@@ -37,7 +37,7 @@ Other benefits of PGSync include:
 SCHEMA DIAGRAM
 
 Inline-style: 
-![alt text](docs/architecture.jpeg "PGSync architecture")
+![alt text](architecture.jpeg "PGSync architecture")
 - [TODO: add showterm.io demo here]
 
 #### Why?
