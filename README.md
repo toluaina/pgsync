@@ -1,8 +1,5 @@
 # PGSync
 
-[![Build Status](https://travis-ci.com/change_to_my_project/change_to_my_icon.svg?token=change_to_my_token&branch=develop)](https://travis-ci.com/change_to_my_project/change_to_my_app)
-[![codecov](https://codecov.io/gh/change_to_my_project/change_to_my_app/branch/develop/graph/badge.svg?token=change_to_my_token)](https://codecov.io/gh/change_to_my_project/change_to_my_app)
-
 ## PostgreSQL to Elasticsearch sync
 
 PGSync is a middleware for shipping data from [Postgres](https://www.postgresql.org) to [Elasticsearch](https://www.elastic.co/products/elastic-stack).  
