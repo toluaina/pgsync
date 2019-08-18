@@ -130,7 +130,7 @@ curl -X GET http://localhost/index_name
   - alternatively, ```ALTER SYSTEM SET wal_level = logical```
 
 - Installation
-  - ```git clone https://github.com/toluaina/pgsync.git```
+  - ```git clone https://github.com/toluaina/essync.git```
   - ```cd pgsync```
   - ```virtualenv -p python3 venv```
   - ```source venv/bin/activate```
