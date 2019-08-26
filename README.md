@@ -21,10 +21,10 @@ It allows you to take advantage of the expressive power and scalability of
 You don't have to write complex queries and transformation pipelines.
 PGSync is lightweight, fast and flexible.
 
-When we denormalize from relational to document, we loose meaning required to reconstruct any changes.
+When we denormalize from relational to document, we lose meaning required to reconstruct any changes.
 Moreover, you shouldn't store your primary data in [Elasticsearch](https://www.elastic.co/products/elastic-stack).
 So how do you then get your data into [Elasticsearch](https://www.elastic.co/products/elastic-stack) in the first place? 
-Tools like Logstash and Kafka can aid this task but they still require a bit 
+Tools like [Logstash](https://www.elastic.co/products/logstash) and [Kafka](https://kafka.apache.org) can aid this task but they still require a bit 
 of engineering and development.
 
 [ETL](https://en.wikipedia.org/wiki/Extract,_transform,_load) and [CDC](https://en.wikipedia.org/wiki/Change_data_capture) tools can be complex and expensive.
@@ -34,17 +34,17 @@ Other benefits of PGSync include:
 - Reliable primary datastore/source of truth
 - Scale on-demand
 
-SCHEMA DIAGRAM
 
-Inline-style: 
-![alt text](architecture.jpeg "PGSync architecture")
-- [TODO: add showterm.io demo here]
+**PGSync Architecture**:
+
+![alt text](docs/architecture.jpeg "PGSync architecture")
+![alt text](docs/demo.svg "PGSync demo")
 
 #### Why?
 
 At a high level, you have data in a Postgres database and you want to mirror it in Elasticsearch.  
-This means every change to your data (*Insert*, *Update*, *Delete* and *Truncate* statements) needs to be replicated to Elasticsearch. 
-At first, this seems easy and then it's not. Simply add some code to copy the data to Elasticsearch after updating the database (or dual writes).
+This means every change to your data (***Insert***, ***Update***, ***Delete*** and ***Truncate*** statements) needs to be replicated to Elasticsearch. 
+At first, this seems easy and then it's not. Simply add some code to copy the data to Elasticsearch after updating the database (or so called dual writes).
 Writing SQL queries spanning multiple tables and involving multiple relationships are hard to write.
 Detecting changes within a nested document can also be quite hard.
 Of course, if your data never changed, then you could just take a snapshot in time and load it into Elasticsearch as a one-off operation.
@@ -74,12 +74,11 @@ You can select any pivot table to be the root of your document.
 
 PGSync's query builder builds advanced queries dynamically against your schema.
 
-PGSync operates both pull and event-driven model.
-It creates a trigger for tables in your database to handle events.
+PGSync operates in an event-driven model by creating triggers for tables in your database to handle notification events.
 
 *This is the only time PGSync will ever make any changes to your database.*
 
-NOTE: **if you change your database schema, or PGSync's schema config, you would need to drop and rebuild your indexes.**
+**NOTE**: **if you change your database schema, or PGSync's schema config, you would need to drop and rebuild your indexes.**
 There are plans to support zero-downtime migrations to streamline this process.
 
 
@@ -97,7 +96,7 @@ Run:
 docker-compose up
 ```
 
-In another shell run 
+In another shell, run 
 ```
 docker-compose up exec -it pgsync
 ```
@@ -114,12 +113,12 @@ psql -f samples/data.sql
 
 Run PGSync
 ```
-pgsync
+./bin/pgsync
 ```
 
 Show the content in Elasticsearch
 ```
-curl -X GET http://localhost/index_name
+curl -X GET http://localhost:9200/[index_name]
 ```
 
 ##### Manual configuration
@@ -151,16 +150,16 @@ Key features of PGSync are:
 - Transactionally consistent output in Elasticsearch. This means: writes appear only when they are committed to the database, insert, update and delete (TG_OP's) operations appear in the same order as they were committed (as opposed to eventual consistency).
 - Fault-tolerant: does not lose data, even if processes crash or a network interruption occurs, etc. The process can be recovered from the last checkpoint.
 - Returns the data directly as Postgres JSON from the database for speed
-- Transformation support: a small subset of transforming the source data e.g rename labels in the document
+- Transforms the data on the fly e.g rename labels before indexing.
 - Supports composite primary and foreign keys.
-- Supports for an arbitrary depth of nested entities i.e Tables having long chain of relationship dependencies.
-- Support for Postgres JSON data fields. This means: we can extract JSON fields in a database table as a separate field in the resulting document.
-- Customize the document structure e.g Object vs List types.
+- Supports an arbitrary depth of nested entities i.e Tables having long chain of relationship dependencies.
+- Supports Postgres JSON data fields. This means: we can extract JSON fields in a database table as a separate field in the resulting document.
+- Customize the document structure.
 
 #### Requirements
 
 - [Python](https://www.python.org) 3.7
-- [Postgres](https://www.postgresql.org) 9.4
+- [Postgres](https://www.postgresql.org) 9.4+
 - [Redis](https://redis.io) 3.1.0
 - [Elasticsearch](https://www.https://www.elastic.co/products/elastic-stack) 6.3.1
 - [SQlAlchemy](https://www.sqlalchemy.org) 1.3.4
@@ -286,6 +285,16 @@ we wanted to change?
 - What if we delete or update an author?
 - What if we truncate an entire table?
 
+
+#### Benefits
+- PGsync aims to be simple to use out of the box compared to other solutions.
+- PGsync handles data deletions Unlike Logstash.
+- PGSync requires little development effort. You simply define a config describing your data.
+- PGsync generates advanced queries matching your schema directly. With Logstash you need to write this yourself.
+- PGSync allows you to easily rebuild your index in case of a schema change.
+- You can only expose the view of your data you require in Elasticsearch.
+
+
 #### Credits
 
 - This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
@@ -295,24 +304,30 @@ we wanted to change?
 
 #### License
 
-MIT License
+Copyright (c) 2019, Tolu Aina
+All rights reserved.
 
-Copyright (c) 2019 Tolu Aina
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+* Neither the name of PGSync nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
