@@ -2,19 +2,19 @@
 
 ## PostgreSQL to Elasticsearch sync
 
-PGSync is a middleware for shipping data from [Postgres](https://www.postgresql.org) to [Elasticsearch](https://www.elastic.co/products/elastic-stack).  
+PGSync is a middleware for syncing data from [Postgres](https://www.postgresql.org) to [Elasticsearch](https://www.elastic.co/products/elastic-stack).  
 It allows you to keep [Postgres](https://www.postgresql.org) as your source of truth data source and
 expose structured denormalized documents in [Elasticsearch](https://www.elastic.co/products/elastic-stack).
 
 Changes to nested entities are propagated to [Elasticsearch](https://www.elastic.co/products/elastic-stack).
-PGSync's advanced query builder generates optimized SQL queries 
+PGSync's advanced query builder then generates optimized SQL queries 
 on the fly based on your schema.
 PGsync's advisory model allows you to quickly move and transform large volumes of data quickly whilst maintaining relational integrity.
 
 Simply describe your document structure or schema in JSON and PGSync will 
 continuously capture changes in your data and load it into [Elasticsearch](https://www.elastic.co/products/elastic-stack) 
 without writing any code. 
-PGSync transforms relational data into a structured document format.
+PGSync transforms your relational data into a structured document format.
 
 It allows you to take advantage of the expressive power and scalability of 
 [Elasticsearch](https://www.elastic.co/products/elastic-stack) directly from [Postgres](https://www.postgresql.org). 
@@ -23,6 +23,7 @@ PGSync is lightweight, fast and flexible.
 
 When we denormalize from relational to document, we lose meaning required to reconstruct any changes.
 Moreover, you shouldn't store your primary data in [Elasticsearch](https://www.elastic.co/products/elastic-stack).
+
 So how do you then get your data into [Elasticsearch](https://www.elastic.co/products/elastic-stack) in the first place? 
 Tools like [Logstash](https://www.elastic.co/products/logstash) and [Kafka](https://kafka.apache.org) can aid this task but they still require a bit 
 of engineering and development.
@@ -49,7 +50,7 @@ Writing SQL queries spanning multiple tables and involving multiple relationship
 Detecting changes within a nested document can also be quite hard.
 Of course, if your data never changed, then you could just take a snapshot in time and load it into Elasticsearch as a one-off operation.
 
-PGSync is appropriate if:
+PGSync is appropriate for you if:
 - [Postgres](https://www.postgresql.org) is your read/write source of truth whilst [Elasticsearch](https://www.elastic.co/products/elastic-stack) is your 
 read-only search layer.
 - Your data is constantly changing.
@@ -65,7 +66,7 @@ the search capabilities of [Elasticsearch](https://www.elastic.co/products/elast
 PGSync is written in Python (supporting version 3.4 onwards) and the stack is composed of: [Redis](https://redis.io), [Elasticsearch](https://www.elastic.co/products/elastic-stack), [Postgres](https://www.postgresql.org), and [SQlAlchemy](https://www.sqlalchemy.org).
 
 PGSync leverages the [logical decoding](https://www.postgresql.org/docs/current/logicaldecoding.html) feature of [Postgres](https://www.postgresql.org) (introduced in PostgreSQL 9.4) to capture a continuous stream of change events.
-This feature needs to be enabled in your [Postgres](https://www.postgresql.org) configuration file by setting:
+This feature needs to be enabled in your [Postgres](https://www.postgresql.org) configuration file by setting in the postgresql.conf file:
 ```
 > wal_level = logical
 ```
@@ -277,7 +278,7 @@ e.g
   }
 ```
 
-PGSync address the following challenges:
+PGSync addresses the following challenges:
 - What if we update the author's name in the database?
 - What if we wanted to add another author for a book?
 - What if there are lots of documents already with the same author 
@@ -288,11 +289,11 @@ we wanted to change?
 
 #### Benefits
 - PGsync aims to be simple to use out of the box compared to other solutions.
-- PGsync handles data deletions Unlike Logstash.
+- PGsync handles data deletions unlike Logstash.
 - PGSync requires little development effort. You simply define a config describing your data.
 - PGsync generates advanced queries matching your schema directly. With Logstash you need to write this yourself.
-- PGSync allows you to easily rebuild your index in case of a schema change.
-- You can only expose the view of your data you require in Elasticsearch.
+- PGSync allows you to easily rebuild your indexes in case of a schema change.
+- You can expose only the data you require in Elasticsearch.
 
 
 #### Credits
