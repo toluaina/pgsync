@@ -1,0 +1,71 @@
+[
+    {
+        "index": "airbnb",
+        "doc_type": "airbnb",
+        "nodes": [
+            {
+                "table": "users",
+                "columns": [
+
+                ],
+                "children": [
+                    {
+                        "table": "bookings",
+                        "columns": [
+                        ],
+                        "relationship": {
+                            "variant": "object",
+                            "type": "one_to_one"
+                        },
+                        "children":[
+                            {
+                                "table": "places",
+                                "relationship": {
+                                    "variant": "object",
+                                    "type": "one_to_one"
+                                },
+                                "children": [
+                                    {
+                                        "table": "cities",
+                                        "relationship": {
+                                            "variant": "object",
+                                            "type": "one_to_one"
+                                        },
+                                        "children": [
+                                            {
+                                                "table": "countries",
+                                                "relationship": {
+                                                    "variant": "object",
+                                                    "type": "one_to_one"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {  
+                                        "table": "hosts",
+                                        "columns": [
+                                            "email"
+                                        ],
+                                        "relationship": {
+                                            "variant": "scalar",
+                                            "type": "one_to_one"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "table": "reviews",
+                                "columns": [
+                                ],
+                                "relationship": {
+                                    "variant": "object",
+                                    "type": "one_to_one"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+]

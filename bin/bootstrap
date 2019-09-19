@@ -1,0 +1,42 @@
+#!/usr/bin/env python
+
+"""PGSync bootstrap."""
+import json
+import logging
+import os
+
+import click
+
+import settings
+from base import Base
+
+logger = logging.getLogger(__name__)
+
+
+def create_es_mapping():
+    # add implementation hook here...
+    pass
+
+
+@click.command()
+@click.option('--teardown', is_flag=True, help='Bootstrap teardown')
+def main(teardown):
+    """Application onetime Bootstrap."""
+    if not os.path.exists(settings.SCHEMA):
+        raise IOError(f'Schema config "{settings.SCHEMA}" not found')
+
+    for database in set([
+        schema.get('index') for schema in json.load(
+            open(settings.SCHEMA)
+        )
+    ]):
+        if teardown:
+            Base(database).teardown()
+        else:
+            Base(database).setup()
+            create_es_mapping()
+            logger.info(f'Bootstrap: {database}')
+
+
+if __name__ == '__main__':
+    main()

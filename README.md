@@ -1,8 +1,10 @@
+![alt text](docs/logo.png "PGSync logo")
+
 # PGSync
 
 ## PostgreSQL to Elasticsearch sync
 
-PGSync is a middleware for syncing data from [Postgres](https://www.postgresql.org) to [Elasticsearch](https://www.elastic.co/products/elastic-stack).  
+[PGSync](http://pgsync.com) is a middleware for syncing data from [Postgres](https://www.postgresql.org) to [Elasticsearch](https://www.elastic.co/products/elastic-stack).  
 It allows you to keep [Postgres](https://www.postgresql.org) as your source of truth data source and
 expose structured denormalized documents in [Elasticsearch](https://www.elastic.co/products/elastic-stack).
 
@@ -11,10 +13,10 @@ PGSync's advanced query builder then generates optimized SQL queries
 on the fly based on your schema.
 PGsync's advisory model allows you to quickly move and transform large volumes of data quickly whilst maintaining relational integrity.
 
-Simply describe your document structure or schema in JSON and PGSync will 
+Simply describe your document structure or schema in JSON and [PGSync](http://pgsync.com) will 
 continuously capture changes in your data and load it into [Elasticsearch](https://www.elastic.co/products/elastic-stack) 
 without writing any code. 
-PGSync transforms your relational data into a structured document format.
+[PGSync](http://pgsync.com) transforms your relational data into a structured document format.
 
 It allows you to take advantage of the expressive power and scalability of 
 [Elasticsearch](https://www.elastic.co/products/elastic-stack) directly from [Postgres](https://www.postgresql.org). 
@@ -63,7 +65,7 @@ the search capabilities of [Elasticsearch](https://www.elastic.co/products/elast
 
 #### How it works
 
-PGSync is written in Python (supporting version 3.4 onwards) and the stack is composed of: [Redis](https://redis.io), [Elasticsearch](https://www.elastic.co/products/elastic-stack), [Postgres](https://www.postgresql.org), and [SQlAlchemy](https://www.sqlalchemy.org).
+PGSync is written in Python (supporting version 3.6 onwards) and the stack is composed of: [Redis](https://redis.io), [Elasticsearch](https://www.elastic.co/products/elastic-stack), [Postgres](https://www.postgresql.org), and [SQlAlchemy](https://www.sqlalchemy.org).
 
 PGSync leverages the [logical decoding](https://www.postgresql.org/docs/current/logicaldecoding.html) feature of [Postgres](https://www.postgresql.org) (introduced in PostgreSQL 9.4) to capture a continuous stream of change events.
 This feature needs to be enabled in your [Postgres](https://www.postgresql.org) configuration file by setting in the postgresql.conf file:
@@ -94,32 +96,32 @@ There are several ways of installing and trying PGSync
 To startup all services with docker.
 Run:
 ```
-docker-compose up
+$ docker-compose up
 ```
 
 In another shell, run 
 ```
-docker-compose up exec -it pgsync
+$ docker-compose up exec -it pgsync
 ```
 
 Create a sample database
 ```
-psql -d mydb < samples/schema.sql
+$ psql -d mydb < samples/schema.sql
 ```
 
 Load some data into the sample database
 ```
-psql -f samples/data.sql
+$ psql -f samples/data.sql
 ```
 
 Run PGSync
 ```
-./bin/pgsync
+$ ./bin/pgsync
 ```
 
 Show the content in Elasticsearch
 ```
-curl -X GET http://localhost:9200/[index_name]
+$ curl -X GET http://localhost:9200/[index_name]
 ```
 
 ##### Manual configuration
@@ -130,15 +132,15 @@ curl -X GET http://localhost:9200/[index_name]
   - alternatively, ```ALTER SYSTEM SET wal_level = logical```
 
 - Installation
-  - ```git clone https://github.com/toluaina/essync.git```
-  - ```cd pgsync```
-  - ```virtualenv -p python3 venv```
-  - ```source venv/bin/activate```
-  - ```pip install -r requirements.txt``` 
+  - ```$ git clone https://github.com/toluaina/essync.git```
+  - ```$ cd pgsync```
+  - ```$ virtualenv -p python3 venv```
+  - ```$ source venv/bin/activate```
+  - ```$ pip install -r requirements.txt``` 
   - create a schema.json for you document representation
-  - ```cp env_sample .env```
+  - ```$ cp env_sample .env```
   - edit the .env above
-  - ```source .env```
+  - ```$ source .env```
   - run the program with **_```pgsync```_**
 
 
@@ -150,19 +152,19 @@ Key features of PGSync are:
 - Negligible impact on database performance.
 - Transactionally consistent output in Elasticsearch. This means: writes appear only when they are committed to the database, insert, update and delete (TG_OP's) operations appear in the same order as they were committed (as opposed to eventual consistency).
 - Fault-tolerant: does not lose data, even if processes crash or a network interruption occurs, etc. The process can be recovered from the last checkpoint.
-- Returns the data directly as Postgres JSON from the database for speed
+- Returns the data directly as Postgres JSON from the database for speed.
 - Transforms the data on the fly e.g rename labels before indexing.
 - Supports composite primary and foreign keys.
 - Supports an arbitrary depth of nested entities i.e Tables having long chain of relationship dependencies.
 - Supports Postgres JSON data fields. This means: we can extract JSON fields in a database table as a separate field in the resulting document.
-- Customize the document structure.
+- Fully customizable document structure.
 
 #### Requirements
 
 - [Python](https://www.python.org) 3.7
 - [Postgres](https://www.postgresql.org) 9.4+
 - [Redis](https://redis.io) 3.1.0
-- [Elasticsearch](https://www.https://www.elastic.co/products/elastic-stack) 6.3.1
+- [Elasticsearch](https://www.elastic.co/products/elastic-stack) 6.3.1
 - [SQlAlchemy](https://www.sqlalchemy.org) 1.3.4
 
 #### Example
@@ -196,6 +198,7 @@ Consider this example of a Book library catalogue.
 | 4 | 9781471331435 | 4 |
 
 With PGSync, we can simply define this [JSON](https://jsonapi.org) schema where the **_book_** table is the pivot.
+A **_pivot_** table indicates the root of your document.
 
 ```json
 {
@@ -281,54 +284,30 @@ e.g
 PGSync addresses the following challenges:
 - What if we update the author's name in the database?
 - What if we wanted to add another author for a book?
-- What if there are lots of documents already with the same author 
-we wanted to change?
+- What if we have lots of documents already with the same author we wanted to change?
 - What if we delete or update an author?
 - What if we truncate an entire table?
 
 
 #### Benefits
-- PGsync aims to be simple to use out of the box compared to other solutions.
+- PGsync aims to be a simple to use out of the box solution.
 - PGsync handles data deletions unlike Logstash.
 - PGSync requires little development effort. You simply define a config describing your data.
-- PGsync generates advanced queries matching your schema directly. With Logstash you need to write this yourself.
+- PGsync generates advanced queries matching your schema directly. With Logstash, you need to write this yourself.
 - PGSync allows you to easily rebuild your indexes in case of a schema change.
 - You can expose only the data you require in Elasticsearch.
 
+#### Contributing
+
+Contributions are very welcome! Check out the [Contribution](CONTRIBUTING.rst) Guidelines for instructions.
 
 #### Credits
 
-- This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
-.. _Cookiecutter: https://github.com/audreyr/cookiecutter
-.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+- This package was created with [Cookiecutter](https://github.com/audreyr/cookiecutter)
 - Elasticsearch is a trademark of Elasticsearch BV, registered in the U.S. and in other countries.
 
 #### License
 
-Copyright (c) 2019, Tolu Aina
-All rights reserved.
+This code is released under the Apache 2.0 License. Please see [LICENSE](LICENSE) and [NOTICE](NOTICE) for more details.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-* Redistributions of source code must retain the above copyright notice, this
-  list of conditions and the following disclaimer.
-
-* Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
-
-* Neither the name of PGSync nor the names of its
-  contributors may be used to endorse or promote products derived from
-  this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+Copyright (c) 2019, Tolu Aina.

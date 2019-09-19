@@ -1,0 +1,36 @@
+version: '3.3'
+
+services:
+  postgres:
+    build:
+      context: ./docker
+    ports:
+      - "65432:5432"
+    environment:
+      - POSTGRES_USER=pgsync
+      - POSTGRES_DB=airbnb
+      - POSTGRES_PASSWORD=PLEASE_REPLACE_ME
+  redis:
+    image: redis
+    command: redis-server --requirepass PLEASE_REPLACE_ME
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
+    ports:
+      - "9201:9200"
+      - "9301:9300"
+    environment:
+      - xpack.security.enabled=false
+      - network.host=127.0.0.1
+      - http.host=0.0.0.0
+  pgsync:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    labels:
+      org.label-schema.name: "Postgres-Elasticsearch-Sync"
+      org.label-schema.description: "Postgres to Elasticsearch ETL"
+      com.label-schema.service-type: "pgsync-daemon"
+    depends_on:
+      - postgres
+      - redis
+      - elasticsearch
