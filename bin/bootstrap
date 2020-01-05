@@ -7,34 +7,32 @@ import os
 
 import click
 
-import settings
-from base import Base
+from pgsync.base import Base
+from pgsync.settings import CHECKPOINT
+from pgsync.utils import get_schema_config
 
 logger = logging.getLogger(__name__)
 
 
-def create_es_mapping():
-    # add implementation hook here...
-    pass
-
-
 @click.command()
-@click.option('--teardown', is_flag=True, help='Bootstrap teardown')
-def main(teardown):
+@click.option('--teardown', is_flag=True, help='Teardown PGSync')
+@click.option('--config', help='Schema config')
+def main(teardown, config):
     """Application onetime Bootstrap."""
-    if not os.path.exists(settings.SCHEMA):
-        raise IOError(f'Schema config "{settings.SCHEMA}" not found')
+
+    config = get_schema_config(config)
+    if os.path.exists(CHECKPOINT):
+        os.unlink(CHECKPOINT)
 
     for database in set([
         schema.get('index') for schema in json.load(
-            open(settings.SCHEMA)
+            open(config)
         )
     ]):
         if teardown:
             Base(database).teardown()
         else:
             Base(database).setup()
-            create_es_mapping()
             logger.info(f'Bootstrap: {database}')
 
 

@@ -1,0 +1,12 @@
+# Byte compiled / optimized / DLL files
+**/__pycache__/
+**/.pytest_cache/
+**/*.pyc
+
+# Exclude docker specific files
+.dockerignore
+Dockerfile
+
+# Coverage
+**/.coverage.xml
+**/coverage.xml

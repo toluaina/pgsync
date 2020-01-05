@@ -3,7 +3,7 @@
 Changelog
 =========
 
-1.0.0 (2019-09-19)
+1.0.0 (2020-01-01)
 ------------------
 
-* initial release
+* First release on PyPI.

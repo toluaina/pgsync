@@ -20,9 +20,11 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('..'))
 
 import pgsync
+
+sys.path.insert(0, os.path.abspath('..'))
+
 
 # -- General configuration ---------------------------------------------
 
@@ -48,7 +50,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'pgsync'
-copyright = u"2019, Tolu Aina"
+copyright = u"2020, Tolu Aina"
 author = u"Tolu Aina"
 
 # The version info for the project you're documenting, acts as replacement
@@ -129,7 +131,7 @@ latex_elements = {
 # [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'pgsync.tex',
-     u'pgsync Documentation',
+     u'PGSync Documentation',
      u'Tolu Aina', 'manual'),
 ]
 
@@ -140,7 +142,7 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     (master_doc, 'pgsync',
-     u'pgsync Documentation',
+     u'PGSync Documentation',
      [author], 1)
 ]
 
@@ -152,12 +154,9 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'pgsync',
-     u'pgsync Documentation',
+     u'PGSync Documentation',
      author,
      'pgsync',
-     'One line description of project.',
+     'Postgres to elasticsearch sync.',
      'Miscellaneous'),
 ]
-
-
-

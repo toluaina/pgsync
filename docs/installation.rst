@@ -32,13 +32,13 @@ You can either clone the public repository:
 
 .. code-block:: console
 
-    $ git clone git://github.com/toluaina/essync
+    $ git clone git://github.com/toluaina/pg-sync
 
 Or download the `tarball`_:
 
 .. code-block:: console
 
-    $ curl  -OL https://github.com/toluaina/essync/tarball/master
+    $ curl  -OL https://github.com/toluaina/pg-sync/tarball/master
 
 Once you have a copy of the source, you can install it with:
 
@@ -47,5 +47,5 @@ Once you have a copy of the source, you can install it with:
     $ python setup.py install
 
 
-.. _Github repo: https://github.com/toluaina/essync
-.. _tarball: https://github.com/toluaina/essync/tarball/master
+.. _Github repo: https://github.com/toluaina/pg-sync
+.. _tarball: https://github.com/toluaina/pg-sync/tarball/master

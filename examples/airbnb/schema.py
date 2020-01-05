@@ -1,13 +1,14 @@
 import json
 from datetime import datetime
 
+import click
 import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.schema import UniqueConstraint
 
-import settings
-from base import create_database, pg_engine
-from helper import teardown
+from pgsync.base import create_database, pg_engine
+from pgsync.helper import teardown
+from pgsync.utils import get_schema_config
 
 Base = declarative_base()
 
@@ -106,8 +107,8 @@ class Reviews(Base):
     )
 
 
-def setup():
-    for schema in json.load(open(settings.SCHEMA)):
+def setup(config=None):
+    for schema in json.load(open(config)):
         create_database(schema.get('index'))
         # create schema
         engine = pg_engine(database=schema.get('index'))
@@ -115,9 +116,13 @@ def setup():
         Base.metadata.create_all(engine)
 
 
-def main():
-    teardown()
-    setup()
+@click.command()
+@click.option('--config',  help='Schema config')
+def main(config):
+
+    config = get_schema_config(config)
+    teardown(config=config)
+    setup(config)
 
 
 if __name__ == '__main__':

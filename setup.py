@@ -2,43 +2,149 @@
 # -*- coding: utf-8 -*-
 
 """The setup script."""
+import os
+import re
+import shutil
+from pathlib import Path
 
-from setuptools import setup, find_packages
+from Cython.Build import cythonize
+from Cython.Distutils import build_ext
+from setuptools import find_packages, setup
+from setuptools.extension import Extension
 
-with open('README.rst') as readme_file:
-    readme = readme_file.read()
+HERE = os.path.dirname(os.path.abspath(__file__))
 
-with open('HISTORY.rst') as history_file:
-    history = history_file.read()
 
-with open('requirements.txt') as requirements_file:
-    requirements = requirements_file.read()
+def get_version():
+    filename = os.path.join(HERE, 'pgsync', '__init__.py')
+    with open(filename) as f:
+        contents = f.read()
+    pattern = r"^__version__ = '(.*?)'$"
+    return re.search(pattern, contents, re.MULTILINE).group(1)
 
-setup_requirements = ['pytest-runner', ]
 
-test_requirements = ['pytest', ]
+# Package meta-data.
+NAME = 'PGSync'
+DESCRIPTION = 'Postgres to elasticsearch sync'
+URL = 'https://github.com/toluaina/pg-sync'
+AUTHOR = MAINTAINER = 'Tolu Aina'
+AUTHOR_EMAIL = MAINTAINER_EMAIL = 'tolu@pgsync.com'
+PYTHON_REQUIRES = '>=3.6.0'
+VERSION = get_version()
+INSTALL_REQUIRES = []
+KEYWORDS = [
+    'pgsync',
+    'elasticsearch',
+    'postgres',
+    'change data capture',
+]
+CLASSIFIERS = [
+    'Development Status :: 4 - Beta',
+    'Intended Audience :: Developers',
+    'Natural Language :: English',
+    'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'License :: OSI Approved :: LGPL-3.0 License',
+]
+SCRIPTS = [
+    'bin/pgsync',
+    'bin/bootstrap',
+]
+SETUP_REQUIRES = ['pytest-runner']
+TESTS_REQUIRE = ['pytest']
+
+# if building the source dist then add the sources
+PACKAGES = find_packages(
+    include=['pgsync']
+)
+PACKAGES = []
+
+with open('README.rst') as fp:
+    readme = fp.read()
+
+with open('HISTORY.rst') as fp:
+    history = fp.read()
+
+with open('requirements/prod.txt') as fp:
+    INSTALL_REQUIRES = fp.read()
+
+try:
+    shutil.rmtree('dist')
+except OSError:
+    pass
+
+try:
+    shutil.rmtree('build')
+except OSError:
+    pass
+
+try:
+    shutil.rmtree('PGSync.egg-info')
+except OSError:
+    pass
+
+
+class Builder(build_ext):
+
+    def run(self):
+
+        build_ext.run(self)
+
+        build_dir = Path(self.build_lib)
+        root_dir = Path(__file__).parent
+
+        target_dir = build_dir if not self.inplace else root_dir
+
+        self.copy_file(
+            Path('pgsync') / '__init__.py', root_dir, target_dir
+        )
+
+    def copy_file(self, path, source_dir, destination_dir):
+        if not (source_dir / path).exists():
+            return
+        shutil.copyfile(
+            str(source_dir / path),
+            str(destination_dir / path),
+        )
+
 
 setup(
-    author="Tolu Aina",
-    author_email='toluaina@hotmail.com',
-    classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
-        'Intended Audience :: Developers',
-        'Natural Language :: English',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-    ],
-    description="Postgres to Elasticsearch sync",
-    install_requires=requirements,
+    name=NAME,
+    author=AUTHOR,
+    maintainer=MAINTAINER,
+    maintainer_email=MAINTAINER_EMAIL,
+    author_email=AUTHOR_EMAIL,
+    classifiers=CLASSIFIERS,
+    python_requires=PYTHON_REQUIRES,
+    description=DESCRIPTION,
     long_description=readme + '\n\n' + history,
+    install_requires=INSTALL_REQUIRES,
     include_package_data=True,
-    keywords='pgsync',
-    name='pgsync',
-    packages=find_packages(include=['pgsync']),
-    setup_requires=setup_requirements,
+    keywords=KEYWORDS,
+    packages=PACKAGES,
+    setup_requires=SETUP_REQUIRES,
+    scripts=SCRIPTS,
     test_suite='tests',
-    tests_require=test_requirements,
-    url='https://github.com/toluaina/essync',
-    version='1.0.0',
+    tests_require=TESTS_REQUIRE,
+    url=URL,
+    version=VERSION,
     zip_safe=False,
+    cmdclass={'build_ext': Builder},
+    ext_modules=cythonize(
+        [
+            Extension(
+                'pgsync.*', ['pgsync/*.py']
+            )
+        ],
+        build_dir='build',
+        language_level=3,
+    ),
+    extra_compile_args=['-finline-functions -s'],
+    project_urls={
+        'Bug Reports': 'https://github.com/toluaina/pg-sync/issues',
+        'Funding': 'https://patreon.com/toluaina',
+        'Source': 'https://github.com/toluaina/pg-sync',
+        'Web': 'https://pgsync.com',
+    },
 )

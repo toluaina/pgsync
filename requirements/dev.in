@@ -1,0 +1,13 @@
+-r base.in
+-r test.in
+
+supervisor
+watchdog
+coverage
+twine
+pip-tools
+bumpversion
+setuptools
+# Pin wheel to 0.31.1 - https://github.com/python-pillow/pillow-wheels/pull/102
+wheel==0.31.1
+cython

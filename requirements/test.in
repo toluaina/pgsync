@@ -1,0 +1,14 @@
+-r base.in
+
+pytest
+pytest-cov
+pytest-runner
+pytest-mock
+pytest-sugar
+pytest-runner
+mock
+flake8_docstrings
+flake8-debugger
+flake8-print
+flake8-todo
+flake8-isort

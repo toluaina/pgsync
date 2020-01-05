@@ -1,7 +1,6 @@
 [
     {
         "index": "airbnb",
-        "doc_type": "airbnb",
         "nodes": [
             {
                 "table": "users",

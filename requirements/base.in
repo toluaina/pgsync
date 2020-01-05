@@ -1,0 +1,9 @@
+# base libraries
+click
+elasticsearch-dsl>=6.0.0,<8.0.0
+environs
+faker
+psycopg2-binary
+redis
+sqlalchemy
+sqlparse

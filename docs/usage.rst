@@ -4,4 +4,5 @@ Usage
 
 To use pgsync in a project::
 
-    import pgsync
+    from pgsync import sync
+    sync.main()

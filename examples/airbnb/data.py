@@ -1,21 +1,25 @@
 import json
 from datetime import datetime, timedelta
 
+import click
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-import settings
-from base import pg_engine, subtransactions
-from helper import teardown
+from pgsync.base import pg_engine, subtransactions
+from pgsync.helper import teardown
+from pgsync.utils import get_schema_config
 from schema import Bookings, Cities, Countries, Hosts, Places, Reviews, Users
 
 Base = declarative_base()
 
 
-def main():
+@click.command()
+@click.option('--config',  help='Schema config')
+def main(config):
 
-    teardown(drop_db=False)
-    schema = json.load(open(settings.SCHEMA))
+    config = get_schema_config(config)
+    teardown(drop_db=False, config=config)
+    schema = json.load(open(config))
     engine = pg_engine(database=schema[0].get('index'))
     Session = sessionmaker(bind=engine, autoflush=True)
     session = Session()
@@ -31,12 +35,13 @@ def main():
     ]
 
     hosts = [
-        Hosts(email='kermit@muppetlabs.com'),
-        Hosts(email='bert@sesamestreet.com'),
-        Hosts(email='big.bird@sesamestreet.com'),
-        Hosts(email='cookie.monster@sesamestreet.com'),
-        Hosts(email='mr.snuffleupagus@sesamestreet.com'),
-        Hosts(email='grover@sesamestreet.com'),
+        Hosts(email='kermit@muppet-labs.inc'),
+        Hosts(email='bert@sesame.street'),
+        Hosts(email='big.bird@sesame.street'),
+        Hosts(email='cookie.monster@sesame.street'),
+        Hosts(email='mr.snuffleupagus@sesame.street'),
+        Hosts(email='grover@sesame.street'),
+        Hosts(email='miss.piggy@muppet-labs.inc'),
     ]
 
     cities = [
@@ -62,7 +67,7 @@ def main():
             ),
         ),
         Cities(
-            name='Copenagen',
+            name='Copenhagen',
             country=Countries(
                 name='Denmark',
                 country_code='DK'

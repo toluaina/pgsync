@@ -2,9 +2,14 @@
 
 # PGSync
 
+
+[![PyPI version](https://badge.fury.io/py/pgsync.svg)](https://badge.fury.io/py/pgsync)
+[![Documentation status](https://readthedocs.org/projects/pgsync/badge/?version=latest)](https://pgsync.readthedocs.io/en/latest/?badge=latest)
+
+
 ## PostgreSQL to Elasticsearch sync
 
-[PGSync](http://pgsync.com) is a middleware for syncing data from [Postgres](https://www.postgresql.org) to [Elasticsearch](https://www.elastic.co/products/elastic-stack).  
+[PGSync](https://pgsync.com) is a middleware for syncing data from [Postgres](https://www.postgresql.org) to [Elasticsearch](https://www.elastic.co/products/elastic-stack) effortlessly.
 It allows you to keep [Postgres](https://www.postgresql.org) as your source of truth data source and
 expose structured denormalized documents in [Elasticsearch](https://www.elastic.co/products/elastic-stack).
 
@@ -13,10 +18,10 @@ PGSync's advanced query builder then generates optimized SQL queries
 on the fly based on your schema.
 PGsync's advisory model allows you to quickly move and transform large volumes of data quickly whilst maintaining relational integrity.
 
-Simply describe your document structure or schema in JSON and [PGSync](http://pgsync.com) will 
+Simply describe your document structure or schema in JSON and [PGSync](https://pgsync.com) will 
 continuously capture changes in your data and load it into [Elasticsearch](https://www.elastic.co/products/elastic-stack) 
-without writing any code. 
-[PGSync](http://pgsync.com) transforms your relational data into a structured document format.
+without writing any code.
+[PGSync](https://pgsync.com) transforms your relational data into a structured document format.
 
 It allows you to take advantage of the expressive power and scalability of 
 [Elasticsearch](https://www.elastic.co/products/elastic-stack) directly from [Postgres](https://www.postgresql.org). 
@@ -30,18 +35,20 @@ So how do you then get your data into [Elasticsearch](https://www.elastic.co/pro
 Tools like [Logstash](https://www.elastic.co/products/logstash) and [Kafka](https://kafka.apache.org) can aid this task but they still require a bit 
 of engineering and development.
 
-[ETL](https://en.wikipedia.org/wiki/Extract,_transform,_load) and [CDC](https://en.wikipedia.org/wiki/Change_data_capture) tools can be complex and expensive.
+[Extract Transform Load](https://en.wikipedia.org/wiki/Extract,_transform,_load) and [Change data capture](https://en.wikipedia.org/wiki/Change_data_capture) tools can be complex and expensive.
 
 Other benefits of PGSync include:
 - Real-time analytics
 - Reliable primary datastore/source of truth
 - Scale on-demand
+- Easily join multiple nested tables
 
 
 **PGSync Architecture**:
 
 ![alt text](docs/architecture.jpeg "PGSync architecture")
 ![alt text](docs/demo.svg "PGSync demo")
+
 
 #### Why?
 
@@ -91,6 +98,7 @@ There are several ways of installing and trying PGSync
  - [Running in Docker](#running-in-docker) is the easiest way to get up and running.
  - [Manual configuration](#manual-configuration) 
 
+
 ##### Running in Docker
 
 To startup all services with docker.
@@ -116,32 +124,28 @@ $ psql -f samples/data.sql
 
 Run PGSync
 ```
-$ ./bin/pgsync
+$ pgsync
 ```
 
 Show the content in Elasticsearch
 ```
-$ curl -X GET http://localhost:9200/[index_name]
+$ curl -X GET http://[elasticsearch host]:9200/[index_name]
 ```
 
 ##### Manual configuration
 
-- Pre-install
+- Setup
   - ensure the database user is a superuser 
-  - set wal_level to logical in postgresql.conf ```wal_level = logical``` 
-  - alternatively, ```ALTER SYSTEM SET wal_level = logical```
+  - Enable logical decoding. you would also need to set up at least two parameters at postgresql.conf
 
+    ```wal_level = logical```
+
+    ```max_replication_slots = 1```
+  
 - Installation
-  - ```$ git clone https://github.com/toluaina/essync.git```
-  - ```$ cd pgsync```
-  - ```$ virtualenv -p python3 venv```
-  - ```$ source venv/bin/activate```
-  - ```$ pip install -r requirements.txt``` 
-  - create a schema.json for you document representation
-  - ```$ cp env_sample .env```
-  - edit the .env above
-  - ```$ source .env```
-  - run the program with **_```pgsync```_**
+  - ```$ pip install pgsync``` 
+  - create a [schema.json](https://github.com/toluaina/pg-sync/blob/master/examples/airbnb/schema.json) for you document representation
+  - run the program with **_```pgsync --config schema.json```_** or as a daemon **_```pgsync --config schema.json -d```_**
 
 
 #### Features
@@ -150,7 +154,7 @@ Key features of PGSync are:
 
 - Works with any PostgreSQL database (version 9.4 or later). 
 - Negligible impact on database performance.
-- Transactionally consistent output in Elasticsearch. This means: writes appear only when they are committed to the database, insert, update and delete (TG_OP's) operations appear in the same order as they were committed (as opposed to eventual consistency).
+- Transactionally consistent output in Elasticsearch. This means: writes appear only when they are committed to the database, insert, update and delete operations appear in the same order as they were committed (as opposed to eventual consistency).
 - Fault-tolerant: does not lose data, even if processes crash or a network interruption occurs, etc. The process can be recovered from the last checkpoint.
 - Returns the data directly as Postgres JSON from the database for speed.
 - Transforms the data on the fly e.g rename labels before indexing.
@@ -159,17 +163,19 @@ Key features of PGSync are:
 - Supports Postgres JSON data fields. This means: we can extract JSON fields in a database table as a separate field in the resulting document.
 - Fully customizable document structure.
 
+
 #### Requirements
 
-- [Python](https://www.python.org) 3.7
+- [Python](https://www.python.org) 3.6+
 - [Postgres](https://www.postgresql.org) 9.4+
 - [Redis](https://redis.io) 3.1.0
-- [Elasticsearch](https://www.elastic.co/products/elastic-stack) 6.3.1
-- [SQlAlchemy](https://www.sqlalchemy.org) 1.3.4
+- [Elasticsearch](https://www.elastic.co/products/elastic-stack) 6.3.1+
+- [SQlAlchemy](https://www.sqlalchemy.org) 1.3.4+
+
 
 #### Example
 
-Consider this example of a Book library catalogue.
+Consider this example of a Book library database.
 
 **Book**
 
@@ -290,24 +296,31 @@ PGSync addresses the following challenges:
 
 
 #### Benefits
-- PGsync aims to be a simple to use out of the box solution.
-- PGsync handles data deletions unlike Logstash.
-- PGSync requires little development effort. You simply define a config describing your data.
-- PGsync generates advanced queries matching your schema directly. With Logstash, you need to write this yourself.
+
+- PGSync is a simple to use out of the box solution for Change data capture.
+- PGSync handles data deletions.
+- PGSync requires little development effort. You simply define a schema config describing your data.
+- PGSync generates advanced queries matching your schema directly.
 - PGSync allows you to easily rebuild your indexes in case of a schema change.
 - You can expose only the data you require in Elasticsearch.
+
 
 #### Contributing
 
 Contributions are very welcome! Check out the [Contribution](CONTRIBUTING.rst) Guidelines for instructions.
+
 
 #### Credits
 
 - This package was created with [Cookiecutter](https://github.com/audreyr/cookiecutter)
 - Elasticsearch is a trademark of Elasticsearch BV, registered in the U.S. and in other countries.
 
+
 #### License
 
-This code is released under the Apache 2.0 License. Please see [LICENSE](LICENSE) and [NOTICE](NOTICE) for more details.
+This code is released under the [GNU Lesser General Public License](https://www.gnu.org/licenses/gpl-3.0.html), version 3.0 (LGPL-3.0).  
+Please see [LICENSE](LICENSE) and [NOTICE](NOTICE) for more details.
 
-Copyright (c) 2019, Tolu Aina.
+You should have received a copy of the GNU Lesser General Public License along with PGSync.  
+If not, see https://www.gnu.org/licenses/.
+
