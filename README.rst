@@ -1,19 +1,21 @@
 # PostgreSQL to Elasticsearch sync
 
-[PGSync](https://pgsync.com) is a middleware for syncing data from [Postgres](https://www.postgresql.org) to [Elasticsearch](https://www.elastic.co/products/elastic-stack).  
-It allows you to keep [Postgres](https://www.postgresql.org) as your source of truth data source and
-expose structured denormalized documents in [Elasticsearch](https://www.elastic.co/products/elastic-stack).
+
+`PGSync <https://pgsync.com>`__ is a middleware for syncing data from `Postgres <https://www.postgresql.org>`__ to `Elasticsearch <https://www.elastic.co/products/elastic-stack>`__.  
+It allows you to keep `Postgres <https://www.postgresql.org>`__ as your source of truth data source and
+expose structured denormalized documents in `Elasticsearch <https://www.elastic.co/products/elastic-stack>`__.
+
 
 ### Requirements
 
-- [Python](https://www.python.org) 3.6+
-- [Postgres](https://www.postgresql.org) 9.4+
-- [Redis](https://redis.io) 3.1.0+
-- [Elasticsearch](https://www.elastic.co/products/elastic-stack) 6.3.1+
+- `Python <https://www.python.org>`__ 3.6+
+- `Postgres <https://www.postgresql.org>`__ 9.4+
+- `Redis <https://redis.io>`__
+- `Elasticsearch <https://www.elastic.co/products/elastic-stack>`__ 6.3.1+
 
 ### Postgres setup
   
-  Enable [logical decoding](https://www.postgresql.org/docs/current/logicaldecoding.html) in your 
+  Enable `logical decoding <https://www.postgresql.org/docs/current/logicaldecoding.html>`__ in your 
   Postgres setting.
 
   - you would also need to set up at least two parameters at postgresql.conf
@@ -24,51 +26,53 @@ expose structured denormalized documents in [Elasticsearch](https://www.elastic.
 
 ### Installation
 
-You can install PGSync from [PyPI](https://pypi.org/project/realpython-reader/):
+You can install PGSync from `PyPI <hhttps://pypi.org>`__:
 
     $ pip install pgsync
 
 ### Config
 
-Create a schema for the application named e.g **_schema.json_**
+Create a schema for the application named e.g **schema.json**
 
-Example configuration
+`Example schema <https://github.com/toluaina/pg-sync/blob/master/examples/airbnb/schema.json>`__
 
-```json
-[
-    {
-        "index": "[database name]",
-        "nodes": [
-            {
-                "table": "[table A]",
-                "columns": [
-                    "column 1 from table A",
-                    "column 2 from table A",
-                    ... additional columns
-                ],
-                "children": [
-                    {
-                        "table": "[table B with relationship to table A]",
-                        "columns": [
-                          "column 1 from table B",
-                          "column 2 from table B",
-                          ... additional columns
-                        ],
-                        "relationship": {
-                            "variant": "object",
-                            "type": "one_to_many"
+Example spec
+
+.. code-block:: json
+
+    [
+        {
+            "index": "[database name]",
+            "nodes": [
+                {
+                    "table": "[table A]",
+                    "columns": [
+                        "column 1 from table A",
+                        "column 2 from table A",
+                        ... additional columns
+                    ],
+                    "children": [
+                        {
+                            "table": "[table B with relationship to table A]",
+                            "columns": [
+                              "column 1 from table B",
+                              "column 2 from table B",
+                              ... additional columns
+                            ],
+                            "relationship": {
+                                "variant": "object",
+                                "type": "one_to_many"
+                            },
+                            ...
                         },
-                        ...
-                    },
-                    {
-                        ... any other additional children
-                    }
-                ]
-            }
-        ]
-    }
-]
-```
+                        {
+                            ... any other additional children
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
 
 ### Environment variables 
 
@@ -92,7 +96,7 @@ Setup required environment variables for the application
 
 ## Running
 
-  - bootstrap the database
-        $ bootstrap --config schema.json
-  - run pgsync as a daemon
-        $ pgsync --config schema.json -d
+bootstrap the database (one time only)
+  $ bootstrap --config schema.json
+run pgsync as a daemon
+  $ pgsync --config schema.json --daemon

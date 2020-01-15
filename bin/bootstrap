@@ -9,18 +9,18 @@ import click
 
 from pgsync.base import Base
 from pgsync.settings import CHECKPOINT
-from pgsync.utils import get_schema_config
+from pgsync.utils import get_config
 
 logger = logging.getLogger(__name__)
 
 
 @click.command()
-@click.option('--teardown', is_flag=True, help='Teardown PGSync')
-@click.option('--config', help='Schema config')
+@click.option('--teardown', '-t', is_flag=True, help='PGSync teardown')
+@click.option('--config', '-c', help='Schema config')
 def main(teardown, config):
     """Application onetime Bootstrap."""
 
-    config = get_schema_config(config)
+    config = get_config(config)
     if os.path.exists(CHECKPOINT):
         os.unlink(CHECKPOINT)
 

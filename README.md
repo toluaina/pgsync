@@ -145,6 +145,7 @@ $ curl -X GET http://[elasticsearch host]:9200/[index_name]
 - Installation
   - ```$ pip install pgsync``` 
   - create a [schema.json](https://github.com/toluaina/pg-sync/blob/master/examples/airbnb/schema.json) for you document representation
+  - bootstrap the database (one time only) **_```bootstrap --config schema.json```_**
   - run the program with **_```pgsync --config schema.json```_** or as a daemon **_```pgsync --config schema.json -d```_**
 
 

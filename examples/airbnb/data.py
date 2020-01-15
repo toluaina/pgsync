@@ -7,17 +7,17 @@ from sqlalchemy.orm import sessionmaker
 
 from pgsync.base import pg_engine, subtransactions
 from pgsync.helper import teardown
-from pgsync.utils import get_schema_config
+from pgsync.utils import get_config
 from schema import Bookings, Cities, Countries, Hosts, Places, Reviews, Users
 
 Base = declarative_base()
 
 
 @click.command()
-@click.option('--config',  help='Schema config')
+@click.option('--config', '-c', help='Schema config')
 def main(config):
 
-    config = get_schema_config(config)
+    config = get_config(config)
     teardown(drop_db=False, config=config)
     schema = json.load(open(config))
     engine = pg_engine(database=schema[0].get('index'))
@@ -49,42 +49,42 @@ def main(config):
             name='Manila',
             country=Countries(
                 name='Philippines',
-                country_code='PH'
+                country_code='PH',
             )
         ),
         Cities(
             name='Lisbon',
             country=Countries(
                 name='Portugal',
-                country_code='PT'
+                country_code='PT',
             ),
         ),
         Cities(
             name='Havana',
             country=Countries(
                 name='Cuba',
-                country_code='PT'
+                country_code='PT',
             ),
         ),
         Cities(
             name='Copenhagen',
             country=Countries(
                 name='Denmark',
-                country_code='DK'
+                country_code='DK',
             ),
         ),
         Cities(
             name='London',
             country=Countries(
                 name='United Kingdom',
-                country_code='UK'
+                country_code='UK',
             ),
         ),
         Cities(
             name='Casablanca',
             country=Countries(
                 name='Morocco',
-                country_code='MA'
+                country_code='MA',
             ),
         ),
     ]
@@ -93,32 +93,32 @@ def main(config):
         Places(
             host=hosts[0],
             city=cities[0],
-            address='Quezon Boulevard'
+            address='Quezon Boulevard',
         ),
         Places(
             host=hosts[1],
             city=cities[1],
-            address='Castelo de São Jorge'
+            address='Castelo de São Jorge',
         ),
         Places(
             host=hosts[2],
             city=cities[2],
-            address='Old Havana'
+            address='Old Havana',
         ),
         Places(
             host=hosts[3],
             city=cities[3],
-            address='Tivoli Gardens'
+            address='Tivoli Gardens',
         ),
         Places(
             host=hosts[4],
             city=cities[4],
-            address='Buckingham Palace'
+            address='Buckingham Palace',
         ),
         Places(
             host=hosts[5],
             city=cities[5],
-            address='Medina'
+            address='Medina',
         ),
     ]
 
@@ -130,7 +130,7 @@ def main(config):
                 start_date=datetime.now() + timedelta(days=1),
                 end_date=datetime.now() + timedelta(days=4),
                 price_per_night=100,
-                num_nights=4
+                num_nights=4,
             ),
             rating=1,
             review_body='Neque porro quisquam est qui dolorem'
@@ -142,7 +142,7 @@ def main(config):
                 start_date=datetime.now() + timedelta(days=2),
                 end_date=datetime.now() + timedelta(days=4),
                 price_per_night=150,
-                num_nights=3
+                num_nights=3,
             ),
             rating=2,
             review_body='Sed eget finibus massa, vel efficitur mauris'
@@ -154,7 +154,7 @@ def main(config):
                 start_date=datetime.now() + timedelta(days=15),
                 end_date=datetime.now() + timedelta(days=19),
                 price_per_night=120,
-                num_nights=4
+                num_nights=4,
             ),
             rating=3,
             review_body='Suspendisse cursus ex et turpis dignissim dignissim'
@@ -166,7 +166,7 @@ def main(config):
                 start_date=datetime.now() + timedelta(days=2),
                 end_date=datetime.now() + timedelta(days=7),
                 price_per_night=300,
-                num_nights=5
+                num_nights=5,
             ),
             rating=4,
             review_body='Suspendisse ultricies arcu lectus'
@@ -178,7 +178,7 @@ def main(config):
                 start_date=datetime.now() + timedelta(days=1),
                 end_date=datetime.now() + timedelta(days=10),
                 price_per_night=800,
-                num_nights=3
+                num_nights=3,
             ),
             rating=5,
             review_body='Putent sententiae scribentur ne vis'
@@ -190,7 +190,7 @@ def main(config):
                 start_date=datetime.now() + timedelta(days=2),
                 end_date=datetime.now() + timedelta(days=8),
                 price_per_night=80,
-                num_nights=10
+                num_nights=10,
             ),
             rating=3,
             review_body='Debet invenire sed ne'
@@ -199,17 +199,9 @@ def main(config):
 
     with subtransactions(session):
         session.add_all(users)
-
-    with subtransactions(session):
         session.add_all(hosts)
-
-    with subtransactions(session):
         session.add_all(cities)
-
-    with subtransactions(session):
         session.add_all(places)
-
-    with subtransactions(session):
         session.add_all(reviews)
 
 

@@ -24,7 +24,7 @@ def get_version():
 
 
 # Package meta-data.
-NAME = 'PGSync'
+NAME = 'pgsync'
 DESCRIPTION = 'Postgres to elasticsearch sync'
 URL = 'https://github.com/toluaina/pg-sync'
 AUTHOR = MAINTAINER = 'Tolu Aina'
@@ -45,7 +45,7 @@ CLASSIFIERS = [
     'Programming Language :: Python :: 3.6',
     'Programming Language :: Python :: 3.7',
     'Programming Language :: Python :: 3.8',
-    'License :: OSI Approved :: LGPL-3.0 License',
+    'License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)',
 ]
 SCRIPTS = [
     'bin/pgsync',
@@ -61,28 +61,19 @@ PACKAGES = find_packages(
 PACKAGES = []
 
 with open('README.rst') as fp:
-    readme = fp.read()
+    README = fp.read()
 
 with open('HISTORY.rst') as fp:
-    history = fp.read()
+    HISTORY = fp.read()
 
 with open('requirements/prod.txt') as fp:
     INSTALL_REQUIRES = fp.read()
 
-try:
-    shutil.rmtree('dist')
-except OSError:
-    pass
-
-try:
-    shutil.rmtree('build')
-except OSError:
-    pass
-
-try:
-    shutil.rmtree('PGSync.egg-info')
-except OSError:
-    pass
+for target_dir in ['dist', 'build', 'PGSync.egg-info']:
+    try:
+        shutil.rmtree(target_dir)
+    except OSError:
+        pass
 
 
 class Builder(build_ext):
@@ -118,7 +109,7 @@ setup(
     classifiers=CLASSIFIERS,
     python_requires=PYTHON_REQUIRES,
     description=DESCRIPTION,
-    long_description=readme + '\n\n' + history,
+    long_description=README + '\n\n' + HISTORY,
     install_requires=INSTALL_REQUIRES,
     include_package_data=True,
     keywords=KEYWORDS,
@@ -144,7 +135,7 @@ setup(
     project_urls={
         'Bug Reports': 'https://github.com/toluaina/pg-sync/issues',
         'Funding': 'https://patreon.com/toluaina',
-        'Source': 'https://github.com/toluaina/pg-sync',
+        'Source': URL,
         'Web': 'https://pgsync.com',
     },
 )

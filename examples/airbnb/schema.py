@@ -8,7 +8,7 @@ from sqlalchemy.schema import UniqueConstraint
 
 from pgsync.base import create_database, pg_engine
 from pgsync.helper import teardown
-from pgsync.utils import get_schema_config
+from pgsync.utils import get_config
 
 Base = declarative_base()
 
@@ -117,10 +117,10 @@ def setup(config=None):
 
 
 @click.command()
-@click.option('--config',  help='Schema config')
+@click.option('--config', '-c', help='Schema config')
 def main(config):
 
-    config = get_schema_config(config)
+    config = get_config(config)
     teardown(config=config)
     setup(config)
 

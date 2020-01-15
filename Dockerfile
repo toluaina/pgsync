@@ -1,4 +1,4 @@
-FROM python:3.7-alpine
+FROM python:3.6
 ARG WORKDIR=/code
 RUN mkdir $WORKDIR
 ADD ./examples/ $WORKDIR/examples
