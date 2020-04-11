@@ -4,7 +4,7 @@
 
 
 [![PyPI version](https://badge.fury.io/py/pgsync.svg)](https://badge.fury.io/py/pgsync)
-[![Documentation status](https://readthedocs.org/projects/pgsync/badge/?version=latest)](https://pgsync.readthedocs.io/en/latest/?badge=latest)
+[![Documentation status](https://readthedocs.org/projects/pg-sync/badge/?version=latest)](https://pgsync.readthedocs.io/en/latest/?badge=latest)
 
 
 ## PostgreSQL to Elasticsearch sync
