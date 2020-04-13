@@ -15,7 +15,12 @@ logger = logging.getLogger(__name__)
 
 
 @click.command()
-@click.option('--teardown', '-t', is_flag=True, help='PGSync teardown')
+@click.option(
+    '--teardown',
+    '-t',
+    is_flag=True,
+    help='Teardown database triggers and replication slots'
+)
 @click.option('--config', '-c', help='Schema config')
 def main(teardown, config):
     """Application onetime Bootstrap."""
@@ -24,11 +29,8 @@ def main(teardown, config):
     if os.path.exists(CHECKPOINT):
         os.unlink(CHECKPOINT)
 
-    for database in set([
-        schema.get('index') for schema in json.load(
-            open(config)
-        )
-    ]):
+    for schema in json.load(open(config)):
+        database = schema.get('database', schema['database'])
         if teardown:
             Base(database).teardown()
         else:

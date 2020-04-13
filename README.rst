@@ -18,7 +18,7 @@ expose structured denormalized documents in `Elasticsearch <https://www.elastic.
   Enable `logical decoding <https://www.postgresql.org/docs/current/logicaldecoding.html>`__ in your 
   Postgres setting.
 
-  - you would also need to set up at least two parameters at postgresql.conf
+  - you would also need to set up two parameters in your Postgres config postgresql.conf
 
     ```wal_level = logical```
 
@@ -26,7 +26,7 @@ expose structured denormalized documents in `Elasticsearch <https://www.elastic.
 
 ### Installation
 
-You can install PGSync from `PyPI <hhttps://pypi.org>`__:
+You can install PGSync from `PyPI <https://pypi.org>`__:
 
     $ pip install pgsync
 
@@ -38,14 +38,16 @@ Create a schema for the application named e.g **schema.json**
 
 Example spec
 
-.. code-block:: json
+.. code-block::
 
     [
         {
-            "index": "[database name]",
+            "database": "[database name]",
+            "index": "[elasticsearch index]",
             "nodes": [
                 {
                     "table": "[table A]",
+                    "schema": "[table A schema]",
                     "columns": [
                         "column 1 from table A",
                         "column 2 from table A",
@@ -54,6 +56,7 @@ Example spec
                     "children": [
                         {
                             "table": "[table B with relationship to table A]",
+                            "schema": "[table B schema]",
                             "columns": [
                               "column 1 from table B",
                               "column 2 from table B",

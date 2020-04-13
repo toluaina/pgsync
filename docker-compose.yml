@@ -10,7 +10,7 @@ services:
       - POSTGRES_DB=airbnb
       - POSTGRES_PASSWORD=PLEASE_REPLACE_ME
     healthcheck: 
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U pgsync -d airbnb"]
       interval: 10s
       timeout: 5s
       retries: 5 
@@ -18,7 +18,7 @@ services:
     image: redis
     command: redis-server --requirepass PLEASE_REPLACE_ME
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.5.1
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.6.2
     ports:
       - "9201:9200"
       - "9301:9300"

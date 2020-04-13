@@ -16,7 +16,7 @@ Base = declarative_base()
 class Users(Base):
     __tablename__ = 'users'
     __table_args__ = (
-        UniqueConstraint('email', ),
+        UniqueConstraint('email'),
     )
     id = sa.Column(sa.Integer, primary_key=True)
     email = sa.Column(sa.String, unique=True, nullable=False)
@@ -25,7 +25,7 @@ class Users(Base):
 class Hosts(Base):
     __tablename__ = 'hosts'
     __table_args__ = (
-        UniqueConstraint('email', ),
+        UniqueConstraint('email'),
     )
     id = sa.Column(sa.Integer, primary_key=True)
     email = sa.Column(sa.String, unique=True, nullable=False)
@@ -95,7 +95,7 @@ class Bookings(Base):
 class Reviews(Base):
     __tablename__ = 'reviews'
     __table_args__ = (
-        UniqueConstraint('booking_id',),
+        UniqueConstraint('booking_id'),
     )
     id = sa.Column(sa.Integer, primary_key=True)
     booking_id = sa.Column(sa.Integer, sa.ForeignKey(Bookings.id))
@@ -109,9 +109,10 @@ class Reviews(Base):
 
 def setup(config=None):
     for schema in json.load(open(config)):
-        create_database(schema.get('index'))
+        database = schema.get('database', schema['index'])
+        create_database(database)
         # create schema
-        engine = pg_engine(database=schema.get('index'))
+        engine = pg_engine(database=database)
         Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)
 

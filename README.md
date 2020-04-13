@@ -4,7 +4,7 @@
 
 
 [![PyPI version](https://badge.fury.io/py/pgsync.svg)](https://badge.fury.io/py/pgsync)
-[![Documentation status](https://readthedocs.org/projects/pgsync/badge/?version=latest)](https://pgsync.readthedocs.io/en/latest/?badge=latest)
+[![Documentation status](https://readthedocs.org/projects/pg-sync/badge/?version=latest)](https://pgsync.readthedocs.io/en/latest/?badge=latest)
 
 
 ## PostgreSQL to Elasticsearch sync
@@ -26,16 +26,16 @@ without writing any code.
 It allows you to take advantage of the expressive power and scalability of 
 [Elasticsearch](https://www.elastic.co/products/elastic-stack) directly from [Postgres](https://www.postgresql.org). 
 You don't have to write complex queries and transformation pipelines.
-PGSync is lightweight, fast and flexible.
+PGSync is lightweight, flexible and fast.
 
-When we denormalize from relational to document, we lose meaning required to reconstruct any changes.
+[Elasticsearch](https://www.elastic.co/products/elastic-stack) is more suited as as secondary denormalised search engine to accompany a more traditional normalized datastore.
 Moreover, you shouldn't store your primary data in [Elasticsearch](https://www.elastic.co/products/elastic-stack).
 
 So how do you then get your data into [Elasticsearch](https://www.elastic.co/products/elastic-stack) in the first place? 
 Tools like [Logstash](https://www.elastic.co/products/logstash) and [Kafka](https://kafka.apache.org) can aid this task but they still require a bit 
 of engineering and development.
 
-[Extract Transform Load](https://en.wikipedia.org/wiki/Extract,_transform,_load) and [Change data capture](https://en.wikipedia.org/wiki/Change_data_capture) tools can be complex and expensive.
+[Extract Transform Load](https://en.wikipedia.org/wiki/Extract,_transform,_load) and [Change data capture](https://en.wikipedia.org/wiki/Change_data_capture) tools can be complex and require expensive engineering effort.
 
 Other benefits of PGSync include:
 - Real-time analytics
@@ -112,24 +112,14 @@ In another shell, run
 $ docker-compose up exec -it pgsync
 ```
 
-Create a sample database
+Run PGSync against the provided sample airbnb database
 ```
-$ psql -d mydb < samples/schema.sql
-```
-
-Load some data into the sample database
-```
-$ psql -f samples/data.sql
-```
-
-Run PGSync
-```
-$ pgsync
+$ pgsync --config examples/airbnb/schema.json
 ```
 
 Show the content in Elasticsearch
 ```
-$ curl -X GET http://[elasticsearch host]:9200/[index_name]
+$ curl -X GET http://[elasticsearch host]:9200/airbnb
 ```
 
 ##### Manual configuration
@@ -158,11 +148,10 @@ Key features of PGSync are:
 - Transactionally consistent output in Elasticsearch. This means: writes appear only when they are committed to the database, insert, update and delete operations appear in the same order as they were committed (as opposed to eventual consistency).
 - Fault-tolerant: does not lose data, even if processes crash or a network interruption occurs, etc. The process can be recovered from the last checkpoint.
 - Returns the data directly as Postgres JSON from the database for speed.
-- Transforms the data on the fly e.g rename labels before indexing.
 - Supports composite primary and foreign keys.
 - Supports an arbitrary depth of nested entities i.e Tables having long chain of relationship dependencies.
 - Supports Postgres JSON data fields. This means: we can extract JSON fields in a database table as a separate field in the resulting document.
-- Fully customizable document structure.
+- Customizable document structure.
 
 
 #### Requirements
@@ -282,7 +271,7 @@ e.g
 ```json
   {
       "isbn": "9781471331435",
-      "this_is_a_long_title": "1984",
+      "this_is_a_custom_title": "1984",
       "desc": "1984 was George Orwell’s chilling prophecy about the dystopian future",
       "contributors": ["George Orwell"]
   }
@@ -290,8 +279,8 @@ e.g
 
 PGSync addresses the following challenges:
 - What if we update the author's name in the database?
-- What if we wanted to add another author for a book?
-- What if we have lots of documents already with the same author we wanted to change?
+- What if we wanted to add another author for an existing book?
+- What if we have lots of documents already with the same author we wanted to change the author name?
 - What if we delete or update an author?
 - What if we truncate an entire table?
 
@@ -304,6 +293,7 @@ PGSync addresses the following challenges:
 - PGSync generates advanced queries matching your schema directly.
 - PGSync allows you to easily rebuild your indexes in case of a schema change.
 - You can expose only the data you require in Elasticsearch.
+- Supports multiple Postgres schemas for multi-tennant applications.
 
 
 #### Contributing

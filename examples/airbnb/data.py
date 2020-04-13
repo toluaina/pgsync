@@ -20,7 +20,7 @@ def main(config):
     config = get_config(config)
     teardown(drop_db=False, config=config)
     schema = json.load(open(config))
-    engine = pg_engine(database=schema[0].get('index'))
+    engine = pg_engine(database=schema[0].get('database', schema[0]['index']))
     Session = sessionmaker(bind=engine, autoflush=True)
     session = Session()
 
@@ -63,7 +63,7 @@ def main(config):
             name='Havana',
             country=Countries(
                 name='Cuba',
-                country_code='PT',
+                country_code='CU',
             ),
         ),
         Cities(
@@ -133,7 +133,7 @@ def main(config):
                 num_nights=4,
             ),
             rating=1,
-            review_body='Neque porro quisquam est qui dolorem'
+            review_body='The rooms were left in a tolerable state'
         ),
         Reviews(
             booking=Bookings(
@@ -145,7 +145,7 @@ def main(config):
                 num_nights=3,
             ),
             rating=2,
-            review_body='Sed eget finibus massa, vel efficitur mauris'
+            review_body='I found my place wonderfully taken care of'
         ),
         Reviews(
             booking=Bookings(
@@ -157,7 +157,7 @@ def main(config):
                 num_nights=4,
             ),
             rating=3,
-            review_body='Suspendisse cursus ex et turpis dignissim dignissim'
+            review_body='All of my house rules were respected'
         ),
         Reviews(
             booking=Bookings(
@@ -169,7 +169,7 @@ def main(config):
                 num_nights=5,
             ),
             rating=4,
-            review_body='Suspendisse ultricies arcu lectus'
+            review_body='Such a pleasure to host and welcome these guests'
         ),
         Reviews(
             booking=Bookings(
@@ -181,7 +181,7 @@ def main(config):
                 num_nights=3,
             ),
             rating=5,
-            review_body='Putent sententiae scribentur ne vis'
+            review_body='We would be happy to host them again'
         ),
         Reviews(
             booking=Bookings(
@@ -193,7 +193,7 @@ def main(config):
                 num_nights=10,
             ),
             rating=3,
-            review_body='Debet invenire sed ne'
+            review_body='Please do not visit our town ever again!'
         ),
     ]
 
