@@ -1,4 +1,5 @@
 FROM python:3.7
+RUN apt-get -y update && apt-get install -y supervisor
 ARG WORKDIR=/code
 RUN mkdir $WORKDIR
 ADD ./examples/ $WORKDIR/examples
