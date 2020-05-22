@@ -1,21 +1,21 @@
 # PostgreSQL to Elasticsearch sync
 
 
-`PGSync <https://pgsync.com>`__ is a middleware for syncing data from `Postgres <https://www.postgresql.org>`__ to `Elasticsearch <https://www.elastic.co/products/elastic-stack>`__.  
-It allows you to keep `Postgres <https://www.postgresql.org>`__ as your source of truth data source and
-expose structured denormalized documents in `Elasticsearch <https://www.elastic.co/products/elastic-stack>`__.
+`PGSync <https://pgsync.com>`_ is a middleware for syncing data from `Postgres <https://www.postgresql.org>`_ to `Elasticsearch <https://www.elastic.co/products/elastic-stack>`_.  
+It allows you to keep `Postgres <https://www.postgresql.org>`_ as your source of truth data source and
+expose structured denormalized documents in `Elasticsearch <https://www.elastic.co/products/elastic-stack>`_.
 
 
 ### Requirements
 
-- `Python <https://www.python.org>`__ 3.6+
-- `Postgres <https://www.postgresql.org>`__ 9.4+
-- `Redis <https://redis.io>`__
-- `Elasticsearch <https://www.elastic.co/products/elastic-stack>`__ 6.3.1+
+- `Python <https://www.python.org>`_ 3.6+
+- `Postgres <https://www.postgresql.org>`_ 9.4+
+- `Redis <https://redis.io>`_
+- `Elasticsearch <https://www.elastic.co/products/elastic-stack>`_ 6.3.1+
 
 ### Postgres setup
   
-  Enable `logical decoding <https://www.postgresql.org/docs/current/logicaldecoding.html>`__ in your 
+  Enable `logical decoding <https://www.postgresql.org/docs/current/logicaldecoding.html>`_ in your 
   Postgres setting.
 
   - you would also need to set up two parameters in your Postgres config postgresql.conf
@@ -26,7 +26,7 @@ expose structured denormalized documents in `Elasticsearch <https://www.elastic.
 
 ### Installation
 
-You can install PGSync from `PyPI <https://pypi.org>`__:
+You can install PGSync from `PyPI <https://pypi.org>`_:
 
     $ pip install pgsync
 
@@ -34,7 +34,7 @@ You can install PGSync from `PyPI <https://pypi.org>`__:
 
 Create a schema for the application named e.g **schema.json**
 
-`Example schema <https://github.com/toluaina/pg-sync/blob/master/examples/airbnb/schema.json>`__
+`Example schema <https://github.com/toluaina/pg-sync/blob/master/examples/airbnb/schema.json>`_
 
 Example spec
 

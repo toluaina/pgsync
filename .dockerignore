@@ -10,3 +10,5 @@ Dockerfile
 # Coverage
 **/.coverage.xml
 **/coverage.xml
+
+.env

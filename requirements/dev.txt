@@ -5,73 +5,74 @@
 #    pip-compile --output-file=requirements/dev.txt requirements/dev.in
 #
 attrs==19.3.0             # via pytest
-bleach==3.1.4             # via readme-renderer
-bumpversion==0.5.3        # via -r requirements/dev.in
-certifi==2020.4.5.1       # via requests
+bleach==3.1.5             # via readme-renderer
+bump2version==1.0.0       # via bumpversion
+bumpversion==0.6.0        # via -r requirements/dev.in
+certifi==2020.4.5.1       # via elasticsearch, requests
 chardet==3.0.4            # via requests
-click==7.1.1              # via -r requirements/base.in, pip-tools
-coverage==5.0.4           # via -r requirements/dev.in, pytest-cov
-cython==0.29.16           # via -r requirements/dev.in
+click==7.1.2              # via -r requirements/base.in, pip-tools
+coverage==5.1             # via -r requirements/dev.in, pytest-cov
+cython==0.29.17           # via -r requirements/dev.in
 docutils==0.16            # via readme-renderer
-elasticsearch-dsl==7.1.0  # via -r requirements/base.in
-elasticsearch==7.6.0      # via elasticsearch-dsl
-entrypoints==0.3          # via flake8
-environs==7.3.1           # via -r requirements/base.in
-faker==4.0.2              # via -r requirements/base.in
+elasticsearch-dsl==7.2.0  # via -r requirements/base.in
+elasticsearch==7.7.0      # via elasticsearch-dsl
+environs==7.4.0           # via -r requirements/base.in
+faker==4.1.0              # via -r requirements/base.in
 flake8-debugger==3.2.1    # via -r requirements/test.in
 flake8-docstrings==1.5.0  # via -r requirements/test.in
-flake8-isort==2.9.1       # via -r requirements/test.in
+flake8-isort==3.0.0       # via -r requirements/test.in
 flake8-print==3.1.4       # via -r requirements/test.in
 flake8-todo==0.7          # via -r requirements/test.in
-flake8==3.7.9             # via flake8-debugger, flake8-docstrings, flake8-isort, flake8-print
+flake8==3.8.1             # via flake8-debugger, flake8-docstrings, flake8-isort, flake8-print
 idna==2.9                 # via requests
-importlib-metadata==1.6.0  # via keyring, pluggy, pytest, twine
+importlib-metadata==1.6.0  # via flake8, keyring, pluggy, pytest, twine
 isort[pyproject]==4.3.21  # via flake8-isort
-keyring==21.2.0           # via twine
-marshmallow==3.5.1        # via environs
+keyring==21.2.1           # via twine
+marshmallow==3.6.0        # via environs
 mccabe==0.6.1             # via flake8
 mock==4.0.2               # via -r requirements/test.in
 more-itertools==8.2.0     # via pytest
-packaging==20.3           # via pytest, pytest-sugar
+packaging==20.3           # via bleach, pytest, pytest-sugar
 pathtools==0.1.2          # via watchdog
-pip-tools==4.5.1          # via -r requirements/dev.in
+pip-tools==5.1.2          # via -r requirements/dev.in
 pkginfo==1.5.0.1          # via twine
 pluggy==0.13.1            # via pytest
 psycopg2-binary==2.8.5    # via -r requirements/base.in
 py==1.8.1                 # via pytest
-pycodestyle==2.5.0        # via flake8, flake8-debugger, flake8-print, flake8-todo
+pycodestyle==2.6.0        # via flake8, flake8-debugger, flake8-print, flake8-todo
 pydocstyle==5.0.2         # via flake8-docstrings
-pyflakes==2.1.1           # via flake8
+pyflakes==2.2.0           # via flake8
 pygments==2.6.1           # via readme-renderer
 pyparsing==2.4.7          # via packaging
 pytest-cov==2.8.1         # via -r requirements/test.in
-pytest-mock==3.0.0        # via -r requirements/test.in
+pytest-mock==3.1.0        # via -r requirements/test.in
 pytest-runner==5.2        # via -r requirements/test.in
-pytest-sugar==0.9.2       # via -r requirements/test.in
+pytest-sugar==0.9.3       # via -r requirements/test.in
 pytest==5.3.5             # via -r requirements/test.in, pytest-cov, pytest-mock, pytest-sugar
 python-dateutil==2.8.1    # via elasticsearch-dsl, faker
-python-dotenv==0.12.0     # via environs
-readme-renderer==25.0     # via twine
-redis==3.4.1              # via -r requirements/base.in
+python-dotenv==0.13.0     # via environs
+readme-renderer==26.0     # via twine
+redis==3.5.2              # via -r requirements/base.in
 requests-toolbelt==0.9.1  # via twine
 requests==2.23.0          # via requests-toolbelt, twine
 six==1.14.0               # via bleach, elasticsearch-dsl, flake8-print, packaging, pip-tools, python-dateutil, readme-renderer
 snowballstemmer==2.0.0    # via pydocstyle
-sqlalchemy==1.3.15        # via -r requirements/base.in
+sqlalchemy==1.3.17        # via -r requirements/base.in
 sqlparse==0.3.1           # via -r requirements/base.in
-supervisor==4.1.0         # via -r requirements/dev.in
+supervisor==4.2.0         # via -r requirements/dev.in
 termcolor==1.1.0          # via pytest-sugar
-testfixtures==6.14.0      # via flake8-isort
+testfixtures==6.14.1      # via flake8-isort
 text-unidecode==1.3       # via faker
-toml==0.10.0              # via isort
-tqdm==4.45.0              # via twine
+toml==0.10.1              # via isort
+tqdm==4.46.0              # via twine
 twine==3.1.1              # via -r requirements/dev.in
-urllib3==1.25.8           # via elasticsearch, requests
+urllib3==1.25.9           # via elasticsearch, requests
 watchdog==0.10.2          # via -r requirements/dev.in
 wcwidth==0.1.9            # via pytest
 webencodings==0.5.1       # via bleach
-wheel==0.31.1             # via -r requirements/dev.in
+wheel==0.34.2             # via -r requirements/dev.in
 zipp==3.1.0               # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
+# pip
 # setuptools

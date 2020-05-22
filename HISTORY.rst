@@ -23,3 +23,11 @@ History
  
   * bootstrap -t
   * bootstrap
+
+
+1.1.1 (2020-05-18)
+------------------
+
+* Fixed authentication with Redis
+* Fixed Docker build
+

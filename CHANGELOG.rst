@@ -23,3 +23,10 @@ Changelog
 * this release required you to re-bootstrap your database with 
  - bootstrap -t
  - bootstrap
+
+
+1.1.1 (2020-05-18)
+------------------
+
+* Fixed authentication with Redis
+* Fixed Docker build

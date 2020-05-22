@@ -7,18 +7,13 @@ services:
       - "15432:5432"
     environment:
       - POSTGRES_USER=pgsync
-      - POSTGRES_DB=airbnb
       - POSTGRES_PASSWORD=PLEASE_REPLACE_ME
-    healthcheck: 
-      test: ["CMD-SHELL", "pg_isready -U pgsync -d airbnb"]
-      interval: 10s
-      timeout: 5s
-      retries: 5 
+      - POSTGRES_DB=airbnb
   redis:
     image: redis
     command: redis-server --requirepass PLEASE_REPLACE_ME
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.6.2
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.7.0
     ports:
       - "9201:9200"
       - "9301:9300"
@@ -30,6 +25,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    command: ./runserver.sh
     labels:
       org.label-schema.name: "pgsync"
       org.label-schema.description: "Postgres to elasticsearch sync"
@@ -42,9 +38,9 @@ services:
       - PG_USER=pgsync
       - PG_HOST=postgres
       - PG_PASSWORD=PLEASE_REPLACE_ME
+      - LOG_LEVEL=INFO
       - ELASTICSEARCH_PORT=9200
       - ELASTICSEARCH_SCHEME=http
       - ELASTICSEARCH_HOST=elasticsearch
       - REDIS_HOST=redis
       - REDIS_AUTH=PLEASE_REPLACE_ME
-
