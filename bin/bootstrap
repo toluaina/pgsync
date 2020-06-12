@@ -8,7 +8,6 @@ import os
 import click
 
 from pgsync.base import Base
-from pgsync.settings import CHECKPOINT
 from pgsync.utils import get_config
 
 logger = logging.getLogger(__name__)
@@ -21,20 +20,38 @@ logger = logging.getLogger(__name__)
     is_flag=True,
     help='Teardown database triggers and replication slots'
 )
+@click.option('--password', is_flag=True, help='Prompt for database password')
+@click.option('--user', '-u', help='PG_USER overide')
+@click.option('--host', '-h', help='PG_HOST overide')
+@click.option('--port', '-p', help='PG_PORT overide', type=int)
 @click.option('--config', '-c', help='Schema config')
-def main(teardown, config):
+def main(teardown, config, user, password, host, port):
     """Application onetime Bootstrap."""
+    pg_params = {
+        'user': user,
+        'host': host,
+        'port': port,
+    }
+    if password:
+        pg_params['password'] = click.prompt(
+            "Password",
+            type=str,
+            hide_input=True,
+        )
+    pg_params = {
+        key: value for key, value in pg_params.items() if value is not None
+    }
 
     config = get_config(config)
-    if os.path.exists(CHECKPOINT):
-        os.unlink(CHECKPOINT)
 
     for schema in json.load(open(config)):
         database = schema.get('database', schema['database'])
+        if os.path.exists(f'.{database}'):
+            os.unlink(f'.{database}')
         if teardown:
-            Base(database).teardown()
+            Base(database, **pg_params).teardown()
         else:
-            Base(database).setup()
+            Base(database, **pg_params).setup()
             logger.info(f'Bootstrap: {database}')
 
 

@@ -6,17 +6,17 @@
 #
 certifi==2020.4.5.1       # via elasticsearch
 click==7.1.2              # via -r requirements/base.in
-elasticsearch-dsl==7.2.0  # via -r requirements/base.in
-elasticsearch==7.7.0      # via elasticsearch-dsl
-environs==7.4.0           # via -r requirements/base.in
+elasticsearch-dsl==7.2.1  # via -r requirements/base.in
+elasticsearch==7.7.1      # via elasticsearch-dsl
+environs==8.0.0           # via -r requirements/base.in
 faker==4.1.0              # via -r requirements/base.in
-marshmallow==3.6.0        # via environs
-newrelic==5.12.1.141      # via -r requirements/prod.in
+marshmallow==3.6.1        # via environs
+newrelic==5.14.0.142      # via -r requirements/prod.in
 psycopg2-binary==2.8.5    # via -r requirements/base.in
 python-dateutil==2.8.1    # via elasticsearch-dsl, faker
 python-dotenv==0.13.0     # via environs
-redis==3.5.2              # via -r requirements/base.in
-six==1.14.0               # via elasticsearch-dsl, python-dateutil
+redis==3.5.3              # via -r requirements/base.in
+six==1.15.0               # via elasticsearch-dsl, python-dateutil
 sqlalchemy==1.3.17        # via -r requirements/base.in
 sqlparse==0.3.1           # via -r requirements/base.in
 text-unidecode==1.3       # via faker

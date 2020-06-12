@@ -44,4 +44,3 @@ services:
       - ELASTICSEARCH_HOST=elasticsearch
       - REDIS_HOST=redis
       - REDIS_AUTH=PLEASE_REPLACE_ME
-

@@ -31,3 +31,10 @@ History
 * Fixed authentication with Redis
 * Fixed Docker build
 
+
+1.1.2 (2020-06-11)
+------------------
+
+* Sync multiple indices in the same schema
+* Test for replication or superuser
+* Fix PG_NOTIFY error when payload exceeds 8000 bytes limit
