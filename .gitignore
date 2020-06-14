@@ -105,11 +105,11 @@ venv.bak/
 .mypy_cache/
 
 # pgsync
-.book
-.social
-.airline
-.movie
-.quiz
-.rental
-.social
-.shakespeare
+.book*
+.social*
+.airline*
+.movie*
+.quiz*
+.rental*
+.social*
+.shakespeare*

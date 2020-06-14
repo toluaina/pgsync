@@ -38,3 +38,9 @@ History
 * Sync multiple indices in the same schema
 * Test for replication or superuser
 * Fix PG_NOTIFY error when payload exceeds 8000 bytes limit
+
+
+1.1.3 (2020-06-14)
+------------------
+
+* Bug fix when syncing multiple indices in the same schema
