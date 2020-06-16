@@ -44,3 +44,15 @@ History
 ------------------
 
 * Bug fix when syncing multiple indices in the same schema
+
+
+1.1.4 (2020-06-15)
+------------------
+
+* Only create triggers for tables present in schema
+
+
+1.1.5 (2020-06-16)
+------------------
+
+* Bug fix when creating multiple triggers in same schema
