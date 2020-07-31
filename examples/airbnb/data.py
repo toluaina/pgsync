@@ -19,8 +19,8 @@ def main(config):
 
     config = get_config(config)
     teardown(drop_db=False, config=config)
-    schema = json.load(open(config))
-    engine = pg_engine(database=schema[0].get('database', schema[0]['index']))
+    document = json.load(open(config))
+    engine = pg_engine(database=document[0].get('database', document[0]['index']))
     Session = sessionmaker(bind=engine, autoflush=True)
     session = Session()
 

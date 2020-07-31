@@ -3,7 +3,6 @@
 """PGSync bootstrap."""
 import json
 import logging
-import os
 
 import click
 
@@ -47,11 +46,6 @@ def main(teardown, config, user, password, host, port):
     for document in json.load(open(config)):
 
         sync = Sync(document, **pg_params)
-
-        try:
-            os.unlink(sync._checkpoint_file)
-        except IOError:
-            pass
 
         if teardown:
             sync.teardown()

@@ -108,8 +108,8 @@ class Reviews(Base):
 
 
 def setup(config=None):
-    for schema in json.load(open(config)):
-        database = schema.get('database', schema['index'])
+    for document in json.load(open(config)):
+        database = document.get('database', document['index'])
         create_database(database)
         # create schema
         engine = pg_engine(database=database)

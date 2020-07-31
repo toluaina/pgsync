@@ -58,3 +58,7 @@ Changelog
 * Bug fix when creating multiple triggers in same schema
 
 
+1.1.6 (2020-07-31)
+------------------
+
+* Bug fix when tearing down secondary schema
