@@ -62,3 +62,11 @@ History
 ------------------
 
 * Bug fix when tearing down secondary schema
+
+
+1.1.7 (2020-08-16)
+------------------
+
+* Fix issue #29: SQLAlchemy err: Neither 'BooleanClauseList' object nor 'Comparator' object has an attribute '_orig'
+
+

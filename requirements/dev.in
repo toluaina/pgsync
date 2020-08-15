@@ -1,8 +1,6 @@
 -r base.in
 -r test.in
 
-supervisor
-watchdog
 coverage
 twine
 pip-tools

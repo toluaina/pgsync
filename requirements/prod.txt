@@ -7,11 +7,11 @@
 certifi==2020.6.20        # via elasticsearch
 click==7.1.2              # via -r requirements/base.in
 elasticsearch-dsl==7.2.1  # via -r requirements/base.in
-elasticsearch==7.8.0      # via elasticsearch-dsl
+elasticsearch==7.8.1      # via elasticsearch-dsl
 environs==8.0.0           # via -r requirements/base.in
 faker==4.1.1              # via -r requirements/base.in
 marshmallow==3.7.1        # via environs
-newrelic==5.14.1.144      # via -r requirements/prod.in
+newrelic==5.16.0.145      # via -r requirements/prod.in
 psycopg2-binary==2.8.5    # via -r requirements/base.in
 python-dateutil==2.8.1    # via elasticsearch-dsl, faker
 python-dotenv==0.14.0     # via environs

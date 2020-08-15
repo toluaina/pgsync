@@ -2,13 +2,13 @@ import json
 from datetime import datetime, timedelta
 
 import click
+from schema import Bookings, Cities, Countries, Hosts, Places, Reviews, Users
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 from pgsync.base import pg_engine, subtransactions
 from pgsync.helper import teardown
 from pgsync.utils import get_config
-from schema import Bookings, Cities, Countries, Hosts, Places, Reviews, Users
 
 Base = declarative_base()
 
