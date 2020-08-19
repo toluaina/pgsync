@@ -69,3 +69,8 @@ Changelog
 
 * Fix issue #29: SQLAlchemy err: Neither 'BooleanClauseList' object nor 'Comparator' object has an attribute '_orig'
 
+
+1.1.8 (2020-08-19)
+------------------
+
+* Fix issue #30: Traceback AttributeError: id
