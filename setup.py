@@ -28,7 +28,7 @@ NAME = 'pgsync'
 DESCRIPTION = 'Postgres to elasticsearch sync'
 URL = 'https://github.com/toluaina/pg-sync'
 AUTHOR = MAINTAINER = 'Tolu Aina'
-AUTHOR_EMAIL = MAINTAINER_EMAIL = 'tolu@pgsync.com'
+AUTHOR_EMAIL = MAINTAINER_EMAIL = 'toluaina@hotmail.com'
 PYTHON_REQUIRES = '>=3.6.0'
 VERSION = get_version()
 INSTALL_REQUIRES = []

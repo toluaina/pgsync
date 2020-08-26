@@ -8,3 +8,4 @@ bumpversion
 setuptools
 wheel
 cython
+mkdocs

@@ -5,7 +5,7 @@ Credits
 Development Lead
 ----------------
 
-* Tolu Aina <tolu@pgsync.com>
+* Tolu Aina <toluaina@hotmail.com>
 
 Contributors
 ------------

@@ -74,3 +74,10 @@ History
 ------------------
 
 * Fix issue #30: Traceback AttributeError: id
+
+
+1.1.9 (2020-08-26)
+------------------
+
+* Fix issue #33: Unable to set redis port via environment variable.
+
