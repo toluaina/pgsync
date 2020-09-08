@@ -16,7 +16,7 @@ expose structured denormalized documents in [Elasticsearch](https://www.elastic.
 Changes to nested entities are propagated to [Elasticsearch](https://www.elastic.co/products/elastic-stack).
 PGSync's advanced query builder then generates optimized SQL queries 
 on the fly based on your schema.
-PGsync's advisory model allows you to quickly move and transform large volumes of data quickly whilst maintaining relational integrity.
+PGSync's advisory model allows you to quickly move and transform large volumes of data quickly whilst maintaining relational integrity.
 
 Simply describe your document structure or schema in JSON and [PGSync](https://pgsync.com) will 
 continuously capture changes in your data and load it into [Elasticsearch](https://www.elastic.co/products/elastic-stack) 

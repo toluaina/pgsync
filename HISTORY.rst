@@ -79,5 +79,24 @@ History
 1.1.9 (2020-08-26)
 ------------------
 
-* Fix issue #33: Unable to set redis port via environment variable.
+* Fix issue #33: Unable to set Redis port via environment variable.
 
+
+1.1.10 (2020-08-29)
+------------------
+
+* Support Amazon RDS #16
+* Optimize database reflection on startup
+* Show elapsed time
+
+
+1.1.11 (2020-09-07)
+------------------
+
+* Support specify Elasticsearch field data type
+
+
+1.1.12 (2020-09-08)
+------------------
+
+* Add support for SSL TCP/IP connection mode
