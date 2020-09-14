@@ -107,16 +107,6 @@ Run:
 $ docker-compose up
 ```
 
-In another shell, run 
-```
-$ docker-compose up exec -it pgsync
-```
-
-Run PGSync against the provided sample airbnb database
-```
-$ pgsync --config examples/airbnb/schema.json
-```
-
 Show the content in Elasticsearch
 ```
 $ curl -X GET http://[elasticsearch host]:9200/airbnb
