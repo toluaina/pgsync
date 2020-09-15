@@ -109,7 +109,7 @@ $ docker-compose up
 
 Show the content in Elasticsearch
 ```
-$ curl -X GET http://[elasticsearch host]:9200/airbnb
+$ curl -X GET http://[elasticsearch host]:9201/reservations/_search?pretty=true
 ```
 
 ##### Manual configuration
