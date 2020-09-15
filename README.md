@@ -88,7 +88,7 @@ PGSync operates in an event-driven model by creating triggers for tables in your
 
 *This is the only time PGSync will ever make any changes to your database.*
 
-**NOTE**: **if you change your database schema, or PGSync's schema config, you would need to drop and rebuild your indexes.**
+**NOTE**: **If you change the structure of your PGSync's schema config, you would need to rebuild your Elasticsearch indices.**
 There are plans to support zero-downtime migrations to streamline this process.
 
 
