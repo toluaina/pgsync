@@ -27,8 +27,6 @@ from .settings import (
 
 logger = logging.getLogger(__name__)
 
-_cache = {}
-
 
 def progress(
     iteration,
@@ -161,16 +159,7 @@ def get_transform(node):
 
 
 def transform(key, row, node):
-    # """
-    # TODO: Cache not working
-    # if key not in _cache:
-    #     _cache[key] = get_structure(node)
-    # structure = _cache[key]
-    # print(structure)
-    # return map_fields(row, structure)
-    # """
     structure = get_transform(node)
-    # print(structure)
     return map_fields(row, structure)
 
 

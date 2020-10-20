@@ -324,7 +324,7 @@ class QueryBuilder(object):
             ).label('_keys')
         )
 
-        columns = [_keys, ]
+        columns = [_keys]
         # We need to include through keys and the actual keys
         if node.relationship_variant == SCALAR:
             columns.append(
@@ -479,7 +479,7 @@ class QueryBuilder(object):
         outer_subquery = outer_subquery.alias()
 
         if self.verbose:
-            compiled_query(outer_subquery, 'Outer sub-query')
+            compiled_query(outer_subquery, 'Outer subquery')
 
         through_primary_keys = get_primary_keys(through)
 
@@ -542,7 +542,7 @@ class QueryBuilder(object):
         inner_subquery = sa.select(columns)
 
         if self.verbose:
-            compiled_query(inner_subquery, 'Inner sub-query')
+            compiled_query(inner_subquery, 'Inner subquery')
 
         onclause = []
         for i in range(len(left_foreign_keys)):
@@ -588,7 +588,7 @@ class QueryBuilder(object):
         )
 
         if self.verbose:
-            compiled_query(subquery, 'Combined sub-query')
+            compiled_query(subquery, 'Combined subquery')
 
         node._subquery = subquery.alias()
 
@@ -791,7 +791,7 @@ class QueryBuilder(object):
         if node.is_root:
             self._root(node)
         else:
-            # 2) sub-query: these are for children creating their own columns
+            # 2) subquery: these are for children creating their own columns
             if node.through_tables:
                 self._through(node)
             else:

@@ -265,11 +265,23 @@ class Sync(Base):
         The basic assumption is that all payloads in the list have the
         same tg_op and table name.
 
-        e.g: [
-        {'tg_op': 'INSERT', 'table': 'book', 'old': {'id': 1}'new': {'id': 4}}
-        {'tg_op': 'INSERT', 'table': 'book', 'old': {'id': 2}'new': {'id': 5}}
-        {'tg_op': 'INSERT', 'table': 'book', 'old': {'id': 3}'new': {'id': 6}}
-        ...
+        e.g:
+        [
+            {
+                'tg_op': 'INSERT',
+                'table': 'book',
+                'old': {'id': 1}'new': {'id': 4}
+            },
+            {
+                'tg_op': 'INSERT',
+                'table': 'book',
+                'old': {'id': 2}'new': {'id': 5}
+            },
+            {   'tg_op': 'INSERT',
+                'table': 'book',
+                'old': {'id': 3}'new': {'id': 6},
+            }
+            ...
         ]
 
         """
