@@ -2,7 +2,7 @@ coverage:
   status:
     project:
       default:
-        threshold: 60%
+        threshold: 70%
 
 codecov:
   archive: 

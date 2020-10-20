@@ -1,0 +1,210 @@
+[
+    {
+        "database": "book",
+        "index": "book",
+        "setting": {
+            "analysis": {
+                "analyzer": {
+                    "ngram_analyzer": {
+                        "filter": [
+                            "lowercase"
+                        ],
+                        "type": "custom",
+                        "tokenizer": "ngram_tokenizer"
+                    }
+                },
+                "tokenizer": {
+                    "ngram_tokenizer": {
+                        "token_chars": [
+                            "letter",
+                            "digit",
+                            "punctuation",
+                            "symbol"
+                        ],
+                        "min_gram": "9",
+                        "type": "nGram",
+                        "max_gram": "10"
+                    }
+                }
+            }
+        },
+        "nodes": [
+            {
+                "table": "book",
+                "columns": [
+                    "id",
+                    "isbn",
+                    "title",
+                    "description"
+                ],
+                "transform": {
+                    "rename": {
+                        "id": "book_id",
+                        "isbn": "book_isbn",
+                        "title": "book_title"
+                    },
+                    "mapping": {
+                        "book_id": {
+                            "type": "long"
+                        },
+                        "book_isbn": {
+                            "type": "text",
+                            "fields":{
+                                "ngram": {
+                                    "type": "text",
+                                    "analyzer": "ngram_analyzer",
+                                    "search_analyzer": "ngram_analyzer",
+                                    "fielddata": true
+                                }
+                            }
+                        }
+                    }
+                },
+                "children": [
+                    {
+                        "table": "publisher",
+                        "columns": [
+                            "name",
+                            "id"
+                        ],
+                        "label": "publisher_label",
+                        "relationship": {
+                            "variant": "object",
+                            "type": "one_to_one"
+                        },
+                        "children": [
+
+                        ],
+                        "transform": {
+                            "rename": {
+                                "id": "publisher_id",
+                                "name": "publisher_name"
+                            },
+
+                            "concat": {
+                                "columns": ["publisher_id", "publisher_name"],
+                                "into": "xyz"
+                            },
+
+                            "move": {
+                                "column": "id",
+                                "destination": "$root.author.author_id"
+                            },
+
+                            "mapping": {
+                                "publisher_id": {
+                                    "type": "long"
+                                },
+                                "publisher_name": {
+                                    "type": "keyword"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "table": "book_language",
+                        "columns": [
+                            "book_isbn",
+                            "language_id"
+                        ],
+                        "label": "book_languages",
+                        "relationship": {
+                            "variant": "object",
+                            "type": "one_to_many"
+                        }
+                    },
+                    {
+                        "table": "author",
+                        "columns": [
+                            "id", "name", "date_of_birth"
+                        ],
+                        "label": "authors",
+                        "relationship": {
+                            "type": "one_to_many",
+                            "variant": "object",
+                            "through_tables": [
+                                "book_author"
+                            ]
+                        },
+                        "children": [
+                            {
+                                "table": "city",
+                                "columns": [
+                                    "name",
+                                    "id"
+                                ],
+                                "label": "city_label",
+                                "relationship": {
+                                    "variant": "object",
+                                    "type": "one_to_one"
+                                },
+                                "children": [
+                                    {
+                                        "table": "country",
+                                        "columns": [
+                                            "name",
+                                            "id"
+                                        ],
+                                        "label": "country_label",
+                                        "relationship": {
+                                            "variant": "object",
+                                            "type": "one_to_one"
+                                        },
+                                        "children": [
+                                            {
+                                                "table": "continent",
+                                                "columns": [
+                                                    "name"
+                                                ],
+                                                "transform": {
+                                                    "mapping": {
+                                                        "name": {
+                                                            "type": "keyword"
+                                                        }
+                                                    }
+                                                },
+                                                "label": "continent_label",
+                                                "relationship": {
+                                                    "variant": "object",
+                                                    "type": "one_to_one"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "table": "language",
+                        "label": "languages",
+                        "columns": [
+                            "code"
+                        ],
+                        "relationship": {
+                            "type": "one_to_many",
+                            "variant": "scalar",
+                            "through_tables": [
+                                "book_language"
+                            ]
+                        }
+                    },
+                    {
+                        "table": "subject",
+                        "label": "subjects",
+                        "columns": [
+                            "name"
+                        ],
+                        "relationship": {
+                            "type": "one_to_many",
+                            "variant": "scalar",
+                            "through_tables": [
+                                "book_subject"
+                            ]
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+]

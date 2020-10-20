@@ -1,0 +1,39 @@
+[
+    {
+        "database": "airline",
+        "index": "airline",
+        "nodes": [
+            {
+                "table": "bookings",
+                "schema": "bookings",
+                "children": [
+                    {
+                        "table": "tickets",
+                        "schema": "bookings",
+                        "columns": [
+                            "contact_data->email",
+                            "contact_data->phone"
+                        ],
+                        "relationship": {
+                            "variant": "object",
+                            "type": "one_to_many"
+                        },
+                        "children":[
+                            {
+                                "table": "boarding_passes",
+                                "schema": "bookings",
+                                "relationship": {
+                                    "variant": "object",
+                                    "type": "one_to_one",
+                                    "through_tables": [
+                                        "ticket_flights"
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+]

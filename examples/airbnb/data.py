@@ -14,7 +14,12 @@ Base = declarative_base()
 
 
 @click.command()
-@click.option('--config', '-c', help='Schema config')
+@click.option(
+    '--config',
+    '-c',
+    help='Schema config',
+    type=click.Path(exists=True),
+)
 def main(config):
 
     config = get_config(config)
@@ -133,7 +138,7 @@ def main(config):
                 num_nights=4,
             ),
             rating=1,
-            review_body='The rooms were left in a tolerable state'
+            review_body='The rooms were left in a tolerable state',
         ),
         Reviews(
             booking=Bookings(
@@ -145,7 +150,7 @@ def main(config):
                 num_nights=3,
             ),
             rating=2,
-            review_body='I found my place wonderfully taken care of'
+            review_body='I found my place wonderfully taken care of',
         ),
         Reviews(
             booking=Bookings(
@@ -157,7 +162,7 @@ def main(config):
                 num_nights=4,
             ),
             rating=3,
-            review_body='All of my house rules were respected'
+            review_body='All of my house rules were respected',
         ),
         Reviews(
             booking=Bookings(
@@ -169,7 +174,7 @@ def main(config):
                 num_nights=5,
             ),
             rating=4,
-            review_body='Such a pleasure to host and welcome these guests'
+            review_body='Such a pleasure to host and welcome these guests',
         ),
         Reviews(
             booking=Bookings(
@@ -181,7 +186,7 @@ def main(config):
                 num_nights=3,
             ),
             rating=5,
-            review_body='We would be happy to host them again'
+            review_body='We would be happy to host them again',
         ),
         Reviews(
             booking=Bookings(
@@ -193,7 +198,7 @@ def main(config):
                 num_nights=10,
             ),
             rating=3,
-            review_body='Please do not visit our town ever again!'
+            review_body='Please do not visit our town ever again!',
         ),
     ]
 

@@ -14,16 +14,21 @@ logger = logging.getLogger(__name__)
 
 @click.command()
 @click.option(
+    '--config',
+    '-c',
+    help='Schema config',
+    type=click.Path(exists=True),
+)
+@click.option('--host', '-h', help='PG_HOST overide')
+@click.option('--password', is_flag=True, help='Prompt for database password')
+@click.option('--port', '-p', help='PG_PORT overide', type=int)
+@click.option(
     '--teardown',
     '-t',
     is_flag=True,
-    help='Teardown database triggers and replication slots'
+    help='Teardown database triggers and replication slots',
 )
-@click.option('--password', is_flag=True, help='Prompt for database password')
 @click.option('--user', '-u', help='PG_USER overide')
-@click.option('--host', '-h', help='PG_HOST overide')
-@click.option('--port', '-p', help='PG_PORT overide', type=int)
-@click.option('--config', '-c', help='Schema config')
 @click.option(
     '--verbose',
     '-v',

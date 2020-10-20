@@ -1,0 +1,126 @@
+#!/usr/bin/env python
+
+"""Create a custom NGram analyzer for the default mapping."""
+import json
+import logging
+
+import click
+from elasticsearch import Elasticsearch, helpers
+
+from pgsync.settings import ELASTICSEARCH_TIMEOUT, ELASTICSEARCH_VERIFY_CERTS
+from pgsync.utils import get_config, get_elasticsearch_url, timeit
+
+logger = logging.getLogger(__name__)
+
+NGRAM_ANALYZER = {
+    'analysis': {
+        'analyzer': {
+            'ngram_analyzer': {
+                'filter': [
+                    'lowercase'
+                ],
+                'type': 'custom',
+                'tokenizer': 'ngram_tokenizer',
+            },
+        },
+        'tokenizer': {
+            'ngram_tokenizer': {
+                'token_chars': [
+                    'letter',
+                    'digit',
+                    'punctuation',
+                    'symbol',
+                ],
+                'min_gram': '3',
+                'type': 'ngram',
+                'max_gram': '10',
+            },
+        },
+    },
+    'max_ngram_diff': 10,
+}
+
+
+def apply_analyzer_to_mapping(mapping, analyzer):
+    _mapping = {}
+    for key, value in mapping.items():
+        if isinstance(value, dict):
+            if 'fields' in value:
+                value['fields']['ngram'] = analyzer
+            value = apply_analyzer_to_mapping(value, analyzer)
+        _mapping[key] = value
+    return _mapping
+
+
+def get_configuration(es, index):
+    configuration = es.indices.get_settings(index)[index]
+    # skip these attributes
+    for key in [
+        'uuid',
+        'version',
+        'provided_name',
+        'creation_date',
+    ]:
+        configuration['settings']['index'].pop(key)
+    mapping = es.indices.get_mapping(index)
+    analyzer_mapping = apply_analyzer_to_mapping(
+        mapping,
+        {
+            'analyzer': 'ngram_analyzer',
+            'search_analyzer': 'ngram_analyzer',
+            'fielddata': True,
+            'type': 'text',
+        }
+    )
+    configuration.update(**analyzer_mapping[index])
+    configuration['settings']['index'].update(**NGRAM_ANALYZER)
+    return configuration
+
+
+@timeit
+def create_es_mapping(index):
+    logger.debug(f'Create Elasticsearch mapping for index {index}')
+    url = get_elasticsearch_url()
+    es = Elasticsearch(
+        hosts=[url],
+        timeout=ELASTICSEARCH_TIMEOUT,
+        verify_certs=ELASTICSEARCH_VERIFY_CERTS,
+    )
+
+    tmp_index = 'tmp_index'
+    es.indices.delete(index=tmp_index, ignore=[400, 404])
+    es.indices.refresh()
+    configuration = get_configuration(es, index)
+    es.indices.create(index=tmp_index, body=configuration)
+    helpers.reindex(es, index, tmp_index)
+    es.indices.refresh()
+    es.indices.delete(index=index)
+    es.indices.refresh()
+    configuration = get_configuration(es, tmp_index)
+    es.indices.create(index=index, body=configuration)
+    helpers.reindex(es, tmp_index, index)
+    es.indices.delete(index=tmp_index)
+    es.indices.refresh()
+
+
+@click.command()
+@click.option(
+    '--config',
+    '-c',
+    help='Schema config',
+    type=click.Path(exists=True),
+)
+def main(config):
+    """Create custom NGram analyzer for the default mapping."""
+
+    config = get_config(config)
+    for index in set([
+        document['index'] for document in json.load(
+            open(config)
+        )
+    ]):
+        create_es_mapping(index)
+
+
+if __name__ == '__main__':
+    main()

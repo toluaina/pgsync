@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+    <meta charset="utf-8">
+    <title>PGSync autocomplete search</title>
+    <style>
+        body {
+            font-family: helvetica, sans-serif;
+            line-height: 1.4;
+        }
+        .card {
+          background: #fff;
+          border-radius: 2px;
+          display: inline-block;
+          height: 300px;
+          margin: 1rem;
+          position: relative;
+          width: 300px;
+        }
+        h2 {
+            color: white;
+            text-align:center;
+            display: block;
+            font-size: 1.5em;
+            margin-top: 1.83em;
+            margin-bottom: 1.83em;
+            margin-left: 0;
+            margin-right: 0;
+            font-weight: bold;
+        }
+    </style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons">
+<link rel="stylesheet" href="https://unpkg.com/bootstrap-material-design@4.1.1/dist/css/bootstrap-material-design.min.css" integrity="sha384-wXznGJNEXNG1NFsbm0ugrLFMQPWswR3lds2VeinahP8N0zJw9VWSopbjv2x7WCvX" crossorigin="anonymous">
+</head>
+
+<body>
+    <h1>PGSync typeahead demo</h1>
+
+    <div class="bmd-form-group bmd-collapse-inline pull-xs-right" style="top: 10%; left: 10%; position: absolute;">
+      <button class="btn bmd-btn-icon" for="search" data-toggle="collapse" data-target="#collapse-search" aria-expanded="false" aria-controls="collapse-search">
+        <i class="material-icons">search</i>
+      </button>  
+      <span id="collapse-search" class="collapse">
+        <input class="form-control" type="search" id="searchbox" placeholder="Enter your query...">
+      </span>
+    </div>
+
+    <div id="results" style="top: 20%; left: 10%; position: absolute;"></div>
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/popper.js@1.12.6/dist/umd/popper.js" integrity="sha384-fA23ZRQ3G/J53mElWqVJEGJzU0sTs+SvzG8fXVWP+kJQ1lwFAOkcUOysnlKJC33U" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/bootstrap-material-design@4.1.1/dist/js/bootstrap-material-design.js" integrity="sha384-CauSuKpEqAFajSpkdjv3z9t8E7RlpJ1UP0lKM/+NdtSarroVKu069AlsRPKkFBz9" crossorigin="anonymous"></script>
+
+    <script>
+
+        const base_url = 'http://localhost:8000/';
+        const searchbox = document.getElementById("searchbox");
+
+        let requestInFlight = null;
+
+        searchbox.onkeyup = debounce(() => {
+            const search_param = searchbox.value;
+            const url = (
+                base_url + `?q=${encodeURIComponent(search_param)}`
+            );
+
+            let currentRequest = {};
+            requestInFlight = currentRequest;
+            fetch(url).then(r => r.json()).then(d => {
+                if (requestInFlight !== currentRequest) {
+                    // Avoid race conditions where a slow request returns after a faster one.
+                    return;
+                }
+           let results = '<div class="container-fluid">' + 
+              d.map(result => `
+                <pre style= "color:gray; font-size: 15px">
+                    ${JSON.stringify(result, null, 4)}
+                </pre><hr>
+            `).join("");
+                document.getElementById("results").innerHTML = results;
+            }) + '</div>';
+        }, 100);
+
+        function debounce(func, wait, immediate) {
+            let timeout;
+            return function() {
+                let context = this,
+                    args = arguments;
+                let later = () => {
+                    timeout = null;
+                    if (!immediate) func.apply(context, args);
+                };
+                let callNow = immediate && !timeout;
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+                if (callNow) func.apply(context, args);
+            };
+        };
+
+        const highlight = (value) => value.replace(
+            /<span>/g, '<b>'
+        ).replace(
+            /<\/span>/g, '</b>'
+        );
+
+        const htmlEscape = (value) => value.replace(
+            />/g, '&gt;'
+        ).replace(
+            /</g, '&lt;'
+        ).replace(
+            /&/g, '&amp;'
+        ).replace(
+            /"/g, '&quot;'
+        ).replace(
+            /'/g, '&#039;'
+        );
+    </script>
+</body>
+
+</html>

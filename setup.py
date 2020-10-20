@@ -26,7 +26,7 @@ def get_version():
 # Package meta-data.
 NAME = 'pgsync'
 DESCRIPTION = 'Postgres to elasticsearch sync'
-URL = 'https://github.com/toluaina/pg-sync'
+URL = 'https://github.com/toluaina/pgsync'
 AUTHOR = MAINTAINER = 'Tolu Aina'
 AUTHOR_EMAIL = MAINTAINER_EMAIL = 'toluaina@hotmail.com'
 PYTHON_REQUIRES = '>=3.6.0'
@@ -45,6 +45,9 @@ CLASSIFIERS = [
     'Programming Language :: Python :: 3.6',
     'Programming Language :: Python :: 3.7',
     'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: Implementation :: CPython',
+    'Programming Language :: Python :: Implementation :: PyPy',
     'License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)',
 ]
 SCRIPTS = [
@@ -62,9 +65,6 @@ PACKAGES = []
 
 with open('README.rst') as fp:
     README = fp.read()
-
-with open('HISTORY.rst') as fp:
-    HISTORY = fp.read()
 
 with open('requirements/prod.txt') as fp:
     INSTALL_REQUIRES = fp.read()
@@ -103,13 +103,14 @@ class Builder(build_ext):
 setup(
     name=NAME,
     author=AUTHOR,
+    license='LGPLv3',
     maintainer=MAINTAINER,
     maintainer_email=MAINTAINER_EMAIL,
     author_email=AUTHOR_EMAIL,
     classifiers=CLASSIFIERS,
     python_requires=PYTHON_REQUIRES,
     description=DESCRIPTION,
-    long_description=README + '\n\n' + HISTORY,
+    long_description=README,
     long_description_content_type='text/markdown',
     install_requires=INSTALL_REQUIRES,
     include_package_data=True,
@@ -134,7 +135,7 @@ setup(
     ),
     extra_compile_args=['-finline-functions -s'],
     project_urls={
-        'Bug Reports': 'https://github.com/toluaina/pg-sync/issues',
+        'Bug Reports': 'https://github.com/toluaina/pgsync/issues',
         'Funding': 'https://patreon.com/toluaina',
         'Source': URL,
         'Web': 'https://pgsync.com',

@@ -1,0 +1,3 @@
+https://postgrespro.ru/education/demodb
+- https://edu.postgrespro.ru/demo-small.zip
+psql < data-load.sql

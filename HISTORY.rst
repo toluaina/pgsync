@@ -100,3 +100,16 @@ History
 ------------------
 
 * Add support for SSL TCP/IP connection mode
+
+
+1.1.13 (2020-09-09)
+------------------
+
+* Show version details with --version argument
+* Fixed airbnb examples docker build
+
+
+1.1.14 (2020-10-07)
+------------------
+
+* Support Elasticsearch settings for adding mapping and analyzers

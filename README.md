@@ -4,13 +4,15 @@
 
 
 [![PyPI version](https://badge.fury.io/py/pgsync.svg)](https://badge.fury.io/py/pgsync)
-[![Documentation status](https://readthedocs.org/projects/pg-sync/badge/?version=latest)](https://pgsync.readthedocs.io/en/latest/?badge=latest)
+[![Build status](https://github.com/toluaina/pgsync/workflows/build/badge.svg)](https://github.com/toluaina/pgsync/actions)
+[![Documentation status](https://readthedocs.org/projects/pgsync/badge/?version=latest)](https://pgsync.readthedocs.io/en/latest/?badge=latest)
+[![codecov](https://codecov.io/gh/toluaina/pgsync/branch/master/graph/badge.svg?token=cvQzYkz6CV)](https://codecov.io/gh/toluaina/pgsync)
 
 
 ## PostgreSQL to Elasticsearch sync
 
 [PGSync](https://pgsync.com) is a middleware for syncing data from [Postgres](https://www.postgresql.org) to [Elasticsearch](https://www.elastic.co/products/elastic-stack) effortlessly.
-It allows you to keep [Postgres](https://www.postgresql.org) as your source of truth data source and
+It allows you to keep [Postgres](https://www.postgresql.org) as your source of truth and
 expose structured denormalized documents in [Elasticsearch](https://www.elastic.co/products/elastic-stack).
 
 Changes to nested entities are propagated to [Elasticsearch](https://www.elastic.co/products/elastic-stack).
@@ -62,6 +64,7 @@ Of course, if your data never changed, then you could just take a snapshot in ti
 PGSync is appropriate for you if:
 - [Postgres](https://www.postgresql.org) is your read/write source of truth whilst [Elasticsearch](https://www.elastic.co/products/elastic-stack) is your 
 read-only search layer.
+- You need to denormalize relational data into a NoSQL data source.
 - Your data is constantly changing.
 - You have existing data in a relational database such as [Postgres](https://www.postgresql.org) and you need
 a secondary NoSQL database like [Elasticsearch](https://www.elastic.co/products/elastic-stack) for text-based queries or autocomplete queries to mirror the existing data without having your application perform dual writes.
@@ -124,7 +127,7 @@ $ curl -X GET http://[elasticsearch host]:9201/reservations/_search?pretty=true
   
 - Installation
   - ```$ pip install pgsync``` 
-  - create a [schema.json](https://github.com/toluaina/pg-sync/blob/master/examples/airbnb/schema.json) for you document representation
+  - create a [schema.json](https://github.com/toluaina/pgsync/blob/master/examples/airbnb/schema.json) for you document representation
   - bootstrap the database (one time only) **_```bootstrap --config schema.json```_**
   - run the program with **_```pgsync --config schema.json```_** or as a daemon **_```pgsync --config schema.json -d```_**
 
@@ -133,6 +136,7 @@ $ curl -X GET http://[elasticsearch host]:9201/reservations/_search?pretty=true
 
 Key features of PGSync are:
 
+- Easily denormalize relational data.
 - Works with any PostgreSQL database (version 9.4 or later). 
 - Negligible impact on database performance.
 - Transactionally consistent output in Elasticsearch. This means: writes appear only when they are committed to the database, insert, update and delete operations appear in the same order as they were committed (as opposed to eventual consistency).
@@ -300,7 +304,7 @@ Contributions are very welcome! Check out the [Contribution](CONTRIBUTING.rst) G
 #### License
 
 This code is released under the [GNU Lesser General Public License](https://www.gnu.org/licenses/gpl-3.0.html), version 3.0 (LGPL-3.0).  
-Please see [LICENSE](LICENSE) and [NOTICE](NOTICE) for more details.
+Please see [LICENSE](LICENSE) for more details.
 
 You should have received a copy of the GNU Lesser General Public License along with PGSync.  
 If not, see https://www.gnu.org/licenses/.

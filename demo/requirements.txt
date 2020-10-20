@@ -1,0 +1,6 @@
+# Demo
+aiohttp
+aiodns
+cchardet
+aiohttp_cors
+aiohttp-devtools

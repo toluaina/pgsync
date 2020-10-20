@@ -1,4 +1,4 @@
-version: '3.7'
+version: '3.8'
 
 services:
   postgres:
@@ -7,13 +7,13 @@ services:
       - "15432:5432"
     environment:
       - POSTGRES_USER=pgsync
-      - POSTGRES_PASSWORD=PLEASE_REPLACE_ME
+      - POSTGRES_PASSWORD=PLEASE_CHANGE_ME
       - POSTGRES_DB=airbnb
   redis:
     image: redis
-    command: redis-server --requirepass PLEASE_REPLACE_ME
+    command: redis-server --requirepass PLEASE_CHANGE_ME
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.7.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.9.2
     ports:
       - "9201:9200"
       - "9301:9300"
@@ -37,10 +37,10 @@ services:
     environment:
       - PG_USER=pgsync
       - PG_HOST=postgres
-      - PG_PASSWORD=PLEASE_REPLACE_ME
+      - PG_PASSWORD=PLEASE_CHANGE_ME
       - LOG_LEVEL=INFO
       - ELASTICSEARCH_PORT=9200
       - ELASTICSEARCH_SCHEME=http
       - ELASTICSEARCH_HOST=elasticsearch
       - REDIS_HOST=redis
-      - REDIS_AUTH=PLEASE_REPLACE_ME
+      - REDIS_AUTH=PLEASE_CHANGE_ME

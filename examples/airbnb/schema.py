@@ -53,7 +53,7 @@ class Cities(Base):
     )
     country = sa.orm.relationship(
         Countries,
-        backref=sa.orm.backref('countries')
+        backref=sa.orm.backref('countries'),
     )
 
 
@@ -68,11 +68,11 @@ class Places(Base):
     city_id = sa.Column(sa.Integer, sa.ForeignKey(Cities.id))
     host = sa.orm.relationship(
         Hosts,
-        backref=sa.orm.backref('hosts')
+        backref=sa.orm.backref('hosts'),
     )
     city = sa.orm.relationship(
         Cities,
-        backref=sa.orm.backref('cities')
+        backref=sa.orm.backref('cities'),
     )
 
 
@@ -103,7 +103,7 @@ class Reviews(Base):
     review_body = sa.Column(sa.Text, nullable=True)
     booking = sa.orm.relationship(
         Bookings,
-        backref=sa.orm.backref('bookings')
+        backref=sa.orm.backref('bookings'),
     )
 
 
@@ -111,14 +111,18 @@ def setup(config=None):
     for document in json.load(open(config)):
         database = document.get('database', document['index'])
         create_database(database)
-        # create schema
         engine = pg_engine(database=database)
         Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)
 
 
 @click.command()
-@click.option('--config', '-c', help='Schema config')
+@click.option(
+    '--config',
+    '-c',
+    help='Schema config',
+    type=click.Path(exists=True),
+)
 def main(config):
 
     config = get_config(config)

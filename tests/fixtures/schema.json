@@ -1,0 +1,16 @@
+[
+    {
+        "database": "index",
+        "index": "index",
+        "nodes": [
+           {
+              "table": "book",
+              "columns": [
+                  "isbn",
+                  "title",
+                  "description"
+              ]
+          }
+        ]
+    }
+]
