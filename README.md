@@ -4,7 +4,7 @@
 
 
 [![PyPI version](https://badge.fury.io/py/pgsync.svg)](https://badge.fury.io/py/pgsync)
-[![Build status](https://github.com/toluaina/pgsync/workflows/build/badge.svg)](https://github.com/toluaina/pgsync/actions)
+[![Build status](https://github.com/toluaina/pgsync/workflows/Build%20and%20Test/badge.svg)](https://github.com/toluaina/pgsync/actions)
 [![Documentation status](https://readthedocs.org/projects/pgsync/badge/?version=latest)](https://pgsync.readthedocs.io/en/latest/?badge=latest)
 [![codecov](https://codecov.io/gh/toluaina/pgsync/branch/master/graph/badge.svg?token=cvQzYkz6CV)](https://codecov.io/gh/toluaina/pgsync)
 
