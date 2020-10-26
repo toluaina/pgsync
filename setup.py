@@ -4,13 +4,8 @@
 """The setup script."""
 import os
 import re
-import shutil
-from pathlib import Path
 
-from Cython.Build import cythonize
-from Cython.Distutils import build_ext
 from setuptools import find_packages, setup
-from setuptools.extension import Extension
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -69,37 +64,6 @@ with open('README.rst') as fp:
 with open('requirements/prod.txt') as fp:
     INSTALL_REQUIRES = fp.read()
 
-for target_dir in ['dist', 'build', 'PGSync.egg-info']:
-    try:
-        shutil.rmtree(target_dir)
-    except OSError:
-        pass
-
-
-class Builder(build_ext):
-
-    def run(self):
-
-        build_ext.run(self)
-
-        build_dir = Path(self.build_lib)
-        root_dir = Path(__file__).parent
-
-        target_dir = build_dir if not self.inplace else root_dir
-
-        self.copy_file(
-            Path('pgsync') / '__init__.py', root_dir, target_dir
-        )
-
-    def copy_file(self, path, source_dir, destination_dir):
-        if not (source_dir / path).exists():
-            return
-        shutil.copyfile(
-            str(source_dir / path),
-            str(destination_dir / path),
-        )
-
-
 setup(
     name=NAME,
     author=AUTHOR,
@@ -123,17 +87,6 @@ setup(
     url=URL,
     version=VERSION,
     zip_safe=False,
-    cmdclass={'build_ext': Builder},
-    ext_modules=cythonize(
-        [
-            Extension(
-                'pgsync.*', ['pgsync/*.py']
-            )
-        ],
-        build_dir='build',
-        language_level=3,
-    ),
-    extra_compile_args=['-finline-functions -s'],
     project_urls={
         'Bug Reports': 'https://github.com/toluaina/pgsync/issues',
         'Funding': 'https://patreon.com/toluaina',
