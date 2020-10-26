@@ -7,3 +7,4 @@ psycopg2-binary
 redis
 sqlalchemy
 sqlparse
+bumpversion
