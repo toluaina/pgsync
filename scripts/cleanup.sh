@@ -9,8 +9,8 @@ fi
 if [ -d 'wheels' ] ; then
     rm -r wheels
 fi
-if [ -d 'pytest_cache' ] ; then
-    rm -r pytest_cache
+if [ -d '.pytest_cache' ] ; then
+    rm -r .pytest_cache
 fi
 if [ -d '__pycache__' ] ; then
     rm -r __pycache__
