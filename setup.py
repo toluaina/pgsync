@@ -56,7 +56,6 @@ TESTS_REQUIRE = ['pytest']
 PACKAGES = find_packages(
     include=['pgsync']
 )
-PACKAGES = []
 
 with open('README.rst') as fp:
     README = fp.read()
