@@ -26,6 +26,7 @@ NODE_ATTRIBUTES = [
     'children',
     'columns',
     'label',
+    'primary_key',
     'relationship',
     'schema',
     'table',
@@ -106,5 +107,5 @@ LOGICAL_SLOT_PREFIX = re.compile(
     r'table\s(?P<schema>\w+).\"?(?P<table>\w+)\"?:\s(?P<tg_op>[A-Z]+):'
 )
 LOGICAL_SLOT_SUFFIX = re.compile(
-    "\s(?P<key>\w+)\[(?P<type>[\w\s]+)\]:(?P<value>[\w\']+)"
+    "\s(?P<key>\w+)\[(?P<type>[\w\s]+)\]:(?P<value>[\w\'\"\-]+)"
 )

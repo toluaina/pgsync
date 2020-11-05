@@ -42,6 +42,10 @@ class Node(object):
 
         self.table_columns = self.model.columns.keys()
         self._primary_keys = get_primary_keys(self.model)
+
+        if not self._primary_keys:
+            self._primary_keys = kwargs.get('primary_key')
+
         # columns to fetch
         self.column_names = [
             column for column in kwargs.get(
@@ -233,6 +237,7 @@ class Tree(object):
             model=self.base.model(table, schema=schema),
             table=table,
             schema=schema,
+            primary_key=root.get('primary_key', []),
             label=root.get('label', table),
             transform=root.get('transform', {}),
             columns=root.get('columns', []),

@@ -336,7 +336,7 @@ class Sync(Base):
 
         if tg_op == INSERT:
 
-            if table in self.tree.nodes:
+            if table == root_table and table in self.tree.nodes:
                 for payload in payloads:
                     payload_data = self._payload_data(payload)
                     primary_values = [

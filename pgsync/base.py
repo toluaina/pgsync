@@ -104,7 +104,7 @@ class Base(object):
         if name not in self.models:
             if schema not in self.__metadata:
                 metadata = sa.MetaData(schema=schema)
-                metadata.reflect(self.__engine)
+                metadata.reflect(self.__engine, views=True)
                 self.__metadata[schema] = metadata
             metadata = self.__metadata[schema]
             if name not in metadata.tables:
@@ -348,10 +348,12 @@ class Base(object):
             self.drop_triggers(database, schema)
         self.execute(CREATE_TRIGGER_TEMPLATE)
         queries = []
+        insp = sa.engine.reflection.Inspector.from_engine(self.engine)
+        views = insp.get_view_names(schema)
         for table in self.tables(schema):
             pairs = table.split('.')
             schema, table = pairs[0], pairs[1]
-            if tables and table not in tables:
+            if (tables and table not in tables) or (table in views):
                 continue
             logger.debug(f'Creating trigger on table: {schema}.{table}')
             for name, for_each, tg_op in [
@@ -497,6 +499,7 @@ class Base(object):
             'character',
             'character varying',
             'text',
+            'uuid',
             'varchar',
         ):
             value = value.lstrip("'").rstrip("'")
@@ -804,6 +807,30 @@ def drop_extension(database, extension, echo=False):
     engine = pg_engine(database=database, echo=echo)
     pg_execute(engine, f'DROP EXTENSION IF EXISTS "{extension}"')
     logger.debug(f'Dropped extension: {extension}')
+
+
+def create_materialized_view(database, view, query, echo=False):
+    """Create a materialized database view."""
+    logger.debug(f'Creating materialized view: {view} with {query}')
+    engine = pg_engine(database=database, echo=echo)
+    pg_execute(engine, f'CREATE MATERIALIZED VIEW {view} AS {query}')
+    logger.debug(f'Created materialized view: {view}')
+
+
+def refresh_materialized_view(database, view, echo=False):
+    """Refresh a materialized database view."""
+    logger.debug(f'Refreshing materialized view: {view}')
+    engine = pg_engine(database=database, echo=echo)
+    pg_execute(engine, f'REFRESH MATERIALIZED VIEW {view}')
+    logger.debug(f'Refreshed materialized view: {view}')
+
+
+def drop_materialized_view(database, view, echo=False):
+    """Drop a materialized database view."""
+    logger.debug(f'Drop materialized view: {view}')
+    engine = pg_engine(database=database, echo=echo)
+    pg_execute(engine, f'DROP MATERIALIZED VIEW IF EXISTS {view}')
+    logger.debug(f'Dropped materialized view: {view}')
 
 
 def compiled_query(query, label=None):
