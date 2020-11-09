@@ -4,7 +4,8 @@ from collections import defaultdict
 
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import parallel_bulk
-from elasticsearch_dsl import Search
+from elasticsearch_dsl import Q, Search
+from elasticsearch_dsl.query import Bool
 
 from .constants import ELASTICSEARCH_TYPES, META
 from .node import traverse_post_order
@@ -80,9 +81,13 @@ class ElasticHelper(object):
         # explicitly exclude all fields since we only need the doc _id
         search = search.source(excludes=['*'])
         for key, values in fields.items():
-            search = search.filter(
-                'terms',
-                **{f'{META}.{table}.{key}': values},
+            search = search.query(
+                Bool(
+                    filter=[
+                        Q('terms', **{f'{META}.{table}.{key}': values}) |
+                        Q('terms', **{f'{META}.{table}.{key}.keyword': values})
+                    ]
+                )
             )
         for hit in search.scan():
             yield hit.meta.id

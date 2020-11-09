@@ -157,7 +157,7 @@ class Sync(Base):
                 tables |= set(node.through_tables)
                 tables |= set([node.table])
             self.drop_triggers(self.database, schema=schema, tables=tables)
-        self.drop_replication_slot(self.__name)
+        self.drop_logical_replication_slot(self.__name)
 
     def get_doc_id(self, primary_keys):
         """Get the Elasticsearch document id from the primary keys."""

@@ -236,7 +236,7 @@ class Base(object):
         )
         return self.query_one(statement)
 
-    def drop_replication_slot(self, slot_name):
+    def drop_logical_replication_slot(self, slot_name):
         """
         Drop a logical replication slot.
 
