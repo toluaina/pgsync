@@ -1,6 +1,5 @@
 """Base tests."""
 import pytest
-from mock import patch
 
 from pgsync.base import Base
 from pgsync.exc import TableNotFoundError
@@ -78,22 +77,14 @@ class TestBase(object):
         )
         assert 'testdb_testdb' == replication_slots[0][0]
 
-    @patch('pgsync.utils.logger')
-    def test_create_logical_replication_slot(self, mock_logger, connection):
+    def test_create_logical_replication_slot(self, connection):
         pg_base = Base(connection.engine.url.database)
         row = pg_base.create_logical_replication_slot('slot_name')
-        mock_logger.debug.call_args_list[0].assert_called_with(
-          'Creating logical replication slot: slot_name'
-        )
         assert row[0] == 'slot_name'
         assert row[1] != None
         pg_base.drop_logical_replication_slot('slot_name')
 
-    @patch('pgsync.utils.logger')
-    def test_drop_logical_replication_slot(self, mock_logger, connection):
+    def test_drop_logical_replication_slot(self, connection):
         pg_base = Base(connection.engine.url.database)
         pg_base.create_logical_replication_slot('slot_name')
         pg_base.drop_logical_replication_slot('slot_name')
-        mock_logger.debug.call_args_list[0].assert_called_with(
-          'Dropping logical replication slot: slot_name'
-        )
