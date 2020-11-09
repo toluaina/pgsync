@@ -77,14 +77,14 @@ class TestBase(object):
         )
         assert 'testdb_testdb' == replication_slots[0][0]
 
-    def test_create_logical_replication_slot(self, connection):
+    def test_create_replication_slot(self, connection):
         pg_base = Base(connection.engine.url.database)
-        row = pg_base.create_logical_replication_slot('slot_name')
+        row = pg_base.create_replication_slot('slot_name')
         assert row[0] == 'slot_name'
         assert row[1] != None
-        pg_base.drop_logical_replication_slot('slot_name')
+        pg_base.drop_replication_slot('slot_name')
 
-    def test_drop_logical_replication_slot(self, connection):
+    def test_drop_replication_slot(self, connection):
         pg_base = Base(connection.engine.url.database)
-        pg_base.create_logical_replication_slot('slot_name')
-        pg_base.drop_logical_replication_slot('slot_name')
+        pg_base.create_replication_slot('slot_name')
+        pg_base.drop_replication_slot('slot_name')

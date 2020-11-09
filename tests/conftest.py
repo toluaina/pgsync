@@ -366,14 +366,14 @@ def table_creator(base, connection, model_mapping):
         connection.engine.url.database,
         SCHEMA,
     )
-    pg_base.drop_logical_replication_slot(
+    pg_base.drop_replication_slot(
         f'{connection.engine.url.database}_testdb'
     )
-    pg_base.create_logical_replication_slot(
+    pg_base.create_replication_slot(
         f'{connection.engine.url.database}_testdb'
     )
     yield
-    pg_base.drop_logical_replication_slot(
+    pg_base.drop_replication_slot(
         f'{connection.engine.url.database}_testdb'
     )
     base.metadata.drop_all(connection)

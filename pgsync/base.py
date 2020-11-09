@@ -217,9 +217,9 @@ class Base(object):
         statement = statement.where(sa.and_(*filters))
         return self.query_all(statement)
 
-    def create_logical_replication_slot(self, slot_name):
+    def create_replication_slot(self, slot_name):
         """
-        Create a logical replication slot.
+        Create a replication slot.
 
         TODO:
         - Only create the replication slot if it does not exist
@@ -227,7 +227,7 @@ class Base(object):
 
         SELECT * FROM PG_REPLICATION_SLOTS
         """
-        logger.debug(f'Creating logical replication slot: {slot_name}')
+        logger.debug(f'Creating replication slot: {slot_name}')
         statement = sa.select(['*']).select_from(
             sa.func.PG_CREATE_LOGICAL_REPLICATION_SLOT(
                 slot_name,
@@ -236,14 +236,14 @@ class Base(object):
         )
         return self.query_one(statement)
 
-    def drop_logical_replication_slot(self, slot_name):
+    def drop_replication_slot(self, slot_name):
         """
-        Drop a logical replication slot.
+        Drop a replication slot.
 
         TODO:
         - Only drop the replication slot if it exists
         """
-        logger.debug(f'Dropping logical replication slot: {slot_name}')
+        logger.debug(f'Dropping replication slot: {slot_name}')
         if self.replication_slots(slot_name):
             statement = sa.select(['*']).select_from(
                 sa.func.PG_DROP_REPLICATION_SLOT(slot_name),
