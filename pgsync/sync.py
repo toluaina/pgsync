@@ -336,18 +336,60 @@ class Sync(Base):
 
         if tg_op == INSERT:
 
-            if table == root_table and table in self.tree.nodes:
-                for payload in payloads:
-                    payload_data = self._payload_data(payload)
-                    primary_values = [
-                        payload_data[key] for key in primary_keys
-                    ]
-                    primary_fields = dict(
-                        zip(primary_keys, primary_values)
-                    )
-                    filters[table].append({
-                        key: value for key, value in primary_fields.items()
-                    })
+            if table in self.tree.nodes:
+
+                if table == root_table:
+                    for payload in payloads:
+                        payload_data = self._payload_data(payload)
+                        primary_values = [
+                            payload_data[key] for key in primary_keys
+                        ]
+                        primary_fields = dict(
+                            zip(primary_keys, primary_values)
+                        )
+                        filters[table].append({
+                            key: value for key, value in primary_fields.items()
+                        })
+                else:
+                    root = self.tree.build(nodes[0])
+                    for node in traverse_post_order(root):
+                        if table != node.table:
+                            continue
+
+                        if not node.parent:
+                            logger.exception(
+                                f'Could not get parent from node: '
+                                f'{node.schema}.{node.table}'
+                            )
+                            raise
+                        # set the parent as the new entity that has changed
+                        filters[node.parent.table] = []
+                        parent_model = self.model(
+                            node.parent.table,
+                            node.parent.schema,
+                        )
+                        foreign_keys = get_foreign_keys(
+                            parent_model,
+                            model,
+                        )
+
+                        _table = table
+                        if not _table.startswith(f'{schema}.'):
+                            _table = f'{schema}.{table}'
+
+                        node_parent_table = node.parent.table
+
+                        if not node_parent_table.startswith(f'{schema}.'):
+                            node_parent_table = f'{schema}.{node_parent_table}'
+
+                        for payload in payloads:
+                            payload_data = self._payload_data(payload)
+                            for i, key in enumerate(foreign_keys[_table]):
+                                value = payload_data[key]
+                                filters[node.parent.table].append({
+                                    foreign_keys[node_parent_table][i]: value
+                                })
+
             else:
 
                 # handle case where we insert into a through table

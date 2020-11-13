@@ -15,8 +15,20 @@ DECLARE
       JOIN pg_attribute ON attrelid = indrelid AND attnum = ANY(indkey)
       WHERE indrelid = TG_RELID AND indisprimary
   );
+  foreign_keys TEXT [] := (
+      SELECT ARRAY_AGG(constraint_column_usage.column_name)
+      FROM information_schema.table_constraints AS table_constraints
+      JOIN information_schema.key_column_usage AS key_column_usage
+      ON table_constraints.constraint_name = key_column_usage.constraint_name
+      AND table_constraints.table_schema = key_column_usage.table_schema
+      JOIN information_schema.constraint_column_usage AS constraint_column_usage
+      ON constraint_column_usage.constraint_name = table_constraints.constraint_name
+      AND constraint_column_usage.table_schema = table_constraints.table_schema
+      WHERE table_constraints.constraint_type = 'FOREIGN KEY'
+      AND table_constraints.table_name = TG_TABLE_NAME
+  );
 BEGIN
-    -- database is also the channel name
+    -- database is also the channel name.
     channel := CURRENT_DATABASE();
 
     IF TG_OP = 'DELETE' THEN
@@ -33,14 +45,14 @@ BEGIN
             new_row := (
                 SELECT JSONB_OBJECT_AGG(key, value)
                 FROM JSON_EACH(new_row)
-                WHERE key = ANY(primary_keys)
+                WHERE key = ANY(primary_keys) OR key = ANY(foreign_keys)
             );
             IF TG_OP = 'UPDATE' THEN
                 old_row = ROW_TO_JSON(OLD);
                 old_row := (
                     SELECT JSONB_OBJECT_AGG(key, value)
                     FROM JSON_EACH(old_row)
-                    WHERE key = ANY(primary_keys)
+                    WHERE key = ANY(primary_keys) OR key = ANY(foreign_keys)
                 );
             END IF;
             xmin := NEW.xmin;
