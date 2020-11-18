@@ -10,6 +10,7 @@ import pprint
 import re
 import select
 import sys
+import time
 
 import click
 import psycopg2
@@ -32,7 +33,7 @@ from .exc import RDSError, SuperUserError
 from .node import traverse_breadth_first, traverse_post_order, Tree
 from .querybuilder import QueryBuilder
 from .redisqueue import RedisQueue
-from .settings import POLL_TIMEOUT
+from .settings import POLL_TIMEOUT, REPLICATION_SLOT_CLEANUP_INTERVAL
 from .utils import (
     get_config,
     get_private_keys,
@@ -65,6 +66,7 @@ class Sync(Base):
         self.es = ElasticHelper()
         self.__name = f"{self.database}_{self.index}"
         self._checkpoint = None
+        self._truncate = False
         self.verbose = verbose
         self._checkpoint_file = f".{self.__name}"
         self.redis = RedisQueue(self.__name)
@@ -879,6 +881,16 @@ class Sync(Base):
         self.sync(txmin=txmin, txmax=txmax)
         # now sync up to txmax to capture everything we might have missed
         self.logical_slot_changes(txmin=txmin, txmax=txmax)
+        self._truncate = True
+
+    @threaded
+    def truncate_slots(self):
+        """Truncate the logical replication slot."""
+        while True:
+            if self._truncate:
+                logger.debug(f'Truncating replication slot: {self.__name}')
+                self.logical_slot_get_changes(self.__name, upto_nchanges=None)
+            time.sleep(REPLICATION_SLOT_CLEANUP_INTERVAL)
 
     def receive(self):
         """
@@ -900,6 +912,9 @@ class Sync(Base):
         # start a background worker consumer thread to
         # poll Redis and populate Elasticsearch
         self.poll_redis()
+
+        # start a background worker thread to cleanup the replication slot
+        self.truncate_slots()
 
 
 @click.command()

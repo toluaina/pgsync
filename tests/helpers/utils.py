@@ -1,6 +1,10 @@
 """Test helper methods."""
 
 
+def truncate_slots():
+    pass
+
+
 def get_docs(results, _id=None):
     """Sorted by _id."""
     sources = []

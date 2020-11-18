@@ -15,7 +15,7 @@ from pgsync.exc import (
 from pgsync.node import Tree
 from pgsync.sync import Sync
 
-from .helpers.utils import assert_resync_empty, search
+from .helpers.utils import assert_resync_empty, search, truncate_slots
 
 
 @pytest.mark.usefixtures('table_creator')
@@ -783,8 +783,12 @@ class TestParentSingleChild(object):
         with mock.patch('pgsync.sync.Sync.poll_redis', side_effect=poll_redis):
             with mock.patch('pgsync.sync.Sync.poll_db', side_effect=poll_db):
                 with mock.patch('pgsync.sync.Sync.pull', side_effect=pull):
-                    sync.receive()
-                    sync.es.refresh('testdb')
+                    with mock.patch(
+                        'pgsync.sync.Sync.truncate_slots',
+                        side_effect=truncate_slots,
+                    ):
+                        sync.receive()
+                        sync.es.refresh('testdb')
 
         docs = search(sync.es, 'testdb')
 
@@ -1073,8 +1077,12 @@ class TestParentSingleChild(object):
         with mock.patch('pgsync.sync.Sync.poll_redis', side_effect=poll_redis):
             with mock.patch('pgsync.sync.Sync.poll_db', side_effect=poll_db):
                 with mock.patch('pgsync.sync.Sync.pull', side_effect=pull):
-                    sync.receive()
-                    sync.es.refresh('testdb')
+                    with mock.patch(
+                        'pgsync.sync.Sync.truncate_slots',
+                        side_effect=truncate_slots,
+                    ):
+                        sync.receive()
+                        sync.es.refresh('testdb')
 
         docs = search(sync.es, 'testdb')
 
@@ -1185,8 +1193,12 @@ class TestParentSingleChild(object):
         with mock.patch('pgsync.sync.Sync.poll_redis', side_effect=poll_redis):
             with mock.patch('pgsync.sync.Sync.poll_db', side_effect=poll_db):
                 with mock.patch('pgsync.sync.Sync.pull', side_effect=pull):
-                    sync.receive()
-                    sync.es.refresh('testdb')
+                    with mock.patch(
+                        'pgsync.sync.Sync.truncate_slots',
+                        side_effect=truncate_slots,
+                    ):
+                        sync.receive()
+                        sync.es.refresh('testdb')
 
         docs = search(sync.es, 'testdb')
 

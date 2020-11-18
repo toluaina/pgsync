@@ -16,6 +16,11 @@ SCHEMA = env.str('SCHEMA', default=None)
 QUERY_CHUNK_SIZE = env.int('QUERY_CHUNK_SIZE', default=10000)
 # poll db interval (consider reducing this duration to increase throughput)
 POLL_TIMEOUT = env.float('POLL_TIMEOUT', default=0.1)
+# replication slot cleanup interval (in secs)
+REPLICATION_SLOT_CLEANUP_INTERVAL = env.float(
+    'REPLICATION_SLOT_CLEANUP_INTERVAL',
+    default=3600.0,
+)
 
 # Elasticsearch:
 ELASTICSEARCH_SCHEME = env.str('ELASTICSEARCH_SCHEME', default='http')
