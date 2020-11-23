@@ -11,6 +11,7 @@ import re
 import select
 import sys
 import time
+from datetime import datetime, timedelta
 
 import click
 import psycopg2
@@ -71,6 +72,7 @@ class Sync(Base):
         self._checkpoint_file = f".{self.__name}"
         self.redis = RedisQueue(self.__name)
         self.tree = Tree(self)
+        self._last_truncate_timestamp = datetime.now()
         if validate:
             self.validate()
             self.create_setting()
@@ -887,10 +889,15 @@ class Sync(Base):
     def truncate_slots(self):
         """Truncate the logical replication slot."""
         while True:
-            if self._truncate:
+            if self._truncate and (
+                datetime.now() >= self._last_truncate_timestamp + timedelta(
+                    seconds=REPLICATION_SLOT_CLEANUP_INTERVAL
+                )
+            ):
                 logger.debug(f'Truncating replication slot: {self.__name}')
                 self.logical_slot_get_changes(self.__name, upto_nchanges=None)
-            time.sleep(REPLICATION_SLOT_CLEANUP_INTERVAL)
+                self._last_truncate_timestamp = datetime.now()
+            time.sleep(0.1)
 
     def receive(self):
         """
