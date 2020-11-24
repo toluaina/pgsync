@@ -179,7 +179,7 @@ class Node(object):
             child.display(prefix, leaf)
 
 
-def traverse_breadth_first(root: Node) -> List[Node]:
+def traverse_breadth_first(root):
     nodes = []
     stack = [root]
     while stack:
@@ -191,7 +191,7 @@ def traverse_breadth_first(root: Node) -> List[Node]:
     return nodes
 
 
-def traverse_post_order(root: Node) -> List[Node]:
+def traverse_post_order(root):
     nodes = collections.deque()
     stack = [root]
     while stack:
