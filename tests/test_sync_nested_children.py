@@ -1178,7 +1178,7 @@ class TestNestedChildren(object):
                         name='Nigeria',
                         continent=continent_cls(
                             id=6,
-                            name='Africa'
+                            name='Africa',
                         )
                     )
                 )
@@ -1934,3 +1934,189 @@ class TestNestedChildren(object):
     def test_delete_nonthrough_child_op(self, sync, data):
         # delete a new non-through child with op
         pass
+
+
+    @pytest.fixture(scope='function')
+    def nodes2(self):
+        return [{
+            "table": "book",
+            "columns": [
+                "isbn",
+                "title",
+                "description"
+            ],
+            "children": [
+                {
+                    "table": "publisher",
+                    "columns": [
+                        "name",
+                        "id"
+                    ],
+                    "label": "publisher_label",
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_one"
+                    },
+                    "children": [
+
+                    ],
+                    "transform": {
+                    }
+                },
+                {
+                    "table": "book_language",
+                    "columns": [
+                        "book_isbn",
+                        "language_id"
+                    ],
+                    "label": "book_languages",
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_many"
+                    }
+                },
+                {
+                    "table": "author",
+                    "columns": [
+                        "id", "name"
+                    ],
+                    "label": "authors",
+                    "relationship": {
+                        "type": "one_to_many",
+                        "variant": "object",
+                        "through_tables": [
+                            "book_author"
+                        ]
+                    },
+                    "children": [
+                        {
+                            "table": "city",
+                            "columns": [
+                                "name",
+                                "id"
+                            ],
+                            "label": "city_label",
+                            "relationship": {
+                                "variant": "object",
+                                "type": "one_to_one"
+                            },
+                            "children": [
+                                {
+                                    "table": "country",
+                                    "columns": [
+                                        "name",
+                                        "id"
+                                    ],
+                                    "label": "country_label",
+                                    "relationship": {
+                                        "variant": "object",
+                                        "type": "one_to_many"
+                                    },
+                                    "children": [
+                                        {
+                                            "table": "continent",
+                                            "columns": [
+                                                "name"
+                                            ],
+                                            "label": "continent_label",
+                                            "relationship": {
+                                                "variant": "object",
+                                                "type": "one_to_one"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "table": "language",
+                    "label": "languages",
+                    "columns": [
+                        "code"
+                    ],
+                    "relationship": {
+                        "type": "one_to_many",
+                        "variant": "scalar",
+                        "through_tables": [
+                            "book_language"
+                        ]
+                    }
+                },
+                {
+                    "table": "subject",
+                    "label": "subjects",
+                    "columns": [
+                        "name"
+                    ],
+                    "relationship": {
+                        "type": "one_to_many",
+                        "variant": "scalar",
+                        "through_tables": [
+                            "book_subject"
+                        ]
+                    }
+                }
+            ]
+        }]
+
+    def test_insert_deep_nested_nonthrough_child_noop(
+        self,
+        data,
+        nodes,
+        city_cls,
+        country_cls,
+        continent_cls,
+    ):
+        """insert a new deep nested non-through child with noop."""
+        country = country_cls(
+            id=5,
+            name='Marioworld',
+            continent=continent_cls(
+                id=6,
+                name='Bowser Land'
+            )
+        )
+
+        document = {
+            'index': 'testdb',
+            'nodes': nodes,
+        }
+        # sync first to add the initial document
+        sync = Sync(document)
+        sync.sync()
+        session = sync.session
+        sync.es.refresh('testdb')
+
+        def pull():
+            txmin = sync.checkpoint
+            txmax = sync.txid_current
+            sync.logical_slot_changes(txmin=txmin, txmax=txmax)
+
+        def poll_redis():
+            return []
+
+        def poll_db():
+            with subtransactions(session):
+                session.add(country)
+
+        with mock.patch('pgsync.sync.Sync.poll_redis', side_effect=poll_redis):
+            with mock.patch('pgsync.sync.Sync.poll_db', side_effect=poll_db):
+                with mock.patch('pgsync.sync.Sync.pull', side_effect=pull):
+                    with mock.patch(
+                        'pgsync.sync.Sync.truncate_slots',
+                        side_effect=truncate_slots,
+                    ):
+                        sync.receive()
+                        sync.es.refresh('testdb')
+
+        txmin = sync.checkpoint
+        docs = [
+            doc for doc in sync._sync(
+                nodes, 'testdb', txmin=txmin
+            )
+        ]
+        assert docs == []
+        docs = search(sync.es, 'testdb')
+        assert_resync_empty(sync, nodes, 'testdb')

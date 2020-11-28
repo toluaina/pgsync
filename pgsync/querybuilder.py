@@ -245,36 +245,39 @@ class QueryBuilder(object):
                 self.isouter = False
                 for _filter in child._filters:
                     if isinstance(_filter, sa.sql.elements.BinaryExpression):
+
                         for column in _filter._orig:
                             if hasattr(column, 'value'):
                                 _column = child._subquery.c
                                 if column._orig_key in node.table_columns:
                                     _column = node.model.c
-                                onclause.append(
-                                    getattr(
-                                        _column,
-                                        column._orig_key,
-                                    ) == column.value
-                                )
-
-                    elif isinstance(
-                        _filter,
-                        sa.sql.elements.BooleanClauseList,
-                    ):
-                        for clause in _filter.clauses:
-                            for column in clause._orig:
-                                if hasattr(column, 'value'):
-                                    _column = child._subquery.c
-                                    if column._orig_key in node.table_columns:
-                                        _column = node.model.c
+                                if hasattr(_column, column._orig_key):
                                     onclause.append(
                                         getattr(
                                             _column,
                                             column._orig_key,
                                         ) == column.value
                                     )
+                    elif isinstance(
+                        _filter,
+                        sa.sql.elements.BooleanClauseList,
+                    ):
+                        for clause in _filter.clauses:
 
-                # compiled_query(child._subquery, 'child._subquery')
+                            for column in clause._orig:
+                                if hasattr(column, 'value'):
+                                    _column = child._subquery.c
+                                    if column._orig_key in node.table_columns:
+                                        _column = node.model.c
+                                    if hasattr(_column, column._orig_key):
+                                        onclause.append(
+                                            getattr(
+                                                _column,
+                                                column._orig_key,
+                                            ) == column.value
+                                        )
+                if self.verbose:
+                    compiled_query(child._subquery, 'child._subquery')
 
             self.from_obj = self.from_obj.join(
                 child._subquery,
@@ -359,7 +362,7 @@ class QueryBuilder(object):
         columns.extend([
             getattr(
                 node.model.c,
-                foreign_key_column
+                foreign_key_column,
             ) for foreign_key_column in foreign_key_columns
         ])
 
@@ -430,34 +433,40 @@ class QueryBuilder(object):
 
                 for _filter in child._filters:
                     if isinstance(_filter, sa.sql.elements.BinaryExpression):
+
                         for column in _filter._orig:
                             if hasattr(column, 'value'):
                                 _column = child._subquery.c
                                 if column._orig_key in node.table_columns:
                                     _column = node.model.c
-                                onclause.append(
-                                    getattr(
-                                        _column,
-                                        column._orig_key,
-                                    ) == column.value
-                                )
-
-                    elif isinstance(
-                        _filter,
-                        sa.sql.elements.BooleanClauseList,
-                    ):
-                        for clause in _filter.clauses:
-                            for column in clause._orig:
-                                if hasattr(column, 'value'):
-                                    _column = child._subquery.c
-                                    if column._orig_key in node.table_columns:
-                                        _column = node.model.c
+                                if hasattr(
+                                    _column,
+                                    column._orig_key,
+                                ):
                                     onclause.append(
                                         getattr(
                                             _column,
                                             column._orig_key,
                                         ) == column.value
                                     )
+                    elif isinstance(
+                        _filter,
+                        sa.sql.elements.BooleanClauseList,
+                    ):
+                        for clause in _filter.clauses:
+
+                            for column in clause._orig:
+                                if hasattr(column, 'value'):
+                                    _column = child._subquery.c
+                                    if column._orig_key in node.table_columns:
+                                        _column = node.model.c
+                                    if hasattr(_column, column._orig_key):
+                                        onclause.append(
+                                            getattr(
+                                                _column,
+                                                column._orig_key,
+                                            ) == column.value
+                                        )
 
             from_obj = from_obj.join(
                 child._subquery,
@@ -632,30 +641,31 @@ class QueryBuilder(object):
                                 _column = child._subquery.c
                                 if column._orig_key in node.table_columns:
                                     _column = node.model.c
-                                onclause.append(
-                                    getattr(
-                                        _column,
-                                        column._orig_key,
-                                    ) == column.value
-                                )
-
-                    elif isinstance(
-                        _filter,
-                        sa.sql.elements.BooleanClauseList,
-                    ):
-                        for clause in _filter.clauses:
-                            for column in clause._orig:
-                                if hasattr(column, 'value'):
-                                    _column = child._subquery.c
-                                    if column._orig_key in node.table_columns:
-                                        _column = node.model.c
+                                if hasattr(_column, column._orig_key):
                                     onclause.append(
                                         getattr(
                                             _column,
                                             column._orig_key,
                                         ) == column.value
                                     )
+                    elif isinstance(
+                        _filter,
+                        sa.sql.elements.BooleanClauseList,
+                    ):
+                        for clause in _filter.clauses:
 
+                            for column in clause._orig:
+                                if hasattr(column, 'value'):
+                                    _column = child._subquery.c
+                                    if column._orig_key in node.table_columns:
+                                        _column = node.model.c
+                                    if hasattr(_column, column._orig_key):
+                                        onclause.append(
+                                            getattr(
+                                                _column,
+                                                column._orig_key,
+                                            ) == column.value
+                                        )
             from_obj = from_obj.join(
                 child._subquery,
                 onclause=sa.and_(*onclause),
