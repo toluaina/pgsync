@@ -4,7 +4,6 @@ import warnings
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.schema import UniqueConstraint
@@ -29,7 +28,7 @@ def dns():
 
 @pytest.yield_fixture(scope='session')
 def engine(dns):
-    engine = create_engine(dns)
+    engine = sa.create_engine(dns)
     drop_database('testdb')
     create_database('testdb')
     yield engine
@@ -300,9 +299,9 @@ def book_language_cls(base, book_cls, language_cls):
 
 
 @pytest.fixture(scope='session')
-def bookshelf_cls(base, book_cls, shelf_cls):
+def book_shelf_cls(base, book_cls, shelf_cls):
     class BookShelf(base):
-        __tablename__ = 'bookshelf'
+        __tablename__ = 'book_shelf'
         __table_args__ = (
             UniqueConstraint('book_isbn', 'shelf_id'),
         )
@@ -312,7 +311,7 @@ def bookshelf_cls(base, book_cls, shelf_cls):
         )
         book = sa.orm.relationship(
             book_cls,
-            backref=sa.orm.backref('book_bookshelf_books')
+            backref=sa.orm.backref('book_book_shelf_books')
         )
         shelf_id = sa.Column(
             sa.Integer, sa.ForeignKey(shelf_cls.id)
@@ -322,6 +321,26 @@ def bookshelf_cls(base, book_cls, shelf_cls):
             backref=sa.orm.backref('shelves')
         )
     return BookShelf
+
+
+@pytest.fixture(scope='session')
+def rating_cls(base, book_cls):
+    class Rating(base):
+        __tablename__ = 'rating'
+        __table_args__ = (
+            UniqueConstraint('book_isbn'),
+        )
+        id = sa.Column(sa.Integer, primary_key=True)
+        book_isbn = sa.Column(
+            sa.String, sa.ForeignKey(book_cls.isbn)
+        )
+        book = sa.orm.relationship(
+            book_cls,
+            backref=sa.orm.backref('book_rating_books')
+        )
+        value = sa.Column(sa.Float, nullable=True)
+
+    return Rating
 
 
 @pytest.fixture(scope='session')
@@ -338,7 +357,8 @@ def model_mapping(
     book_author_cls,
     book_subject_cls,
     book_language_cls,
-    bookshelf_cls,
+    book_shelf_cls,
+    rating_cls,
 ):
     return {
         'cities': city_cls,
@@ -353,7 +373,8 @@ def model_mapping(
         'book_authors': book_author_cls,
         'book_subjects': book_subject_cls,
         'book_languages': book_language_cls,
-        'bookshelves': bookshelf_cls,
+        'book_shelves': book_shelf_cls,
+        'ratings': rating_cls,
     }
 
 
@@ -398,7 +419,8 @@ def dataset(
     book_author_cls,
     book_subject_cls,
     book_language_cls,
-    bookshelf_cls,
+    book_shelf_cls,
+    rating_cls,
 ):
 
     eu_continent = continent_cls(name='Europe')
@@ -467,10 +489,10 @@ def dataset(
     session.add(en_languages)
     session.add(fr_languages)
 
-    shelf_a_bookshelf = bookshelf_cls(shelf='Shelf A')
-    shelf_b_bookshelf = bookshelf_cls(shelf='Shelf B')
-    session.add(shelf_a_bookshelf)
-    session.add(shelf_b_bookshelf)
+    shelf_a_book_shelf = book_shelf_cls(shelf='Shelf A')
+    shelf_b_book_shelf = book_shelf_cls(shelf='Shelf B')
+    session.add(shelf_a_book_shelf)
+    session.add(shelf_b_book_shelf)
 
     book_001 = book_cls(
         isbn='001',
@@ -577,8 +599,7 @@ def dataset(
             author=tolu_aina_author,
         ),
     ]
-    for book_author in book_authors:
-        session.add(book_author)
+    session.add_all(book_authors)
 
     book_subjects = [
         book_subject_cls(book=book_001, subject=literature_subject),
@@ -590,8 +611,7 @@ def dataset(
         book_subject_cls(book=book_007, subject=science_subject),
         book_subject_cls(book=book_008, subject=science_subject),
     ]
-    for book_subject in book_subjects:
-        session.add(book_subject)
+    session.add_all(book_subjects)
 
     book_languages = [
         book_language_cls(book=book_001, language=en_languages),
@@ -611,19 +631,30 @@ def dataset(
         book_language_cls(book=book_007, language=fr_languages),
         book_language_cls(book=book_008, language=fr_languages),
     ]
-    for book_language in book_languages:
-        session.add(book_language)
+    session.add_all(book_languages)
 
     book_shelves = [
-        bookshelf_cls(book=book_001, shelf=shelf_a_bookshelf),
-        bookshelf_cls(book=book_002, shelf=shelf_b_bookshelf),
-        bookshelf_cls(book=book_003, shelf=shelf_a_bookshelf),
-        bookshelf_cls(book=book_004, shelf=shelf_b_bookshelf),
-        bookshelf_cls(book=book_005, shelf=shelf_a_bookshelf),
-        bookshelf_cls(book=book_006, shelf=shelf_b_bookshelf),
-        bookshelf_cls(book=book_007, shelf=shelf_a_bookshelf),
-        bookshelf_cls(book=book_008, shelf=shelf_b_bookshelf),
+        book_shelf_cls(book=book_001, shelf=shelf_a_book_shelf),
+        book_shelf_cls(book=book_002, shelf=shelf_b_book_shelf),
+        book_shelf_cls(book=book_003, shelf=shelf_a_book_shelf),
+        book_shelf_cls(book=book_004, shelf=shelf_b_book_shelf),
+        book_shelf_cls(book=book_005, shelf=shelf_a_book_shelf),
+        book_shelf_cls(book=book_006, shelf=shelf_b_book_shelf),
+        book_shelf_cls(book=book_007, shelf=shelf_a_book_shelf),
+        book_shelf_cls(book=book_008, shelf=shelf_b_book_shelf),
     ]
-    for book_shelf in book_shelves:
-        session.add(book_shelf)
+    session.add_all(book_shelves)
+
+    ratings = [
+        rating_cls(book=book_001, rating=1),
+        rating_cls(book=book_002, rating=2),
+        rating_cls(book=book_003, rating=3),
+        rating_cls(book=book_004, rating=4),
+        rating_cls(book=book_005, rating=5),
+        rating_cls(book=book_006, rating=6),
+        rating_cls(book=book_007, rating=7),
+        rating_cls(book=book_008, rating=8),
+    ]
+    session.add_all(ratings)
+
     session.commit()

@@ -62,10 +62,11 @@ class TestBase(object):
             'public.subject',
             'public.book_language',
             'public.language',
-            'public.bookshelf',
+            'public.book_shelf',
             'public.shelf',
             'public.author',
             'public.book_author',
+            'public.rating',
         ]
         assert sorted(pg_base.tables('public')) == sorted(tables)
 

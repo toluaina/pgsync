@@ -135,7 +135,7 @@ def map_fields(init_dict, map_dict, result_dict=None):
             elif key in map_dict.keys():
                 if isinstance(value, list):
                     value = [map_fields(v, map_dict[key]) for v in value]
-                elif isinstance(value, string_types) or isinstance(value, int):
+                elif isinstance(value, (string_types, int, float)):
                     if map_dict[key]:
                         key = str(map_dict[key])
             result_dict[key] = value

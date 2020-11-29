@@ -19,7 +19,7 @@ from .helpers.utils import assert_resync_empty, search, truncate_slots
 
 
 @pytest.mark.usefixtures('table_creator')
-class TestParentSingleChild(object):
+class TestParentSingleChildFkOnParent(object):
     """Root and single child node tests."""
 
     @pytest.fixture(scope='function')

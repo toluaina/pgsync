@@ -29,7 +29,7 @@ class TestNestedChildren(object):
         language_cls,
         book_subject_cls,
         subject_cls,
-        bookshelf_cls,
+        book_shelf_cls,
         shelf_cls,
     ):
         session = sync.session
@@ -207,11 +207,11 @@ class TestNestedChildren(object):
         ]
 
         book_shelves = [
-            bookshelf_cls(id=1, book=books[0], shelf=shelves[0]),
-            bookshelf_cls(id=2, book=books[1], shelf=shelves[0]),
-            bookshelf_cls(id=3, book=books[2], shelf=shelves[1]),
-            bookshelf_cls(id=4, book=books[0], shelf=shelves[1]),
-            bookshelf_cls(id=5, book=books[1], shelf=shelves[1]),
+            book_shelf_cls(id=1, book=books[0], shelf=shelves[0]),
+            book_shelf_cls(id=2, book=books[1], shelf=shelves[0]),
+            book_shelf_cls(id=3, book=books[2], shelf=shelves[1]),
+            book_shelf_cls(id=4, book=books[0], shelf=shelves[1]),
+            book_shelf_cls(id=5, book=books[1], shelf=shelves[1]),
         ]
 
         with subtransactions(session):
@@ -268,7 +268,7 @@ class TestNestedChildren(object):
                     language_cls.__table__.name,
                     book_subject_cls.__table__.name,
                     subject_cls.__table__.name,
-                    bookshelf_cls.__table__.name,
+                    book_shelf_cls.__table__.name,
                     shelf_cls.__table__.name,
                 ]
             )
@@ -640,7 +640,7 @@ class TestNestedChildren(object):
         language_cls,
         book_subject_cls,
         subject_cls,
-        bookshelf_cls,
+        book_shelf_cls,
         shelf_cls
     ):
         """Test insert a new root item."""
@@ -719,8 +719,8 @@ class TestNestedChildren(object):
         ]
 
         book_shelves = [
-            bookshelf_cls(id=6, book=books[0], shelf=shelves[0]),
-            bookshelf_cls(id=7, book=books[0], shelf=shelves[1]),
+            book_shelf_cls(id=6, book=books[0], shelf=shelves[0]),
+            book_shelf_cls(id=7, book=books[0], shelf=shelves[1]),
         ]
 
         document = {
@@ -948,7 +948,7 @@ class TestNestedChildren(object):
         data,
         nodes,
         book_cls,
-        bookshelf_cls,
+        book_shelf_cls,
         book_language_cls,
         book_subject_cls,
         book_author_cls
@@ -974,8 +974,8 @@ class TestNestedChildren(object):
         def poll_db():
             with subtransactions(session):
                 session.execute(
-                    bookshelf_cls.__table__.delete().where(
-                        bookshelf_cls.__table__.c.book_isbn == 'abc'
+                    book_shelf_cls.__table__.delete().where(
+                        book_shelf_cls.__table__.c.book_isbn == 'abc'
                     )
                 )
                 session.execute(
@@ -2120,3 +2120,47 @@ class TestNestedChildren(object):
         assert docs == []
         docs = search(sync.es, 'testdb')
         assert_resync_empty(sync, nodes, 'testdb')
+
+
+    def test_insert_deep_nested_fk_nonthrough_child_op(
+        self,
+        data,
+        nodes,
+        city_cls,
+        country_cls,
+        continent_cls,
+    ):
+        """insert a new deep nested non-through fk child with op."""
+        
+
+        import pprint
+        nodes[0]['children'].append(
+            {
+                "table": "book_rating",
+                "columns": [
+                    "book_isbn",
+                    "rating",
+                ],
+                "label": "book_ratings",
+                "relationship": {
+                    "variant": "object",
+                    "type": "one_to_many",
+                }
+            },
+        )
+
+        pprint.pprint(nodes[0]['children'])
+        print('-' * 1000)
+
+         # {
+         #            "table": "book_language",
+         #            "columns": [
+         #                "book_isbn",
+         #                "language_id"
+         #            ],
+         #            "label": "book_languages",
+         #            "relationship": {
+         #                "variant": "object",
+         #                "type": "one_to_many"
+         #            }
+         #        },
