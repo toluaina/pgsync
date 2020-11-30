@@ -35,7 +35,8 @@
                     "id",
                     "isbn",
                     "title",
-                    "description"
+                    "description",
+                    "tags"
                 ],
                 "transform": {
                     "rename": {

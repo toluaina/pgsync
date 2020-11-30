@@ -71,6 +71,8 @@ ELASTICSEARCH_TYPES = [
     'scaled_float',
     'short',
     'text',
+    'object',
+    'nested',
 ]
 
 CONCAT_TRANSFORM = 'concat'

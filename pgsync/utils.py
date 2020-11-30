@@ -130,8 +130,10 @@ def map_fields(init_dict, map_dict, result_dict=None):
             elif isinstance(value, list) and value and not isinstance(
                 value[0], dict
             ):
-                if None not in value:
+                try:
                     value = sorted(value)
+                except TypeError:
+                    pass
             elif key in map_dict.keys():
                 if isinstance(value, list):
                     value = [map_fields(v, map_dict[key]) for v in value]

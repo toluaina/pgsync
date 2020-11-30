@@ -115,6 +115,7 @@ class Book(Base):
     title = sa.Column(sa.String, nullable=False)
     description = sa.Column(sa.String, nullable=True)
     copyright = sa.Column(sa.String, nullable=True)
+    tags = sa.Column(sa.dialects.postgresql.JSONB, nullable=True)
     publisher_id = sa.Column(
         sa.Integer, sa.ForeignKey(Publisher.id)
     )
