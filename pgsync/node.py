@@ -1,6 +1,5 @@
 """PGSync Node class representation."""
 import collections
-from typing import List
 
 import sqlalchemy as sa
 from six import string_types

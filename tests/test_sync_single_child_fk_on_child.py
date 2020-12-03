@@ -1,7 +1,5 @@
 """Tests for `pgsync` package."""
 
-import pprint
-
 import mock
 import psycopg2
 import pytest
@@ -597,8 +595,8 @@ class TestParentSingleChildFkOnChild(object):
         with pytest.raises(ForeignKeyError) as excinfo:
             [doc for doc in sync._sync(nodes, 'testdb')]
         msg = (
-            f'No foreign key relationship between '
-            f'"public.book" and "public.city"'
+            'No foreign key relationship between '
+            '"public.book" and "public.city"'
         )
         assert msg in str(
             excinfo.value
@@ -796,22 +794,6 @@ class TestParentSingleChildFkOnChild(object):
             except Exception:
                 session.rollback()
                 raise
-            # try:
-            #     session.execute(
-            #         rating_cls.__table__.insert().values(
-            #             id=99,
-            #             name='Rabbit ratings'
-            #         )
-            #     )
-            #     session.execute(
-            #         book_cls.__table__.update().where(
-            #             book_cls.__table__.c.rating_id == 3
-            #         ).values(rating_id=99)
-            #     )
-            #     session.commit()
-            # except Exception:
-            #     session.rollback()
-            #     raise
 
         with mock.patch('pgsync.sync.Sync.poll_redis', side_effect=poll_redis):
             with mock.patch('pgsync.sync.Sync.poll_db', side_effect=poll_db):
@@ -856,412 +838,411 @@ class TestParentSingleChildFkOnChild(object):
             document.get('index'),
         )
 
-    # def test_insert_non_concurrent(self, data, book_cls, rating_cls):
-    #     """Test sync insert and then sync in non-concurrent mode."""
-    #     document = {
-    #         'index': 'testdb',
-    #         'nodes': [{
-    #             'table': 'book',
-    #             'columns': ['isbn', 'title'],
-    #             'children': [{
-    #                 'table': 'rating',
-    #                 'columns': ['id', 'name'],
-    #                 'relationship': {
-    #                     'variant': 'object',
-    #                     'type': 'one_to_one'
-    #                 }
-    #             }]
-    #         }]
-    #     }
-    #     sync = Sync(document)
-    #     sync.sync()
-    #     sync.es.refresh('testdb')
+    def test_insert_non_concurrent(self, data, book_cls, rating_cls):
+        """Test sync insert and then sync in non-concurrent mode."""
+        document = {
+            'index': 'testdb',
+            'nodes': [{
+                'table': 'book',
+                'columns': ['isbn', 'title'],
+                'children': [{
+                    'table': 'rating',
+                    'columns': ['id', 'value'],
+                    'relationship': {
+                        'variant': 'object',
+                        'type': 'one_to_one'
+                    }
+                }]
+            }]
+        }
+        sync = Sync(document)
+        sync.sync()
+        sync.es.refresh('testdb')
 
-    #     session = sync.session
+        session = sync.session
 
-    #     docs = search(sync.es, 'testdb')
-    #     assert docs == [
-    #         {
-    #             u'_meta': {'rating': {'id': [1]}},
-    #             u'isbn': u'abc',
-    #             u'rating': {'id': 1, 'name': 'Tiger publishing'},
-    #             u'title': u'The Tiger Club'
-    #         },
-    #         {
-    #             u'_meta': {'rating': {'id': [2]}},
-    #             u'isbn': u'def',
-    #             u'rating': {'id': 2, 'name': 'Lion publishing'},
-    #             u'title': u'The Lion Club'
-    #         },
-    #         {
-    #             u'_meta': {'rating': {'id': [3]}},
-    #             u'isbn': u'ghi',
-    #             u'rating': {'id': 3, 'name': 'Hop Bunny publishing'},
-    #             u'title': u'The Rabbit Club'
-    #         }
-    #     ]
+        docs = search(sync.es, 'testdb')
+        assert docs == [
+            {
+                u'_meta': {'rating': {'id': [1]}},
+                u'isbn': u'abc',
+                u'rating': {'id': 1, 'value': 1.1},
+                u'title': u'The Tiger Club'
+            },
+            {
+                u'_meta': {'rating': {'id': [2]}},
+                u'isbn': u'def',
+                u'rating': {'id': 2, 'value': 2.2},
+                u'title': u'The Lion Club'
+            },
+            {
+                u'_meta': {'rating': {'id': [3]}},
+                u'isbn': u'ghi',
+                u'rating': {'id': 3, 'value': 3.3},
+                u'title': u'The Rabbit Club'
+            }
+        ]
 
-    #     try:
-    #         session.execute(
-    #             rating_cls.__table__.insert().values(
-    #                 id=99,
-    #                 name='Rabbit ratings'
-    #             )
-    #         )
-    #         session.execute(
-    #             book_cls.__table__.insert().values(
-    #                 isbn='xyz',
-    #                 title='Encyclopedia',
-    #                 rating_id=99
-    #             )
-    #         )
-    #         session.commit()
-    #     except Exception:
-    #         session.rollback()
-    #         raise
+        try:
+            session.execute(
+                book_cls.__table__.insert().values(
+                    isbn='xyz',
+                    title='Encyclopedia',
+                )
+            )
+            session.execute(
+                rating_cls.__table__.insert().values(
+                    id=99,
+                    book_isbn='xyz',
+                    value=4.4,
+                )
+            )
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
 
-    #     sync.sync()
-    #     sync.es.refresh('testdb')
+        sync.sync()
+        sync.es.refresh('testdb')
 
-    #     docs = search(sync.es, 'testdb')
+        docs = search(sync.es, 'testdb')
 
-    #     assert docs == [
-    #         {
-    #             u'_meta': {'rating': {'id': [1]}},
-    #             u'isbn': u'abc',
-    #             u'rating': {'id': 1, 'name': 'Tiger publishing'},
-    #             u'title': u'The Tiger Club'
-    #         },
-    #         {
-    #             u'_meta': {'rating': {'id': [2]}},
-    #             u'isbn': u'def',
-    #             u'rating': {'id': 2, 'name': 'Lion publishing'},
-    #             u'title': u'The Lion Club'
-    #         },
-    #         {
-    #             u'_meta': {'rating': {'id': [3]}},
-    #             u'isbn': u'ghi',
-    #             u'rating': {'id': 3, 'name': 'Hop Bunny publishing'},
-    #             u'title': u'The Rabbit Club'
-    #         },
-    #         {
-    #             u'_meta': {'rating': {'id': [99]}},
-    #             u'isbn': u'xyz',
-    #             u'rating': {'id': 99, 'name': 'Rabbit ratings'},
-    #             u'title': u'Encyclopedia'
-    #         }
-    #     ]
-    #     assert_resync_empty(
-    #         sync,
-    #         document.get('nodes', []),
-    #         document.get('index'),
-    #     )
+        assert docs == [
+            {
+                u'_meta': {'rating': {'id': [1]}},
+                u'isbn': u'abc',
+                u'rating': {'id': 1, 'value': 1.1},
+                u'title': u'The Tiger Club'
+            },
+            {
+                u'_meta': {'rating': {'id': [2]}},
+                u'isbn': u'def',
+                u'rating': {'id': 2, 'value': 2.2},
+                u'title': u'The Lion Club'
+            },
+            {
+                u'_meta': {'rating': {'id': [3]}},
+                u'isbn': u'ghi',
+                u'rating': {'id': 3, 'value': 3.3},
+                u'title': u'The Rabbit Club'
+            },
+            {
+                u'_meta': {'rating': {'id': [99]}},
+                u'isbn': u'xyz',
+                u'rating': {'id': 99, 'value': 4.4},
+                u'title': u'Encyclopedia'
+            }
+        ]
+        assert_resync_empty(
+            sync,
+            document.get('nodes', []),
+            document.get('index'),
+        )
 
-    # def test_update_non_primary_key_non_concurrent(
-    #     self, data, book_cls, rating_cls
-    # ):
-    #     """Test sync update and then sync in non-concurrent mode."""
-    #     document = {
-    #         'index': 'testdb',
-    #         'nodes': [{
-    #             'table': 'book',
-    #             'columns': ['isbn', 'title'],
-    #             'children': [{
-    #                 'table': 'rating',
-    #                 'columns': ['id', 'name'],
-    #                 'relationship': {
-    #                     'variant': 'object',
-    #                     'type': 'one_to_one'
-    #                 }
-    #             }]
-    #         }]
-    #     }
-    #     sync = Sync(document)
-    #     sync.sync()
-    #     sync.es.refresh('testdb')
+    def test_update_non_primary_key_non_concurrent(
+        self, data, book_cls, rating_cls
+    ):
+        """Test sync update and then sync in non-concurrent mode."""
+        document = {
+            'index': 'testdb',
+            'nodes': [{
+                'table': 'book',
+                'columns': ['isbn', 'title'],
+                'children': [{
+                    'table': 'rating',
+                    'columns': ['id', 'value'],
+                    'relationship': {
+                        'variant': 'object',
+                        'type': 'one_to_one'
+                    }
+                }]
+            }]
+        }
+        sync = Sync(document)
+        sync.sync()
+        sync.es.refresh('testdb')
 
-    #     docs = search(sync.es, 'testdb')
+        docs = search(sync.es, 'testdb')
 
-    #     assert docs == [
-    #         {
-    #             u'_meta': {'rating': {'id': [1]}},
-    #             u'isbn': u'abc',
-    #             u'rating': {'id': 1, 'name': 'Tiger publishing'},
-    #             u'title': u'The Tiger Club'
-    #         },
-    #         {
-    #             u'_meta': {'rating': {'id': [2]}},
-    #             u'isbn': u'def',
-    #             u'rating': {'id': 2, 'name': 'Lion publishing'},
-    #             u'title': u'The Lion Club'
-    #         },
-    #         {
-    #             u'_meta': {'rating': {'id': [3]}},
-    #             u'isbn': u'ghi',
-    #             u'rating': {'id': 3, 'name': 'Hop Bunny publishing'},
-    #             u'title': u'The Rabbit Club'
-    #         }
-    #     ]
+        assert docs == [
+            {
+                u'_meta': {'rating': {'id': [1]}},
+                u'isbn': u'abc',
+                u'rating': {'id': 1, 'value': 1.1},
+                u'title': u'The Tiger Club'
+            },
+            {
+                u'_meta': {'rating': {'id': [2]}},
+                u'isbn': u'def',
+                u'rating': {'id': 2, 'value': 2.2},
+                u'title': u'The Lion Club'
+            },
+            {
+                u'_meta': {'rating': {'id': [3]}},
+                u'isbn': u'ghi',
+                u'rating': {'id': 3, 'value': 3.3},
+                u'title': u'The Rabbit Club'
+            }
+        ]
 
-    #     session = sync.session
+        session = sync.session
 
-    #     try:
-    #         session.execute(
-    #             rating_cls.__table__.update().where(
-    #                 rating_cls.__table__.c.id == 3
-    #             ).values(name='Rabbit ratings')
-    #         )
-    #         session.commit()
-    #     except Exception:
-    #         session.rollback()
-    #         raise
+        try:
+            session.execute(
+                rating_cls.__table__.update().where(
+                    rating_cls.__table__.c.id == 3
+                ).values(value=4.4)
+            )
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
 
-    #     sync.sync()
-    #     sync.es.refresh('testdb')
+        sync.sync()
+        sync.es.refresh('testdb')
 
-    #     docs = search(sync.es, 'testdb')
+        docs = search(sync.es, 'testdb')
 
-    #     assert docs == [
-    #         {
-    #             u'_meta': {'rating': {'id': [1]}},
-    #             u'isbn': u'abc',
-    #             u'rating': {'id': 1, 'name': 'Tiger publishing'},
-    #             u'title': u'The Tiger Club'
-    #         },
-    #         {
-    #             u'_meta': {'rating': {'id': [2]}},
-    #             u'isbn': u'def',
-    #             u'rating': {'id': 2, 'name': 'Lion publishing'},
-    #             u'title': u'The Lion Club'
-    #         },
-    #         {
-    #             u'_meta': {'rating': {'id': [3]}},
-    #             u'isbn': u'ghi',
-    #             u'rating': {'id': 3, 'name': 'Rabbit ratings'},
-    #             u'title': u'The Rabbit Club'
-    #         }
-    #     ]
-    #     assert_resync_empty(
-    #         sync,
-    #         document.get('nodes', []),
-    #         document.get('index'),
-    #     )
+        assert docs == [
+            {
+                u'_meta': {'rating': {'id': [1]}},
+                u'isbn': u'abc',
+                u'rating': {'id': 1, 'value': 1.1},
+                u'title': u'The Tiger Club'
+            },
+            {
+                u'_meta': {'rating': {'id': [2]}},
+                u'isbn': u'def',
+                u'rating': {'id': 2, 'value': 2.2},
+                u'title': u'The Lion Club'
+            },
+            {
+                u'_meta': {'rating': {'id': [3]}},
+                u'isbn': u'ghi',
+                u'rating': {'id': 3, 'value': 4.4},
+                u'title': u'The Rabbit Club'
+            }
+        ]
+        assert_resync_empty(
+            sync,
+            document.get('nodes', []),
+            document.get('index'),
+        )
 
-    # def test_update_non_primary_key_concurrent(
-    #     self, data, book_cls, rating_cls
-    # ):
-    #     """Test sync update and then sync in concurrent mode."""
-    #     document = {
-    #         'index': 'testdb',
-    #         'nodes': [{
-    #             'table': 'book',
-    #             'columns': ['isbn', 'title'],
-    #             'children': [{
-    #                 'table': 'rating',
-    #                 'columns': ['id', 'name'],
-    #                 'relationship': {
-    #                     'variant': 'object',
-    #                     'type': 'one_to_one'
-    #                 }
-    #             }]
-    #         }]
-    #     }
-    #     sync = Sync(document)
-    #     sync.sync()
-    #     sync.es.refresh('testdb')
+    def test_update_non_primary_key_concurrent(
+        self, data, book_cls, rating_cls
+    ):
+        """Test sync update and then sync in concurrent mode."""
+        document = {
+            'index': 'testdb',
+            'nodes': [{
+                'table': 'book',
+                'columns': ['isbn', 'title'],
+                'children': [{
+                    'table': 'rating',
+                    'columns': ['id', 'value'],
+                    'relationship': {
+                        'variant': 'object',
+                        'type': 'one_to_one'
+                    }
+                }]
+            }]
+        }
+        sync = Sync(document)
+        sync.sync()
+        sync.es.refresh('testdb')
 
-    #     docs = search(sync.es, 'testdb')
+        docs = search(sync.es, 'testdb')
 
-    #     assert docs == [
-    #         {
-    #             u'_meta': {'rating': {'id': [1]}},
-    #             u'isbn': u'abc',
-    #             u'rating': {'id': 1, 'name': 'Tiger publishing'},
-    #             u'title': u'The Tiger Club'
-    #         },
-    #         {
-    #             u'_meta': {'rating': {'id': [2]}},
-    #             u'isbn': u'def',
-    #             u'rating': {'id': 2, 'name': 'Lion publishing'},
-    #             u'title': u'The Lion Club'
-    #         },
-    #         {
-    #             u'_meta': {'rating': {'id': [3]}},
-    #             u'isbn': u'ghi',
-    #             u'rating': {'id': 3, 'name': 'Hop Bunny publishing'},
-    #             u'title': u'The Rabbit Club'
-    #         }
-    #     ]
+        assert docs == [
+            {
+                u'_meta': {'rating': {'id': [1]}},
+                u'isbn': u'abc',
+                u'rating': {'id': 1, 'value': 1.1},
+                u'title': u'The Tiger Club'
+            },
+            {
+                u'_meta': {'rating': {'id': [2]}},
+                u'isbn': u'def',
+                u'rating': {'id': 2, 'value': 2.2},
+                u'title': u'The Lion Club'
+            },
+            {
+                u'_meta': {'rating': {'id': [3]}},
+                u'isbn': u'ghi',
+                u'rating': {'id': 3, 'value': 3.3},
+                u'title': u'The Rabbit Club'
+            }
+        ]
 
-    #     session = sync.session
+        session = sync.session
 
-    #     def pull():
-    #         txmin = sync.checkpoint
-    #         txmax = sync.txid_current
-    #         sync.logical_slot_changes(txmin=txmin, txmax=txmax)
+        def pull():
+            txmin = sync.checkpoint
+            txmax = sync.txid_current
+            sync.logical_slot_changes(txmin=txmin, txmax=txmax)
 
-    #     def poll_redis():
-    #         return []
+        def poll_redis():
+            return []
 
-    #     def poll_db():
-    #         with subtransactions(session):
-    #             session.execute(
-    #                 rating_cls.__table__.update().where(
-    #                     rating_cls.__table__.c.id == 3
-    #                 ).values(name='Rabbit ratings')
-    #             )
-    #             session.commit()
+        def poll_db():
+            with subtransactions(session):
+                session.execute(
+                    rating_cls.__table__.update().where(
+                        rating_cls.__table__.c.id == 3
+                    ).values(value=4.4)
+                )
+                session.commit()
 
-    #     with mock.patch('pgsync.sync.Sync.poll_redis', side_effect=poll_redis):
-    #         with mock.patch('pgsync.sync.Sync.poll_db', side_effect=poll_db):
-    #             with mock.patch('pgsync.sync.Sync.pull', side_effect=pull):
-    #                 with mock.patch(
-    #                     'pgsync.sync.Sync.truncate_slots',
-    #                     side_effect=truncate_slots,
-    #                 ):
-    #                     sync.receive()
-    #                     sync.es.refresh('testdb')
+        with mock.patch('pgsync.sync.Sync.poll_redis', side_effect=poll_redis):
+            with mock.patch('pgsync.sync.Sync.poll_db', side_effect=poll_db):
+                with mock.patch('pgsync.sync.Sync.pull', side_effect=pull):
+                    with mock.patch(
+                        'pgsync.sync.Sync.truncate_slots',
+                        side_effect=truncate_slots,
+                    ):
+                        sync.receive()
+                        sync.es.refresh('testdb')
 
-    #     docs = search(sync.es, 'testdb')
+        docs = search(sync.es, 'testdb')
 
-    #     assert docs == [
-    #         {
-    #             u'_meta': {'rating': {'id': [1]}},
-    #             u'isbn': u'abc',
-    #             u'rating': {'id': 1, 'name': 'Tiger publishing'},
-    #             u'title': u'The Tiger Club'
-    #         },
-    #         {
-    #             u'_meta': {'rating': {'id': [2]}},
-    #             u'isbn': u'def',
-    #             u'rating': {'id': 2, 'name': 'Lion publishing'},
-    #             u'title': u'The Lion Club'
-    #         },
-    #         {
-    #             u'_meta': {'rating': {'id': [3]}},
-    #             u'isbn': u'ghi',
-    #             u'rating': {'id': 3, 'name': 'Rabbit ratings'},
-    #             u'title': u'The Rabbit Club'
-    #         }
-    #     ]
-    #     assert_resync_empty(
-    #         sync,
-    #         document.get('nodes', []),
-    #         document.get('index'),
-    #     )
+        assert docs == [
+            {
+                u'_meta': {'rating': {'id': [1]}},
+                u'isbn': u'abc',
+                u'rating': {'id': 1, 'value': 1.1},
+                u'title': u'The Tiger Club'
+            },
+            {
+                u'_meta': {'rating': {'id': [2]}},
+                u'isbn': u'def',
+                u'rating': {'id': 2, 'value': 2.2},
+                u'title': u'The Lion Club'
+            },
+            {
+                u'_meta': {'rating': {'id': [3]}},
+                u'isbn': u'ghi',
+                u'rating': {'id': 3, 'value': 4.4},
+                u'title': u'The Rabbit Club'
+            }
+        ]
+        assert_resync_empty(
+            sync,
+            document.get('nodes', []),
+            document.get('index'),
+        )
 
-    # def test_delete_concurrent(self, data, book_cls, rating_cls):
-    #     """Test sync delete and then sync in concurrent mode."""
-    #     document = {
-    #         'index': 'testdb',
-    #         'nodes': [{
-    #             'table': 'book',
-    #             'columns': ['isbn', 'title'],
-    #             'children': [{
-    #                 'table': 'rating',
-    #                 'columns': ['id', 'name'],
-    #                 'relationship': {
-    #                     'variant': 'object',
-    #                     'type': 'one_to_one'
-    #                 }
-    #             }]
-    #         }]
-    #     }
+    def test_delete_concurrent(self, data, book_cls, rating_cls):
+        """Test sync delete and then sync in concurrent mode."""
+        document = {
+            'index': 'testdb',
+            'nodes': [{
+                'table': 'book',
+                'columns': ['isbn', 'title'],
+                'children': [{
+                    'table': 'rating',
+                    'columns': ['id', 'value'],
+                    'relationship': {
+                        'variant': 'object',
+                        'type': 'one_to_one'
+                    }
+                }]
+            }]
+        }
 
-    #     sync = Sync(document)
-    #     sync.sync()
-    #     sync.es.refresh('testdb')
+        sync = Sync(document)
+        sync.sync()
+        sync.es.refresh('testdb')
 
-    #     docs = search(sync.es, 'testdb')
+        docs = search(sync.es, 'testdb')
 
-    #     assert docs == [
-    #         {
-    #             u'_meta': {'rating': {'id': [1]}},
-    #             u'isbn': u'abc',
-    #             u'rating': {'id': 1, 'name': 'Tiger publishing'},
-    #             u'title': u'The Tiger Club'
-    #         },
-    #         {
-    #             u'_meta': {'rating': {'id': [2]}},
-    #             u'isbn': u'def',
-    #             u'rating': {'id': 2, 'name': 'Lion publishing'},
-    #             u'title': u'The Lion Club'
-    #         },
-    #         {
-    #             u'_meta': {'rating': {'id': [3]}},
-    #             u'isbn': u'ghi',
-    #             u'rating': {'id': 3, 'name': 'Hop Bunny publishing'},
-    #             u'title': u'The Rabbit Club'
-    #         }
-    #     ]
+        assert docs == [
+            {
+                u'_meta': {'rating': {'id': [1]}},
+                u'isbn': u'abc',
+                u'rating': {'id': 1, 'value': 1.1},
+                u'title': u'The Tiger Club'
+            },
+            {
+                u'_meta': {'rating': {'id': [2]}},
+                u'isbn': u'def',
+                u'rating': {'id': 2, 'value': 2.2},
+                u'title': u'The Lion Club'
+            },
+            {
+                u'_meta': {'rating': {'id': [3]}},
+                u'isbn': u'ghi',
+                u'rating': {'id': 3, 'value': 3.3},
+                u'title': u'The Rabbit Club'
+            }
+        ]
 
-    #     session = sync.session
+        session = sync.session
 
-    #     def pull():
-    #         txmin = sync.checkpoint
-    #         txmax = sync.txid_current
-    #         sync.logical_slot_changes(txmin=txmin, txmax=txmax)
+        def pull():
+            txmin = sync.checkpoint
+            txmax = sync.txid_current
+            sync.logical_slot_changes(txmin=txmin, txmax=txmax)
 
-    #     def poll_redis():
-    #         return []
+        def poll_redis():
+            return []
 
-    #     def poll_db():
-    #         try:
-    #             session.execute(
-    #                 rating_cls.__table__.insert().values(
-    #                     id=99,
-    #                     name='Rabbit ratings'
-    #                 )
-    #             )
-    #             session.execute(
-    #                 book_cls.__table__.update().where(
-    #                     book_cls.__table__.c.rating_id == 3
-    #                 ).values(rating_id=99)
-    #             )
-    #             session.execute(
-    #                 rating_cls.__table__.delete().where(
-    #                     rating_cls.__table__.c.id == 3
-    #                 )
-    #             )
-    #             session.commit()
-    #         except Exception:
-    #             session.rollback()
-    #             raise
+        def poll_db():
+            try:
+                session.execute(
+                    book_cls.__table__.insert().values(
+                        isbn='xyz',
+                        title='The End of time',
+                    )
+                )
+                session.execute(
+                    rating_cls.__table__.update().where(
+                        rating_cls.__table__.c.id == 3
+                    ).values(book_isbn='xyz')
+                )
+                session.execute(
+                    book_cls.__table__.delete().where(
+                        book_cls.__table__.c.isbn == 'ghi'
+                    )
+                )
+                session.commit()
+            except Exception:
+                session.rollback()
+                raise
 
-    #     with mock.patch('pgsync.sync.Sync.poll_redis', side_effect=poll_redis):
-    #         with mock.patch('pgsync.sync.Sync.poll_db', side_effect=poll_db):
-    #             with mock.patch('pgsync.sync.Sync.pull', side_effect=pull):
-    #                 with mock.patch(
-    #                     'pgsync.sync.Sync.truncate_slots',
-    #                     side_effect=truncate_slots,
-    #                 ):
-    #                     sync.receive()
-    #                     sync.es.refresh('testdb')
+        with mock.patch('pgsync.sync.Sync.poll_redis', side_effect=poll_redis):
+            with mock.patch('pgsync.sync.Sync.poll_db', side_effect=poll_db):
+                with mock.patch('pgsync.sync.Sync.pull', side_effect=pull):
+                    with mock.patch(
+                        'pgsync.sync.Sync.truncate_slots',
+                        side_effect=truncate_slots,
+                    ):
+                        sync.receive()
+                        sync.es.refresh('testdb')
 
-    #     docs = search(sync.es, 'testdb')
-
-    #     assert docs == [
-    #         {
-    #             u'_meta': {'rating': {'id': [1]}},
-    #             u'isbn': u'abc',
-    #             u'rating': {'id': 1, 'name': 'Tiger publishing'},
-    #             u'title': u'The Tiger Club'
-    #         },
-    #         {
-    #             u'_meta': {'rating': {'id': [2]}},
-    #             u'isbn': u'def',
-    #             u'rating': {'id': 2, 'name': 'Lion publishing'},
-    #             u'title': u'The Lion Club'
-    #         },
-    #         {
-    #             u'_meta': {'rating': {'id': [99]}},
-    #             u'isbn': u'ghi',
-    #             u'rating': {'id': 99, 'name': 'Rabbit ratings'},
-    #             u'title': u'The Rabbit Club'
-    #         }
-    #     ]
-    #     assert_resync_empty(
-    #         sync,
-    #         document.get('nodes', []),
-    #         document.get('index'),
-    #     )
+        docs = search(sync.es, 'testdb')
+        assert docs == [
+            {
+                u'_meta': {'rating': {'id': [1]}},
+                u'isbn': u'abc',
+                u'rating': {'id': 1, 'value': 1.1},
+                u'title': u'The Tiger Club'
+            },
+            {
+                u'_meta': {'rating': {'id': [2]}},
+                u'isbn': u'def',
+                u'rating': {'id': 2, 'value': 2.2},
+                u'title': u'The Lion Club'
+            },
+            {
+                u'_meta': {'rating': {'id': [3]}},
+                u'isbn': u'xyz',
+                u'rating': {'id': 3, 'value': 3.3},
+                u'title': u'The End of time'
+            }
+        ]
+        assert_resync_empty(
+            sync,
+            document.get('nodes', []),
+            document.get('index'),
+        )

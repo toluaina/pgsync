@@ -585,8 +585,8 @@ class TestParentSingleChildFkOnParent(object):
         with pytest.raises(ForeignKeyError) as excinfo:
             [doc for doc in sync._sync(nodes, 'testdb')]
         msg = (
-            f'No foreign key relationship between '
-            f'"public.book" and "public.city"'
+            'No foreign key relationship between '
+            '"public.book" and "public.city"'
         )
         assert msg in str(
             excinfo.value

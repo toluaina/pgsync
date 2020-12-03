@@ -142,11 +142,10 @@ class ElasticHelper(object):
 
         for node in traverse_post_order(root):
 
-            columns = node.column_names
             rename = node.transform.get('rename', {})
             mapping = node.transform.get('mapping', {})
 
-            for column in columns:
+            for column in node.column_names:
 
                 column = rename.get(column, column)
                 if column not in mapping:

@@ -11,7 +11,7 @@ click==7.1.2              # via -r requirements/base.in
 elasticsearch-dsl==7.3.0  # via -r requirements/base.in
 elasticsearch==7.10.0     # via elasticsearch-dsl
 environs==9.2.0           # via -r requirements/base.in
-faker==4.18.0             # via -r requirements/base.in
+faker==5.0.0              # via -r requirements/base.in
 marshmallow==3.9.1        # via environs
 newrelic==5.22.1.152      # via -r requirements/prod.in
 psycopg2-binary==2.8.6    # via -r requirements/base.in
