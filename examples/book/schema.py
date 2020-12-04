@@ -45,7 +45,8 @@ class City(Base):
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String, nullable=False)
     country_id = sa.Column(
-        sa.Integer, sa.ForeignKey(Country.id)
+        sa.Integer,
+        sa.ForeignKey(Country.id),
     )
     country = sa.orm.relationship(
         Country,
@@ -175,16 +176,12 @@ class BookLanguage(Base):
         UniqueConstraint('book_isbn', 'language_id'),
     )
     id = sa.Column(sa.Integer, primary_key=True)
-    book_isbn = sa.Column(
-        sa.String, sa.ForeignKey(Book.isbn)
-    )
+    book_isbn = sa.Column(sa.String, sa.ForeignKey(Book.isbn))
     book = sa.orm.relationship(
         Book,
         backref=sa.orm.backref('book_language_books'),
     )
-    language_id = sa.Column(
-        sa.Integer, sa.ForeignKey(Language.id)
-    )
+    language_id = sa.Column(sa.Integer, sa.ForeignKey(Language.id))
     language = sa.orm.relationship(
         Language,
         backref=sa.orm.backref('languages'),
@@ -197,20 +194,13 @@ class BookShelf(Base):
         UniqueConstraint('book_isbn', 'shelf_id'),
     )
     id = sa.Column(sa.Integer, primary_key=True)
-    book_isbn = sa.Column(
-        sa.String, sa.ForeignKey(Book.isbn)
-    )
+    book_isbn = sa.Column(sa.String, sa.ForeignKey(Book.isbn))
     book = sa.orm.relationship(
         Book,
         backref=sa.orm.backref('book_bookshelf_books'),
     )
-    shelf_id = sa.Column(
-        sa.Integer, sa.ForeignKey(Shelf.id)
-    )
-    shelf = sa.orm.relationship(
-        Shelf,
-        backref=sa.orm.backref('shelves'),
-    )
+    shelf_id = sa.Column(sa.Integer, sa.ForeignKey(Shelf.id))
+    shelf = sa.orm.relationship(Shelf, backref=sa.orm.backref('shelves'))
 
 
 def setup(config=None):

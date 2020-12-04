@@ -16,8 +16,11 @@ if [ -d '__pycache__' ] ; then
     rm -r __pycache__
 fi
 
-rm -rf .coverge.*
+rm -rf .coverage
+rm -rf .coverage.*
 rm -rf *.egg-info
+rm -rf .eggs
+rm -rf .mypy_cache
 find . -type f -name .book* -exec rm -r "{}" \;
 find . -type f -name .social* -exec rm -r "{}" \;
 find . -type f -name .airbnb* -exec rm -r "{}" \;

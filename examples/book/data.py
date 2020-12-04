@@ -175,21 +175,28 @@ def main(config, nsize):
         '004': Book(
             isbn='004',
             title='Harry Potter and the Chamber of Secrets',
-            description='The Dursleys were so mean and hideous that summer that all Harry Potter wanted was to get back to the Hogwarts School for Witchcraft and Wizardry',
+            description='The Dursleys were so mean and hideous that summer '
+                        'that all Harry Potter wanted was to get back to the '
+                        'Hogwarts School for Witchcraft and Wizardry',
             publisher=publishers['Penguin Books'],
             tags=['j', 'k', 'l'],
         ),
         '005': Book(
             isbn='005',
             title='The 17th Suspect',
-            description='A series of shootings exposes San Francisco to a methodical yet unpredictable killer, and a reluctant woman decides to put her trust in Sergeant Lindsay Boxer',
+            description='A series of shootings exposes San Francisco to a '
+                        'methodical yet unpredictable killer, and a reluctant '
+                        'woman decides to put her trust in Sergeant Lindsay '
+                        'Boxer',
             publisher=publishers['Pearson Press'],
             tags=['m', 'n', 'o'],
         ),
         '006': Book(
             isbn='006',
             title='The President Is Missing',
-            description='The publishing event of 2018: Bill Clinton and James Patterson\'s The President Is Missing is a superlative thriller',
+            description='The publishing event of 2018: Bill Clinton and James '
+                        'Patterson\'s The President Is Missing is a '
+                        'superlative thriller',
             publisher=publishers['Pearson Press'],
         ),
         '007': Book(
