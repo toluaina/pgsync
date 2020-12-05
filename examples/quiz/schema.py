@@ -68,18 +68,12 @@ class PossibleAnswer(Base):
     )
     question_id = sa.Column(
         sa.Integer,
-        # sa.ForeignKey(Question.id),
         primary_key=True
     )
     question_uid = sa.Column(
         sa.String,
-        # sa.ForeignKey(Question.uid),
         primary_key=True
     )
-    # question = sa.orm.relationship(
-    #     Question,
-    #     backref=sa.orm.backref('question')
-    # )
     answer_id = sa.Column(
         sa.Integer,
         primary_key=True
@@ -116,12 +110,10 @@ class RealAnswer(Base):
     )
     question_id = sa.Column(
         sa.Integer,
-        # sa.ForeignKey(Question.id),
         primary_key=True,
     )
     question_uid = sa.Column(
         sa.String,
-        # sa.ForeignKey(Question.uid),
         primary_key=True,
     )
     answer_id = sa.Column(

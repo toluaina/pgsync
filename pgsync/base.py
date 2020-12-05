@@ -701,7 +701,7 @@ def get_foreign_keys(model_a, model_b):
     e.g:
         {
             fk1['table_1']: [column_1, column_2, column_N],
-            fk2['table_2']: [column_1, column_2, column_N]
+            fk2['table_2']: [column_1, column_2, column_N],
         }
 
     column_1, column_2, column_N are of type ForeignKeyContraint

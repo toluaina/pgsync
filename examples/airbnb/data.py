@@ -29,7 +29,6 @@ def main(config):
     Session = sessionmaker(bind=engine, autoflush=True)
     session = Session()
 
-    # Bootstrap
     users = [
         Users(email='stephanie.miller@aol.com'),
         Users(email='nancy.gaines@ibm.com'),

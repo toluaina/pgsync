@@ -662,7 +662,7 @@ class Sync(Base):
                         sa.cast(
                             sa.cast(
                                 node.model.c.xmin,
-                                sa.Text
+                                sa.Text,
                             ), sa.BigInteger
                         ) >= txmin
                     )
@@ -671,7 +671,7 @@ class Sync(Base):
                         sa.cast(
                             sa.cast(
                                 node.model.c.xmin,
-                                sa.Text
+                                sa.Text,
                             ), sa.BigInteger
                         ) < txmax
                     )

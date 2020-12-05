@@ -245,7 +245,7 @@ def get_elasticsearch_url(
     user=None,
     host=None,
     password=None,
-    port=None
+    port=None,
 ):
     """
     Return the URL to connect to Elasticsearch.

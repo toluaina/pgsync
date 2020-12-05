@@ -46,13 +46,13 @@ def main(config):
         session.add_all(users.values())
 
     posts = {
-        'Post1': Post(
+        'Post 1': Post(
             slug='post_1', title='This is the first post'
         ),
-        'Post2': Post(
+        'Post 2': Post(
             slug='post_2', title='This is the second post'
         ),
-        'Post3': Post(
+        'Post 3': Post(
             slug='post_3', title='This is the third post'
         ),
     }
@@ -60,27 +60,27 @@ def main(config):
         session.add_all(posts.values())
 
     comments = {
-        'Comment1': Comment(
+        'Comment 1': Comment(
             title='Comment 1',
             content='This is a sample comment for comment 1',
         ),
-        'Comment2': Comment(
+        'Comment 2': Comment(
             title='Comment 2',
             content='This is a sample comment for comment 2',
         ),
-        'Comment3': Comment(
+        'Comment 3': Comment(
             title='Comment 3',
             content='This is a sample comment for comment 3',
         ),
-        'Comment4': Comment(
+        'Comment 4': Comment(
             title='Comment 4',
             content='This is a sample comment for comment 4',
         ),
-        'Comment5': Comment(
+        'Comment 5': Comment(
             title='Comment 5',
             content='This is a sample comment for comment 5',
         ),
-        'Comment6': Comment(
+        'Comment 6': Comment(
             title='Comment 6',
             content='This is a sample comment for comment 6',
         ),
@@ -108,15 +108,15 @@ def main(config):
     user_posts = [
         UserPost(
             user=users['Carla Ferreira Cardoso'],
-            post=posts['Post1'],
+            post=posts['Post 1'],
         ),
         UserPost(
             user=users['Uwe Fuerst'],
-            post=posts['Post2'],
+            post=posts['Post 2'],
         ),
         UserPost(
             user=users['Otitodilinna Chigolum'],
-            post=posts['Post3'],
+            post=posts['Post 3'],
         ),
     ]
     with subtransactions(session):
@@ -161,28 +161,28 @@ def main(config):
 
     post_comments = [
         PostComment(
-            post=posts['Post1'],
-            comment=comments['Comment1'],
+            post=posts['Post 1'],
+            comment=comments['Comment 1'],
         ),
         PostComment(
-            post=posts['Post1'],
-            comment=comments['Comment2'],
+            post=posts['Post 1'],
+            comment=comments['Comment 2'],
         ),
         PostComment(
-            post=posts['Post2'],
-            comment=comments['Comment3'],
+            post=posts['Post 2'],
+            comment=comments['Comment 3'],
         ),
         PostComment(
-            post=posts['Post2'],
-            comment=comments['Comment4'],
+            post=posts['Post 2'],
+            comment=comments['Comment 4'],
         ),
         PostComment(
-            post=posts['Post3'],
-            comment=comments['Comment5'],
+            post=posts['Post 3'],
+            comment=comments['Comment 5'],
         ),
         PostComment(
-            post=posts['Post3'],
-            comment=comments['Comment6'],
+            post=posts['Post 3'],
+            comment=comments['Comment 6'],
         ),
     ]
     with subtransactions(session):
