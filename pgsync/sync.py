@@ -663,7 +663,7 @@ class Sync(Base):
                             sa.cast(
                                 node.model.c.xmin,
                                 sa.Text,
-                            ), sa.BigInteger
+                            ), sa.BigInteger,
                         ) >= txmin
                     )
                 if txmax:
@@ -672,7 +672,7 @@ class Sync(Base):
                             sa.cast(
                                 node.model.c.xmin,
                                 sa.Text,
-                            ), sa.BigInteger
+                            ), sa.BigInteger,
                         ) < txmax
                     )
 

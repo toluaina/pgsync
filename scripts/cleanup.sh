@@ -21,15 +21,15 @@ rm -rf .coverage.*
 rm -rf *.egg-info
 rm -rf .eggs
 rm -rf .mypy_cache
-find . -type f -name .book* -exec rm -r "{}" \;
-find . -type f -name .social* -exec rm -r "{}" \;
-find . -type f -name .airbnb* -exec rm -r "{}" \;
-find . -type f -name .airline* -exec rm -r "{}" \;
-find . -type f -name .movie* -exec rm -r "{}" \;
-find . -type f -name .quiz* -exec rm -r "{}" \;
-find . -type f -name .rental* -exec rm -r "{}" \;
-find . -type f -name .shakespeare* -exec rm -r "{}" \;
-find . -type f -name .survey* -exec rm -r "{}" \;
+find . -type f -name .book_* -exec rm -r "{}" \;
+find . -type f -name .social_* -exec rm -r "{}" \;
+find . -type f -name .airbnb_* -exec rm -r "{}" \;
+find . -type f -name .airline_* -exec rm -r "{}" \;
+find . -type f -name .movie_* -exec rm -r "{}" \;
+find . -type f -name .quiz_* -exec rm -r "{}" \;
+find . -type f -name .rental_* -exec rm -r "{}" \;
+find . -type f -name .shakespeare_* -exec rm -r "{}" \;
+find . -type f -name .survey_* -exec rm -r "{}" \;
 find . -type d -name *.egg-info -exec rm -r "{}" \;
 find . -type d -name __pycache__ -exec rm -r "{}" \;
 find . -type f -name *.pyc -exec rm -r "{}" \;

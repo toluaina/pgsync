@@ -114,8 +114,8 @@ $ curl -X GET http://[elasticsearch host]:9201/reservations/_search?pretty=true
 ##### Manual configuration
 
 - Setup
-  - ensure the database user is a superuser 
-  - Enable logical decoding. you would also need to set up at least two parameters at postgresql.conf
+  - Ensure the database user is a superuser 
+  - Enable logical decoding. You would also need to set up at least two parameters at postgresql.conf
 
     ```wal_level = logical```
 
@@ -123,16 +123,16 @@ $ curl -X GET http://[elasticsearch host]:9201/reservations/_search?pretty=true
   
 - Installation
   - ```$ pip install pgsync``` 
-  - create a [schema.json](https://github.com/toluaina/pgsync/blob/master/examples/airbnb/schema.json) for you document representation
-  - bootstrap the database (one time only) **_```bootstrap --config schema.json```_**
-  - run the program with **_```pgsync --config schema.json```_** or as a daemon **_```pgsync --config schema.json -d```_**
+  - Create a [schema.json](https://github.com/toluaina/pgsync/blob/master/examples/airbnb/schema.json) for you document representation
+  - Bootstrap the database (one time only) **_```bootstrap --config schema.json```_**
+  - Run the program with **_```pgsync --config schema.json```_** or as a daemon **_```pgsync --config schema.json -d```_**
 
 
 #### Features
 
 Key features of PGSync are:
 
-- Easily denormalize relational data.
+- Easily denormalize relational data. 
 - Works with any PostgreSQL database (version 9.4 or later). 
 - Negligible impact on database performance.
 - Transactionally consistent output in Elasticsearch. This means: writes appear only when they are committed to the database, insert, update and delete operations appear in the same order as they were committed (as opposed to eventual consistency).
