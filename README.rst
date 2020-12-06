@@ -18,7 +18,7 @@ expose structured denormalized documents in `Elasticsearch <https://www.elastic.
   Enable `logical decoding <https://www.postgresql.org/docs/current/logicaldecoding.html>`_ in your 
   Postgres setting.
 
-  - you would also need to set up two parameters in your Postgres config postgresql.conf
+  - You would also need to set up two parameters in your Postgres config postgresql.conf
 
     ```wal_level = logical```
 
@@ -99,7 +99,7 @@ Setup required environment variables for the application
 
 ## Running
 
-bootstrap the database (one time only)
+Bootstrap the database (one time only)
   $ bootstrap --config schema.json
-run pgsync as a daemon
+Run pgsync as a daemon
   $ pgsync --config schema.json --daemon
