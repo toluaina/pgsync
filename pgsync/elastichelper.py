@@ -11,6 +11,9 @@ from .constants import ELASTICSEARCH_TYPES, META
 from .node import traverse_post_order
 from .settings import (
     ELASTICSEARCH_CHUNK_SIZE,
+    ELASTICSEARCH_MAX_CHUNK_BYTES,
+    ELASTICSEARCH_QUEUE_SIZE,
+    ELASTICSEARCH_THREAD_COUNT,
     ELASTICSEARCH_TIMEOUT,
     ELASTICSEARCH_VERIFY_CERTS,
 )
@@ -49,15 +52,29 @@ class ElasticHelper(object):
             logger.exception(f'Exception {e}')
             raise
 
-    def bulk(self, index, docs, chunk_size=None):
+    def bulk(
+        self,
+        index,
+        docs,
+        chunk_size=None,
+        max_chunk_bytes=None,
+        queue_size=None,
+        thread_count=None,
+    ):
         """Bulk index, update, delete docs to Elasticsearch."""
         chunk_size = chunk_size or ELASTICSEARCH_CHUNK_SIZE
+        max_chunk_bytes = max_chunk_bytes or ELASTICSEARCH_MAX_CHUNK_BYTES
+        thread_count = thread_count or ELASTICSEARCH_THREAD_COUNT
+        queue_size = queue_size or ELASTICSEARCH_QUEUE_SIZE
 
         for _ in parallel_bulk(
             self.__es,
             docs,
             index=index,
+            thread_count=thread_count,
             chunk_size=chunk_size,
+            max_chunk_bytes=max_chunk_bytes,
+            queue_size=queue_size,
             refresh=False,
         ):
             pass

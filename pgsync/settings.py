@@ -32,6 +32,16 @@ ELASTICSEARCH_PASSWORD = env.str('ELASTICSEARCH_PASSWORD', default=None)
 ELASTICSEARCH_TIMEOUT = env.int('ELASTICSEARCH_TIMEOUT', default=10)
 # Elasticsearch index chunk size (how many documents to index at a time)
 ELASTICSEARCH_CHUNK_SIZE = env.int('ELASTICSEARCH_CHUNK_SIZE', default=2000)
+# the maximum size of the request in bytes (default: 100MB)
+ELASTICSEARCH_MAX_CHUNK_BYTES = env.int(
+    'ELASTICSEARCH_MAX_CHUNK_BYTES',
+    default=104857600,
+)
+# the size of the threadpool to use for the bulk requests
+ELASTICSEARCH_THREAD_COUNT = env.int('ELASTICSEARCH_THREAD_COUNT', default=4)
+# the size of the task queue between the main thread
+# (producing chunks to send) and the processing threads.
+ELASTICSEARCH_QUEUE_SIZE = env.int('ELASTICSEARCH_QUEUE_SIZE', default=4)
 ELASTICSEARCH_VERIFY_CERTS = env.bool(
     'ELASTICSEARCH_VERIFY_CERTS',
     default=True,
