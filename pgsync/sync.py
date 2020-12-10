@@ -878,7 +878,7 @@ class Sync(Base):
         """Pull data from db."""
         txmin = self.checkpoint
         txmax = self.txid_current
-        logger.debug(f'pull txmin {txmin}; txmax {txmax}')
+        logger.debug(f'pull txmin: {txmin} txmax: {txmax}')
         # forward pass sync
         self.sync(txmin=txmin, txmax=txmax)
         # now sync up to txmax to capture everything we might have missed

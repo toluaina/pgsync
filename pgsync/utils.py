@@ -128,7 +128,8 @@ def map_fields(init_dict, map_dict, result_dict=None):
                 if key in map_dict:
                     value = map_fields(value, map_dict[key])
             elif isinstance(value, list) and value and not isinstance(
-                value[0], dict
+                value[0],
+                dict,
             ):
                 try:
                     value = sorted(value)
