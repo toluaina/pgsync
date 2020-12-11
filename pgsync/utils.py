@@ -4,6 +4,7 @@ import os
 import sys
 import threading
 import time
+from datetime import timedelta
 
 from six import string_types
 
@@ -69,12 +70,6 @@ def timeit(func):
     return timed
 
 
-def time_human(seconds):
-    minutes, seconds = divmod(seconds, 60)
-    hours, minutes = divmod(minutes, 60)
-    return f'{hours:02}:{minutes:02}:{seconds:02}'
-
-
 class Timer:
     def __init__(self, message=None):
         self._message = message or ''
@@ -87,7 +82,7 @@ class Timer:
         self.end = time.time()
         self.elapsed = self.end - self.start
         sys.stdout.write(
-            f'{self._message} {time_human(self.elapsed)} '
+            f'{self._message} {str(timedelta(seconds=self.elapsed))} '
             f'({self.elapsed:2.2f} sec)\n'
         )
 

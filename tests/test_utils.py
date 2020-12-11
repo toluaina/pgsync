@@ -9,7 +9,6 @@ from pgsync.utils import (
     get_postgres_url,
     get_redis_url,
     progress,
-    time_human,
 )
 
 
@@ -21,9 +20,6 @@ class TestUtils(object):
     def test_progress(self, mock_sys):
         progress(2, 1, prefix='A', suffix='B', decimals=3, bar_length=5)
         mock_sys.stdout.write.assert_called_once()
-
-    def test_time_human(self):
-        assert time_human(2000) == '00:33:20'
 
     @patch('pgsync.utils.logger')
     def test_get_elasticsearch_url(self, mock_logger):
