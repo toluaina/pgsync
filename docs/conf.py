@@ -57,7 +57,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'pgsync'
-copyright = u"2020, Tolu Aina"
+copyright = u"2021, Tolu Aina"
 author = u"Tolu Aina"
 
 # The version info for the project you're documenting, acts as replacement
