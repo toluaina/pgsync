@@ -23,7 +23,7 @@ DECLARE
       WHERE indrelid = TG_RELID AND indisprimary
   );
   foreign_keys TEXT [] := (
-      SELECT ARRAY_AGG(constraint_column_usage.column_name) || ARRAY_AGG(key_column_usage.column_name)
+      SELECT ARRAY_AGG(constraint_column_usage.column_name::TEXT) || ARRAY_AGG(key_column_usage.column_name::TEXT)
       FROM information_schema.table_constraints AS table_constraints
       JOIN information_schema.key_column_usage AS key_column_usage
       ON table_constraints.constraint_name = key_column_usage.constraint_name
