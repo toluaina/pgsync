@@ -5,6 +5,7 @@ import sys
 import threading
 import time
 from datetime import timedelta
+from urllib.parse import quote_plus
 
 from six import string_types
 
@@ -252,7 +253,7 @@ def get_elasticsearch_url(
     user = user or ELASTICSEARCH_USER
     password = password or ELASTICSEARCH_PASSWORD
     if user:
-        return f'{scheme}://{user}:{password}@{host}:{port}'
+        return f'{scheme}://{user}:{quote_plus(password)}@{host}:{port}'
     logger.debug('Connecting to Elasticsearch without authentication.')
     return f'{scheme}://{host}:{port}'
 
@@ -272,7 +273,7 @@ def get_postgres_url(
     password = password or PG_PASSWORD
     port = port or PG_PORT
     if password:
-        return f'postgresql://{user}:{password}@{host}:{port}/{database}'
+        return f'postgresql://{user}:{quote_plus(password)}@{host}:{port}/{database}'
     logger.debug('Connecting to Postgres without password.')
     return f'postgresql://{user}@{host}:{port}/{database}'
 
@@ -286,7 +287,7 @@ def get_redis_url(host=None, password=None, port=None, db=None):
     port = port or REDIS_PORT
     db = db or REDIS_DB
     if password:
-        return f'redis://:{password}@{host}:{port}/{db}'
+        return f'redis://:{quote_plus(password)}@{host}:{port}/{db}'
     logger.debug('Connecting to Redis without password.')
     return f'redis://{host}:{port}/{db}'
 
