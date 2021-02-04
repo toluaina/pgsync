@@ -65,7 +65,9 @@ class Sync(Base):
         self.setting = document.get('setting')
         super().__init__(document.get('database', self.index), **params)
         self.es = ElasticHelper()
-        self.__name = f"{self.database}_{self.index}"
+        self.__name = re.sub(
+            '[^0-9a-zA-Z_]+', '', f"{self.database}_{self.index}"
+        )
         self._checkpoint = None
         self._truncate = False
         self.verbose = verbose

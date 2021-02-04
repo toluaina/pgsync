@@ -1,5 +1,6 @@
 """Trigger tests."""
 import pytest
+
 from pgsync.trigger import CREATE_TRIGGER_TEMPLATE
 
 
