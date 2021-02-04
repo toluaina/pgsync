@@ -815,7 +815,12 @@ class Sync(Base):
                 i += 1
                 continue
 
-            conn.poll()
+            try:
+                conn.poll()
+            except psycopg2.OperationalError as e:
+                logger.fatal(f'OperationalError: {e}')
+                os._exit(-1)
+
             while conn.notifies:
                 notification = conn.notifies.pop(0)
                 payload = json.loads(notification.payload)
