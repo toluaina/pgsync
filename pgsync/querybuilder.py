@@ -279,9 +279,12 @@ class QueryBuilder(object):
                 if self.verbose:
                     compiled_query(child._subquery, 'child._subquery')
 
+            op = sa.and_
+            if child.table == child.parent.table:
+                op = sa.or_
             self.from_obj = self.from_obj.join(
                 child._subquery,
-                onclause=sa.and_(*onclause),
+                onclause=op(*onclause),
                 isouter=self.isouter,
             )
 
@@ -569,9 +572,13 @@ class QueryBuilder(object):
         if node._filters:
             self.isouter = False
 
+        op = sa.and_
+        if node.table == node.parent.table:
+            op = sa.or_
+
         from_obj = through.join(
             outer_subquery,
-            onclause=sa.and_(*onclause),
+            onclause=op(*onclause),
             isouter=self.isouter,
         )
 
