@@ -207,10 +207,7 @@ class Sync(Base):
         _rows = []
 
         for row in rows:
-            if (
-                re.search(r'BEGIN', row.data) or
-                re.search(r'COMMIT', row.data)
-            ):
+            if re.search(r'BEGIN|COMMIT', row.data):
                 continue
             _rows.append(row)
 

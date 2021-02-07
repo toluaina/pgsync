@@ -308,7 +308,7 @@ class Base(object):
         upto_nchanges=1,
     ):
         """
-        Peek from a logical replication slot without consuming changes.
+        Peek a logical replication slot without consuming changes.
 
         SELECT * FROM PG_LOGICAL_SLOT_PEEK_CHANGES('testdb', NULL, 1)
         """
