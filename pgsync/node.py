@@ -179,26 +179,18 @@ class Node(object):
 
 
 def traverse_breadth_first(root):
-    nodes = []
     stack = [root]
     while stack:
-        current = stack[0]
-        stack = stack[1:]
-        nodes.append(current)
-        for child in current.children:
+        node = stack.pop(0)
+        yield node
+        for child in node.children:
             stack.append(child)
-    return nodes
 
 
 def traverse_post_order(root):
-    nodes = collections.deque()
-    stack = [root]
-    while stack:
-        current = stack.pop()
-        nodes.appendleft(current)
-        for child in current.children:
-            stack.append(child)
-    return nodes
+    for child in root.children:
+        yield from traverse_post_order(child)
+    yield root
 
 
 class Tree(object):
