@@ -12,7 +12,7 @@ click==7.1.2              # via -r requirements/base.in
 coverage==5.4             # via pytest-cov
 elasticsearch-dsl==7.3.0  # via -r requirements/base.in
 elasticsearch==7.10.1     # via elasticsearch-dsl
-environs==9.3.0           # via -r requirements/base.in
+environs==9.3.1           # via -r requirements/base.in
 faker==6.0.0              # via -r requirements/base.in
 flake8-debugger==4.0.0    # via -r requirements/test.in
 flake8-docstrings==1.5.0  # via -r requirements/test.in
@@ -24,7 +24,7 @@ isort==5.7.0              # via flake8-isort
 marshmallow==3.10.0       # via environs
 mccabe==0.6.1             # via flake8
 mock==4.0.3               # via -r requirements/test.in
-more-itertools==8.6.0     # via pytest
+more-itertools==8.7.0     # via pytest
 packaging==20.9           # via pytest, pytest-sugar
 pluggy==0.13.1            # via pytest
 psycopg2-binary==2.8.6    # via -r requirements/base.in
