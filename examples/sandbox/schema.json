@@ -1,0 +1,37 @@
+[
+    {
+        "database": "zone",
+        "index": "zone",
+        "setting": {},
+        "nodes": [
+            {
+                "table": "zone",
+                "columns": [
+                    "cassini_id",
+                    "country_code",
+                    "admin_level",
+                    "geometry_json",
+                    "bounding_box_json"
+                ],
+                "children": [
+                    {
+                        "table": "zone",
+                        "columns": [
+                            "cassini_id",
+                            "country_code",
+                            "admin_level"
+                        ],
+                        "label": "parents",
+                        "relationship": {
+                            "variant": "object",
+                            "type": "one_to_many",
+                            "through_tables": [
+                                "zone_relation_parent"
+                            ]
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+]
