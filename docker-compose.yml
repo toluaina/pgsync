@@ -26,6 +26,10 @@ services:
       context: .
       dockerfile: Dockerfile
     command: ./runserver.sh
+    sysctls:
+      - net.ipv4.tcp_keepalive_time=200
+      - net.ipv4.tcp_keepalive_intvl=200
+      - net.ipv4.tcp_keepalive_probes=5
     labels:
       org.label-schema.name: "pgsync"
       org.label-schema.description: "Postgres to elasticsearch sync"
