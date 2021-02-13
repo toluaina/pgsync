@@ -91,8 +91,7 @@ class TestParentSingleChildFkOnChild(object):
 
         try:
             sync.es.teardown(index='testdb')
-        except Exception as e:
-            print(f'Exception {e}')
+        except Exception:
             raise
 
         sync.redis._delete()

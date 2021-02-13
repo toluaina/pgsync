@@ -1,7 +1,18 @@
 """Base tests."""
-import pytest
 
-from pgsync.base import Base
+import pytest
+from mock import patch
+
+from pgsync.base import (
+    Base,
+    create_database,
+    create_extension,
+    create_materialized_view,
+    drop_database,
+    drop_extension,
+    drop_materialized_view,
+    refresh_materialized_view,
+)
 from pgsync.exc import TableNotFoundError
 
 
@@ -14,7 +25,7 @@ class TestBase(object):
         pg_base.verbose = False
         value = pg_base.pg_settings('max_replication_slots')
         assert int(value) > 0
-        assert pg_base.pg_settings('xyz') == None
+        assert pg_base.pg_settings('xyz') is None
 
     def test_has_permission(self, connection):
         pg_base = Base(connection.engine.url.database)
@@ -23,7 +34,7 @@ class TestBase(object):
             connection.engine.url.username,
             'usesuper',
         )
-        assert value == True
+        assert value is True
         with pytest.raises(RuntimeError) as excinfo:
             value = pg_base.has_permission(
                 connection.engine.url.username,
@@ -82,7 +93,7 @@ class TestBase(object):
         pg_base = Base(connection.engine.url.database)
         row = pg_base.create_replication_slot('slot_name')
         assert row[0] == 'slot_name'
-        assert row[1] != None
+        assert row[1] is not None
         pg_base.drop_replication_slot('slot_name')
 
     def test_drop_replication_slot(self, connection):
@@ -106,3 +117,169 @@ class TestBase(object):
             assert 'Invalid definition public1.my_table for public' == str(
                 excinfo.value
             )
+
+    @patch('pgsync.base.pg_execute')
+    @patch('pgsync.base.pg_engine')
+    @patch('pgsync.base.logger')
+    def test_create_database(
+        self,
+        mock_logger,
+        mock_pg_engine,
+        mock_pg_execute,
+        connection,
+    ):
+        database = connection.engine.url.database
+        mock_pg_engine.return_value = connection.engine
+        create_database(database, echo=True)
+        assert mock_logger.debug.call_count == 2
+        mock_logger.debug.assert_any_call(f'Creating database: {database}')
+        mock_logger.debug.assert_any_call(f'Created database: {database}')
+        mock_pg_engine.assert_any_call(database='postgres', echo=True)
+        mock_pg_execute.assert_any_call(
+            connection.engine,
+            f'CREATE DATABASE {database}',
+        )
+
+    @patch('pgsync.base.pg_execute')
+    @patch('pgsync.base.pg_engine')
+    @patch('pgsync.base.logger')
+    def test_drop_database(
+        self,
+        mock_logger,
+        mock_pg_engine,
+        mock_pg_execute,
+        connection,
+    ):
+        database = connection.engine.url.database
+        mock_pg_engine.return_value = connection.engine
+        drop_database(database, echo=True)
+        assert mock_logger.debug.call_count == 2
+        mock_logger.debug.assert_any_call(f'Dropping database: {database}')
+        mock_logger.debug.assert_any_call(f'Dropped database: {database}')
+        mock_pg_engine.assert_any_call(database='postgres', echo=True)
+        mock_pg_execute.assert_any_call(
+            connection.engine,
+            f'DROP DATABASE IF EXISTS {database}',
+        )
+
+    @patch('pgsync.base.pg_execute')
+    @patch('pgsync.base.pg_engine')
+    @patch('pgsync.base.logger')
+    def test_create_extension(
+        self,
+        mock_logger,
+        mock_pg_engine,
+        mock_pg_execute,
+        connection,
+    ):
+        database = connection.engine.url.database
+        mock_pg_engine.return_value = connection.engine
+        create_extension(database, 'my_ext', echo=True)
+        assert mock_logger.debug.call_count == 2
+        mock_logger.debug.assert_any_call('Creating extension: my_ext')
+        mock_logger.debug.assert_any_call('Created extension: my_ext')
+        mock_pg_engine.assert_any_call(database=database, echo=True)
+        mock_pg_execute.assert_any_call(
+            connection.engine,
+            'CREATE EXTENSION IF NOT EXISTS "my_ext"',
+        )
+
+    @patch('pgsync.base.pg_execute')
+    @patch('pgsync.base.pg_engine')
+    @patch('pgsync.base.logger')
+    def test_drop_extension(
+        self,
+        mock_logger,
+        mock_pg_engine,
+        mock_pg_execute,
+        connection,
+    ):
+        database = connection.engine.url.database
+        mock_pg_engine.return_value = connection.engine
+        drop_extension(database, 'my_ext', echo=True)
+        assert mock_logger.debug.call_count == 2
+        mock_logger.debug.assert_any_call('Dropping extension: my_ext')
+        mock_logger.debug.assert_any_call('Dropped extension: my_ext')
+        mock_pg_engine.assert_any_call(database=database, echo=True)
+        mock_pg_execute.assert_any_call(
+            connection.engine,
+            'DROP EXTENSION IF EXISTS "my_ext"',
+        )
+
+    @patch('pgsync.base.pg_execute')
+    @patch('pgsync.base.pg_engine')
+    @patch('pgsync.base.logger')
+    def test_create_materialized_view(
+        self,
+        mock_logger,
+        mock_pg_engine,
+        mock_pg_execute,
+        connection,
+    ):
+        database = connection.engine.url.database
+        mock_pg_engine.return_value = connection.engine
+        create_materialized_view(database, 'my_view', 'SELECT 1', echo=True)
+        assert mock_logger.debug.call_count == 2
+        mock_logger.debug.assert_any_call(
+            'Creating materialized view: my_view with SELECT 1'
+        )
+        mock_logger.debug.assert_any_call(
+            'Created materialized view: my_view'
+        )
+        mock_pg_engine.assert_any_call(database=database, echo=True)
+        mock_pg_execute.assert_any_call(
+            connection.engine,
+            'CREATE MATERIALIZED VIEW my_view AS SELECT 1',
+        )
+
+    @patch('pgsync.base.pg_execute')
+    @patch('pgsync.base.pg_engine')
+    @patch('pgsync.base.logger')
+    def test_refresh_materialized_view(
+        self,
+        mock_logger,
+        mock_pg_engine,
+        mock_pg_execute,
+        connection,
+    ):
+        database = connection.engine.url.database
+        mock_pg_engine.return_value = connection.engine
+        refresh_materialized_view(database, 'my_view')
+        assert mock_logger.debug.call_count == 2
+        mock_logger.debug.assert_any_call(
+            'Refreshing materialized view: my_view'
+        )
+        mock_logger.debug.assert_any_call(
+            'Refreshed materialized view: my_view'
+        )
+        mock_pg_engine.assert_any_call(database=database, echo=False)
+        mock_pg_execute.assert_any_call(
+            connection.engine,
+            'REFRESH MATERIALIZED VIEW my_view',
+        )
+
+    @patch('pgsync.base.pg_execute')
+    @patch('pgsync.base.pg_engine')
+    @patch('pgsync.base.logger')
+    def test_drop_materialized_view(
+        self,
+        mock_logger,
+        mock_pg_engine,
+        mock_pg_execute,
+        connection,
+    ):
+        database = connection.engine.url.database
+        mock_pg_engine.return_value = connection.engine
+        drop_materialized_view(database, 'my_view')
+        assert mock_logger.debug.call_count == 2
+        mock_logger.debug.assert_any_call(
+            'Dropping materialized view: my_view'
+        )
+        mock_logger.debug.assert_any_call(
+            'Dropped materialized view: my_view'
+        )
+        mock_pg_engine.assert_any_call(database=database, echo=False)
+        mock_pg_execute.assert_any_call(
+            connection.engine,
+            'DROP MATERIALIZED VIEW IF EXISTS my_view',
+        )

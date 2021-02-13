@@ -280,8 +280,7 @@ class TestNestedChildren(object):
 
         try:
             sync.es.teardown(index='testdb')
-        except Exception as e:
-            print(f'Exception {e}')
+        except Exception:
             raise
 
         sync.redis._delete()
@@ -2121,7 +2120,6 @@ class TestNestedChildren(object):
         docs = search(sync.es, 'testdb')
         assert_resync_empty(sync, nodes, 'testdb')
 
-
     def test_insert_deep_nested_fk_nonthrough_child_op(
         self,
         data,
@@ -2131,9 +2129,6 @@ class TestNestedChildren(object):
         continent_cls,
     ):
         """insert a new deep nested non-through fk child with op."""
-        
-
-        import pprint
         nodes[0]['children'].append(
             {
                 "table": "book_rating",
@@ -2148,19 +2143,16 @@ class TestNestedChildren(object):
                 }
             },
         )
-
-        pprint.pprint(nodes[0]['children'])
-        print('-' * 1000)
-
-         # {
-         #            "table": "book_language",
-         #            "columns": [
-         #                "book_isbn",
-         #                "language_id"
-         #            ],
-         #            "label": "book_languages",
-         #            "relationship": {
-         #                "variant": "object",
-         #                "type": "one_to_many"
-         #            }
-         #        },
+        # TODO
+        # {
+        #            "table": "book_language",
+        #            "columns": [
+        #                "book_isbn",
+        #                "language_id"
+        #            ],
+        #            "label": "book_languages",
+        #            "relationship": {
+        #                "variant": "object",
+        #                "type": "one_to_many"
+        #            }
+        #        },

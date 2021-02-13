@@ -832,7 +832,7 @@ def refresh_materialized_view(database, view, echo=False):
 
 def drop_materialized_view(database, view, echo=False):
     """Drop a materialized database view."""
-    logger.debug(f'Drop materialized view: {view}')
+    logger.debug(f'Dropping materialized view: {view}')
     engine = pg_engine(database=database, echo=echo)
     pg_execute(engine, f'DROP MATERIALIZED VIEW IF EXISTS {view}')
     logger.debug(f'Dropped materialized view: {view}')
