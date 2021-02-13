@@ -156,6 +156,16 @@ class Base(object):
         metadata = self.__metadata[schema]
         return metadata.tables.keys()
 
+    def _get_schema(self, schema, table):
+        pairs = table.split('.')
+        if len(pairs) == 2:
+            return pairs[0], pairs[1]
+        if len(pairs) == 1:
+            return schema, pairs[0]
+        raise ValueError(
+            f'Invalid definition {table} for schema: {schema}'
+        )
+
     def truncate_table(self, table, schema=SCHEMA):
         """Truncate a table.
 
@@ -170,8 +180,7 @@ class Base(object):
         """
         if not table.startswith(f'{schema}.'):
             table = f'{schema}.{table}'
-        pairs = table.split('.')
-        schema, table = pairs[0], pairs[1]
+        schema, table = self._get_schema(schema, table)
         logger.debug(f'Truncating table: {schema}.{table}')
         query = f'TRUNCATE TABLE "{schema}"."{table}" CASCADE'
         self.execute(query)
@@ -351,8 +360,7 @@ class Base(object):
         insp = sa.engine.reflection.Inspector.from_engine(self.engine)
         views = insp.get_view_names(schema)
         for table in self.tables(schema):
-            pairs = table.split('.')
-            schema, table = pairs[0], pairs[1]
+            schema, table = self._get_schema(schema, table)
             if (tables and table not in tables) or (table in views):
                 continue
             logger.debug(f'Creating trigger on table: {schema}.{table}')
@@ -372,8 +380,7 @@ class Base(object):
     def drop_triggers(self, database, schema, tables=None):
         """Drop all pgsync defined triggers in database."""
         for table in self.tables(schema):
-            pairs = table.split('.')
-            schema, table = pairs[0], pairs[1]
+            schema, table = self._get_schema(schema, table)
             if tables and table not in tables:
                 continue
             logger.debug(f'Dropping trigger on table: {schema}.{table}')
@@ -387,8 +394,7 @@ class Base(object):
     def disable_triggers(self, database, schema):
         """Disable all pgsync defined triggers in database."""
         for table in self.tables(schema):
-            pairs = table.split('.')
-            schema, table = pairs[0], pairs[1]
+            schema, table = self._get_schema(schema, table)
             logger.debug(f'Disabling trigger on table: {schema}.{table}')
             for name in ('notify', 'truncate'):
                 query = (
@@ -400,8 +406,7 @@ class Base(object):
     def enable_triggers(self, database, schema):
         """Enable all pgsync defined triggers in database."""
         for table in self.tables(schema):
-            pairs = table.split('.')
-            schema, table = pairs[0], pairs[1]
+            schema, table = self._get_schema(schema, table)
             logger.debug(f'Enabling trigger on table: {schema}.{table}')
             for name in ('notify', 'truncate'):
                 query = (
