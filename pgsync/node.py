@@ -1,6 +1,4 @@
 """PGSync Node class representation."""
-import collections
-
 import sqlalchemy as sa
 from six import string_types
 
@@ -171,7 +169,7 @@ class Node(object):
         self.children.append(node)
 
     def display(self, prefix='', leaf=True):
-        print(prefix, ' - ' if leaf else '|- ', self.table, sep='')
+        print(prefix, ' - ' if leaf else '|- ', self.table, sep='') # noqa T001
         prefix += '   ' if leaf else '|  '
         for i, child in enumerate(self.children):
             leaf = i == (len(self.children) - 1)
