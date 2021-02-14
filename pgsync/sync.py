@@ -18,7 +18,7 @@ import psycopg2
 import sqlalchemy as sa
 
 from . import __version__
-from .base import Base, compiled_query, get_foreign_keys, get_primary_keys
+from .base import Base, compiled_query, get_primary_keys
 from .constants import (
     DELETE,
     INSERT,
@@ -370,23 +370,16 @@ class Sync(Base):
                             raise
                         # set the parent as the new entity that has changed
                         filters[node.parent.table] = []
-                        parent_model = self.model(
+                        foreign_keys = self.query_builder._get_foreign_keys(
+                            node.parent,
+                            node,
+                        )
+
+                        _table = self._get_table(schema, table)
+                        node_parent_table = self._get_table(
+                            schema,
                             node.parent.table,
-                            node.parent.schema,
                         )
-                        foreign_keys = get_foreign_keys(
-                            parent_model,
-                            model,
-                        )
-
-                        _table = table
-                        if not _table.startswith(f'{schema}.'):
-                            _table = f'{schema}.{table}'
-
-                        node_parent_table = node.parent.table
-
-                        if not node_parent_table.startswith(f'{schema}.'):
-                            node_parent_table = f'{schema}.{node_parent_table}'
 
                         for payload in payloads:
                             payload_data = self._payload_data(payload)
@@ -410,23 +403,16 @@ class Sync(Base):
                             raise
                         # set the parent as the new entity that has changed
                         filters[node.parent.table] = []
-                        parent_model = self.model(
+                        foreign_keys = self.query_builder._get_foreign_keys(
+                            node.parent,
+                            node,
+                        )
+
+                        _table = self._get_table(schema, table)
+                        node_parent_table = self._get_table(
+                            schema,
                             node.parent.table,
-                            node.parent.schema,
                         )
-                        foreign_keys = get_foreign_keys(
-                            parent_model,
-                            model,
-                        )
-
-                        _table = table
-                        if not _table.startswith(f'{schema}.'):
-                            _table = f'{schema}.{table}'
-
-                        node_parent_table = node.parent.table
-
-                        if not node_parent_table.startswith(f'{schema}.'):
-                            node_parent_table = f'{schema}.{node_parent_table}'
 
                         for payload in payloads:
                             payload_data = self._payload_data(payload)

@@ -166,6 +166,12 @@ class Base(object):
             f'Invalid definition {table} for schema: {schema}'
         )
 
+    def _get_table(self, schema, table):
+        """Get fully qualified table name."""
+        if not table.startswith(f'{schema}.'):
+            return f'{schema}.{table}'
+        return table
+
     def truncate_table(self, table, schema=SCHEMA):
         """Truncate a table.
 
@@ -178,8 +184,7 @@ class Base(object):
             schema (str): The database schema
 
         """
-        if not table.startswith(f'{schema}.'):
-            table = f'{schema}.{table}'
+        table = self._get_table(schema, table)
         schema, table = self._get_schema(schema, table)
         logger.debug(f'Truncating table: {schema}.{table}')
         query = f'TRUNCATE TABLE "{schema}"."{table}" CASCADE'
@@ -218,12 +223,13 @@ class Base(object):
         statement = statement.select_from(
             sa.text('PG_REPLICATION_SLOTS')
         )
-        filters = [
-            sa.column('slot_name') == slot_name,
-            sa.column('slot_type') == slot_type,
-            sa.column('plugin') == plugin,
-        ]
-        statement = statement.where(sa.and_(*filters))
+        statement = statement.where(
+            sa.and_(*[
+                sa.column('slot_name') == slot_name,
+                sa.column('slot_type') == slot_type,
+                sa.column('plugin') == plugin,
+            ])
+        )
         return self.query_all(statement)
 
     def create_replication_slot(self, slot_name):
