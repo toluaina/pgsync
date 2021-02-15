@@ -1,6 +1,7 @@
 """Trigger tests."""
 import pytest
 
+from pgsync.base import Base
 from pgsync.trigger import CREATE_TRIGGER_TEMPLATE
 
 
@@ -8,7 +9,7 @@ from pgsync.trigger import CREATE_TRIGGER_TEMPLATE
 class TestTrigger(object):
     """Trigger tests."""
 
-    def test_trigger_definition(self):
+    def test_trigger_template(self):
         expected = """
 CREATE OR REPLACE FUNCTION table_notify() RETURNS TRIGGER AS $$
 DECLARE
@@ -24,16 +25,11 @@ DECLARE
       WHERE indrelid = TG_RELID AND indisprimary
   );
   foreign_keys TEXT [] := (
-      SELECT ARRAY_AGG(constraint_column_usage.column_name::TEXT) || ARRAY_AGG(key_column_usage.column_name::TEXT)
-      FROM information_schema.table_constraints AS table_constraints
-      JOIN information_schema.key_column_usage AS key_column_usage
-      ON table_constraints.constraint_name = key_column_usage.constraint_name
-      AND table_constraints.table_schema = key_column_usage.table_schema
-      JOIN information_schema.constraint_column_usage AS constraint_column_usage
-      ON constraint_column_usage.constraint_name = table_constraints.constraint_name
-      AND constraint_column_usage.table_schema = table_constraints.table_schema
-      WHERE table_constraints.constraint_type = 'FOREIGN KEY'
-      AND table_constraints.table_name = TG_TABLE_NAME
+      SELECT ARRAY_AGG(column_name)
+      FROM information_schema.key_column_usage
+      WHERE constraint_catalog=current_catalog
+      AND table_name = TG_TABLE_NAME
+      AND position_in_unique_constraint NOTNULL
   );
 BEGIN
     -- database is also the channel name.
@@ -86,3 +82,52 @@ END;
 $$ LANGUAGE plpgsql;
 """
         assert CREATE_TRIGGER_TEMPLATE == expected
+
+    def test_trigger_primary_key_function(self, connection):
+        tables = {
+            'book': ['isbn'],
+            'publisher': ['id'],
+            'book_language': ['id'],
+            'author': ['id'],
+            'language': ['id'],
+            'subject': ['id'],
+            'city': ['id'],
+            'country': ['id'],
+            'continent': ['id'],
+        }
+        pg_base = Base(connection.engine.url.database)
+        for table_name, primary_keys in tables.items():
+            query = (
+                f"SELECT ARRAY_AGG(attname) "
+                f"FROM pg_index "
+                f"JOIN pg_attribute ON attrelid = indrelid AND attnum = ANY(indkey) "
+                f"WHERE indrelid = '{table_name}'::regclass AND indisprimary"
+            )
+            rows = pg_base.query_all(query)[0]
+            assert list(rows)[0] == primary_keys
+
+    def test_trigger_foreign_key_function(self, connection):
+        tables = {
+            'book': ['publisher_id'],
+            'publisher': None,
+            'book_language': ['book_isbn', 'language_id'],
+            'author': ['city_id'],
+            'language': None,
+            'subject': None,
+            'city': ['country_id'],
+            'country': ['continent_id'],
+            'continent': None,
+        }
+        pg_base = Base(connection.engine.url.database)
+        for table_name, foreign_keys in tables.items():
+            query = (
+                f"SELECT ARRAY_AGG(column_name) FROM information_schema.key_column_usage "
+                f"WHERE constraint_catalog=current_catalog AND "
+                f"table_name='{table_name}' AND position_in_unique_constraint NOTNULL "
+            )
+            rows = pg_base.query_all(query)[0]
+            if rows[0]:
+                rows = rows[0].replace('{', '').replace('}', '').split(',')
+                assert rows == foreign_keys
+            else:
+                assert rows[0] == foreign_keys

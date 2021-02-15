@@ -16,16 +16,11 @@ DECLARE
       WHERE indrelid = TG_RELID AND indisprimary
   );
   foreign_keys TEXT [] := (
-      SELECT ARRAY_AGG(constraint_column_usage.column_name::TEXT) || ARRAY_AGG(key_column_usage.column_name::TEXT)
-      FROM information_schema.table_constraints AS table_constraints
-      JOIN information_schema.key_column_usage AS key_column_usage
-      ON table_constraints.constraint_name = key_column_usage.constraint_name
-      AND table_constraints.table_schema = key_column_usage.table_schema
-      JOIN information_schema.constraint_column_usage AS constraint_column_usage
-      ON constraint_column_usage.constraint_name = table_constraints.constraint_name
-      AND constraint_column_usage.table_schema = table_constraints.table_schema
-      WHERE table_constraints.constraint_type = 'FOREIGN KEY'
-      AND table_constraints.table_name = TG_TABLE_NAME
+      SELECT ARRAY_AGG(column_name)
+      FROM information_schema.key_column_usage
+      WHERE constraint_catalog=current_catalog
+      AND table_name = TG_TABLE_NAME
+      AND position_in_unique_constraint NOTNULL
   );
 BEGIN
     -- database is also the channel name.
