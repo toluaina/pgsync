@@ -25,7 +25,7 @@ DECLARE
       WHERE indrelid = TG_RELID AND indisprimary
   );
   foreign_keys TEXT [] := (
-      SELECT ARRAY_AGG(column_name)
+      SELECT ARRAY_AGG(column_name::TEXT)
       FROM information_schema.key_column_usage
       WHERE constraint_catalog=current_catalog
       AND table_name = TG_TABLE_NAME
@@ -121,13 +121,9 @@ $$ LANGUAGE plpgsql;
         pg_base = Base(connection.engine.url.database)
         for table_name, foreign_keys in tables.items():
             query = (
-                f"SELECT ARRAY_AGG(column_name) FROM information_schema.key_column_usage "
+                f"SELECT ARRAY_AGG(column_name::TEXT) FROM information_schema.key_column_usage "
                 f"WHERE constraint_catalog=current_catalog AND "
                 f"table_name='{table_name}' AND position_in_unique_constraint NOTNULL "
             )
             rows = pg_base.query_all(query)[0]
-            if rows[0]:
-                rows = rows[0].replace('{', '').replace('}', '').split(',')
-                assert rows == foreign_keys
-            else:
-                assert rows[0] == foreign_keys
+            assert rows[0] == foreign_keys

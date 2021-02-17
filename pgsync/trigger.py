@@ -16,7 +16,7 @@ DECLARE
       WHERE indrelid = TG_RELID AND indisprimary
   );
   foreign_keys TEXT [] := (
-      SELECT ARRAY_AGG(column_name)
+      SELECT ARRAY_AGG(column_name::TEXT)
       FROM information_schema.key_column_usage
       WHERE constraint_catalog=current_catalog
       AND table_name = TG_TABLE_NAME
