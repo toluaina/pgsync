@@ -64,6 +64,8 @@ REDIS_AUTH = env.str('REDIS_AUTH', default=None)
 REDIS_CHUNK_SIZE = env.int('REDIS_CHUNK_SIZE', default=1000)
 # redis socket connection timeout
 REDIS_SOCKET_TIMEOUT = env.int('REDIS_SOCKET_TIMEOUT', default=5)
+# redis poll interval (in secs)
+REDIS_POLL_INTERVAL = env.float('REDIS_POLL_INTERVAL', default=0.01)
 
 
 # Logging:

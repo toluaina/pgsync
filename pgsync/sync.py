@@ -34,7 +34,11 @@ from .exc import RDSError, SuperUserError
 from .node import traverse_breadth_first, traverse_post_order, Tree
 from .querybuilder import QueryBuilder
 from .redisqueue import RedisQueue
-from .settings import POLL_TIMEOUT, REPLICATION_SLOT_CLEANUP_INTERVAL
+from .settings import (
+    POLL_TIMEOUT,
+    REDIS_POLL_INTERVAL,
+    REPLICATION_SLOT_CLEANUP_INTERVAL,
+)
 from .utils import (
     get_config,
     get_private_keys,
@@ -768,6 +772,7 @@ class Sync(Base):
                     f'poll_redis: {payloads}'
                 )
                 self.on_publish(payloads)
+            time.sleep(REDIS_POLL_INTERVAL)
 
     @threaded
     def poll_db(self):
