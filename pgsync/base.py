@@ -137,8 +137,7 @@ class Base(object):
     def schemas(self):
         """Get the database schema names."""
         if self.__schemas is None:
-            insp = sa.engine.reflection.Inspector.from_engine(self.engine)
-            self.__schemas = insp.get_schema_names()
+            self.__schemas = sa.inspect(self.engine).get_schema_names()
             for schema in BUILTIN_SCHEMAS:
                 if schema in self.__schemas:
                     self.__schemas.remove(schema)
@@ -363,8 +362,7 @@ class Base(object):
             self.drop_triggers(database, schema)
         self.execute(CREATE_TRIGGER_TEMPLATE)
         queries = []
-        insp = sa.engine.reflection.Inspector.from_engine(self.engine)
-        views = insp.get_view_names(schema)
+        views = sa.inspect(self.engine).get_view_names(schema)
         for table in self.tables(schema):
             schema, table = self._get_schema(schema, table)
             if (tables and table not in tables) or (table in views):
