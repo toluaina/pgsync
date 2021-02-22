@@ -66,7 +66,8 @@
                         "table": "publisher",
                         "columns": [
                             "name",
-                            "id"
+                            "id",
+                            "is_active"
                         ],
                         "label": "publisher_label",
                         "relationship": {
@@ -83,8 +84,9 @@
                             },
 
                             "concat": {
-                                "columns": ["publisher_id", "publisher_name"],
-                                "into": "xyz"
+                                "columns": ["publisher_id", "publisher_name", "is_active"],
+                                "destination": "xyz",
+                                "delimiter": "_"
                             },
 
                             "move": {
