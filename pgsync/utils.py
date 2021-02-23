@@ -141,24 +141,20 @@ def map_fields(init_dict, map_dict, result_dict=None):
     return result_dict
 
 
-def get_transform(node):
+def _transform(node):
     structure = {}
-    for key in node:
-        if key == 'children':
-            for child in node['children']:
-                label = child.get('label', child['table'])
-                structure[label] = get_transform(child)
-        elif key == 'transform':
-            if 'rename' in node['transform']:
-                structure = node['transform']['rename']
-            # for name in ('rename', 'mapping'):
-            #     if name in node['transform']:
-            #         structure = node['transform'][name]
+    if 'transform' in node.keys():
+        if 'rename' in node['transform']:
+            structure = node['transform']['rename']
+    if 'children' in node.keys():
+        for child in node['children']:
+            label = child.get('label', child['table'])
+            structure[label] = _transform(child)
     return structure
 
 
 def transform(key, row, node):
-    structure = get_transform(node)
+    structure = _transform(node)
     return map_fields(row, structure)
 
 
