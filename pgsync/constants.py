@@ -67,12 +67,12 @@ ELASTICSEARCH_TYPES = [
     'ip',
     'keyword',
     'long',
+    'nested',
     'null',
+    'object',
     'scaled_float',
     'short',
     'text',
-    'object',
-    'nested',
 ]
 
 CONCAT_TRANSFORM = 'concat'

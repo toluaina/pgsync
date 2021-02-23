@@ -1,7 +1,7 @@
 '''Transform tests.'''
 import pytest
 
-from pgsync.utils import transform
+from pgsync.utils import _transform, map_fields, transform
 
 
 @pytest.mark.usefixtures('table_creator')
@@ -21,7 +21,7 @@ class TestTransform(object):
                     'table': 'child_1',
                     'columns': [
                         'column_1',
-                        'column_2'
+                        'column_2',
                     ],
                     'label': 'Child1',
                     'relationship': {
@@ -38,7 +38,7 @@ class TestTransform(object):
                     'table': 'Child2',
                     'columns': [
                         'column_1',
-                        'column_2'
+                        'column_2',
                     ],
                     'label': 'Child2',
                     'relationship': {
@@ -54,9 +54,9 @@ class TestTransform(object):
             ],
             'transform': {
                 'rename': {
-                    'id': 'myId',
-                    'code': 'myCode',
-                    'level': 'Level'
+                    'id': 'my_id',
+                    'code': 'my_code',
+                    'level': 'levelup',
                 }
             }
         }
@@ -84,7 +84,88 @@ class TestTransform(object):
                 {'column2': 'aa', 'column_1': 2},
                 {'column2': 'bb', 'column_1': 3}
             ],
-            'Level': 1,
-            'myCode': 'be',
-            'myId': '007',
+            'levelup': 1,
+            'my_code': 'be',
+            'my_id': '007',
+        }
+
+    def test_transform(self):
+        node = {
+            'table': 'tableau',
+            'columns': [
+                'id',
+                'code',
+                'level',
+            ],
+            'children': [
+                {
+                    'table': 'child_1',
+                    'columns': [
+                        'column_1',
+                        'column_2'
+                    ],
+                    'label': 'Child1',
+                    'relationship': {
+                        'variant': 'object',
+                        'type': 'one_to_one',
+                    },
+                    'transform': {
+                        'rename': {
+                            'column_1': 'column1'
+                        }
+                    }
+                },
+            ],
+            'transform': {
+                'rename': {
+                    'id': 'my_id',
+                    'code': 'my_code',
+                    'level': 'levelup'
+                }
+            }
+        }
+
+        transformed = _transform(node)
+        assert transformed == {
+            'id': 'my_id',
+            'code': 'my_code',
+            'level': 'levelup',
+            'Child1': {'column_1': 'column1'},
+        }
+
+    def test_map_fields(self):
+        structure = {
+            'id': 'my_id',
+            'code': 'my_code',
+            'level': 'levelup',
+            'Child1': {'column_1': 'column1'},
+        }
+
+        row = {
+            'level': 1,
+            'id': '007',
+            'code': 'be',
+            'Child1': [
+                {'column_1': 2, 'column_2': 'aa'},
+                {'column_1': 3, 'column_2': 'bb'}
+            ],
+            'Child2': [
+                {'column_1': 2, 'column_2': 'aa'},
+                {'column_1': 3, 'column_2': 'bb'}
+            ],
+        }
+        mapping = map_fields(row, structure)
+
+        assert mapping == {
+            'levelup': 1,
+            'my_id': '007',
+            'my_code': 'be',
+            'Child1': [
+                {'column1': 2, 'column_2': 'aa'},
+                {'column1': 3, 'column_2': 'bb'},
+            ],
+            'Child2': [
+                {'column_1': 2, 'column_2': 'aa'},
+                {'column_1': 3, 'column_2': 'bb'},
+            ]
         }
