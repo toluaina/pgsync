@@ -685,7 +685,7 @@ class Sync(Base):
 
             progress(i + 1, row_count)
 
-            row = transform(self.__name, row, nodes[0])
+            row = transform(row, nodes[0])
             row[META] = get_private_keys(keys)
             if extra:
                 if extra['table'] not in row[META]:

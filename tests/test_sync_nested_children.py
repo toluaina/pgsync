@@ -612,15 +612,15 @@ class TestNestedChildren(object):
                     'languages': ['EN', 'FR'],
                     'publisher_label': {
                         'id': 3,
-                        'name': 'Hop Bunny publishing'
+                        'name': 'Hop Bunny publishing',
                     },
                     'subjects': [
                         'Literature',
                         'Romance'
                     ],
-                    'title': 'The Rabbit Club'
-                }
-            }
+                    'title': 'The Rabbit Club',
+                },
+            },
         ]
         assert_resync_empty(sync, nodes, 'testdb')
 

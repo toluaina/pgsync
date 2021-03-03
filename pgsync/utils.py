@@ -9,6 +9,7 @@ from urllib.parse import quote_plus
 
 from six import string_types
 
+from .constants import CONCAT_TRANSFORM, RENAME_TRANSFORM
 from .exc import SchemaError
 from .settings import (
     ELASTICSEARCH_HOST,
@@ -115,14 +116,14 @@ def show_settings(schema=None, params={}):
     logger.info('-' * 65)
 
 
-def map_fields(init_dict, map_dict, result_dict=None):
-    """Rename keys in a nested dictionary based on mapping."""
+def rename_fields(fields, transform_node, result_dict=None):
+    """Rename keys in a nested dictionary based on transform_node."""
     result_dict = result_dict or {}
-    if isinstance(init_dict, dict):
-        for key, value in init_dict.items():
+    if isinstance(fields, dict):
+        for key, value in fields.items():
             if isinstance(value, dict):
-                if key in map_dict:
-                    value = map_fields(value, map_dict[key])
+                if key in transform_node:
+                    value = rename_fields(value, transform_node[key])
             elif isinstance(value, list) and value and not isinstance(
                 value[0],
                 dict,
@@ -131,31 +132,64 @@ def map_fields(init_dict, map_dict, result_dict=None):
                     value = sorted(value)
                 except TypeError:
                     pass
-            elif key in map_dict.keys():
+            elif key in transform_node.keys():
                 if isinstance(value, list):
-                    value = [map_fields(v, map_dict[key]) for v in value]
+                    value = [
+                        rename_fields(v, transform_node[key]) for v in value
+                    ]
                 elif isinstance(value, (string_types, int, float)):
-                    if map_dict[key]:
-                        key = str(map_dict[key])
+                    if transform_node[key]:
+                        key = str(transform_node[key])
             result_dict[key] = value
     return result_dict
 
 
-def _transform(node):
-    structure = {}
+def concat_fields(fields, transform_node, result_dict=None):
+    """Concatenate fields of a column."""
+    result_dict = result_dict or {}
+    if not transform_node:
+        return fields
+    if isinstance(fields, dict):
+        if 'columns' in transform_node:
+            columns = dict(
+                filter(
+                    lambda x: x[0] in transform_node['columns'],
+                    fields.items(),
+                )
+            ).values()
+            delimiter = transform_node.get('delimiter', '')
+            destination = transform_node['destination']
+            fields[destination] = f'{delimiter}'.join(map(str, columns))
+        for key, value in fields.items():
+            if isinstance(value, dict):
+                value = concat_fields(value, transform_node[key])
+            elif isinstance(value, list):
+                value = [
+                    concat_fields(v, transform_node[key]) for v in value
+                ]
+            result_dict[key] = value
+    return result_dict
+
+
+def get_transform(node, name):
+    transform_node = {}
     if 'transform' in node.keys():
-        if 'rename' in node['transform']:
-            structure = node['transform']['rename']
+        if name in node['transform']:
+            transform_node = node['transform'][name]
     if 'children' in node.keys():
         for child in node['children']:
             label = child.get('label', child['table'])
-            structure[label] = _transform(child)
-    return structure
+            _transform_node = get_transform(child, name)
+            if _transform_node:
+                transform_node[label] = _transform_node
+    return transform_node
 
 
-def transform(key, row, node):
-    structure = _transform(node)
-    return map_fields(row, structure)
+def transform(row, node):
+    transform_node = get_transform(node, RENAME_TRANSFORM)
+    row = rename_fields(row, transform_node)
+    transform_node = get_transform(node, CONCAT_TRANSFORM)
+    return concat_fields(row, transform_node)
 
 
 def get_private_keys(primary_keys):

@@ -82,18 +82,15 @@
                                 "id": "publisher_id",
                                 "name": "publisher_name"
                             },
-
                             "concat": {
-                                "columns": ["publisher_id", "publisher_name", "is_active"],
+                                "columns": ["publisher_id", "publisher_name", "is_active", "foo"],
                                 "destination": "xyz",
                                 "delimiter": "_"
                             },
-
                             "move": {
                                 "column": "id",
                                 "destination": "$root.author.author_id"
                             },
-
                             "mapping": {
                                 "publisher_id": {
                                     "type": "long"
