@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: debezium/postgres:12-alpine
+    image: debezium/postgres:13-alpine
     ports:
       - "15432:5432"
     environment:
