@@ -39,15 +39,8 @@ from .settings import (
     REDIS_POLL_INTERVAL,
     REPLICATION_SLOT_CLEANUP_INTERVAL,
 )
-from .utils import (
-    get_config,
-    get_private_keys,
-    progress,
-    show_settings,
-    threaded,
-    Timer,
-    transform,
-)
+from .transform import get_private_keys, transform
+from .utils import get_config, progress, show_settings, threaded, Timer
 
 logger = logging.getLogger(__name__)
 

@@ -2,7 +2,12 @@
 import pytest
 
 from pgsync.constants import CONCAT_TRANSFORM, RENAME_TRANSFORM
-from pgsync.utils import concat_fields, get_transform, rename_fields, transform
+from pgsync.transform import (
+    concat_fields,
+    get_transform,
+    rename_fields,
+    transform,
+)
 
 
 @pytest.mark.usefixtures('table_creator')
