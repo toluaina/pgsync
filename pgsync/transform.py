@@ -57,7 +57,10 @@ def concat_fields(fields, transform_node, result_dict=None):
                 value = concat_fields(value, transform_node[key])
             elif isinstance(value, list):
                 value = [
-                    concat_fields(v, transform_node[key]) for v in value
+                    concat_fields(
+                        v,
+                        transform_node[key],
+                    ) for v in value if key in transform_node
                 ]
             result_dict[key] = value
     return result_dict
