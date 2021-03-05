@@ -58,6 +58,7 @@ class Sync(Base):
         """Constructor."""
         params = params or {}
         self.index = document['index']
+        self.pipeline = document.get('pipeline')
         self.nodes = document.get('nodes', [])
         self.setting = document.get('setting')
         super().__init__(document.get('database', self.index), **params)
@@ -693,11 +694,14 @@ class Sync(Base):
                 pprint.pprint(row)
                 print('-' * 10)
 
-            yield {
+            doc = {
                 '_id': self.get_doc_id(primary_keys),
                 '_index': index,
                 '_source': row,
             }
+            if self.pipeline:
+                doc['pipeline'] = self.pipeline
+            yield doc
 
     def sync(self, txmin=None, txmax=None):
         """
