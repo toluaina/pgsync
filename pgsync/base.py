@@ -540,6 +540,7 @@ class Base(object):
                     break
 
                 key = match.groupdict().get('key')
+                key = key.replace('"', '')
                 value = match.groupdict().get('value')
                 type_ = match.groupdict().get('type')
 
