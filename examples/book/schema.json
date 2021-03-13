@@ -44,6 +44,11 @@
                         "isbn": "book_isbn",
                         "title": "book_title"
                     },
+                    "replace": {
+                        "isbn": {
+                            "00": "XX"
+                        }
+                    },
                     "mapping": {
                         "book_id": {
                             "type": "long"
@@ -187,6 +192,13 @@
                             "through_tables": [
                                 "book_language"
                             ]
+                        },
+                        "transform": {
+                            "replace": {
+                                "code": {
+                                    "-": "="
+                                }
+                            }
                         }
                     },
                     {

@@ -146,7 +146,7 @@ class TypeAheadView(web.View):
     def queries(self, mapping, search_param):
         """Return matching query by search_param."""
         should = self.build_queries(
-            mapping[ELASTICSEARCH_INDEX]['mappings']['properties'],
+            mapping[ELASTICSEARCH_INDEX]['mappings']['_doc']['properties'],
             search_param.lower(),
         )
         return Bool(
@@ -165,7 +165,7 @@ class TypeAheadView(web.View):
             timeout=ELASTICSEARCH_TIMEOUT,
             verify_certs=ELASTICSEARCH_VERIFY_CERTS,
         )
-        mapping = es.indices.get_mapping(ELASTICSEARCH_INDEX)
+        mapping = es.indices.get_mapping(ELASTICSEARCH_INDEX, include_type_name=True)
         search = Search(index=ELASTICSEARCH_INDEX, using=es)
         search = search.highlight_options(
             pre_tags=[PRE_HIGHLIGHT_TAG],
@@ -174,7 +174,7 @@ class TypeAheadView(web.View):
         query = self.queries(mapping, q)
         search = search.query(query)
         highlights = self.build_highlight(
-            mapping[ELASTICSEARCH_INDEX]['mappings']['properties']
+            mapping[ELASTICSEARCH_INDEX]['mappings']['_doc']['properties']
         )
 
         for highlight in highlights:

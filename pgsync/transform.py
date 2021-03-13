@@ -3,19 +3,33 @@ import logging
 
 from six import string_types
 
-from .constants import CONCAT_TRANSFORM, RENAME_TRANSFORM
+from .constants import CONCAT_TRANSFORM, RENAME_TRANSFORM, REPLACE_TRANSFORM
 
 logger = logging.getLogger(__name__)
 
 
-def rename_fields(fields, transform_node, result_dict=None):
+def _get_transform(node, key):
+    transform_node = {}
+    if 'transform' in node.keys():
+        if key in node['transform']:
+            transform_node = node['transform'][key]
+    if 'children' in node.keys():
+        for child in node['children']:
+            label = child.get('label', child['table'])
+            _transform_node = _get_transform(child, key)
+            if _transform_node:
+                transform_node[label] = _transform_node
+    return transform_node
+
+
+def _rename_fields(data, node, result=None):
     """Rename keys in a nested dictionary based on transform_node."""
-    result_dict = result_dict or {}
-    if isinstance(fields, dict):
-        for key, value in fields.items():
+    result = result or {}
+    if isinstance(data, dict):
+        for key, value in data.items():
             if isinstance(value, dict):
-                if key in transform_node:
-                    value = rename_fields(value, transform_node[key])
+                if key in node:
+                    value = _rename_fields(value, node[key])
             elif isinstance(value, list) and value and not isinstance(
                 value[0],
                 dict,
@@ -24,67 +38,82 @@ def rename_fields(fields, transform_node, result_dict=None):
                     value = sorted(value)
                 except TypeError:
                     pass
-            elif key in transform_node.keys():
+            elif key in node.keys():
                 if isinstance(value, list):
                     value = [
-                        rename_fields(v, transform_node[key]) for v in value
+                        _rename_fields(v, node[key]) for v in value
                     ]
                 elif isinstance(value, (string_types, int, float)):
-                    if transform_node[key]:
-                        key = str(transform_node[key])
-            result_dict[key] = value
-    return result_dict
+                    if node[key]:
+                        key = str(node[key])
+            result[key] = value
+    return result
 
 
-def concat_fields(fields, transform_node, result_dict=None):
-    """Concatenate fields of a column."""
-    result_dict = result_dict or {}
-    if not transform_node:
-        return fields
-    if isinstance(fields, dict):
-        if 'columns' in transform_node:
+def _concat_fields(data, node, result=None):
+    """Concatenate fields."""
+    result = result or {}
+    if not node:
+        return data
+    if isinstance(data, dict):
+        if 'columns' in node:
             columns = dict(
-                filter(
-                    lambda x: x[0] in transform_node['columns'],
-                    fields.items(),
-                )
+                filter(lambda x: x[0] in node['columns'], data.items())
             ).values()
-            delimiter = transform_node.get('delimiter', '')
-            destination = transform_node['destination']
-            fields[destination] = f'{delimiter}'.join(map(str, columns))
-        for key, value in fields.items():
+            delimiter = node.get('delimiter', '')
+            destination = node['destination']
+            data[destination] = f'{delimiter}'.join(map(str, columns))
+        for key, value in data.items():
             if isinstance(value, dict):
-                value = concat_fields(value, transform_node[key])
+                value = _concat_fields(value, node[key])
             elif isinstance(value, list):
                 value = [
-                    concat_fields(
-                        v,
-                        transform_node[key],
-                    ) for v in value if key in transform_node
+                    _concat_fields(v, node[key]) for v in value if key in node
                 ]
-            result_dict[key] = value
-    return result_dict
+            result[key] = value
+    return result
 
 
-def get_transform(node, name):
-    transform_node = {}
-    if 'transform' in node.keys():
-        if name in node['transform']:
-            transform_node = node['transform'][name]
-    if 'children' in node.keys():
-        for child in node['children']:
-            label = child.get('label', child['table'])
-            _transform_node = get_transform(child, name)
-            if _transform_node:
-                transform_node[label] = _transform_node
-    return transform_node
+# def _replace_fields(data, node, result_dict=None):
+#     """Replace field values"""
+#     result_dict = result_dict or {}
+#     if isinstance(data, dict):
+#         if node:
+#             for key, values in node.items():
+#                 if key not in data:
+#                     continue
+#                 if isinstance(data[key], list):
+#                     for k in values:
+#                         for search, replace in values[k].items():
+#                             data[key] = [
+#                                 x.replace(search, replace) for x in data[key]
+#                             ]
+#                 else:
+#                     for search, replace in values.items():
+#                         data[key] = data[key].replace(search, replace)
+
+#         for key, value in data.items():
+#             if isinstance(value, dict):
+#                 value = _replace_fields(value, node.get(key))
+#             elif isinstance(value, list):
+#                 value = [
+#                     _replace_fields(
+#                         v,
+#                         node[key],
+#                     ) for v in value if key in node
+#                 ]
+#             result_dict[key] = value
+#     return result_dict
 
 
-def transform(row, node):
-    transform_node = get_transform(node, RENAME_TRANSFORM)
-    row = rename_fields(row, transform_node)
-    transform_node = get_transform(node, CONCAT_TRANSFORM)
-    return concat_fields(row, transform_node)
+def transform(data, node):
+    transform_node = _get_transform(node, RENAME_TRANSFORM)
+    data = _rename_fields(data, transform_node)
+    transform_node = _get_transform(node, CONCAT_TRANSFORM)
+    data = _concat_fields(data, transform_node)
+    # transform_node = _get_transform(node, REPLACE_TRANSFORM)
+    # _replace_fields(data, transform_node)
+    return data
 
 
 def get_private_keys(primary_keys):

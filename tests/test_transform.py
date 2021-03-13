@@ -3,9 +3,9 @@ import pytest
 
 from pgsync.constants import CONCAT_TRANSFORM, RENAME_TRANSFORM
 from pgsync.transform import (
-    concat_fields,
-    get_transform,
-    rename_fields,
+    _concat_fields,
+    _get_transform,
+    _rename_fields,
     transform,
 )
 
@@ -79,7 +79,7 @@ class TestTransform(object):
             }
         }
 
-        transform_node = get_transform(node, RENAME_TRANSFORM)
+        transform_node = _get_transform(node, RENAME_TRANSFORM)
         assert transform_node == {
             'id': 'my_id',
             'code': 'my_code',
@@ -92,7 +92,7 @@ class TestTransform(object):
             },
         }
 
-        transform_node = get_transform(node, CONCAT_TRANSFORM)
+        transform_node = _get_transform(node, CONCAT_TRANSFORM)
         assert transform_node == {
             'Child1': {
                 'Grandchild_1': {
@@ -208,7 +208,7 @@ class TestTransform(object):
                 {'column_1': 3, 'column_2': 'bb'},
             ],
         }
-        row = rename_fields(row, node)
+        row = _rename_fields(row, node)
 
         assert row == {
             'levelup': 1,
@@ -357,7 +357,7 @@ class TestTransform(object):
                 {'column_1': 3, 'column_2': 'bb'},
             ],
         }
-        row = concat_fields(row, node)
+        row = _concat_fields(row, node)
         assert row == {
             'level': 1,
             'id': '007',
