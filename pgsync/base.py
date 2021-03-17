@@ -638,6 +638,7 @@ class Base(object):
     def query_yield(self, query, chunk_size=None):
         chunk_size = chunk_size or QUERY_CHUNK_SIZE
         with self.__engine.connect() as conn:
+            conn = conn.execution_options(stream_results=True)
             result = conn.execute(query)
             while True:
                 chunk = result.fetchmany(chunk_size)
@@ -648,7 +649,10 @@ class Base(object):
 
     def query_count(self, query):
         with self.__engine.connect() as conn:
-            return conn.execute(query).rowcount
+            query = query.original.with_only_columns(
+                [sa.func.count()]
+            ).order_by(None)
+            return conn.execute(query).scalar()
 
 
 # helper methods

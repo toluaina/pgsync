@@ -6,6 +6,7 @@ import logging
 
 import click
 from elasticsearch import Elasticsearch, helpers
+
 from pgsync.settings import ELASTICSEARCH_TIMEOUT, ELASTICSEARCH_VERIFY_CERTS
 from pgsync.utils import get_config, get_elasticsearch_url, timeit
 
