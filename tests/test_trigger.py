@@ -103,7 +103,7 @@ $$ LANGUAGE plpgsql;
                 f"JOIN pg_attribute ON attrelid = indrelid AND attnum = ANY(indkey) "
                 f"WHERE indrelid = '{table_name}'::regclass AND indisprimary"
             )
-            rows = pg_base.query_all(query)[0]
+            rows = pg_base.query(query)[0]
             assert list(rows)[0] == primary_keys
 
     def test_trigger_foreign_key_function(self, connection):
@@ -125,5 +125,5 @@ $$ LANGUAGE plpgsql;
                 f"WHERE constraint_catalog=current_catalog AND "
                 f"table_name='{table_name}' AND position_in_unique_constraint NOTNULL "
             )
-            rows = pg_base.query_all(query)[0]
+            rows = pg_base.query(query)[0]
             assert rows[0] == foreign_keys

@@ -229,7 +229,7 @@ class Base(object):
                 sa.column('plugin') == plugin,
             ])
         )
-        return self.query_all(statement)
+        return self.query(statement)
 
     def create_replication_slot(self, slot_name):
         """
@@ -312,7 +312,7 @@ class Base(object):
             statement = statement.where(sa.and_(*filters))
         if self.verbose:
             compiled_query(statement, 'logical_slot_get_changes')
-        return self.query_all(statement)
+        return self.query(statement)
 
     def logical_slot_peek_changes(
         self,
@@ -353,7 +353,7 @@ class Base(object):
             statement = statement.where(sa.and_(*filters))
         if self.verbose:
             compiled_query(statement, 'logical_slot_peek_changes')
-        return self.query_all(statement)
+        return self.query(statement)
 
     # Triggers...
     def create_triggers(self, database, schema, tables=None, drop=False):
@@ -625,7 +625,7 @@ class Base(object):
             raise
         return row
 
-    def query_all(self, query):
+    def query(self, query):
         conn = self.__engine.connect()
         try:
             rows = conn.execute(query).fetchall()
