@@ -19,7 +19,7 @@ POLL_TIMEOUT = env.float('POLL_TIMEOUT', default=0.1)
 # replication slot cleanup interval (in secs)
 REPLICATION_SLOT_CLEANUP_INTERVAL = env.float(
     'REPLICATION_SLOT_CLEANUP_INTERVAL',
-    default=3600.0,
+    default=180.0,
 )
 
 # Elasticsearch:
