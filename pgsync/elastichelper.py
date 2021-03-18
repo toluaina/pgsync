@@ -162,17 +162,13 @@ class ElasticHelper(object):
             rename = node.transform.get('rename', {})
             mapping = node.transform.get('mapping', {})
 
-            for column in node.column_names:
-
-                column = rename.get(column, column)
-                if column not in mapping:
-                    continue
+            for key, value in mapping.items():
+                column = rename.get(key, key)
                 column_type = mapping[column]['type']
                 if column_type not in ELASTICSEARCH_TYPES:
                     raise RuntimeError(
                         f'Invalid Elasticsearch type {column_type}'
                     )
-
                 fields = mapping[column].get('fields')
 
                 if 'properties' not in node._mapping:
