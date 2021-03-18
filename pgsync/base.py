@@ -273,7 +273,8 @@ class Base(object):
         slot_name,
         txmin=None,
         txmax=None,
-        upto_nchanges=1,
+        upto_lsn=None,
+        upto_nchanges=None,
     ):
         """
         Get/Consume changes from a logical replication slot.
@@ -290,7 +291,7 @@ class Base(object):
         statement = statement.select_from(
             sa.func.PG_LOGICAL_SLOT_GET_CHANGES(
                 slot_name,
-                None,
+                upto_lsn,
                 upto_nchanges,
             )
         )
@@ -319,7 +320,8 @@ class Base(object):
         slot_name,
         txmin=None,
         txmax=None,
-        upto_nchanges=1,
+        upto_lsn=None,
+        upto_nchanges=None,
     ):
         """
         Peek a logical replication slot without consuming changes.
@@ -331,7 +333,7 @@ class Base(object):
         statement = sa.select(columns).select_from(
             sa.func.PG_LOGICAL_SLOT_PEEK_CHANGES(
                 slot_name,
-                None,
+                upto_lsn,
                 upto_nchanges,
             )
         )
