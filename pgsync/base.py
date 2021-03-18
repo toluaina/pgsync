@@ -358,10 +358,8 @@ class Base(object):
         return self.query(statement)
 
     # Triggers...
-    def create_triggers(self, database, schema, tables=None, drop=False):
+    def create_triggers(self, database, schema, tables=None):
         """Create a database triggers."""
-        if drop:
-            self.drop_triggers(database, schema)
         self.execute(CREATE_TRIGGER_TEMPLATE)
         queries = []
         views = sa.inspect(self.engine).get_view_names(schema)
