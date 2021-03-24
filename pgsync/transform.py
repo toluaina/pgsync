@@ -53,8 +53,6 @@ def _rename_fields(data, node, result=None):
 def _concat_fields(data, node, result=None):
     """Concatenate fields."""
     result = result or {}
-    if not node:
-        return data
     if isinstance(data, dict):
         if 'columns' in node:
             columns = dict(
@@ -64,12 +62,16 @@ def _concat_fields(data, node, result=None):
             destination = node['destination']
             data[destination] = f'{delimiter}'.join(map(str, columns))
         for key, value in data.items():
-            if isinstance(value, dict):
-                value = _concat_fields(value, node[key])
-            elif isinstance(value, list):
-                value = [
-                    _concat_fields(v, node[key]) for v in value if key in node
-                ]
+            if key in node:
+                if isinstance(value, dict):
+                    value = _concat_fields(value, node[key])
+                elif isinstance(value, list):
+                    value = [
+                        _concat_fields(
+                            v,
+                            node[key],
+                        ) for v in value if key in node
+                    ]
             result[key] = value
     return result
 

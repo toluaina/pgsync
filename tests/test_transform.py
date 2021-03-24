@@ -375,5 +375,5 @@ class TestTransform(object):
         # - without predefined setting!!!!!!
         # - with delimiter
         # - withour delimiter
-        # - with list order maintainer
+        # - with list order maintained
         # - without destination specified
