@@ -227,7 +227,7 @@ class QueryBuilder(object):
                     )
 
                 for i in range(len(left_foreign_keys)):
-                    if child.relationship and child.relationship['foreignKey']:
+                    if 'foreignKey' in child.relationship:
                         if child.relationship['foreignKey'] == right_foreign_keys[i]:
                             onclause.append(
                                 getattr(
