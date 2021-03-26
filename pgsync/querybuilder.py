@@ -227,16 +227,29 @@ class QueryBuilder(object):
                     )
 
                 for i in range(len(left_foreign_keys)):
-                    onclause.append(
-                        getattr(
-                            child._subquery.c,
-                            left_foreign_keys[i],
-                        ) ==
-                        getattr(
-                            child.parent.model.c,
-                            right_foreign_keys[i],
+                    if child.relationship and child.relationship['foreignKey']:
+                        if child.relationship['foreignKey'] == right_foreign_keys[i]:
+                            onclause.append(
+                                getattr(
+                                    child._subquery.c,
+                                    left_foreign_keys[i],
+                                ) ==
+                                getattr(
+                                    child.parent.model.c,
+                                    right_foreign_keys[i],
+                                )
+                            )
+                    else:
+                        onclause.append(
+                            getattr(
+                                child._subquery.c,
+                                left_foreign_keys[i],
+                            ) ==
+                            getattr(
+                                child.parent.model.c,
+                                right_foreign_keys[i],
+                            )
                         )
-                    )
 
             if self.from_obj is None:
                 self.from_obj = child.parent.model

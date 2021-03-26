@@ -38,6 +38,7 @@ RELATIONSHIP_ATTRIBUTES = [
     'through_tables',
     'type',
     'variant',
+    'foreignKey'
 ]
 
 # tg_op
