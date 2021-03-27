@@ -6,6 +6,7 @@ from .base import get_primary_keys
 from .constants import (
     NODE_ATTRIBUTES,
     RELATIONSHIP_ATTRIBUTES,
+    RELATIONSHIP_FOREIGN_KEYS,
     RELATIONSHIP_TYPES,
     RELATIONSHIP_VARIANTS,
     SCHEMA,
@@ -21,6 +22,74 @@ from .exc import (
     RelationshipVariantError,
     TableNotInNodeError,
 )
+
+
+def _safe_get(obj, attr):
+    value = obj.get(attr)
+    if value is not None:
+        value = value.lower()
+    return value
+
+
+class ForeignKey(object):
+    def __init__(self, foreign_key=None):
+        """ForeignKey constructor."""
+        foreign_key = foreign_key or dict()
+        self.parent = foreign_key.get('parent')
+        self.child = foreign_key.get('child')
+        if not set(foreign_key.keys()).issubset(
+            set(RELATIONSHIP_FOREIGN_KEYS)
+        ):
+            raise RuntimeError('Relationship ForeignKey is invalid.')
+        self.parent = foreign_key.get('parent')
+        self.child = foreign_key.get('child')
+
+    def __str__(self):
+        return f'foreign_key: {self.parent}:{self.child}'
+
+    def __repr__(self):
+        return self.__str__()
+
+
+class Relationship(object):
+    def __init__(self, relationship=None):
+        """Relationship constructor."""
+        relationship = relationship or dict()
+        self.type = relationship.get('type')
+        self.variant = relationship.get('variant')
+        self.through_tables = relationship.get('through_tables', [])
+
+        if not set(relationship.keys()).issubset(
+            set(RELATIONSHIP_ATTRIBUTES)
+        ):
+            attrs = set(relationship.keys()).difference(
+                set(RELATIONSHIP_ATTRIBUTES)
+            )
+            raise RelationshipAttributeError(
+                f'Relationship attribute {attrs} is invalid.'
+            )
+        if self.type and self.type not in RELATIONSHIP_TYPES:
+            raise RelationshipTypeError(
+                f'Relationship type "{self.type}" is invalid.'
+            )
+        if self.variant and self.variant not in RELATIONSHIP_VARIANTS:
+            raise RelationshipVariantError(
+                f'Relationship variant "{self.variant}" is invalid.'
+            )
+        if self.through_tables and len(self.through_tables) > 1:
+            raise MultipleThroughTablesError(
+                f'Multiple through tables: {self.through_tables}'
+            )
+        self.type = _safe_get(relationship, 'type')
+        self.variant = _safe_get(relationship, 'variant')
+        self.through_tables = relationship.get('through_tables', [])
+        self.foreign_key = ForeignKey(relationship.get('foreign_key'))
+
+    def __str__(self):
+        return f'relationship: {self.variant}.{self.type}'
+
+    def __repr__(self):
+        return self.__str__()
 
 
 class Node(object):
@@ -87,55 +156,16 @@ class Node(object):
                 self.columns.append(column_name)
                 self.columns.append(getattr(self.model.c, column_name))
 
-        self.relationship_type = None
-        self.relationship_variant = None
-        self.through_tables = []
+        self.relationship = Relationship(kwargs.get('relationship'))
         self._subquery = None
         self._filters = []
         self._mapping = {}
 
-        if 'relationship' in kwargs:
-            relationship = kwargs.get('relationship')
-            if not set(relationship.keys()).issubset(
-                set(RELATIONSHIP_ATTRIBUTES)
-            ):
-                attrs = set(relationship.keys()).difference(
-                    set(RELATIONSHIP_ATTRIBUTES)
-                )
-                raise RelationshipAttributeError(
-                    f'Relationship attribute {attrs} is invalid.'
-                )
-
-            self.relationship_type = self._safe_get(relationship, 'type')
-            self.relationship_variant = self._safe_get(relationship, 'variant')
-
-            if (
-                self.relationship_type and
-                self.relationship_type not in RELATIONSHIP_TYPES
-            ):
-                raise RelationshipTypeError(
-                    f'Relationship type "{self.relationship_type}" '
-                    f'is invalid.'
-                )
-
-            if (
-                self.relationship_variant and
-                self.relationship_variant not in RELATIONSHIP_VARIANTS
-            ):
-                raise RelationshipVariantError(
-                    f'Relationship variant "{self.relationship_variant}" '
-                    f'is invalid.'
-                )
-
-            self.through_tables = relationship.get('through_tables', [])
-
-            if self.through_tables and len(self.through_tables) > 1:
-                raise MultipleThroughTablesError(
-                    f'Multiple through tables: {self.through_tables}'
-                )
+    def __str__(self):
+        return f'node: {self.schema}.{self.table}'
 
     def __repr__(self):
-        return f'node: {self.schema}.{self.table}'
+        return self.__str__()
 
     @property
     def primary_keys(self):
@@ -145,26 +175,27 @@ class Node(object):
             ) for primary_key in self._primary_keys
         ]
 
-    def _safe_get(self, obj, attr):
-        value = obj.get(attr)
-        if value is not None:
-            value = value.lower()
-        return value
-
     @property
     def is_root(self):
         return self.parent is None
 
+    @property
+    def name(self):
+        """
+        returns a fully qualified node name`
+        """
+        return f'{self.schema}.{self.table}'
+
     def add_child(self, node):
-        # all child nodes must have a relationship defined
+        """
+        all nodes except root must have a relationship definition
+        """
         node.parent = self
         if not node.is_root and (
-            node.relationship_type is None or
-            node.relationship_variant is None
+            not node.relationship.type or not node.relationship.variant
         ):
             raise RelationshipError(
-                f'Relationship not present on table '
-                f'"{node.schema}.{node.table}"'
+                f'Relationship not present on "{node.name}"'
             )
         self.children.append(node)
 
@@ -235,7 +266,7 @@ class Tree(object):
 
         self.nodes.add(node.table)
 
-        for through_table in node.through_tables:
+        for through_table in node.relationship.through_tables:
             self.through_nodes.add(through_table)
 
         for child in root.get('children', []):

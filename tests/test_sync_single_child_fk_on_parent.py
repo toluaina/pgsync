@@ -602,7 +602,7 @@ class TestParentSingleChildFkOnParent(object):
 
         with pytest.raises(RelationshipError) as excinfo:
             [doc for doc in sync._sync(nodes, 'testdb')]
-        assert 'Relationship not present on table "public.publisher"' in str(
+        assert 'Relationship not present on "public.publisher"' in str(
             excinfo.value
         )
 

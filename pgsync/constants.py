@@ -35,10 +35,18 @@ NODE_ATTRIBUTES = [
 
 # Relationship attributes
 RELATIONSHIP_ATTRIBUTES = [
+    'foreign_key',
     'through_tables',
     'type',
     'variant',
 ]
+
+# Relationship foreign keys
+RELATIONSHIP_FOREIGN_KEYS = [
+     'child',
+     'parent',
+]
+
 
 # tg_op
 UPDATE = 'UPDATE'

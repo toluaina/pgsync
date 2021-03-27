@@ -24,13 +24,16 @@ class QueryBuilder(object):
 
     def _get_foreign_keys(self, model_a, model_b):
 
-        if model_a.through_tables or model_b.through_tables:
+        if (
+            model_a.relationship.through_tables or
+            model_b.relationship.through_tables
+        ):
 
             if model_a.through_tables:
-                through_tables = model_a.through_tables[0]
+                through_tables = model_a.relationship.through_tables[0]
 
             if model_b.through_tables:
-                through_tables = model_b.through_tables[0]
+                through_tables = model_b.relationship.through_tables[0]
                 model_a, model_b = model_b, model_a
 
             through = self.base.model(through_tables, model_a.schema)
@@ -104,8 +107,8 @@ class QueryBuilder(object):
         )
         for child in node.children:
             if (
-                not child.parent.through_tables and
-                child.parent.relationship_type == ONE_TO_MANY
+                not child.parent.relationship.through_tables and
+                child.parent.relationship.type == ONE_TO_MANY
             ):
                 row = row.concat(
                     sa.cast(
@@ -159,7 +162,7 @@ class QueryBuilder(object):
 
             onclause = []
 
-            if child.through_tables:
+            if child.relationship.through_tables:
 
                 child.parent.columns.extend(
                     [
@@ -169,7 +172,7 @@ class QueryBuilder(object):
                 )
 
                 through = self.base.model(
-                    child.through_tables[0],
+                    child.relationship.through_tables[0],
                     child.schema,
                 )
                 foreign_keys = get_foreign_keys(
@@ -290,7 +293,10 @@ class QueryBuilder(object):
 
     def _through(self, node):  # noqa: C901
 
-        through = self.base.model(node.through_tables[0], node.schema)
+        through = self.base.model(
+            node.relationship.through_tables[0],
+            node.schema,
+        )
         foreign_keys = get_foreign_keys(node.model, through)
 
         for key, value in get_foreign_keys(
@@ -332,15 +338,15 @@ class QueryBuilder(object):
 
         columns = [_keys]
         # We need to include through keys and the actual keys
-        if node.relationship_variant == SCALAR:
+        if node.relationship.variant == SCALAR:
             columns.append(
                 node.columns[1].label(
                     'anon'
                 )
             )
-        elif node.relationship_variant == OBJECT:
+        elif node.relationship.variant == OBJECT:
 
-            if node.relationship_type == ONE_TO_ONE:
+            if node.relationship.type == ONE_TO_ONE:
 
                 if not node.children:
                     columns.append(
@@ -355,7 +361,7 @@ class QueryBuilder(object):
                             *node.columns
                         ).label('anon')
                     )
-            elif node.relationship_type == ONE_TO_MANY:
+            elif node.relationship.type == ONE_TO_MANY:
                 columns.append(
                     sa.func.JSON_BUILD_OBJECT(
                         *node.columns
@@ -375,10 +381,10 @@ class QueryBuilder(object):
 
             onclause = []
 
-            if child.through_tables:
+            if child.relationship.through_tables:
 
                 child_through = self.base.model(
-                    child.through_tables[0],
+                    child.relationship.through_tables[0],
                     child.schema,
                 )
                 child_foreign_keys = get_foreign_keys(
@@ -412,9 +418,7 @@ class QueryBuilder(object):
                     child_foreign_keys,
                 )
 
-            right_foreign_keys = child_foreign_keys[
-                f'{child.parent.schema}.{child.parent.table}'
-            ]
+            right_foreign_keys = child_foreign_keys[child.parent.name]
 
             for i in range(len(left_foreign_keys)):
                 onclause.append(
@@ -511,7 +515,7 @@ class QueryBuilder(object):
 
         through_keys = sa.cast(
             sa.func.JSON_BUILD_OBJECT(
-                node.through_tables[0],
+                node.relationship.through_tables[0],
                 sa.func.JSON_BUILD_ARRAY(
                     *params
                 )
@@ -529,7 +533,7 @@ class QueryBuilder(object):
             )
         ).label('_keys')
 
-        left_foreign_keys = foreign_keys[f'{node.schema}.{node.table}']
+        left_foreign_keys = foreign_keys[node.name]
         right_foreign_keys = self._get_column_foreign_keys(
             through.columns,
             foreign_keys,
@@ -631,7 +635,7 @@ class QueryBuilder(object):
                     ) ==
                     getattr(
                         node.model.c,
-                        foreign_keys[f'{node.schema}.{node.table}'][i],
+                        foreign_keys[node.name][i],
                     )
                 )
 
@@ -713,14 +717,14 @@ class QueryBuilder(object):
                     )
                 ])
 
-        if node.relationship_type == ONE_TO_ONE:
+        if node.relationship.type == ONE_TO_ONE:
             _keys = self._get_child_keys(
                 node,
                 sa.func.JSON_BUILD_OBJECT(
                     *params
                 )
             )
-        elif node.relationship_type == ONE_TO_MANY:
+        elif node.relationship.type == ONE_TO_MANY:
             _keys = self._get_child_keys(
                 node,
                 sa.func.JSON_AGG(
@@ -732,16 +736,16 @@ class QueryBuilder(object):
 
         columns = [_keys]
 
-        if node.relationship_variant == SCALAR:
+        if node.relationship.variant == SCALAR:
             # TODO: Raise exception here if the number of columns > 1
-            if node.relationship_type == ONE_TO_ONE:
+            if node.relationship.type == ONE_TO_ONE:
                 columns.append(
                     getattr(
                         node.model.c,
                         node.columns[0],
                     ).label(node.label)
                 )
-            elif node.relationship_type == ONE_TO_MANY:
+            elif node.relationship.type == ONE_TO_MANY:
                 columns.append(
                     sa.func.JSON_AGG(
                         getattr(
@@ -750,14 +754,14 @@ class QueryBuilder(object):
                         )
                     ).label(node.label)
                 )
-        elif node.relationship_variant == OBJECT:
-            if node.relationship_type == ONE_TO_ONE:
+        elif node.relationship.variant == OBJECT:
+            if node.relationship.type == ONE_TO_ONE:
                 columns.append(
                     sa.func.JSON_BUILD_OBJECT(
                         *node.columns
                     ).label(node.label)
                 )
-            elif node.relationship_type == ONE_TO_MANY:
+            elif node.relationship.type == ONE_TO_MANY:
                 columns.append(
                     sa.func.JSON_AGG(
                         sa.func.JSON_BUILD_OBJECT(
@@ -786,7 +790,7 @@ class QueryBuilder(object):
                 sa.and_(*node._filters)
             )
 
-        if node.relationship_type == ONE_TO_MANY:
+        if node.relationship.type == ONE_TO_MANY:
             node._subquery = node._subquery.group_by(
                 *[
                     getattr(
@@ -809,7 +813,7 @@ class QueryBuilder(object):
             self._root(node)
         else:
             # 2) subquery: these are for children creating their own columns
-            if node.through_tables:
+            if node.relationship.through_tables:
                 self._through(node)
             else:
                 self._non_through(node)

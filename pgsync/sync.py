@@ -141,7 +141,7 @@ class Sync(Base):
             tables = set([])
             root = self.tree.build(self.nodes[0])
             for node in traverse_breadth_first(root):
-                tables |= set(node.through_tables)
+                tables |= set(node.relationship.through_tables)
                 tables |= set([node.table])
             self.create_triggers(self.database, schema, tables=tables)
         self.create_replication_slot(self.__name)
@@ -158,7 +158,7 @@ class Sync(Base):
             tables = set([])
             root = self.tree.build(self.nodes[0])
             for node in traverse_breadth_first(root):
-                tables |= set(node.through_tables)
+                tables |= set(node.relationship.through_tables)
                 tables |= set([node.table])
             self.drop_triggers(self.database, schema=schema, tables=tables)
         self.drop_replication_slot(self.__name)
@@ -362,8 +362,7 @@ class Sync(Base):
 
                         if not node.parent:
                             logger.exception(
-                                f'Could not get parent from node: '
-                                f'{node.schema}.{node.table}'
+                                f'Could not get parent from node: {node.name}'
                             )
                             raise
                         # set the parent as the new entity that has changed
@@ -392,11 +391,10 @@ class Sync(Base):
                 # handle case where we insert into a through table
                 root = self.tree.build(nodes[0])
                 for node in traverse_post_order(root):
-                    if table in node.through_tables:
+                    if table in node.relationship.through_tables:
                         if not node.parent:
                             logger.exception(
-                                f'Could not get parent from node: '
-                                f'{node.schema}.{node.table}'
+                                f'Could not get parent from node: {node.name}'
                             )
                             raise
                         # set the parent as the new entity that has changed
