@@ -18,6 +18,7 @@ from .exc import (
     NodeAttributeError,
     RelationshipAttributeError,
     RelationshipError,
+    RelationshipForeignKeyError,
     RelationshipTypeError,
     RelationshipVariantError,
     TableNotInNodeError,
@@ -40,7 +41,9 @@ class ForeignKey(object):
         if not set(foreign_key.keys()).issubset(
             set(RELATIONSHIP_FOREIGN_KEYS)
         ):
-            raise RuntimeError('Relationship ForeignKey is invalid.')
+            raise RelationshipForeignKeyError(
+                'Relationship ForeignKey must contain a parent and child.'
+            )
         self.parent = foreign_key.get('parent')
         self.child = foreign_key.get('child')
 
@@ -86,7 +89,9 @@ class Relationship(object):
         self.foreign_key = ForeignKey(relationship.get('foreign_key'))
 
     def __str__(self):
-        return f'relationship: {self.variant}.{self.type}'
+        return (
+            f'relationship: {self.variant}.{self.type}:{self.through_tables}'
+        )
 
     def __repr__(self):
         return self.__str__()
@@ -285,3 +290,13 @@ class Tree(object):
                 )
             node.add_child(self.build(child))
         return node
+
+
+def node_from_table(base, table, schema):
+    return Node(
+        model=base.model(table, schema=schema),
+        table=table,
+        schema=schema,
+        label=table,
+        primary_key=[],
+    )

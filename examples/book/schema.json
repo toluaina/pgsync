@@ -77,7 +77,11 @@
                         "label": "publisher_label",
                         "relationship": {
                             "variant": "object",
-                            "type": "one_to_one"
+                            "type": "one_to_one",
+                            "foreign_key": {
+                                "child": ["id"],
+                                "parent": ["publisher_id"]
+                            }
                         },
                         "children": [
 

@@ -4,6 +4,7 @@ import sqlalchemy as sa
 from .base import compiled_query, get_foreign_keys, get_primary_keys
 from .constants import OBJECT, ONE_TO_MANY, ONE_TO_ONE, SCALAR
 from .exc import FetchColumnForeignKeysError
+from .node import node_from_table
 
 
 class QueryBuilder(object):
@@ -36,25 +37,20 @@ class QueryBuilder(object):
                 through_tables = model_b.relationship.through_tables[0]
                 model_a, model_b = model_b, model_a
 
-            through = self.base.model(through_tables, model_a.schema)
-            foreign_keys = get_foreign_keys(
-                model_a.model,
-                through,
+            through = node_from_table(
+                self.base,
+                through_tables,
+                model_a.schema,
             )
-            for key, value in get_foreign_keys(
-                through,
-                model_b.model,
-            ).items():
+            foreign_keys = get_foreign_keys(model_a, through)
+            for key, value in get_foreign_keys(through, model_b).items():
                 if key in foreign_keys:
                     foreign_keys[key].extend(value)
                     continue
                 foreign_keys[key] = value
 
         else:
-            return get_foreign_keys(
-                model_a.model,
-                model_b.model,
-            )
+            return get_foreign_keys(model_a, model_b)
         return foreign_keys
 
     def _get_column_foreign_keys(
@@ -76,7 +72,12 @@ class QueryBuilder(object):
             columns = ['column_a', 'column_b']
             returns ['column_a', 'column_b']
         """
-        column_names = [column.name for column in columns]
+        # TODO: normalize this elsewhere
+        try:
+            column_names = [column.name for column in columns]
+        except AttributeError:
+            column_names = [column for column in columns]
+
         if table is None:
             for table, cols in foreign_keys.items():
                 if set(cols).issubset(set(column_names)):
@@ -171,19 +172,17 @@ class QueryBuilder(object):
                     ]
                 )
 
-                through = self.base.model(
+                through = node_from_table(
+                    self.base,
                     child.relationship.through_tables[0],
                     child.schema,
                 )
-                foreign_keys = get_foreign_keys(
-                    child.parent.model,
-                    through,
-                )
+                foreign_keys = get_foreign_keys(child.parent, through)
 
                 left_foreign_keys = self._get_column_foreign_keys(
                     child._subquery.columns,
                     foreign_keys,
-                    table=through.original.name,
+                    table=through.name,
                     schema=child.schema,
                 )
                 right_foreign_keys = self._get_column_foreign_keys(
@@ -212,10 +211,7 @@ class QueryBuilder(object):
                     ]
                 )
 
-                foreign_keys = get_foreign_keys(
-                    node.model,
-                    child.model,
-                )
+                foreign_keys = get_foreign_keys(node, child)
                 left_foreign_keys = self._get_column_foreign_keys(
                     child._subquery.columns,
                     foreign_keys,
@@ -293,16 +289,14 @@ class QueryBuilder(object):
 
     def _through(self, node):  # noqa: C901
 
-        through = self.base.model(
+        through = node_from_table(
+            self.base,
             node.relationship.through_tables[0],
             node.schema,
         )
-        foreign_keys = get_foreign_keys(node.model, through)
+        foreign_keys = get_foreign_keys(node, through)
 
-        for key, value in get_foreign_keys(
-            through,
-            node.parent.model
-        ).items():
+        for key, value in get_foreign_keys(through, node.parent).items():
             if key in foreign_keys:
                 foreign_keys[key].extend(value)
                 continue
@@ -383,17 +377,15 @@ class QueryBuilder(object):
 
             if child.relationship.through_tables:
 
-                child_through = self.base.model(
+                child_through = node_from_table(
+                    self.base,
                     child.relationship.through_tables[0],
                     child.schema,
                 )
-                child_foreign_keys = get_foreign_keys(
-                    child.model,
-                    child_through,
-                )
+                child_foreign_keys = get_foreign_keys(child, child_through)
                 for key, value in get_foreign_keys(
                     child_through,
-                    child.parent.model,
+                    child.parent,
                 ).items():
                     if key in child_foreign_keys:
                         child_foreign_keys[key].extend(value)
@@ -403,16 +395,13 @@ class QueryBuilder(object):
                 left_foreign_keys = self._get_column_foreign_keys(
                     child._subquery.columns,
                     child_foreign_keys,
-                    table=child_through.original.name,
+                    table=child_through.table,
                     schema=child.schema,
                 )
 
             else:
 
-                child_foreign_keys = get_foreign_keys(
-                    child.parent.model,
-                    child.model,
-                )
+                child_foreign_keys = get_foreign_keys(child.parent, child)
                 left_foreign_keys = self._get_column_foreign_keys(
                     child._subquery.columns,
                     child_foreign_keys,
@@ -497,7 +486,7 @@ class QueryBuilder(object):
         if self.verbose:
             compiled_query(outer_subquery, 'Outer subquery')
 
-        through_primary_keys = get_primary_keys(through)
+        through_primary_keys = get_primary_keys(through.model)
 
         params = []
         for through_primary_key in through_primary_keys:
@@ -506,7 +495,7 @@ class QueryBuilder(object):
                     str(through_primary_key),
                     sa.func.JSON_BUILD_ARRAY(
                         getattr(
-                            through.c,
+                            through.model.c,
                             through_primary_key,
                         )
                     )
@@ -537,7 +526,7 @@ class QueryBuilder(object):
         right_foreign_keys = self._get_column_foreign_keys(
             through.columns,
             foreign_keys,
-            table=through.original.name,
+            table=through.table,
             schema=node.schema,
         )
 
@@ -548,11 +537,11 @@ class QueryBuilder(object):
             ).label(node.label)
         ]
 
-        foreign_keys = get_foreign_keys(node.parent.model, through)
+        foreign_keys = get_foreign_keys(node.parent, through)
 
-        for column in foreign_keys[str(through.original)]:
+        for column in foreign_keys[through.name]:
             columns.append(
-                getattr(through.c, column)
+                getattr(through.model.c, column)
             )
 
         inner_subquery = sa.select(columns)
@@ -568,7 +557,7 @@ class QueryBuilder(object):
                     left_foreign_keys[i],
                 ) ==
                 getattr(
-                    through.c,
+                    through.model.c,
                     right_foreign_keys[i],
                 )
             )
@@ -580,7 +569,7 @@ class QueryBuilder(object):
         if node.table == node.parent.table:
             op = sa.or_
 
-        from_obj = through.join(
+        from_obj = through.model.join(
             outer_subquery,
             onclause=op(*onclause),
             isouter=self.isouter,
@@ -599,10 +588,10 @@ class QueryBuilder(object):
         subquery = subquery.group_by(
             *[
                 getattr(
-                    through.c,
+                    through.model.c,
                     column,
                 ) for column in foreign_keys[
-                    str(through.original)
+                    through.name
                 ]
             ]
         )
@@ -683,10 +672,7 @@ class QueryBuilder(object):
                 isouter=self.isouter,
             )
 
-        foreign_keys = get_foreign_keys(
-            node.parent.model,
-            node.model,
-        )
+        foreign_keys = get_foreign_keys(node.parent, node)
 
         foreign_key_columns = self._get_column_foreign_keys(
             node.model.columns,

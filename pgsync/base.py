@@ -710,7 +710,7 @@ def _get_foreign_keys(model_a, model_b):
     return foreign_keys
 
 
-def get_foreign_keys(model_a, model_b):
+def get_foreign_keys(node_a, node_b):
     """Return dict of single foreign key with multiple columns.
 
     e.g:
@@ -722,9 +722,31 @@ def get_foreign_keys(model_a, model_b):
     column_1, column_2, column_N are of type ForeignKeyContraint
     """
     foreign_keys = {}
-    _foreign_keys = _get_foreign_keys(model_a, model_b)
-    for table, columns in _foreign_keys.items():
-        foreign_keys[table] = sorted([column.name for column in columns])
+    # if either offers a foreign_key via relationship, use it!
+    if (
+        node_a.relationship.foreign_key.parent or
+        node_b.relationship.foreign_key.parent
+    ):
+        if node_a.relationship.foreign_key.parent:
+            foreign_keys[node_a.parent.name] = sorted(
+                node_a.relationship.foreign_key.parent
+            )
+            foreign_keys[node_a.name] = sorted(
+                node_a.relationship.foreign_key.child
+            )
+        if node_b.relationship.foreign_key.parent:
+            foreign_keys[node_b.parent.name] = sorted(
+                node_b.relationship.foreign_key.parent
+            )
+            foreign_keys[node_b.name] = sorted(
+                node_b.relationship.foreign_key.child
+            )
+    else:
+        for table, columns in _get_foreign_keys(
+            node_a.model,
+            node_b.model,
+        ).items():
+            foreign_keys[table] = sorted([column.name for column in columns])
     return foreign_keys
 
 

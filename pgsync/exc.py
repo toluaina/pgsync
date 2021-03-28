@@ -25,6 +25,18 @@ class RelationshipVariantError(Exception):
         return repr(self.value)
 
 
+class RelationshipForeignKeyError(Exception):
+    """
+    This error is raised if the relationship foreign key is not one of
+    "Child" or "Parent"
+    """
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
+
+
 class RelationshipAttributeError(Exception):
     """
     This error is raised if the relationship attribute is not one of
