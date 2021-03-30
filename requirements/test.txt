@@ -20,9 +20,9 @@ elasticsearch-dsl==7.3.0
     # via -r requirements/base.in
 elasticsearch==7.12.0
     # via elasticsearch-dsl
-environs==9.3.1
+environs==9.3.2
     # via -r requirements/base.in
-faker==6.6.3
+faker==7.0.1
     # via -r requirements/base.in
 flake8-debugger==4.0.0
     # via -r requirements/test.in
@@ -42,7 +42,7 @@ flake8==3.9.0
     #   flake8-print
 greenlet==1.0.0
     # via sqlalchemy
-importlib-metadata==3.8.1
+importlib-metadata==3.10.0
     # via
     #   flake8
     #   pluggy
@@ -50,7 +50,7 @@ importlib-metadata==3.8.1
     #   sqlalchemy
 isort==5.8.0
     # via flake8-isort
-marshmallow==3.10.0
+marshmallow==3.11.1
     # via environs
 mccabe==0.6.1
     # via flake8
