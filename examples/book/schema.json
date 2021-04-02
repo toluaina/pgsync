@@ -36,7 +36,8 @@
                     "isbn",
                     "title",
                     "description",
-                    "tags"
+                    "tags",
+                    "doc#>{a,b,c}->4"
                 ],
                 "transform": {
                     "rename": {

@@ -1,9 +1,12 @@
 """PGSync Node class representation."""
+import re
+
 import sqlalchemy as sa
 from six import string_types
 
-from .base import get_primary_keys
+from .base import compiled_query, get_primary_keys
 from .constants import (
+    JSONB_OPERATORS,
     NODE_ATTRIBUTES,
     RELATIONSHIP_ATTRIBUTES,
     RELATIONSHIP_FOREIGN_KEYS,
@@ -136,22 +139,27 @@ class Node(object):
         for column_name in self.column_names:
 
             tokens = None
-
-            # https://www.postgresql.org/docs/current/functions-json.html
-            # NB: this will not work for multi level ops: a->b->c
-            # TODO: support multi level ops
-            for op in ('->', '->>', '#>', '#>>'):
-                if op in column_name:
-                    tokens = column_name.split(op)
-                    break
+            if any(op in column_name for op in JSONB_OPERATORS):
+                tokens = re.split(
+                    f"({'|'.join(JSONB_OPERATORS)})",
+                    column_name,
+                )
 
             if tokens:
+                tokenized = getattr(self.model.c, tokens[0])
+                for token in tokens[1:]:
+                    if token in JSONB_OPERATORS:
+                        tokenized = tokenized.op(token)
+                        continue
+                    if token.isdigit():
+                        token = int(token)
+                    tokenized = tokenized(token)
                 self.columns.append(
-                    f'{tokens[0]}_{tokens[1]}'
+                    '_'.join([x for x in tokens if x not in JSONB_OPERATORS])
                 )
-                self.columns.append(
-                    getattr(self.model.c, tokens[0])[tokens[1]]
-                )
+                self.columns.append(tokenized)
+                compiled_query(self.columns[-1], 'JSONB Query')
+
             else:
                 if column_name not in self.table_columns:
                     raise ColumnNotFoundError(

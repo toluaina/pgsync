@@ -61,6 +61,14 @@ TG_OP = [
     UPDATE,
 ]
 
+# https://www.postgresql.org/docs/current/functions-json.html
+JSONB_OPERATORS = [
+    '->',
+    '->>',
+    '#>',
+    '#>>',
+]
+
 # https://www.elastic.co/guide/en/elasticsearch/reference/current/sql-data-types.html
 ELASTICSEARCH_TYPES = [
     'binary',

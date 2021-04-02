@@ -4,6 +4,9 @@ import random
 
 import click
 from faker import Faker
+from pgsync.base import pg_engine, subtransactions
+from pgsync.helper import teardown
+from pgsync.utils import get_config
 from schema import (
     Author,
     Book,
@@ -21,10 +24,6 @@ from schema import (
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-
-from pgsync.base import pg_engine, subtransactions
-from pgsync.helper import teardown
-from pgsync.utils import get_config
 
 Base = declarative_base()
 
@@ -157,6 +156,38 @@ def main(config, nsize):
             description='Stephens Kings It',
             publisher=publishers['Oxford Press'],
             tags=['a', 'b', 'c'],
+            doc={
+                "i": 73,
+                "j": 98.475,
+                "bool": True,
+                "firstname": "Glenda",
+                "lastname": "Judye",
+                "nick_names": [
+                    "Beatriz",
+                    "Jean",
+                    "Carilyn",
+                    "Carol-Jean",
+                    "Sara-Ann"
+                ],
+                "a": {
+                    "b": {
+                        "c": [0, 1, 2, 3, 4]
+                    }
+                },
+                "x": [
+                    {
+                        "y": 0,
+                        "z": 5
+                    },
+                    {
+                        "y": 1,
+                        "z": 6
+                    }
+                ],
+                "alice": {
+                    "age": 64
+                }
+            }
         ),
         '002': Book(
             isbn='002',

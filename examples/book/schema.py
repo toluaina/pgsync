@@ -2,12 +2,11 @@ import json
 
 import click
 import sqlalchemy as sa
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.schema import UniqueConstraint
-
 from pgsync.base import create_database, pg_engine
 from pgsync.helper import teardown
 from pgsync.utils import get_config
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.schema import UniqueConstraint
 
 Base = declarative_base()
 
@@ -117,6 +116,7 @@ class Book(Base):
     description = sa.Column(sa.String, nullable=True)
     copyright = sa.Column(sa.String, nullable=True)
     tags = sa.Column(sa.dialects.postgresql.JSONB, nullable=True)
+    doc = sa.Column(sa.dialects.postgresql.JSONB, nullable=True)
     publisher_id = sa.Column(
         sa.Integer, sa.ForeignKey(Publisher.id)
     )
