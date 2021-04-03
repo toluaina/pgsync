@@ -1,3 +1,4 @@
+import importlib
 import inspect
 import logging
 import os
@@ -19,47 +20,50 @@ class Plugin(ABC):
 
 class Plugins(object):
 
-    def __init__(self, plugin_package, plugin_names=None):
-        self.plugin_package = plugin_package
-        self.plugin_names = plugin_names or []
+    def __init__(self, package, names=None):
+        self.package = package
+        self.names = names or []
         self.reload()
 
     def reload(self):
         """Reload the pluging from the available list."""
         self.plugins = []
         self._paths = []
-        logger.debug(f'Reloading plugins from package: {self.plugin_package}')
-        self.walk(self.plugin_package)
+        logger.debug(f'Reloading plugins from package: {self.package}')
+        self.walk(self.package)
 
     def walk(self, package):
         """Recursively walk the supplied package and fetch all plugins
         """
-        imported_package = __import__(package, fromlist=['foo'])
-        for _, plugin_name, ispkg in pkgutil.iter_modules(
-            imported_package.__path__,
-            f'{imported_package.__name__}.',
+        plugins = importlib.import_module(package)
+        for _, name, ispkg in pkgutil.iter_modules(
+            plugins.__path__,
+            f'{plugins.__name__}.',
         ):
             if ispkg:
                 continue
-            plugin_module = __import__(plugin_name, fromlist=['foo'])
-            members = inspect.getmembers(plugin_module, inspect.isclass)
-            for _, plugin_class in members:
-                if issubclass(plugin_class, Plugin) & (
-                    plugin_class is not Plugin
+
+            module = importlib.import_module(name)
+            members = inspect.getmembers(module, inspect.isclass)
+            for _, klass in members:
+                if issubclass(klass, Plugin) & (
+                    klass is not Plugin
                 ):
-                    if plugin_class.name not in self.plugin_names:
+                    if klass.name not in self.names:
                         continue
                     logger.debug(
-                        f'Plugin class: {plugin_class.__module__}.'
-                        f'{plugin_class.__name__}'
+                        f'Plugin class: {klass.__module__}.'
+                        f'{klass.__name__}'
                     )
-                    self.plugins.append(plugin_class())
+                    self.plugins.append(klass())
 
         paths = []
-        if isinstance(imported_package.__path__, str):
-            paths.append(imported_package.__path__)
+        if isinstance(plugins.__path__, str):
+            paths.append(plugins.__path__)
         else:
-            paths.extend([path for path in imported_package.__path__])
+            paths.extend(
+                [path for path in plugins.__path__]
+            )
 
         for pkg_path in paths:
             if pkg_path in self._paths:
