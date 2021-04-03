@@ -32,6 +32,7 @@ from .constants import (
 from .elastichelper import ElasticHelper
 from .exc import RDSError, SuperUserError
 from .node import traverse_breadth_first, traverse_post_order, Tree
+from .plugin import Plugins
 from .querybuilder import QueryBuilder
 from .redisqueue import RedisQueue
 from .settings import (
@@ -59,6 +60,7 @@ class Sync(Base):
         params = params or {}
         self.index = document['index']
         self.pipeline = document.get('pipeline')
+        self.plugins = document.get('plugins', [])
         self.nodes = document.get('nodes', [])
         self.setting = document.get('setting')
         super().__init__(document.get('database', self.index), **params)
@@ -67,6 +69,7 @@ class Sync(Base):
             '[^0-9a-zA-Z_]+', '', f"{self.database}_{self.index}"
         )
         self._checkpoint = None
+        self._plugins = None
         self._truncate = False
         self.verbose = verbose
         self._checkpoint_file = f".{self.__name}"
@@ -81,6 +84,8 @@ class Sync(Base):
     def validate(self):
         """Perform all validation right away."""
         self.connect()
+        if self.plugins:
+            self._plugins = Plugins('plugins', self.plugins)
 
         max_replication_slots = self.pg_settings('max_replication_slots')
         try:
@@ -686,6 +691,9 @@ class Sync(Base):
                     row[META][extra['table']][extra['column']] = []
                 row[META][extra['table']][extra['column']].append(0)
 
+            if self._plugins:
+                row = list(self._plugins.transform([row]))[0]
+
             if self.verbose:
                 print(f'{(i+1)})')
                 print(f'Pkeys: {primary_keys}')
@@ -697,8 +705,10 @@ class Sync(Base):
                 '_index': index,
                 '_source': row,
             }
+
             if self.pipeline:
                 doc['pipeline'] = self.pipeline
+
             yield doc
 
     def sync(self, txmin=None, txmax=None):

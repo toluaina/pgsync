@@ -326,7 +326,7 @@ class TestTransform(object):
             ],
             'Child3': {'column_1': 4, 'column_2': 'ee', 'column_9': '4@ee'},
             'code': 'be',
-            'column_x': '1=007',
+            'column_x': '007=1',
             'id': '007',
             'level': 1,
         }

@@ -28,6 +28,7 @@
                 }
             }
         },
+        "plugins": ["Groot", "Hero", "Villain"],
         "nodes": [
             {
                 "table": "book",

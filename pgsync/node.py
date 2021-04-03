@@ -4,7 +4,7 @@ import re
 import sqlalchemy as sa
 from six import string_types
 
-from .base import compiled_query, get_primary_keys
+from .base import get_primary_keys
 from .constants import (
     JSONB_OPERATORS,
     NODE_ATTRIBUTES,
@@ -158,7 +158,7 @@ class Node(object):
                     '_'.join([x for x in tokens if x not in JSONB_OPERATORS])
                 )
                 self.columns.append(tokenized)
-                compiled_query(self.columns[-1], 'JSONB Query')
+                # compiled_query(self.columns[-1], 'JSONB Query')
 
             else:
                 if column_name not in self.table_columns:

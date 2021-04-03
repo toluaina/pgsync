@@ -4,9 +4,6 @@ import random
 
 import click
 from faker import Faker
-from pgsync.base import pg_engine, subtransactions
-from pgsync.helper import teardown
-from pgsync.utils import get_config
 from schema import (
     Author,
     Book,
@@ -24,6 +21,10 @@ from schema import (
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+
+from pgsync.base import pg_engine, subtransactions
+from pgsync.helper import teardown
+from pgsync.utils import get_config
 
 Base = declarative_base()
 
