@@ -55,12 +55,10 @@ def _concat_fields(data, node, result=None):
     result = result or {}
     if isinstance(data, dict):
         if 'columns' in node:
-            columns = dict(
-                filter(lambda x: x[0] in node['columns'], data.items())
-            ).values()
+            values = [data.get(key) for key in node['columns'] if key in data]
             delimiter = node.get('delimiter', '')
             destination = node['destination']
-            data[destination] = f'{delimiter}'.join(map(str, columns))
+            data[destination] = f'{delimiter}'.join(map(str, values))
         for key, value in data.items():
             if key in node:
                 if isinstance(value, dict):
