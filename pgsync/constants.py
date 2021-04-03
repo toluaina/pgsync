@@ -4,10 +4,8 @@ import re
 # Relationship types
 ONE_TO_ONE = 'one_to_one'
 ONE_TO_MANY = 'one_to_many'
-MANY_TO_ONE = 'many_to_one'
 
 RELATIONSHIP_TYPES = [
-    MANY_TO_ONE,
     ONE_TO_MANY,
     ONE_TO_ONE,
 ]
