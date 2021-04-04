@@ -38,7 +38,12 @@
                     "title",
                     "description",
                     "tags",
-                    "doc#>{a,b,c}->4"
+                    "doc->firstname",
+                    "doc->coordinates",
+                    "doc#>{a,b,c}->4",
+                    "doc->x",
+                    "doc->x->0->y",
+                    "doc->x->1->z"
                 ],
                 "transform": {
                     "rename": {
@@ -219,6 +224,17 @@
                             "through_tables": [
                                 "book_subject"
                             ]
+                        }
+                    },
+                    {
+                        "table": "rating",
+                        "label": "ratings",
+                        "columns": [
+                            "value"
+                        ],
+                        "relationship": {
+                            "type": "one_to_one",
+                            "variant": "object"
                         }
                     }
                 ]

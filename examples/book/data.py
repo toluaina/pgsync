@@ -16,6 +16,7 @@ from schema import (
     Country,
     Language,
     Publisher,
+    Rating,
     Shelf,
     Subject,
 )
@@ -159,7 +160,6 @@ def main(config, nsize):
             tags=['a', 'b', 'c'],
             doc={
                 "i": 73,
-                "j": 98.475,
                 "bool": True,
                 "firstname": "Glenda",
                 "lastname": "Judye",
@@ -170,6 +170,10 @@ def main(config, nsize):
                     "Carol-Jean",
                     "Sara-Ann"
                 ],
+                "coordinates": {
+                    "lat": 21.1,
+                    "lon": 32.9
+                },
                 "a": {
                     "b": {
                         "c": [0, 1, 2, 3, 4]
@@ -185,8 +189,8 @@ def main(config, nsize):
                         "z": 6
                     }
                 ],
-                "alice": {
-                    "age": 64
+                "generation": {
+                    "name": 'X'
                 }
             }
         ),
@@ -196,6 +200,41 @@ def main(config, nsize):
             description='Lodsdcsdrem ipsum dodscdslor sit amet',
             publisher=publishers['Oxford Press'],
             tags=['d', 'e', 'f'],
+            doc={
+                "i": 99,
+                "bool": False,
+                "firstname": "Jack",
+                "lastname": "Jones",
+                "nick_names": [
+                    "Jack",
+                    "Jones",
+                    "Jay",
+                    "Jay-Jay",
+                    "Jackie"
+                ],
+                "coordinates": {
+                    "lat": 25.1,
+                    "lon": 52.2
+                },
+                "a": {
+                    "b": {
+                        "c": [2, 3, 4, 5, 6]
+                    }
+                },
+                "x": [
+                    {
+                        "y": 2,
+                        "z": 3
+                    },
+                    {
+                        "y": 7,
+                        "z": 2
+                    }
+                ],
+                "generation": {
+                    "name": 'X'
+                }
+            }
         ),
         '003': Book(
             isbn='003',
@@ -203,6 +242,41 @@ def main(config, nsize):
             description='Harry Potter has never been',
             publisher=publishers['Penguin Books'],
             tags=['g', 'h', 'i'],
+            doc={
+                "i": 13,
+                "bool": True,
+                "firstname": "Mary",
+                "lastname": "Jane",
+                "nick_names": [
+                    "Mariane",
+                    "May",
+                    "Maey",
+                    "M-Jane",
+                    "Jane"
+                ],
+                "coordinates": {
+                    "lat": 24.9,
+                    "lon": 93.2
+                },
+                "a": {
+                    "b": {
+                        "c": [9, 8, 7, 6, 5]
+                    }
+                },
+                "x": [
+                    {
+                        "y": 3,
+                        "z": 5
+                    },
+                    {
+                        "y": 8,
+                        "z": 2
+                    }
+                ],
+                "generation": {
+                    "name": 'X'
+                }
+            }
         ),
         '004': Book(
             isbn='004',
@@ -212,6 +286,41 @@ def main(config, nsize):
                         'Hogwarts School for Witchcraft and Wizardry',
             publisher=publishers['Penguin Books'],
             tags=['j', 'k', 'l'],
+            doc={
+                "i": 43,
+                "bool": False,
+                "firstname": "Kermit",
+                "lastname": "Frog",
+                "nick_names": [
+                    "Kermit",
+                    "Frog",
+                    "Ker",
+                    "Boss",
+                    "K"
+                ],
+                "coordinates": {
+                    "lat": 22.7,
+                    "lon": 35.2
+                },
+                "a": {
+                    "b": {
+                        "c": [9, 1, 2, 8, 4]
+                    }
+                },
+                "x": [
+                    {
+                        "y": 3,
+                        "z": 2
+                    },
+                    {
+                        "y": 9,
+                        "z": 2
+                    }
+                ],
+                "generation": {
+                    "name": 'Z'
+                }
+            }
         ),
         '005': Book(
             isbn='005',
@@ -246,6 +355,19 @@ def main(config, nsize):
     }
     with subtransactions(session):
         session.add_all(books.values())
+
+    ratings = [
+        Rating(value=1.1, book=books['001']),
+        Rating(value=2.1, book=books['002']),
+        Rating(value=3.1, book=books['003']),
+        Rating(value=4.1, book=books['004']),
+        Rating(value=5.1, book=books['005']),
+        Rating(value=6.1, book=books['006']),
+        Rating(value=7.1, book=books['007']),
+        Rating(value=8.1, book=books['008']),
+    ]
+    with subtransactions(session):
+        session.add_all(ratings)
 
     book_authors = [
         BookAuthor(book=books['001'], author=authors['Stephen King']),

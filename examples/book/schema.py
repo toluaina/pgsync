@@ -127,15 +127,29 @@ class Book(Base):
     )
 
 
+class Rating(Base):
+    __tablename__ = 'rating'
+    __table_args__ = (
+        UniqueConstraint('book_isbn'),
+    )
+    id = sa.Column(sa.Integer, primary_key=True)
+    book_isbn = sa.Column(
+        sa.String, sa.ForeignKey(Book.isbn)
+    )
+    book = sa.orm.relationship(
+        Book,
+        backref=sa.orm.backref('ratings')
+    )
+    value = sa.Column(sa.Float, nullable=True)
+
+
 class BookAuthor(Base):
     __tablename__ = 'book_author'
     __table_args__ = (
         UniqueConstraint('book_isbn', 'author_id'),
     )
     id = sa.Column(sa.Integer, primary_key=True)
-    book_isbn = sa.Column(
-        sa.String, sa.ForeignKey(Book.isbn)
-    )
+    book_isbn = sa.Column(sa.String, sa.ForeignKey(Book.isbn))
     book = sa.orm.relationship(
         Book,
         backref=sa.orm.backref('book_author_books'),
