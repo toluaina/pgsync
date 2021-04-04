@@ -46,6 +46,19 @@ ELASTICSEARCH_VERIFY_CERTS = env.bool(
     'ELASTICSEARCH_VERIFY_CERTS',
     default=True,
 )
+# turn on SSL
+ELASTICSEARCH_USE_SSL = env.bool('ELASTICSEARCH_USE_SSL', default=False)
+# don't show warnings about ssl certs verification
+ELASTICSEARCH_SSL_SHOW_WARN = env.bool(
+    'ELASTICSEARCH_SSL_SHOW_WARN',
+    default=False,
+)
+# provide a path to CA certs on disk
+ELASTICSEARCH_CA_CERTS = env.str('ELASTICSEARCH_CA_CERTS', default=None)
+# PEM formatted SSL client certificate
+ELASTICSEARCH_CLIENT_CERT = env.str('ELASTICSEARCH_CLIENT_CERT', default=None)
+# PEM formatted SSL client key
+ELASTICSEARCH_CLIENT_KEY = env.str('ELASTICSEARCH_CLIENT_KEY', default=None)
 
 # Postgres:
 PG_HOST = env.str('PG_HOST', default='localhost')

@@ -48,10 +48,11 @@ class QueryBuilder(object):
                     foreign_keys[key].extend(value)
                     continue
                 foreign_keys[key] = value
+            return foreign_keys
 
         else:
+
             return get_foreign_keys(model_a, model_b)
-        return foreign_keys
 
     def _get_column_foreign_keys(
         self,

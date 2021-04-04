@@ -10,11 +10,16 @@ from elasticsearch_dsl.query import Bool
 from .constants import ELASTICSEARCH_TYPES, META
 from .node import traverse_post_order
 from .settings import (
+    ELASTICSEARCH_CA_CERTS,
     ELASTICSEARCH_CHUNK_SIZE,
+    ELASTICSEARCH_CLIENT_CERT,
+    ELASTICSEARCH_CLIENT_KEY,
     ELASTICSEARCH_MAX_CHUNK_BYTES,
     ELASTICSEARCH_QUEUE_SIZE,
+    ELASTICSEARCH_SSL_SHOW_WARN,
     ELASTICSEARCH_THREAD_COUNT,
     ELASTICSEARCH_TIMEOUT,
+    ELASTICSEARCH_USE_SSL,
     ELASTICSEARCH_VERIFY_CERTS,
 )
 from .utils import get_elasticsearch_url
@@ -37,6 +42,11 @@ class ElasticHelper(object):
             hosts=[url],
             timeout=ELASTICSEARCH_TIMEOUT,
             verify_certs=ELASTICSEARCH_VERIFY_CERTS,
+            use_ssl=ELASTICSEARCH_USE_SSL,
+            ssl_show_warn=ELASTICSEARCH_SSL_SHOW_WARN,
+            ca_certs=ELASTICSEARCH_CA_CERTS,
+            client_cert=ELASTICSEARCH_CLIENT_CERT,
+            client_key=ELASTICSEARCH_CLIENT_KEY,
         )
 
     def teardown(self, index):

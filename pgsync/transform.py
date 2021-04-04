@@ -119,6 +119,7 @@ def transform(data, node):
 def get_private_keys(primary_keys):
     """
     Get private keys entry from a nested dict.
+    re-write someday!
     """
     def squash_list(values, _values=None):
         if not _values:
