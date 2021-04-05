@@ -192,7 +192,9 @@ def main(config, nsize):
                 "generation": {
                     "name": 'X'
                 }
-            }
+            },
+            point='POINT(4 1)',
+            polygon='POLYGON((0 0,1 0,1 1,0 1,0 0))',
         ),
         '002': Book(
             isbn='002',
@@ -234,7 +236,9 @@ def main(config, nsize):
                 "generation": {
                     "name": 'X'
                 }
-            }
+            },
+            point='POINT(3 6)',
+            polygon='POLYGON((0 0,1 0,1 1,0 1,0 0))',
         ),
         '003': Book(
             isbn='003',
@@ -276,7 +280,9 @@ def main(config, nsize):
                 "generation": {
                     "name": 'X'
                 }
-            }
+            },
+            point='POINT(1 1)',
+            polygon='POLYGON((0 0,1 0,1 1,0 1,0 0))',
         ),
         '004': Book(
             isbn='004',
@@ -320,7 +326,9 @@ def main(config, nsize):
                 "generation": {
                     "name": 'Z'
                 }
-            }
+            },
+            point='POINT(8 2)',
+            polygon='POLYGON((0 0,1 0,1 1,0 1,0 0))',
         ),
         '005': Book(
             isbn='005',

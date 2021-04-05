@@ -39,3 +39,24 @@ class HeroPlugin(plugin.Plugin):
 
         doc['hero'] = 'Doctor Strange'
         return doc
+
+
+class GeometryPlugin(plugin.Plugin):
+    """Example plugin demonstrating GeoPoint and GeoShape."""
+    name = 'Geometry'
+
+    def transform(self, doc, **kwargs):
+        """Demonstrates how to modify a document."""
+        doc_index = kwargs['_index']
+
+        if doc_index == 'book':
+
+            if doc and doc.get('point'):
+                if doc['point']['type'] == 'Point':
+                    doc['coordinates'] = doc['point']['coordinates']
+
+            if doc and doc.get('polygon'):
+                if doc['polygon']['type'] == 'Polygon':
+                    doc['shape'] = doc['polygon']
+
+        return doc
