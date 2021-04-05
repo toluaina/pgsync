@@ -691,9 +691,6 @@ class Sync(Base):
                     row[META][extra['table']][extra['column']] = []
                 row[META][extra['table']][extra['column']].append(0)
 
-            if self._plugins:
-                row = list(self._plugins.transform([row]))[0]
-
             if self.verbose:
                 print(f'{(i+1)})')
                 print(f'Pkeys: {primary_keys}')
@@ -705,6 +702,9 @@ class Sync(Base):
                 '_index': index,
                 '_source': row,
             }
+
+            if self._plugins:
+                doc = list(self._plugins.transform([doc]))[0]
 
             if self.pipeline:
                 doc['pipeline'] = self.pipeline

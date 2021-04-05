@@ -12,7 +12,7 @@ class Plugin(ABC):
     """Plugin base class."""
 
     @abstractmethod
-    def transform(self, doc):
+    def transform(self, doc, **kwargs):
         """Must be implemented by all derived classes.
         """
         pass
@@ -46,14 +46,11 @@ class Plugins(object):
             module = importlib.import_module(name)
             members = inspect.getmembers(module, inspect.isclass)
             for _, klass in members:
-                if issubclass(klass, Plugin) & (
-                    klass is not Plugin
-                ):
+                if issubclass(klass, Plugin) & (klass is not Plugin):
                     if klass.name not in self.names:
                         continue
                     logger.debug(
-                        f'Plugin class: {klass.__module__}.'
-                        f'{klass.__name__}'
+                        f'Plugin class: {klass.__module__}.{klass.__name__}'
                     )
                     self.plugins.append(klass())
 
@@ -81,5 +78,9 @@ class Plugins(object):
         for doc in docs:
             for plugin in self.plugins:
                 logger.debug(f'Plugin: {plugin.name}')
-                doc = plugin.transform(doc)
+                doc['_source'] = plugin.transform(
+                    doc['_source'],
+                    _id=doc['_id'],
+                    _index=doc['_index'],
+                )
             yield doc
