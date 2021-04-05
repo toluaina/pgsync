@@ -40,7 +40,7 @@ elasticsearch==7.12.0
     # via elasticsearch-dsl
 environs==9.3.2
     # via -r requirements/base.in
-faker==7.0.1
+faker==8.0.0
     # via -r requirements/base.in
 flake8-debugger==4.0.0
     # via -r requirements/test.in

@@ -48,6 +48,7 @@ class QueryBuilder(object):
                     foreign_keys[key].extend(value)
                     continue
                 foreign_keys[key] = value
+
             return foreign_keys
 
         else:
@@ -105,7 +106,7 @@ class QueryBuilder(object):
                 node.table,
                 params,
             ),
-            sa.dialects.postgresql.JSONB
+            sa.dialects.postgresql.JSONB,
         )
         for child in node.children:
             if (
