@@ -34,7 +34,7 @@ KEYWORDS = [
     'change data capture',
 ]
 CLASSIFIERS = [
-    'Development Status :: 4 - Beta',
+    'Development Status :: 5 - Production/Stable',
     'Intended Audience :: Developers',
     'Natural Language :: English',
     'Programming Language :: Python :: 3.6',
@@ -91,5 +91,6 @@ setup(
         'Funding': 'https://patreon.com/toluaina',
         'Source': URL,
         'Web': 'https://pgsync.com',
+        'Documentation': 'https://pgsync.com',
     },
 )
