@@ -2,14 +2,11 @@ import json
 
 import click
 from schema import Answer, Category, PossibleAnswer, Question, RealAnswer
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 from pgsync.base import pg_engine, subtransactions
 from pgsync.helper import teardown
 from pgsync.utils import get_config
-
-Base = declarative_base()
 
 
 @click.command()
