@@ -660,8 +660,9 @@ class Base(object):
     def query_yield(self, query, chunk_size=None):
         chunk_size = chunk_size or QUERY_CHUNK_SIZE
         with self.__engine.connect() as conn:
-            conn = conn.execution_options(stream_results=True)
-            result = conn.execute(query)
+            result = conn.execution_options(stream_results=True).execute(
+                query.select()
+            )
             while True:
                 chunk = result.fetchmany(chunk_size)
                 if not chunk:
