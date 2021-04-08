@@ -42,7 +42,7 @@ six==1.15.0
     # via
     #   elasticsearch-dsl
     #   python-dateutil
-sqlalchemy==1.4.5
+sqlalchemy==1.4.6
     # via -r requirements/base.in
 sqlparse==0.4.1
     # via -r requirements/base.in

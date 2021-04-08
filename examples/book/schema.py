@@ -6,7 +6,13 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.types import UserDefinedType
 
-from pgsync.base import create_database, create_extension, pg_engine
+from pgsync.base import (
+    create_database,
+    create_extension,
+    create_schema,
+    pg_engine,
+)
+from pgsync.constants import SCHEMA
 from pgsync.helper import teardown
 from pgsync.utils import get_config
 
@@ -204,6 +210,7 @@ class BookLanguage(Base):
     __table_args__ = (
         UniqueConstraint('book_isbn', 'language_id'),
     )
+
     id = sa.Column(sa.Integer, primary_key=True)
     book_isbn = sa.Column(sa.String, sa.ForeignKey(Book.isbn))
     book = sa.orm.relationship(
@@ -222,6 +229,7 @@ class BookShelf(Base):
     __table_args__ = (
         UniqueConstraint('book_isbn', 'shelf_id'),
     )
+
     id = sa.Column(sa.Integer, primary_key=True)
     book_isbn = sa.Column(sa.String, sa.ForeignKey(Book.isbn))
     book = sa.orm.relationship(
@@ -235,9 +243,16 @@ class BookShelf(Base):
 def setup(config=None):
     for document in json.load(open(config)):
         database = document.get('database', document['index'])
+        schema = document.get('schema', SCHEMA)
         create_database(database)
         create_extension(database, 'POSTGIS', echo=True)
         engine = pg_engine(database=database)
+        create_schema(engine, schema)
+        engine = engine.connect().execution_options(
+            schema_translate_map={
+                None: schema
+            }
+        )
         Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)
 

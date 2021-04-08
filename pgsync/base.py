@@ -372,6 +372,10 @@ class Base(object):
                 ('notify', 'ROW', ['INSERT', 'UPDATE', 'DELETE']),
                 ('truncate', 'STATEMENT', ['TRUNCATE']),
             ]:
+
+                if self.exist_trigger(f'{table}_{name}', f'{schema}.{table}'):
+                    continue
+
                 queries.append(
                     f'CREATE TRIGGER {table}_{name} '
                     f'AFTER {" OR ".join(tg_op)} ON "{schema}"."{table}" '
@@ -418,6 +422,24 @@ class Base(object):
                     f'ENABLE TRIGGER {table}_{name}'
                 )
                 self.execute(query)
+
+    def exist_trigger(self, tgname, tgrelid):
+        """Check if the given trigger exists on table.
+
+        Args:
+            tgname (str): The trigger name
+            tgrelid (str): The table name
+
+        Returns:
+            True if exists, False otherwise.
+        """
+        statement = sa.text(
+            f"SELECT tgname FROM pg_trigger "
+            f"WHERE NOT tgisinternal "
+            f"AND tgrelid = '{tgrelid}'::REGCLASS "
+            f"AND tgname = '{tgname}' "
+        )
+        return self.query_one(statement) is not None
 
     def execute(self, query, values=None, options=None):
         """Execute a query command."""
@@ -808,10 +830,11 @@ def pg_execute(engine, query, values=None, options=None):
         raise
 
 
-def create_schema(base, engine):
+def create_schema(engine, schema):
     """Create database schema."""
-    base.metadata.drop_all(engine)
-    base.metadata.create_all(engine)
+    if schema == SCHEMA:
+        return
+    engine.execute(sa.schema.CreateSchema(schema))
 
 
 def create_database(database, echo=False):

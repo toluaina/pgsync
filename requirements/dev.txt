@@ -156,7 +156,7 @@ six==1.15.0
     #   readme-renderer
 snowballstemmer==2.1.0
     # via pydocstyle
-sqlalchemy==1.4.5
+sqlalchemy==1.4.6
     # via -r requirements/base.in
 sqlparse==0.4.1
     # via -r requirements/base.in
@@ -168,7 +168,7 @@ text-unidecode==1.3
     # via faker
 toml==0.10.2
     # via pep517
-tqdm==4.59.0
+tqdm==4.60.0
     # via twine
 twine==3.4.1
     # via -r requirements/dev.in
