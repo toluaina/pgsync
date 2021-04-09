@@ -148,7 +148,7 @@ class Sync(Base):
             for node in traverse_breadth_first(root):
                 tables |= set(node.relationship.through_tables)
                 tables |= set([node.table])
-            self.create_triggers(self.database, schema, tables=tables)
+            self.create_triggers(schema, tables=tables)
         self.create_replication_slot(self.__name)
 
     def teardown(self):
@@ -165,7 +165,7 @@ class Sync(Base):
             for node in traverse_breadth_first(root):
                 tables |= set(node.relationship.through_tables)
                 tables |= set([node.table])
-            self.drop_triggers(self.database, schema=schema, tables=tables)
+            self.drop_triggers(schema=schema, tables=tables)
         self.drop_replication_slot(self.__name)
 
     def get_doc_id(self, primary_keys):
@@ -377,8 +377,8 @@ class Sync(Base):
                             node,
                         )
 
-                        _table = self._get_table(schema, table)
-                        node_parent_table = self._get_table(
+                        _table = self._absolute_table(schema, table)
+                        node_parent_table = self._absolute_table(
                             schema,
                             node.parent.table,
                         )
@@ -409,8 +409,8 @@ class Sync(Base):
                             node,
                         )
 
-                        _table = self._get_table(schema, table)
-                        node_parent_table = self._get_table(
+                        _table = self._absolute_table(schema, table)
+                        node_parent_table = self._absolute_table(
                             schema,
                             node.parent.table,
                         )

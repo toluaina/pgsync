@@ -118,13 +118,13 @@ class TestBase(object):
                 excinfo.value
             )
 
-    def test_get_table(self, connection):
+    def test_absolute_table(self, connection):
         pg_base = Base(connection.engine.url.database)
 
-        table = pg_base._get_table('public', 'public.my_table')
+        table = pg_base._absolute_table('public', 'public.my_table')
         assert table == 'public.my_table'
 
-        table = pg_base._get_table('public', 'my_table')
+        table = pg_base._absolute_table('public', 'my_table')
         assert table == 'public.my_table'
 
     @patch('pgsync.base.pg_execute')

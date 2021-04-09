@@ -37,7 +37,7 @@ class Base(object):
         """
         self.__engine = pg_engine(database, **kwargs)
         self.__schemas = None
-        # models is a dict of f'{schema}.{table}''
+        # models is a dict of f'{schema}.{table}'
         self.models = {}
         self.__metadata = {}
 
@@ -56,10 +56,9 @@ class Base(object):
         statement = statement.where(sa.column('name') == column)
         if self.verbose:
             compiled_query(statement, 'pg_settings')
-        try:
-            return self.query_one(statement)[0]
-        except Exception:
-            pass
+        row = self.query_one(statement)
+        if row:
+            return row[0]
         return None
 
     def has_permission(self, username, permission):
@@ -165,7 +164,7 @@ class Base(object):
             f'Invalid definition {table} for schema: {schema}'
         )
 
-    def _get_table(self, schema, table):
+    def _absolute_table(self, schema, table):
         """Get fully qualified table name."""
         if not table.startswith(f'{schema}.'):
             return f'{schema}.{table}'
@@ -183,7 +182,7 @@ class Base(object):
             schema (str): The database schema
 
         """
-        table = self._get_table(schema, table)
+        table = self._absolute_table(schema, table)
         schema, table = self._get_schema(schema, table)
         logger.debug(f'Truncating table: {schema}.{table}')
         query = f'TRUNCATE TABLE "{schema}"."{table}" CASCADE'
@@ -358,11 +357,11 @@ class Base(object):
         return self.query(statement)
 
     # Triggers...
-    def create_triggers(self, database, schema, tables=None):
+    def create_triggers(self, schema, tables=None):
         """Create a database triggers."""
         self.execute(CREATE_TRIGGER_TEMPLATE)
-        queries = []
         views = sa.inspect(self.engine).get_view_names(schema)
+        queries = []
         for table in self.tables(schema):
             schema, table = self._get_schema(schema, table)
             if (tables and table not in tables) or (table in views):
@@ -373,7 +372,9 @@ class Base(object):
                 ('truncate', 'STATEMENT', ['TRUNCATE']),
             ]:
 
-                if self.exist_trigger(f'{table}_{name}', f'{schema}.{table}'):
+                if self.trigger_exists(
+                    f'{table}_{name}', f'{schema}.{table}'
+                ):
                     continue
 
                 queries.append(
@@ -385,7 +386,7 @@ class Base(object):
         for query in queries:
             self.execute(query)
 
-    def drop_triggers(self, database, schema, tables=None):
+    def drop_triggers(self, schema, tables=None):
         """Drop all pgsync defined triggers in database."""
         for table in self.tables(schema):
             schema, table = self._get_schema(schema, table)
@@ -399,7 +400,7 @@ class Base(object):
                 )
                 self.execute(query)
 
-    def disable_triggers(self, database, schema):
+    def disable_triggers(self, schema):
         """Disable all pgsync defined triggers in database."""
         for table in self.tables(schema):
             schema, table = self._get_schema(schema, table)
@@ -411,7 +412,7 @@ class Base(object):
                 )
                 self.execute(query)
 
-    def enable_triggers(self, database, schema):
+    def enable_triggers(self, schema):
         """Enable all pgsync defined triggers in database."""
         for table in self.tables(schema):
             schema, table = self._get_schema(schema, table)
@@ -423,7 +424,7 @@ class Base(object):
                 )
                 self.execute(query)
 
-    def exist_trigger(self, tgname, tgrelid):
+    def trigger_exists(self, tgname, tgrelid):
         """Check if the given trigger exists on table.
 
         Args:
@@ -433,11 +434,15 @@ class Base(object):
         Returns:
             True if exists, False otherwise.
         """
-        statement = sa.text(
-            f"SELECT tgname FROM pg_trigger "
-            f"WHERE NOT tgisinternal "
-            f"AND tgrelid = '{tgrelid}'::REGCLASS "
-            f"AND tgname = '{tgname}' "
+        statement = sa.select([sa.column('tgname')])
+        statement = statement.select_from(sa.text('pg_trigger'))
+        statement = statement.where(sa.not_(sa.column('tgisinternal')))
+        statement = statement.where(sa.column('tgname') == tgname)
+        statement = statement.where(
+            sa.column('tgrelid') == sa.cast(
+                tgrelid,
+                sa.dialects.postgresql.REGCLASS,
+            )
         )
         return self.query_one(statement) is not None
 
