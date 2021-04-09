@@ -378,11 +378,14 @@ class Base(object):
                     continue
 
                 queries.append(
-                    f'CREATE TRIGGER {table}_{name} '
-                    f'AFTER {" OR ".join(tg_op)} ON "{schema}"."{table}" '
-                    f'FOR EACH {for_each} EXECUTE PROCEDURE '
-                    f'{TRIGGER_FUNC}()',
+                    sa.DDL(
+                        f'CREATE TRIGGER {table}_{name} '
+                        f'AFTER {" OR ".join(tg_op)} ON "{schema}"."{table}" '
+                        f'FOR EACH {for_each} EXECUTE PROCEDURE '
+                        f'{TRIGGER_FUNC}()',
+                    )
                 )
+
         for query in queries:
             self.execute(query)
 

@@ -805,7 +805,7 @@ class Sync(Base):
             ) == ([], [], []):
                 if i % 10 == 0:
                     sys.stdout.write(
-                        f'Polling db {channel}: {j:,} items\n'
+                        f'Polling db {channel}: {j:,} item(s)\n'
                     )
                     sys.stdout.flush()
                 i += 1
