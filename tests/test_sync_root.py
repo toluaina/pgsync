@@ -110,6 +110,7 @@ class TestRoot(object):
             {
                 '_id': 'abc',
                 '_index': 'testdb',
+                '_type': '_doc',
                 '_source': {
                     '_meta': {},
                     'description': 'Tigers are fierce creatures',
@@ -120,6 +121,7 @@ class TestRoot(object):
             {
                 '_id': 'def',
                 '_index': 'testdb',
+                '_type': '_doc',
                 '_source': {
                     '_meta': {},
                     'description': 'Lion and the mouse',
@@ -130,6 +132,7 @@ class TestRoot(object):
             {
                 '_id': 'ghi',
                 '_index': 'testdb',
+                '_type': '_doc',
                 '_source': {
                     '_meta': {},
                     'description': 'Rabbits on the run',
@@ -166,6 +169,7 @@ class TestRoot(object):
             {
                 '_id': 'abc',
                 '_index': 'testdb',
+                '_type': '_doc',
                 '_source': {
                     '_meta': {},
                     'description': 'Tigers are fierce creatures',
@@ -176,6 +180,7 @@ class TestRoot(object):
             {
                 '_id': 'def',
                 '_index': 'testdb',
+                '_type': '_doc',
                 '_source': {
                     '_meta': {},
                     'description': 'Lion and the mouse',
@@ -186,6 +191,7 @@ class TestRoot(object):
             {
                 '_id': 'ghi',
                 '_index': 'testdb',
+                '_type': '_doc',
                 '_source': {
                     '_meta': {},
                     'description': 'Rabbits on the run',

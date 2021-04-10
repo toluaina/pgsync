@@ -421,6 +421,7 @@ class TestNestedChildren(object):
             {
                 '_id': 'abc',
                 '_index': 'testdb',
+                '_type': '_doc',
                 '_source': {
                     '_meta': {
                         'author': {'id': [1, 4]},
@@ -490,6 +491,7 @@ class TestNestedChildren(object):
             {
                 '_id': 'def',
                 '_index': 'testdb',
+                '_type': '_doc',
                 '_source': {
                     '_meta': {
                         'author': {'id': [1, 2]},
@@ -558,6 +560,7 @@ class TestNestedChildren(object):
             {
                 '_id': 'ghi',
                 '_index': 'testdb',
+                '_type': '_doc',
                 '_source': {
                     '_meta': {
                         'author': {'id': [2, 3]},
@@ -753,6 +756,7 @@ class TestNestedChildren(object):
             {
                 '_id': 'jkl',
                 '_index': 'testdb',
+                '_type': '_doc',
                 '_source': {
                     '_meta': {
                         'author': {'id': [5]},
@@ -801,6 +805,7 @@ class TestNestedChildren(object):
             {
                 '_id': 'mno',
                 '_index': 'testdb',
+                '_type': '_doc',
                 '_source': {
                     '_meta': {
                         'author': {'id': [5]},
@@ -880,6 +885,7 @@ class TestNestedChildren(object):
             {
                 '_id': 'abc',
                 '_index': 'testdb',
+                '_type': '_doc',
                 '_source': {
                     '_meta': {
                         'author': {'id': [1, 4]},
