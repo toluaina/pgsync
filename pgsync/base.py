@@ -285,8 +285,9 @@ class Base(object):
         SELECT * FROM PG_LOGICAL_SLOT_GET_CHANGES('testdb', NULL, NULL)
         """
         filters = []
-        columns = [sa.column('xid'), sa.column('data')]
-        statement = sa.select(columns)
+        statement = sa.select(
+            [sa.column('xid'), sa.column('data')]
+        )
         statement = statement.select_from(
             sa.func.PG_LOGICAL_SLOT_GET_CHANGES(
                 slot_name,
@@ -328,8 +329,9 @@ class Base(object):
         SELECT * FROM PG_LOGICAL_SLOT_PEEK_CHANGES('testdb', NULL, 1)
         """
         filters = []
-        columns = [sa.column('xid'), sa.column('data')]
-        statement = sa.select(columns).select_from(
+        statement = sa.select(
+            [sa.column('xid'), sa.column('data')]
+        ).select_from(
             sa.func.PG_LOGICAL_SLOT_PEEK_CHANGES(
                 slot_name,
                 upto_lsn,
