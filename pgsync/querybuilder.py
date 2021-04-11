@@ -23,27 +23,26 @@ class QueryBuilder(object):
         self.verbose = verbose
         self.isouter = True
 
-    def _get_foreign_keys(self, model_a, model_b):
-
+    def _get_foreign_keys(self, node_a, node_b):
         if (
-            model_a.relationship.through_tables or
-            model_b.relationship.through_tables
+            node_a.relationship.through_tables or
+            node_b.relationship.through_tables
         ):
 
-            if model_a.through_tables:
-                through_tables = model_a.relationship.through_tables[0]
+            if node_a.relationship.through_tables:
+                through_tables = node_a.relationship.through_tables[0]
 
-            if model_b.through_tables:
-                through_tables = model_b.relationship.through_tables[0]
-                model_a, model_b = model_b, model_a
+            if node_b.relationship.through_tables:
+                through_tables = node_b.relationship.through_tables[0]
+                node_a, node_b = node_b, node_a
 
             through = node_from_table(
                 self.base,
                 through_tables,
-                model_a.schema,
+                node_a.schema,
             )
-            foreign_keys = get_foreign_keys(model_a, through)
-            for key, value in get_foreign_keys(through, model_b).items():
+            foreign_keys = get_foreign_keys(node_a, through)
+            for key, value in get_foreign_keys(through, node_b).items():
                 if key in foreign_keys:
                     foreign_keys[key].extend(value)
                     continue
@@ -53,7 +52,7 @@ class QueryBuilder(object):
 
         else:
 
-            return get_foreign_keys(model_a, model_b)
+            return get_foreign_keys(node_a, node_b)
 
     def _get_column_foreign_keys(
         self,
