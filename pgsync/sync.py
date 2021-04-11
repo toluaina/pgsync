@@ -459,12 +459,14 @@ class Sync(Base):
                         len(old_values) == len(new_values) and
                         old_values != new_values
                     ):
-                        docs.append({
+                        doc = {
                             '_id': self.get_doc_id(old_values),
                             '_index': index,
                             '_op_type': 'delete',
-                            '_type': '_doc',
-                        })
+                        }
+                        if self.es.version[0] < 7:
+                            doc['_type'] = '_doc',
+                        docs.append(doc)
 
                 if docs:
                     self.es.bulk(index, docs)
@@ -517,12 +519,14 @@ class Sync(Base):
                         payload_data[key] for key in root_primary_keys
                     ]
 
-                    docs.append({
+                    doc = {
                         '_id': self.get_doc_id(root_primary_values),
                         '_index': index,
                         '_op_type': 'delete',
-                        '_type': '_doc',
-                    })
+                    }
+                    if self.es.version[0] < 7:
+                        doc['_type'] = '_doc',
+                    docs.append(doc)
 
                 if docs:
                     self.es.bulk(index, docs)
@@ -561,12 +565,16 @@ class Sync(Base):
             if table == root_table:
                 docs = []
                 for doc_id in self.es._search(index, table, {}):
-                    docs.append({
+
+                    doc = {
                         '_id': doc_id,
                         '_index': index,
                         '_op_type': 'delete',
-                        '_type': '_doc',
-                    })
+                    }
+                    if self.es.version[0] < 7:
+                        doc['_type'] = '_doc',
+                    docs.append(doc)
+
                 if docs:
                     self.es.bulk(index, docs)
 
@@ -704,8 +712,10 @@ class Sync(Base):
                 '_id': self.get_doc_id(primary_keys),
                 '_index': index,
                 '_source': row,
-                '_type': '_doc',
             }
+
+            if self.es.version[0] < 7:
+                doc['_type'] = '_doc',
 
             if self._plugins:
                 doc = list(self._plugins.transform([doc]))[0]

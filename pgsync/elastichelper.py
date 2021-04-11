@@ -48,6 +48,9 @@ class ElasticHelper(object):
             client_cert=ELASTICSEARCH_CLIENT_CERT,
             client_key=ELASTICSEARCH_CLIENT_KEY,
         )
+        self.version = list(
+            map(int, self.__es.info()['version']['number'].split('.'))
+        )
 
     def teardown(self, index):
         """
