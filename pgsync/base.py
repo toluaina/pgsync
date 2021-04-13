@@ -439,10 +439,11 @@ class Base(object):
         Returns:
             True if exists, False otherwise.
         """
+        tgrelid = tgrelid.split('.')[-1].lower()
         statement = sa.select([sa.column('tgname')])
         statement = statement.select_from(sa.text('pg_trigger'))
         statement = statement.where(sa.not_(sa.column('tgisinternal')))
-        statement = statement.where(sa.column('tgname') == tgname)
+        statement = statement.where(sa.column('tgname') == tgname.lower())
         statement = statement.where(
             sa.column('tgrelid') == sa.cast(
                 tgrelid,
