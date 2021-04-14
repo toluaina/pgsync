@@ -2,10 +2,13 @@
 import logging
 from collections import defaultdict
 
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, RequestsHttpConnection
 from elasticsearch.helpers import parallel_bulk
 from elasticsearch_dsl import Q, Search
 from elasticsearch_dsl.query import Bool
+
+from requests_aws4auth import AWS4Auth
+import boto3
 
 from .constants import ELASTICSEARCH_TYPES, META
 from .node import traverse_post_order
@@ -21,6 +24,8 @@ from .settings import (
     ELASTICSEARCH_TIMEOUT,
     ELASTICSEARCH_USE_SSL,
     ELASTICSEARCH_VERIFY_CERTS,
+    AWS_HOSTED,
+    AWS_ELASTICSEARCH_URL
 )
 from .utils import get_elasticsearch_url
 
@@ -38,16 +43,29 @@ class ElasticHelper(object):
         host = 'localhost', port = 9200
         """
         url = get_elasticsearch_url()
-        self.__es = Elasticsearch(
-            hosts=[url],
-            timeout=ELASTICSEARCH_TIMEOUT,
-            verify_certs=ELASTICSEARCH_VERIFY_CERTS,
-            use_ssl=ELASTICSEARCH_USE_SSL,
-            ssl_show_warn=ELASTICSEARCH_SSL_SHOW_WARN,
-            ca_certs=ELASTICSEARCH_CA_CERTS,
-            client_cert=ELASTICSEARCH_CLIENT_CERT,
-            client_key=ELASTICSEARCH_CLIENT_KEY,
-        )
+        if(AWS_HOSTED):
+            service = 'es'
+            credentials = boto3.Session().get_credentials()
+            awsauth = AWS4Auth(credentials.access_key, credentials.secret_key, region, service, session_token=credentials.token)
+
+            self.__es = Elasticsearch(
+                hosts = [{'host': AWS_ELASTICSEARCH_URL, 'port': 443}],
+                http_auth = awsauth,
+                use_ssl = True,
+                verify_certs = True,
+                connection_class = RequestsHttpConnection
+            )
+        else:
+            self.__es = Elasticsearch(
+                hosts=[url],
+                timeout=ELASTICSEARCH_TIMEOUT,
+                verify_certs=ELASTICSEARCH_VERIFY_CERTS,
+                use_ssl=ELASTICSEARCH_USE_SSL,
+                ssl_show_warn=ELASTICSEARCH_SSL_SHOW_WARN,
+                ca_certs=ELASTICSEARCH_CA_CERTS,
+                client_cert=ELASTICSEARCH_CLIENT_CERT,
+                client_key=ELASTICSEARCH_CLIENT_KEY,
+            )
         self.version = list(
             map(int, self.__es.info()['version']['number'].split('.'))
         )
