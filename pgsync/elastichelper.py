@@ -198,4 +198,7 @@ class ElasticHelper(object):
                 node.parent._mapping['properties'][node.label] = node._mapping
 
         if root._mapping:
+            if self.version[0] < 7:
+                root._mapping = { '_doc': root._mapping }
+            
             return dict(mappings=root._mapping)
