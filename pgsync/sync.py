@@ -465,7 +465,7 @@ class Sync(Base):
                             '_op_type': 'delete',
                         }
                         if self.es.version[0] < 7:
-                            doc['_type'] = '_doc',
+                            doc['_type'] = '_doc'
                         docs.append(doc)
 
                 if docs:
@@ -525,7 +525,7 @@ class Sync(Base):
                         '_op_type': 'delete',
                     }
                     if self.es.version[0] < 7:
-                        doc['_type'] = '_doc',
+                        doc['_type'] = '_doc'
                     docs.append(doc)
 
                 if docs:
@@ -572,7 +572,7 @@ class Sync(Base):
                         '_op_type': 'delete',
                     }
                     if self.es.version[0] < 7:
-                        doc['_type'] = '_doc',
+                        doc['_type'] = '_doc'
                     docs.append(doc)
 
                 if docs:
@@ -715,7 +715,7 @@ class Sync(Base):
             }
 
             if self.es.version[0] < 7:
-                doc['_type'] = '_doc',
+                doc['_type'] = '_doc'
 
             if self._plugins:
                 doc = list(self._plugins.transform([doc]))[0]
