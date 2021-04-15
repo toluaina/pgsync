@@ -24,8 +24,9 @@ from .settings import (
     ELASTICSEARCH_TIMEOUT,
     ELASTICSEARCH_USE_SSL,
     ELASTICSEARCH_VERIFY_CERTS,
-    AWS_HOSTED,
-    AWS_ELASTICSEARCH_URL
+    AWS_HOSTED_ELASTICSEARCH,
+    AWS_ELASTICSEARCH_URL,
+    AWS_ELASTICSEARCH_REGION
 )
 from .utils import get_elasticsearch_url
 
@@ -43,17 +44,18 @@ class ElasticHelper(object):
         host = 'localhost', port = 9200
         """
         url = get_elasticsearch_url()
-        if(AWS_HOSTED):
+        if(AWS_HOSTED_ELASTICSEARCH):
             service = 'es'
             credentials = boto3.Session().get_credentials()
-            awsauth = AWS4Auth(credentials.access_key, credentials.secret_key, region, service, session_token=credentials.token)
+            awsauth = AWS4Auth(credentials.access_key, credentials.secret_key,
+                               AWS_ELASTICSEARCH_REGION, service, session_token=credentials.token)
 
             self.__es = Elasticsearch(
-                hosts = [{'host': AWS_ELASTICSEARCH_URL, 'port': 443}],
-                http_auth = awsauth,
-                use_ssl = True,
-                verify_certs = True,
-                connection_class = RequestsHttpConnection
+                hosts=[{'host': AWS_ELASTICSEARCH_URL, 'port': 443}],
+                http_auth=awsauth,
+                use_ssl=True,
+                verify_certs=True,
+                connection_class=RequestsHttpConnection
             )
         else:
             self.__es = Elasticsearch(

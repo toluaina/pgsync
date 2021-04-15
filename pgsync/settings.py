@@ -80,9 +80,10 @@ REDIS_SOCKET_TIMEOUT = env.int('REDIS_SOCKET_TIMEOUT', default=5)
 # redis poll interval (in secs)
 REDIS_POLL_INTERVAL = env.float('REDIS_POLL_INTERVAL', default=0.01)
 
-# AWS Elasticsearch
-AWS_HOSTED = env.bool('AWS_HOSTED', default=False)
+# AWS Hosted Elasticsearch
+AWS_HOSTED_ELASTICSEARCH = env.bool('AWS_HOSTED_ELASTICSEARCH', default=False)
 AWS_ELASTICSEARCH_URL = env.str('AWS_ELASTICSEARCH_URL')
+AWS_ELASTICSEARCH_REGION = env.str('AWS_ELASTICSEARCH_REGION', default='us-east-1')
 
 # Logging:
 def get_logging_config(silent_loggers=None):
