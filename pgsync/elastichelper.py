@@ -43,7 +43,6 @@ class ElasticHelper(object):
         The default connection parameters are:
         host = 'localhost', port = 9200
         """
-        url = get_elasticsearch_url()
         if(AWS_HOSTED_ELASTICSEARCH):
             service = 'es'
             credentials = boto3.Session().get_credentials()
@@ -58,6 +57,7 @@ class ElasticHelper(object):
                 connection_class=RequestsHttpConnection
             )
         else:
+            url = get_elasticsearch_url()
             self.__es = Elasticsearch(
                 hosts=[url],
                 timeout=ELASTICSEARCH_TIMEOUT,
