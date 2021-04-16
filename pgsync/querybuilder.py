@@ -1,7 +1,7 @@
 """PGSync QueryBuilder."""
 import sqlalchemy as sa
 
-from .base import compiled_query, get_foreign_keys, get_primary_keys
+from .base import compiled_query, get_foreign_keys
 from .constants import OBJECT, ONE_TO_MANY, ONE_TO_ONE, SCALAR
 from .exc import FetchColumnForeignKeysError
 from .node import node_from_table
@@ -487,17 +487,15 @@ class QueryBuilder(object):
         if self.verbose:
             compiled_query(outer_subquery, 'Outer subquery')
 
-        through_primary_keys = get_primary_keys(through.model)
-
         params = []
-        for through_primary_key in through_primary_keys:
+        for primary_key in through.model.primary_keys:
             params.append(
                 sa.func.JSON_BUILD_OBJECT(
-                    str(through_primary_key),
+                    str(primary_key),
                     sa.func.JSON_BUILD_ARRAY(
                         getattr(
                             through.model.c,
-                            through_primary_key,
+                            primary_key,
                         )
                     )
                 )

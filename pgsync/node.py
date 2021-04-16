@@ -4,7 +4,6 @@ import re
 import sqlalchemy as sa
 from six import string_types
 
-from .base import get_primary_keys
 from .constants import (
     JSONB_OPERATORS,
     NODE_ATTRIBUTES,
@@ -115,10 +114,9 @@ class Node(object):
             self.children = []
 
         self.table_columns = self.model.columns.keys()
-        self._primary_keys = get_primary_keys(self.model)
 
-        if not self._primary_keys:
-            self._primary_keys = kwargs.get('primary_key')
+        if not self.model.primary_keys:
+            setattr(self.model, 'primary_keys', kwargs.get('primary_key'))
 
         # columns to fetch
         self.column_names = [
@@ -185,7 +183,7 @@ class Node(object):
         return [
             getattr(
                 self.model.c, str(sa.text(primary_key))
-            ) for primary_key in self._primary_keys
+            ) for primary_key in self.model.primary_keys
         ]
 
     @property

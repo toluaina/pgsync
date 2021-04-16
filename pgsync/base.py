@@ -113,7 +113,9 @@ class Base(object):
             model = metadata.tables[name]
             model.append_column(sa.Column('xmin', sa.BigInteger))
             model = model.alias()
+            setattr(model, 'primary_keys', _get_primary_keys(model))
             self.models[f'{model.original}'] = model
+
         return self.models[name]
 
     @property
@@ -374,9 +376,7 @@ class Base(object):
                 ('truncate', 'STATEMENT', ['TRUNCATE']),
             ]:
 
-                if self.trigger_exists(
-                    f'{table}_{name}', f'{schema}.{table}'
-                ):
+                if self.trigger_exists(f'{table}_{name}', table):
                     continue
 
                 queries.append(
@@ -439,7 +439,6 @@ class Base(object):
         Returns:
             True if exists, False otherwise.
         """
-        tgrelid = tgrelid.split('.')[-1].lower()
         statement = sa.select([sa.column('tgname')])
         statement = statement.select_from(sa.text('pg_trigger'))
         statement = statement.where(sa.not_(sa.column('tgisinternal')))
@@ -710,8 +709,8 @@ def subtransactions(session):
     return ControlledExecution(session)
 
 
-def get_primary_keys(model):
-    return sorted([column.key for column in model.primary_key])
+def _get_primary_keys(model):
+    return sorted([primary_key.key for primary_key in model.primary_key])
 
 
 def _get_foreign_keys(model_a, model_b):

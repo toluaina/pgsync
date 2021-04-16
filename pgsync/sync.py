@@ -18,7 +18,7 @@ import psycopg2
 import sqlalchemy as sa
 
 from . import __version__
-from .base import Base, compiled_query, get_primary_keys
+from .base import Base, compiled_query
 from .constants import (
     DELETE,
     INSERT,
@@ -304,24 +304,22 @@ class Sync(Base):
         schema = payload['schema']
 
         model = self.model(table, schema)
-        primary_keys = get_primary_keys(model)
 
         root_table = nodes[0]['table']
         root_model = self.model(
             root_table,
             nodes[0].get('schema', SCHEMA),
         )
-        root_primary_keys = get_primary_keys(root_model)
 
         for payload in payloads:
             payload_data = self._payload_data(payload)
             # this is only required for the non truncate tg_ops
             if payload_data:
-                if not set(primary_keys).issubset(set(payload_data.keys())):
+                if not set(model.primary_keys).issubset(set(payload_data.keys())):
                     table = payload['table']
                     schema = payload['schema']
                     logger.exception(
-                        f'Primary keys {primary_keys} not subset of payload '
+                        f'Primary keys {model.primary_keys} not subset of payload '
                         f'data {payload_data.keys()} for table '
                         f'{schema}.{table}'
                     )
@@ -351,10 +349,10 @@ class Sync(Base):
                     for payload in payloads:
                         payload_data = self._payload_data(payload)
                         primary_values = [
-                            payload_data[key] for key in primary_keys
+                            payload_data[key] for key in model.primary_keys
                         ]
                         primary_fields = dict(
-                            zip(primary_keys, primary_values)
+                            zip(model.primary_keys, primary_values)
                         )
                         filters[table].append({
                             key: value for key, value in primary_fields.items()
@@ -437,22 +435,22 @@ class Sync(Base):
                 for payload in payloads:
                     payload_data = self._payload_data(payload)
                     primary_values = [
-                        payload_data[key] for key in primary_keys
+                        payload_data[key] for key in model.primary_keys
                     ]
                     primary_fields = dict(
-                        zip(primary_keys, primary_values)
+                        zip(model.primary_keys, primary_values)
                     )
                     filters[table].append({
                         key: value for key, value in primary_fields.items()
                     })
 
                     old_values = []
-                    for key in root_primary_keys:
+                    for key in root_model.primary_keys:
                         if key in payload.get('old').keys():
                             old_values.append(payload.get('old')[key])
 
                     new_values = [
-                        payload.get('new')[key] for key in root_primary_keys
+                        payload.get('new')[key] for key in root_model.primary_keys
                     ]
 
                     if (
@@ -477,10 +475,10 @@ class Sync(Base):
                 for payload in payloads:
                     payload_data = self._payload_data(payload)
                     primary_values = [
-                        payload_data[key] for key in primary_keys
+                        payload_data[key] for key in model.primary_keys
                     ]
                     primary_fields = dict(
-                        zip(primary_keys, primary_values)
+                        zip(model.primary_keys, primary_values)
                     )
                     fields = collections.defaultdict(list)
                     _filters = []
@@ -498,7 +496,7 @@ class Sync(Base):
                     for doc_id in self.es._search(index, table, fields):
                         where = {}
                         params = doc_id.split(PRIMARY_KEY_DELIMITER)
-                        for i, key in enumerate(root_primary_keys):
+                        for i, key in enumerate(root_model.primary_keys):
                             where[key] = params[i]
 
                         _filters.append(where)
@@ -516,7 +514,7 @@ class Sync(Base):
 
                     payload_data = self._payload_data(payload)
                     root_primary_values = [
-                        payload_data[key] for key in root_primary_keys
+                        payload_data[key] for key in root_model.primary_keys
                     ]
 
                     doc = {
@@ -539,10 +537,10 @@ class Sync(Base):
                 for payload in payloads:
                     payload_data = self._payload_data(payload)
                     primary_values = [
-                        payload_data[key] for key in primary_keys
+                        payload_data[key] for key in model.primary_keys
                     ]
                     primary_fields = dict(
-                        zip(primary_keys, primary_values)
+                        zip(model.primary_keys, primary_values)
                     )
                     fields = collections.defaultdict(list)
                     _filters = []
@@ -552,7 +550,7 @@ class Sync(Base):
                     for doc_id in self.es._search(index, table, fields):
                         where = {}
                         params = doc_id.split(PRIMARY_KEY_DELIMITER)
-                        for i, key in enumerate(root_primary_keys):
+                        for i, key in enumerate(root_model.primary_keys):
                             where[key] = params[i]
 
                         _filters.append(where)
@@ -584,7 +582,7 @@ class Sync(Base):
                 for doc_id in self.es._search(index, table, {}):
                     where = {}
                     params = doc_id.split(PRIMARY_KEY_DELIMITER)
-                    for i, key in enumerate(root_primary_keys):
+                    for i, key in enumerate(root_model.primary_keys):
                         where[key] = params[i]
 
                     _filters.append(where)

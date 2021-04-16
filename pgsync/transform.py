@@ -13,12 +13,12 @@ def _get_transform(node, key):
     if 'transform' in node.keys():
         if key in node['transform']:
             transform_node = node['transform'][key]
-    if 'children' in node.keys():
-        for child in node['children']:
-            label = child.get('label', child['table'])
-            _transform_node = _get_transform(child, key)
-            if _transform_node:
-                transform_node[label] = _transform_node
+    for child in node.get('children', {}):
+        txfm_node = _get_transform(child, key)
+        if txfm_node:
+            transform_node[
+                child.get('label', child['table'])
+            ] = txfm_node
     return transform_node
 
 
