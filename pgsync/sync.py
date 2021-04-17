@@ -149,6 +149,7 @@ class Sync(Base):
                 tables |= set(node.relationship.through_tables)
                 tables |= set([node.table])
             self.create_triggers(schema, tables=tables)
+            self.create_views(tables=tables)
         self.create_replication_slot(self.__name)
 
     def teardown(self):
@@ -166,6 +167,7 @@ class Sync(Base):
                 tables |= set(node.relationship.through_tables)
                 tables |= set([node.table])
             self.drop_triggers(schema=schema, tables=tables)
+            self.drop_views()
         self.drop_replication_slot(self.__name)
 
     def get_doc_id(self, primary_keys):

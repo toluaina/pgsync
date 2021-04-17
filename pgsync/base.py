@@ -11,9 +11,11 @@ from sqlalchemy.orm import sessionmaker
 
 from .constants import (
     BUILTIN_SCHEMAS,
+    FOREIGN_KEY_VIEW,
     LOGICAL_SLOT_PREFIX,
     LOGICAL_SLOT_SUFFIX,
     PLUGIN,
+    PRIMARY_KEY_VIEW,
     SCHEMA,
     TG_OP,
     TRIGGER_FUNC,
@@ -21,7 +23,11 @@ from .constants import (
 )
 from .exc import ForeignKeyError, ParseLogicalSlotError, TableNotFoundError
 from .settings import PG_SSLMODE, PG_SSLROOTCERT, QUERY_CHUNK_SIZE
-from .trigger import CREATE_TRIGGER_TEMPLATE
+from .trigger import (
+    CREATE_FOREIGN_KEY_VIEW_TEMPLATE,
+    CREATE_PRIMARY_KEY_VIEW_TEMPLATE,
+    CREATE_TRIGGER_TEMPLATE,
+)
 from .utils import get_postgres_url
 
 logger = logging.getLogger(__name__)
@@ -359,6 +365,35 @@ class Base(object):
         if self.verbose:
             compiled_query(statement, 'logical_slot_peek_changes')
         return self.query(statement)
+
+    # Views...
+    def create_views(self, tables):
+        tables = [f"'{table}'" for table in tables]
+        logger.debug(f'Creating view: {PRIMARY_KEY_VIEW}')
+        statement = CREATE_PRIMARY_KEY_VIEW_TEMPLATE.format(
+            **{'tables': ', '.join(tables), 'view': PRIMARY_KEY_VIEW}
+        )
+        self.execute(statement)
+        self.execute(
+            f'CREATE UNIQUE INDEX pkey_idx ON {PRIMARY_KEY_VIEW} (table_name)'
+        )
+        logger.debug(f'Created view: {PRIMARY_KEY_VIEW}')
+
+        logger.debug(f'Creating view: {FOREIGN_KEY_VIEW}')
+        statement = CREATE_FOREIGN_KEY_VIEW_TEMPLATE.format(
+            **{'tables': ', '.join(tables), 'view': FOREIGN_KEY_VIEW}
+        )
+        self.execute(statement)
+        self.execute(
+            f'CREATE UNIQUE INDEX fkey_idx ON {FOREIGN_KEY_VIEW} (table_name)'
+        )
+        logger.debug(f'Created view: {FOREIGN_KEY_VIEW}')
+
+    def drop_views(self):
+        for view in [PRIMARY_KEY_VIEW, FOREIGN_KEY_VIEW]:
+            logger.debug(f'Dropping view: {view}')
+            self.execute(f'DROP MATERIALIZED VIEW IF EXISTS {view}')
+            logger.debug(f'Dropped view: {view}')
 
     # Triggers...
     def create_triggers(self, schema, tables=None):

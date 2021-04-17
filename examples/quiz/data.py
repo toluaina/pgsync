@@ -20,11 +20,11 @@ def main(config):
 
     config = get_config(config)
     teardown(drop_db=False, config=config)
-    document = json.load(open(config))
+    documents = json.load(open(config))
     engine = pg_engine(
-        database=document[0].get(
+        database=documents[0].get(
             'database',
-            document[0]['index'],
+            documents[0]['index'],
         )
     )
     Session = sessionmaker(bind=engine, autoflush=True)

@@ -135,6 +135,10 @@ PLUGIN = 'test_decoding'
 # Trigger function
 TRIGGER_FUNC = 'table_notify'
 
+# Views
+PRIMARY_KEY_VIEW = '_pkey_view'
+FOREIGN_KEY_VIEW = '_fkey_view'
+
 # Primary key delimiter
 PRIMARY_KEY_DELIMITER = '|'
 

@@ -129,7 +129,7 @@ $ curl -X GET http://[elasticsearch host]:9201/reservations/_search?pretty=true
 Key features of PGSync are:
 
 - Easily denormalize relational data. 
-- Works with any PostgreSQL database (version 9.4 or later). 
+- Works with any PostgreSQL database (version 9.6 or later). 
 - Negligible impact on database performance.
 - Transactionally consistent output in Elasticsearch. This means: writes appear only when they are committed to the database, insert, update and delete operations appear in the same order as they were committed (as opposed to eventual consistency).
 - Fault-tolerant: does not lose data, even if processes crash or a network interruption occurs, etc. The process can be recovered from the last checkpoint.
@@ -143,7 +143,7 @@ Key features of PGSync are:
 #### Requirements
 
 - [Python](https://www.python.org) 3.6+
-- [Postgres](https://www.postgresql.org) 9.4+
+- [Postgres](https://www.postgresql.org) 9.6+
 - [Redis](https://redis.io) 3.1.0
 - [Elasticsearch](https://www.elastic.co/products/elastic-stack) 6.3.1+
 - [SQlAlchemy](https://www.sqlalchemy.org) 1.3.4+
