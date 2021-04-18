@@ -18,19 +18,18 @@ DECLARE
   new_row JSON;
   notification JSON;
   xmin BIGINT;
+
   primary_keys TEXT [] := (
-      SELECT ARRAY_AGG(attname)
-      FROM pg_index
-      JOIN pg_attribute ON attrelid = indrelid AND attnum = ANY(indkey)
-      WHERE indrelid = TG_RELID AND indisprimary
+      SELECT primary_keys
+      FROM _pkey_view
+      WHERE table_name = TG_TABLE_NAME::REGCLASS
   );
   foreign_keys TEXT [] := (
-      SELECT ARRAY_AGG(column_name::TEXT)
-      FROM information_schema.key_column_usage
-      WHERE constraint_catalog=current_catalog
-      AND table_name = TG_TABLE_NAME
-      AND position_in_unique_constraint NOTNULL
+      SELECT foreign_keys
+      FROM _fkey_view
+      WHERE table_name = TG_TABLE_NAME
   );
+
 BEGIN
     -- database is also the channel name.
     channel := CURRENT_DATABASE();
@@ -49,14 +48,14 @@ BEGIN
             new_row := (
                 SELECT JSONB_OBJECT_AGG(key, value)
                 FROM JSON_EACH(new_row)
-                WHERE key = ANY(primary_keys) OR key = ANY(foreign_keys)
+                WHERE key = ANY(primary_keys || foreign_keys)
             );
             IF TG_OP = 'UPDATE' THEN
                 old_row = ROW_TO_JSON(OLD);
                 old_row := (
                     SELECT JSONB_OBJECT_AGG(key, value)
                     FROM JSON_EACH(old_row)
-                    WHERE key = ANY(primary_keys) OR key = ANY(foreign_keys)
+                    WHERE key = ANY(primary_keys || foreign_keys)
                 );
             END IF;
             xmin := NEW.xmin;

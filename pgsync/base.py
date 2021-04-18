@@ -3,6 +3,7 @@ import collections
 import logging
 import os
 import sys
+import warnings
 
 import sqlalchemy as sa
 import sqlparse
@@ -23,12 +24,9 @@ from .constants import (
 )
 from .exc import ForeignKeyError, ParseLogicalSlotError, TableNotFoundError
 from .settings import PG_SSLMODE, PG_SSLROOTCERT, QUERY_CHUNK_SIZE
-from .trigger import (
-    CREATE_FOREIGN_KEY_VIEW_TEMPLATE,
-    CREATE_PRIMARY_KEY_VIEW_TEMPLATE,
-    CREATE_TRIGGER_TEMPLATE,
-)
+from .trigger import CREATE_TRIGGER_TEMPLATE
 from .utils import get_postgres_url
+from .view import CreateView, DropView
 
 logger = logging.getLogger(__name__)
 
@@ -367,23 +365,96 @@ class Base(object):
         return self.query(statement)
 
     # Views...
+    def _primary_key_view_statement(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', category=sa.exc.SAWarning)
+            pg_index = self.model('pg_index', 'pg_catalog')
+            pg_attribute = self.model('pg_attribute', 'pg_catalog')
+            pg_class = self.model('pg_class', 'pg_catalog')
+            pg_namespace = self.model('pg_namespace', 'pg_catalog')
+        alias = pg_class.alias('x')
+        return sa.select([
+            sa.cast(
+                pg_index.c.indrelid,
+                sa.dialects.postgresql.REGCLASS,
+            ).label('table_name'),
+            sa.func.ARRAY_AGG(pg_attribute.c.attname).label('primary_keys'),
+        ]).join(
+            pg_attribute,
+            pg_attribute.c.attrelid == pg_index.c.indrelid,
+        ).join(
+            pg_class,
+            pg_class.c.oid == pg_index.c.indexrelid,
+        ).join(
+            alias,
+            alias.c.oid == pg_index.c.indrelid,
+        ).join(
+            pg_namespace,
+            pg_namespace.c.oid == pg_class.c.relnamespace,
+        ).where(*[
+             pg_namespace.c.nspname.notin_(['pg_catalog', 'pg_toast']),
+             pg_index.c.indisprimary,
+             pg_attribute.c.attnum == sa.any_(pg_index.c.indkey),
+        ]).group_by(pg_index.c.indrelid)
+
+    def _foreign_key_view_statement(self, tables):
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', category=sa.exc.SAWarning)
+            table_constraints = self.model(
+                'table_constraints',
+                'information_schema',
+            )
+            key_column_usage = self.model(
+                'key_column_usage',
+                'information_schema',
+            )
+            constraint_column_usage = self.model(
+                'constraint_column_usage',
+                'information_schema',
+            )
+
+        return sa.select([
+            table_constraints.c.table_name,
+            sa.func.ARRAY_AGG(
+                sa.cast(
+                    key_column_usage.c.column_name,
+                    sa.TEXT,
+                )
+            ).label('foreign_keys'),
+        ]).join(
+            key_column_usage,
+            sa.and_(
+                key_column_usage.c.constraint_name == table_constraints.c.constraint_name,
+                key_column_usage.c.table_schema == table_constraints.c.table_schema,
+             )
+        ).join(
+            constraint_column_usage,
+            sa.and_(
+                constraint_column_usage.c.constraint_name == table_constraints.c.constraint_name,
+                constraint_column_usage.c.table_schema == table_constraints.c.table_schema,
+             )
+        ).where(*[
+             table_constraints.c.table_name.in_(tables),
+             table_constraints.c.constraint_type == 'FOREIGN KEY',
+        ]).group_by(table_constraints.c.table_name)
+
     def create_views(self, tables):
-        tables = [f"'{table}'" for table in tables]
         logger.debug(f'Creating view: {PRIMARY_KEY_VIEW}')
-        statement = CREATE_PRIMARY_KEY_VIEW_TEMPLATE.format(
-            **{'tables': ', '.join(tables), 'view': PRIMARY_KEY_VIEW}
+        self.__engine.execute(
+            CreateView(PRIMARY_KEY_VIEW, self._primary_key_view_statement())
         )
-        self.execute(statement)
         self.execute(
             f'CREATE UNIQUE INDEX pkey_idx ON {PRIMARY_KEY_VIEW} (table_name)'
         )
         logger.debug(f'Created view: {PRIMARY_KEY_VIEW}')
 
         logger.debug(f'Creating view: {FOREIGN_KEY_VIEW}')
-        statement = CREATE_FOREIGN_KEY_VIEW_TEMPLATE.format(
-            **{'tables': ', '.join(tables), 'view': FOREIGN_KEY_VIEW}
+        self.__engine.execute(
+            CreateView(
+                FOREIGN_KEY_VIEW,
+                self._foreign_key_view_statement(tables),
+            )
         )
-        self.execute(statement)
         self.execute(
             f'CREATE UNIQUE INDEX fkey_idx ON {FOREIGN_KEY_VIEW} (table_name)'
         )
@@ -392,7 +463,9 @@ class Base(object):
     def drop_views(self):
         for view in [PRIMARY_KEY_VIEW, FOREIGN_KEY_VIEW]:
             logger.debug(f'Dropping view: {view}')
-            self.execute(f'DROP MATERIALIZED VIEW IF EXISTS {view}')
+            self.__engine.execute(
+                DropView(view, materialized=True)
+            )
             logger.debug(f'Dropped view: {view}')
 
     # Triggers...
