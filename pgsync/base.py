@@ -1020,7 +1020,7 @@ def compiled_query(query, label=None):
         query.compile(
             dialect=postgresql.dialect(),
             compile_kwargs={
-                'literal_binds': True
+                'literal_binds': False
             },
         )
     )
