@@ -16,13 +16,11 @@ def compile_create_view(element, compiler, **kwargs):
         literal_binds=True,
     )
     materialized = 'MATERIALIZED' if element.materialized else ''
-    return (
-        f'CREATE {materialized} VIEW {element.name} AS {statement}'
-    )
+    return f'CREATE {materialized} VIEW {element.name} AS {statement}'
 
 
 class DropView(DDLElement):
-    def __init__(self, name, materialized=False, cascade=True):
+    def __init__(self, name, materialized=True, cascade=True):
         self.name = name
         self.materialized = materialized
         self.cascade = cascade
@@ -31,5 +29,5 @@ class DropView(DDLElement):
 @compiler.compiles(DropView)
 def compile_drop_view(element, compiler, **kwargs):
     materialized = 'MATERIALIZED' if element.materialized else ''
-    with_cascade = 'CASCADE' if element.cascade else ''
-    return f'DROP {materialized} VIEW IF EXISTS {element.name} {with_cascade}'
+    cascade = 'CASCADE' if element.cascade else ''
+    return f'DROP {materialized} VIEW IF EXISTS {element.name} {cascade}'

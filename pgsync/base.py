@@ -79,10 +79,14 @@ class Base(object):
         if permission not in ('usecreatedb', 'usesuper', 'userepl'):
             raise RuntimeError(f'Invalid user permission {permission}')
 
-        statement = sa.select([sa.column(permission)])
-        statement = statement.select_from(sa.text('pg_user'))
-        statement = statement.where(sa.column('usename') == username)
-        statement = statement.where(sa.column(permission) == True) # noqa
+        statement = sa.select([sa.column(permission)]).select_from(
+            sa.text('pg_user')
+        ).where(
+            sa.and_(*[
+                sa.column('usename') == username,
+                sa.column(permission) == True, # noqa
+            ])
+        )
         if self.verbose:
             compiled_query(statement, 'has_permission')
         try:
@@ -223,11 +227,9 @@ class Base(object):
 
         SELECT * FROM PG_REPLICATION_SLOTS
         """
-        statement = sa.select(['*'])
-        statement = statement.select_from(
+        statement = sa.select(['*']).select_from(
             sa.text('PG_REPLICATION_SLOTS')
-        )
-        statement = statement.where(
+        ).where(
             sa.and_(*[
                 sa.column('slot_name') == slot_name,
                 sa.column('slot_type') == slot_type,
@@ -372,30 +374,32 @@ class Base(object):
             pg_attribute = self.model('pg_attribute', 'pg_catalog')
             pg_class = self.model('pg_class', 'pg_catalog')
             pg_namespace = self.model('pg_namespace', 'pg_catalog')
-        alias = pg_class.alias('x')
-        return sa.select([
-            sa.cast(
-                pg_index.c.indrelid,
-                sa.dialects.postgresql.REGCLASS,
-            ).label('table_name'),
-            sa.func.ARRAY_AGG(pg_attribute.c.attname).label('primary_keys'),
-        ]).join(
-            pg_attribute,
-            pg_attribute.c.attrelid == pg_index.c.indrelid,
-        ).join(
-            pg_class,
-            pg_class.c.oid == pg_index.c.indexrelid,
-        ).join(
-            alias,
-            alias.c.oid == pg_index.c.indrelid,
-        ).join(
-            pg_namespace,
-            pg_namespace.c.oid == pg_class.c.relnamespace,
-        ).where(*[
-             pg_namespace.c.nspname.notin_(['pg_catalog', 'pg_toast']),
-             pg_index.c.indisprimary,
-             pg_attribute.c.attnum == sa.any_(pg_index.c.indkey),
-        ]).group_by(pg_index.c.indrelid)
+            alias = pg_class.alias('x')
+            return sa.select([
+                sa.cast(
+                    pg_index.c.indrelid,
+                    sa.dialects.postgresql.REGCLASS,
+                ).label('table_name'),
+                sa.func.ARRAY_AGG(pg_attribute.c.attname).label(
+                    'primary_keys'
+                ),
+            ]).join(
+                pg_attribute,
+                pg_attribute.c.attrelid == pg_index.c.indrelid,
+            ).join(
+                pg_class,
+                pg_class.c.oid == pg_index.c.indexrelid,
+            ).join(
+                alias,
+                alias.c.oid == pg_index.c.indrelid,
+            ).join(
+                pg_namespace,
+                pg_namespace.c.oid == pg_class.c.relnamespace,
+            ).where(*[
+                 pg_namespace.c.nspname.notin_(['pg_catalog', 'pg_toast']),
+                 pg_index.c.indisprimary,
+                 pg_attribute.c.attnum == sa.any_(pg_index.c.indkey),
+            ]).group_by(pg_index.c.indrelid)
 
     def _foreign_key_view_statement(self, tables):
         with warnings.catch_warnings():
@@ -412,31 +416,30 @@ class Base(object):
                 'constraint_column_usage',
                 'information_schema',
             )
-
-        return sa.select([
-            table_constraints.c.table_name,
-            sa.func.ARRAY_AGG(
-                sa.cast(
-                    key_column_usage.c.column_name,
-                    sa.TEXT,
-                )
-            ).label('foreign_keys'),
-        ]).join(
-            key_column_usage,
-            sa.and_(
-                key_column_usage.c.constraint_name == table_constraints.c.constraint_name,
-                key_column_usage.c.table_schema == table_constraints.c.table_schema,
-             )
-        ).join(
-            constraint_column_usage,
-            sa.and_(
-                constraint_column_usage.c.constraint_name == table_constraints.c.constraint_name,
-                constraint_column_usage.c.table_schema == table_constraints.c.table_schema,
-             )
-        ).where(*[
-             table_constraints.c.table_name.in_(tables),
-             table_constraints.c.constraint_type == 'FOREIGN KEY',
-        ]).group_by(table_constraints.c.table_name)
+            return sa.select([
+                table_constraints.c.table_name,
+                sa.func.ARRAY_AGG(
+                    sa.cast(
+                        key_column_usage.c.column_name,
+                        sa.TEXT,
+                    )
+                ).label('foreign_keys'),
+            ]).join(
+                key_column_usage,
+                sa.and_(
+                    key_column_usage.c.constraint_name == table_constraints.c.constraint_name,
+                    key_column_usage.c.table_schema == table_constraints.c.table_schema,
+                 )
+            ).join(
+                constraint_column_usage,
+                sa.and_(
+                    constraint_column_usage.c.constraint_name == table_constraints.c.constraint_name,
+                    constraint_column_usage.c.table_schema == table_constraints.c.table_schema,
+                 )
+            ).where(*[
+                 table_constraints.c.table_name.in_(tables),
+                 table_constraints.c.constraint_type == 'FOREIGN KEY',
+            ]).group_by(table_constraints.c.table_name)
 
     def create_views(self, tables):
         logger.debug(f'Creating view: {PRIMARY_KEY_VIEW}')
@@ -463,9 +466,7 @@ class Base(object):
     def drop_views(self):
         for view in [PRIMARY_KEY_VIEW, FOREIGN_KEY_VIEW]:
             logger.debug(f'Dropping view: {view}')
-            self.__engine.execute(
-                DropView(view, materialized=True)
-            )
+            self.__engine.execute(DropView(view))
             logger.debug(f'Dropped view: {view}')
 
     # Triggers...
@@ -547,15 +548,17 @@ class Base(object):
         Returns:
             True if exists, False otherwise.
         """
-        statement = sa.select([sa.column('tgname')])
-        statement = statement.select_from(sa.text('pg_trigger'))
-        statement = statement.where(sa.not_(sa.column('tgisinternal')))
-        statement = statement.where(sa.column('tgname') == tgname.lower())
-        statement = statement.where(
-            sa.column('tgrelid') == sa.cast(
-                tgrelid,
-                sa.dialects.postgresql.REGCLASS,
-            )
+        statement = sa.select([sa.column('tgname')]).select_from(
+            sa.text('pg_trigger')
+        ).where(
+            sa.and_(*[
+                sa.not_(sa.column('tgisinternal')),
+                sa.column('tgname') == tgname.lower(),
+                sa.column('tgrelid') == sa.cast(
+                    tgrelid,
+                    sa.dialects.postgresql.REGCLASS,
+                ),
+            ])
         )
         return self.query_one(statement) is not None
 
@@ -951,9 +954,8 @@ def pg_execute(engine, query, values=None, options=None):
 
 def create_schema(engine, schema):
     """Create database schema."""
-    if schema == SCHEMA:
-        return
-    engine.execute(sa.schema.CreateSchema(schema))
+    if schema != SCHEMA:
+        engine.execute(sa.schema.CreateSchema(schema))
 
 
 def create_database(database, echo=False):
