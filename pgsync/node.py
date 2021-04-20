@@ -129,6 +129,7 @@ class Node(object):
                 str(column) for column in self.table_columns
             ]
             self.column_names.remove('xmin')
+            self.column_names.remove('oid')
 
         if self.label is None:
             self.label = self.table
