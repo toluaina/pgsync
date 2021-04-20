@@ -136,7 +136,7 @@ ELASTICSEARCH_MAPPING_PARAMETERS = [
     'search_analyzer',
     'similarity',
     'store',
-    'term_vector'
+    'term_vector',
 ]
 
 CONCAT_TRANSFORM = 'concat'
