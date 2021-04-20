@@ -7,7 +7,7 @@ from elasticsearch.helpers import parallel_bulk
 from elasticsearch_dsl import Q, Search
 from elasticsearch_dsl.query import Bool
 
-from .constants import ELASTICSEARCH_TYPES, ELASTICSEARCH_MAPPING_PARAMETERS, aMETA
+from .constants import ELASTICSEARCH_TYPES, ELASTICSEARCH_MAPPING_PARAMETERS, META
 from .node import traverse_post_order
 from .settings import (
     ELASTICSEARCH_CA_CERTS,
