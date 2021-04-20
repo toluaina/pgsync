@@ -441,33 +441,34 @@ class Base(object):
                  table_constraints.c.constraint_type == 'FOREIGN KEY',
             ]).group_by(table_constraints.c.table_name)
 
-    def create_views(self, tables):
-        logger.debug(f'Creating view: {PRIMARY_KEY_VIEW}')
+    def create_views(self, schema, tables):
+        logger.debug(f'Creating view: {schema}.{PRIMARY_KEY_VIEW}')
         self.__engine.execute(
-            CreateView(PRIMARY_KEY_VIEW, self._primary_key_view_statement())
+            CreateView(schema, PRIMARY_KEY_VIEW, self._primary_key_view_statement())
         )
         self.execute(
-            f'CREATE UNIQUE INDEX pkey_idx ON {PRIMARY_KEY_VIEW} (table_name)'
+            f'CREATE UNIQUE INDEX pkey_idx ON "{schema}".{PRIMARY_KEY_VIEW} (table_name)'
         )
-        logger.debug(f'Created view: {PRIMARY_KEY_VIEW}')
+        logger.debug(f'Created view: {schema}.{PRIMARY_KEY_VIEW}')
 
-        logger.debug(f'Creating view: {FOREIGN_KEY_VIEW}')
+        logger.debug(f'Creating view: {schema}.{FOREIGN_KEY_VIEW}')
         self.__engine.execute(
             CreateView(
+                schema,
                 FOREIGN_KEY_VIEW,
                 self._foreign_key_view_statement(tables),
             )
         )
         self.execute(
-            f'CREATE UNIQUE INDEX fkey_idx ON {FOREIGN_KEY_VIEW} (table_name)'
+            f'CREATE UNIQUE INDEX fkey_idx ON "{schema}".{FOREIGN_KEY_VIEW} (table_name)'
         )
-        logger.debug(f'Created view: {FOREIGN_KEY_VIEW}')
+        logger.debug(f'Created view: {schema}.{FOREIGN_KEY_VIEW}')
 
-    def drop_views(self):
+    def drop_views(self, schema):
         for view in [PRIMARY_KEY_VIEW, FOREIGN_KEY_VIEW]:
-            logger.debug(f'Dropping view: {view}')
-            self.__engine.execute(DropView(view))
-            logger.debug(f'Dropped view: {view}')
+            logger.debug(f'Dropping view: {schema}.{view}')
+            self.__engine.execute(DropView(schema, view))
+            logger.debug(f'Dropped view: {schema}.{view}')
 
     # Triggers...
     def create_triggers(self, schema, tables=None):
