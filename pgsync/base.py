@@ -120,6 +120,7 @@ class Base(object):
                 )
             model = metadata.tables[name]
             model.append_column(sa.Column('xmin', sa.BigInteger))
+            model.append_column(sa.Column('oid', sa.dialects.postgresql.OID))
             model = model.alias()
             setattr(model, 'primary_keys', _get_primary_keys(model))
             self.models[f'{model.original}'] = model
