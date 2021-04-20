@@ -183,6 +183,7 @@ class ElasticHelper(object):
                         f'Invalid Elasticsearch type {column_type}'
                     )
                 fields = mapping[column].get('fields')
+                ignore_above = mapping[column].get('ignore_above')
 
                 if 'properties' not in node._mapping:
                     node._mapping['properties'] = {}
@@ -191,6 +192,8 @@ class ElasticHelper(object):
                 }
                 if fields:
                     node._mapping['properties'][column]['fields'] = fields
+                if ignore_above:
+                    node._mapping['properties'][column]['ignore_above'] = ignore_above
 
             if node.parent and node._mapping:
                 if 'properties' not in node.parent._mapping:
@@ -200,5 +203,5 @@ class ElasticHelper(object):
         if root._mapping:
             if self.version[0] < 7:
                 root._mapping = { '_doc': root._mapping }
-            
+
             return dict(mappings=root._mapping)
