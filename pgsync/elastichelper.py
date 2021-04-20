@@ -7,7 +7,7 @@ from elasticsearch.helpers import parallel_bulk
 from elasticsearch_dsl import Q, Search
 from elasticsearch_dsl.query import Bool
 
-from .constants import ELASTICSEARCH_TYPES, META
+from .constants import ELASTICSEARCH_TYPES, ELASTICSEARCH_MAPPING_PARAMETERS, aMETA
 from .node import traverse_post_order
 from .settings import (
     ELASTICSEARCH_CA_CERTS,
@@ -182,18 +182,23 @@ class ElasticHelper(object):
                     raise RuntimeError(
                         f'Invalid Elasticsearch type {column_type}'
                     )
-                fields = mapping[column].get('fields')
-                ignore_above = mapping[column].get('ignore_above')
 
                 if 'properties' not in node._mapping:
                     node._mapping['properties'] = {}
                 node._mapping['properties'][column] = {
                     'type': column_type
                 }
-                if fields:
-                    node._mapping['properties'][column]['fields'] = fields
-                if ignore_above:
-                    node._mapping['properties'][column]['ignore_above'] = ignore_above
+
+                for parameter, parameter_value in mapping[column].items():
+                    if parameter == 'type':
+                        continue
+
+                    if parameter not in ELASTICSEARCH_MAPPING_PARAMETERS:
+                        raise RuntimeError(
+                            f'Invalid Elasticsearch mapping parameter {parameter}'
+                        )
+
+                    node._mapping['properties'][column][parameter] = parameter_value
 
             if node.parent and node._mapping:
                 if 'properties' not in node.parent._mapping:
