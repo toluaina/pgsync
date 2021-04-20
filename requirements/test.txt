@@ -22,7 +22,7 @@ elasticsearch==7.12.0
     # via elasticsearch-dsl
 environs==9.3.2
     # via -r requirements/base.in
-faker==8.0.0
+faker==8.1.0
     # via -r requirements/base.in
 flake8-debugger==4.0.0
     # via -r requirements/test.in
@@ -34,7 +34,7 @@ flake8-print==4.0.0
     # via -r requirements/test.in
 flake8-todo==0.7
     # via -r requirements/test.in
-flake8==3.9.0
+flake8==3.9.1
     # via
     #   flake8-debugger
     #   flake8-docstrings
@@ -42,7 +42,7 @@ flake8==3.9.0
     #   flake8-print
 greenlet==1.0.0
     # via sqlalchemy
-importlib-metadata==3.10.0
+importlib-metadata==4.0.0
     # via
     #   flake8
     #   pluggy
@@ -110,7 +110,7 @@ six==1.15.0
     #   python-dateutil
 snowballstemmer==2.1.0
     # via pydocstyle
-sqlalchemy==1.4.7
+sqlalchemy==1.4.9
     # via -r requirements/base.in
 sqlparse==0.4.1
     # via -r requirements/base.in

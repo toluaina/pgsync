@@ -2,9 +2,5 @@
 -r test.in
 
 coverage
-twine
 pip-tools
-bumpversion
 setuptools
-wheel
-cython
