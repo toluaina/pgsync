@@ -107,6 +107,38 @@ ELASTICSEARCH_TYPES = [
     'time',
 ]
 
+# https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-params.html
+ELASTICSEARCH_MAPPING_PARAMETERS = [
+    'analyzer',
+    'boost',
+    'coerce',
+    'copy_to',
+    'doc_values',
+    'dynamic',
+    'eager_global_ordinals',
+    'enabled',
+    'fielddata',
+    'fielddata_frequency_filter',
+    'fields',
+    'format',
+    'ignore_above',
+    'ignore_malformed',
+    'index_options',
+    'index_phrases',
+    'index_prefixes',
+    'index',
+    'meta',
+    'normalizer',
+    'norms',
+    'null_value',
+    'position_increment_gap',
+    'properties',
+    'search_analyzer',
+    'similarity',
+    'store',
+    'term_vector'
+]
+
 CONCAT_TRANSFORM = 'concat'
 MAPPING_TRANSFORM = 'mapping'
 MOVE_TRANSFORM = 'move'
