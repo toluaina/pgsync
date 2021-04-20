@@ -3,7 +3,8 @@ from sqlalchemy.schema import DDLElement
 
 
 class CreateView(DDLElement):
-    def __init__(self, name, selectable, materialized=True):
+    def __init__(self, schema, name, selectable, materialized=True):
+        self.schema = schema
         self.name = name
         self.selectable = selectable
         self.materialized = materialized
@@ -16,11 +17,12 @@ def compile_create_view(element, compiler, **kwargs):
         literal_binds=True,
     )
     materialized = 'MATERIALIZED' if element.materialized else ''
-    return f'CREATE {materialized} VIEW {element.name} AS {statement}'
+    return f'CREATE {materialized} VIEW "{element.schema}"."{element.name}" AS {statement}'
 
 
 class DropView(DDLElement):
-    def __init__(self, name, materialized=True, cascade=True):
+    def __init__(self, schema, name, materialized=True, cascade=True):
+        self.schema = schema
         self.name = name
         self.materialized = materialized
         self.cascade = cascade
@@ -30,4 +32,4 @@ class DropView(DDLElement):
 def compile_drop_view(element, compiler, **kwargs):
     materialized = 'MATERIALIZED' if element.materialized else ''
     cascade = 'CASCADE' if element.cascade else ''
-    return f'DROP {materialized} VIEW IF EXISTS {element.name} {cascade}'
+    return f'DROP {materialized} VIEW IF EXISTS "{element.schema}"."{element.name}" {cascade}'
