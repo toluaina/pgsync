@@ -445,10 +445,15 @@ class Base(object):
     def create_views(self, schema, tables):
         logger.debug(f'Creating view: {schema}.{PRIMARY_KEY_VIEW}')
         self.__engine.execute(
-            CreateView(schema, PRIMARY_KEY_VIEW, self._primary_key_view_statement())
+            CreateView(
+                schema,
+                PRIMARY_KEY_VIEW,
+                self._primary_key_view_statement(),
+            )
         )
         self.execute(
-            f'CREATE UNIQUE INDEX pkey_idx ON "{schema}".{PRIMARY_KEY_VIEW} (table_name)'
+            f'CREATE UNIQUE INDEX pkey_idx ON "{schema}".{PRIMARY_KEY_VIEW} '
+            f'(table_name)'
         )
         logger.debug(f'Created view: {schema}.{PRIMARY_KEY_VIEW}')
 
@@ -461,7 +466,8 @@ class Base(object):
             )
         )
         self.execute(
-            f'CREATE UNIQUE INDEX fkey_idx ON "{schema}".{FOREIGN_KEY_VIEW} (table_name)'
+            f'CREATE UNIQUE INDEX fkey_idx ON "{schema}".{FOREIGN_KEY_VIEW} '
+            f'(table_name)'
         )
         logger.debug(f'Created view: {schema}.{FOREIGN_KEY_VIEW}')
 
@@ -1016,13 +1022,13 @@ def drop_materialized_view(database, view, echo=False):
     logger.debug(f'Dropped materialized view: {view}')
 
 
-def compiled_query(query, label=None):
+def compiled_query(query, label=None, literal_binds=False):
     """Compile an SQLAlchemy query with an optional label."""
     query = str(
         query.compile(
             dialect=postgresql.dialect(),
             compile_kwargs={
-                'literal_binds': False
+                'literal_binds': literal_binds
             },
         )
     )
