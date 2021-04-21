@@ -10,6 +10,16 @@ import sqlparse
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import sessionmaker
 
+try:
+    import citext
+except ImportError:
+    pass
+
+try:
+    import geoalchemy2
+except ImportError:
+    pass
+
 from .constants import (
     BUILTIN_SCHEMAS,
     FOREIGN_KEY_VIEW,
