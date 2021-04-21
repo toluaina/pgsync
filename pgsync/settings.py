@@ -59,6 +59,8 @@ ELASTICSEARCH_CA_CERTS = env.str('ELASTICSEARCH_CA_CERTS', default=None)
 ELASTICSEARCH_CLIENT_CERT = env.str('ELASTICSEARCH_CLIENT_CERT', default=None)
 # PEM formatted SSL client key
 ELASTICSEARCH_CLIENT_KEY = env.str('ELASTICSEARCH_CLIENT_KEY', default=None)
+ELASTICSEARCH_AWS_REGION = env.str('ELASTICSEARCH_AWS_REGION', default=None)
+ELASTICSEARCH_AWS_HOSTED = env.bool('ELASTICSEARCH_AWS_HOSTED', default=False)
 
 # Postgres:
 PG_HOST = env.str('PG_HOST', default='localhost')

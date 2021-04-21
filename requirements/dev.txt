@@ -6,12 +6,22 @@
 #
 attrs==20.3.0
     # via pytest
+boto3==1.17.55
+    # via -r requirements/base.in
+botocore==1.20.55
+    # via
+    #   boto3
+    #   s3transfer
 bump2version==1.0.1
     # via bumpversion
 bumpversion==0.6.0
     # via -r requirements/base.in
 certifi==2020.12.5
-    # via elasticsearch
+    # via
+    #   elasticsearch
+    #   requests
+chardet==4.0.0
+    # via requests
 click==7.1.2
     # via
     #   -r requirements/base.in
@@ -46,7 +56,9 @@ flake8==3.9.1
     #   flake8-print
 greenlet==1.0.0
     # via sqlalchemy
-importlib-metadata==4.0.0
+idna==2.10
+    # via requests
+importlib-metadata==4.0.1
     # via
     #   flake8
     #   pep517
@@ -55,6 +67,10 @@ importlib-metadata==4.0.0
     #   sqlalchemy
 isort==5.8.0
     # via flake8-isort
+jmespath==0.10.0
+    # via
+    #   boto3
+    #   botocore
 marshmallow==3.11.1
     # via environs
 mccabe==0.6.1
@@ -105,12 +121,19 @@ pytest==5.3.5
     #   pytest-sugar
 python-dateutil==2.8.1
     # via
+    #   botocore
     #   elasticsearch-dsl
     #   faker
 python-dotenv==0.17.0
     # via environs
 redis==3.5.3
     # via -r requirements/base.in
+requests-aws4auth==1.0.1
+    # via -r requirements/base.in
+requests==2.25.1
+    # via requests-aws4auth
+s3transfer==0.4.1
+    # via boto3
 six==1.15.0
     # via
     #   elasticsearch-dsl
@@ -119,7 +142,7 @@ six==1.15.0
     #   python-dateutil
 snowballstemmer==2.1.0
     # via pydocstyle
-sqlalchemy==1.4.9
+sqlalchemy==1.4.10
     # via -r requirements/base.in
 sqlparse==0.4.1
     # via -r requirements/base.in
@@ -134,7 +157,10 @@ toml==0.10.2
 typing-extensions==3.7.4.3
     # via importlib-metadata
 urllib3==1.26.4
-    # via elasticsearch
+    # via
+    #   botocore
+    #   elasticsearch
+    #   requests
 wcwidth==0.2.5
     # via pytest
 zipp==3.4.1
