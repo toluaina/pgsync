@@ -56,8 +56,8 @@ BEGIN
     -- construct the notification as a JSON object.
     notification = JSON_BUILD_OBJECT(
         'xmin', xmin,
-        'new', new_row,
-        'old', old_row,
+        'new', COALESCE(new_row, JSON_BUILD_OBJECT()),
+        'old', COALESCE(old_row, JSON_BUILD_OBJECT()),
         'tg_op', TG_OP,
         'table', TG_TABLE_NAME,
         'schema', TG_TABLE_SCHEMA
