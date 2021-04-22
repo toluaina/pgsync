@@ -64,11 +64,15 @@ class TestElasticsearchHelper(object):
                     'pgsync.elastichelper.AWS4Auth',
                     return_value='foo',
                 ):
-                    get_elasticsearch_client(url)
-                    mocker_elasticsearch.assert_called_once_with(
-                        hosts=[{'host': url, 'port': 443}],
-                        http_auth=ANY,
-                        use_ssl=True,
-                        verify_certs=True,
-                        connection_class=RequestsHttpConnection,
-                    )
+                    with mock.patch(
+                        'pgsync.elastichelper.boto3',
+                        return_value=MagicMock(),
+                    ):
+                        get_elasticsearch_client(url)
+                        mocker_elasticsearch.assert_called_once_with(
+                            hosts=[{'host': url, 'port': 443}],
+                            http_auth=ANY,
+                            use_ssl=True,
+                            verify_certs=True,
+                            connection_class=RequestsHttpConnection,
+                        )
