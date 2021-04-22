@@ -8,3 +8,5 @@ redis
 sqlalchemy
 sqlparse
 bumpversion
+boto3
+requests-aws4auth

@@ -6,5 +6,5 @@ import pytest
 class TestEnvVars(object):
     """Env vars tests."""
 
-    def test_env_vars(self):
+    def test_envvars(self):
         pass
