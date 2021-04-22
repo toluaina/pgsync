@@ -10,16 +10,6 @@ import sqlparse
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import sessionmaker
 
-try:
-    import citext
-except ImportError:
-    pass
-
-try:
-    import geoalchemy2
-except ImportError:
-    pass
-
 from .constants import (
     BUILTIN_SCHEMAS,
     FOREIGN_KEY_VIEW,
@@ -37,6 +27,17 @@ from .settings import PG_SSLMODE, PG_SSLROOTCERT, QUERY_CHUNK_SIZE
 from .trigger import CREATE_TRIGGER_TEMPLATE
 from .utils import get_postgres_url
 from .view import CreateView, DropView
+
+try:
+    import citext
+except ImportError:
+    pass
+
+try:
+    import geoalchemy2
+except ImportError:
+    pass
+
 
 logger = logging.getLogger(__name__)
 
