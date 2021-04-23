@@ -606,10 +606,6 @@ class Base(object):
                 ('notify', 'ROW', ['INSERT', 'UPDATE', 'DELETE']),
                 ('truncate', 'STATEMENT', ['TRUNCATE']),
             ]:
-
-                if self.trigger_exists(f'{table}_{name}', table):
-                    continue
-
                 queries.append(
                     sa.DDL(
                         f'CREATE TRIGGER {table}_{name} '
@@ -659,30 +655,6 @@ class Base(object):
                     f'ENABLE TRIGGER {table}_{name}'
                 )
                 self.execute(query)
-
-    def trigger_exists(self, tgname, tgrelid):
-        """Check if the given trigger exists on table.
-
-        Args:
-            tgname (str): The trigger name
-            tgrelid (str): The table name
-
-        Returns:
-            True if exists, False otherwise.
-        """
-        statement = sa.select([sa.column('tgname')]).select_from(
-            sa.text('pg_trigger')
-        ).where(
-            sa.and_(*[
-                sa.not_(sa.column('tgisinternal')),
-                sa.column('tgname') == tgname.lower(),
-                sa.column('tgrelid') == sa.cast(
-                    tgrelid,
-                    sa.dialects.postgresql.REGCLASS,
-                ),
-            ])
-        )
-        return self.query_one(statement) is not None
 
     def execute(self, query, values=None, options=None):
         """Execute a query command."""
