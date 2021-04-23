@@ -8,7 +8,9 @@ import warnings
 import sqlalchemy as sa
 import sqlparse
 from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects.postgresql import array
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.sql import Values
 
 from .constants import (
     BUILTIN_SCHEMAS,
@@ -29,12 +31,12 @@ from .utils import get_postgres_url
 from .view import CreateView, DropView
 
 try:
-    import citext
+    import citext  # noqa
 except ImportError:
     pass
 
 try:
-    import geoalchemy2
+    import geoalchemy2  # noqa
 except ImportError:
     pass
 
@@ -411,9 +413,11 @@ class Base(object):
                  pg_namespace.c.nspname.notin_(['pg_catalog', 'pg_toast']),
                  pg_index.c.indisprimary,
                  pg_attribute.c.attnum == sa.any_(pg_index.c.indkey),
-            ]).group_by(pg_index.c.indrelid)
+            ]).group_by(
+                pg_index.c.indrelid
+            )
 
-    def _foreign_key_view_statement(self, tables):
+    def _foreign_key_view_statement(self, tables, values=None):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', category=sa.exc.SAWarning)
             table_constraints = self.model(
@@ -428,7 +432,7 @@ class Base(object):
                 'constraint_column_usage',
                 'information_schema',
             )
-            return sa.select([
+            query = sa.select([
                 table_constraints.c.table_name,
                 sa.func.ARRAY_AGG(
                     sa.cast(
@@ -451,9 +455,26 @@ class Base(object):
             ).where(*[
                  table_constraints.c.table_name.in_(tables),
                  table_constraints.c.constraint_type == 'FOREIGN KEY',
-            ]).group_by(table_constraints.c.table_name)
+            ]).group_by(
+                table_constraints.c.table_name
+            )
 
-    def create_views(self, schema, tables):
+            if values:
+                query = query.union(
+                    sa.select(
+                        Values(
+                            sa.column('table_name'),
+                            sa.column('foreign_keys'),
+                        ).data(
+                            [(value[0], array(value[1])) for value in values]
+                        ).alias(
+                            't'
+                        )
+                    )
+                )
+        return query
+
+    def create_views(self, schema, tables, other_tables):
         logger.debug(f'Creating view: {schema}.{PRIMARY_KEY_VIEW}')
         self.__engine.execute(
             CreateView(
@@ -473,7 +494,7 @@ class Base(object):
             CreateView(
                 schema,
                 FOREIGN_KEY_VIEW,
-                self._foreign_key_view_statement(tables),
+                self._foreign_key_view_statement(tables, other_tables),
             )
         )
         self.execute(

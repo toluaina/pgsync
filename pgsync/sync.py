@@ -144,12 +144,24 @@ class Sync(Base):
 
         for schema in self.schemas:
             tables = set([])
+            # tables with manual foreign keys
+            other_tables = []
+
             root = self.tree.build(self.nodes[0])
             for node in traverse_breadth_first(root):
                 tables |= set(node.relationship.through_tables)
                 tables |= set([node.table])
+
+                columns = []
+                if node.relationship.foreign_key.parent:
+                    columns.extend(node.relationship.foreign_key.parent)
+                if node.relationship.foreign_key.child:
+                    columns.extend(node.relationship.foreign_key.child)
+                if columns:
+                    other_tables.append((node.table, columns))
+
             self.create_triggers(schema, tables=tables)
-            self.create_views(schema, tables=tables)
+            self.create_views(schema, tables, other_tables)
         self.create_replication_slot(self.__name)
 
     def teardown(self):
