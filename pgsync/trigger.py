@@ -13,7 +13,7 @@ DECLARE
   primary_keys TEXT [] := (
       SELECT primary_keys
       FROM {PRIMARY_KEY_VIEW}
-      WHERE table_name = TG_TABLE_NAME::REGCLASS
+      WHERE table_name = TG_TABLE_NAME
   );
   foreign_keys TEXT [] := (
       SELECT foreign_keys

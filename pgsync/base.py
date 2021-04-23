@@ -28,7 +28,7 @@ from .exc import ForeignKeyError, ParseLogicalSlotError, TableNotFoundError
 from .settings import PG_SSLMODE, PG_SSLROOTCERT, QUERY_CHUNK_SIZE
 from .trigger import CREATE_TRIGGER_TEMPLATE
 from .utils import get_postgres_url
-from .view import CreateView, DropView
+from .view import CreateIndex, CreateView, DropView
 
 try:
     import citext  # noqa
@@ -381,43 +381,87 @@ class Base(object):
         return self.query(statement)
 
     # Views...
-    def _primary_key_view_statement(self):
+    def _primary_key_view_statement(self, schema, tables, views):
+
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', category=sa.exc.SAWarning)
+            pg_class = self.model('pg_class', 'pg_catalog')
             pg_index = self.model('pg_index', 'pg_catalog')
             pg_attribute = self.model('pg_attribute', 'pg_catalog')
-            pg_class = self.model('pg_class', 'pg_catalog')
             pg_namespace = self.model('pg_namespace', 'pg_catalog')
-            alias = pg_class.alias('x')
-            return sa.select([
+
+        alias = pg_class.alias('x')
+        statement = sa.select([
+            sa.cast(
                 sa.cast(
                     pg_index.c.indrelid,
                     sa.dialects.postgresql.REGCLASS,
-                ).label('table_name'),
-                sa.func.ARRAY_AGG(pg_attribute.c.attname).label(
-                    'primary_keys'
-                ),
-            ]).join(
-                pg_attribute,
-                pg_attribute.c.attrelid == pg_index.c.indrelid,
-            ).join(
-                pg_class,
-                pg_class.c.oid == pg_index.c.indexrelid,
-            ).join(
-                alias,
-                alias.c.oid == pg_index.c.indrelid,
-            ).join(
-                pg_namespace,
-                pg_namespace.c.oid == pg_class.c.relnamespace,
-            ).where(*[
-                 pg_namespace.c.nspname.notin_(['pg_catalog', 'pg_toast']),
-                 pg_index.c.indisprimary,
-                 pg_attribute.c.attnum == sa.any_(pg_index.c.indkey),
-            ]).group_by(
-                pg_index.c.indrelid
-            )
+                ), sa.Text,
+            ).label(
+                'table_name'
+            ),
+            sa.func.ARRAY_AGG(pg_attribute.c.attname).label(
+                'primary_keys'
+            ),
+        ]).join(
+            pg_attribute,
+            pg_attribute.c.attrelid == pg_index.c.indrelid,
+        ).join(
+            pg_class,
+            pg_class.c.oid == pg_index.c.indexrelid,
+        ).join(
+            alias,
+            alias.c.oid == pg_index.c.indrelid,
+        ).join(
+            pg_namespace,
+            pg_namespace.c.oid == pg_class.c.relnamespace,
+        ).where(*[
+            pg_namespace.c.nspname.notin_(
+                ['pg_catalog', 'pg_toast']
+            ),
+            pg_index.c.indisprimary,
+            sa.cast(
+                sa.cast(
+                    pg_index.c.indrelid,
+                    sa.dialects.postgresql.REGCLASS,
+                ), sa.Text,
+            ).in_(tables),
+            pg_attribute.c.attnum == sa.any_(pg_index.c.indkey),
+        ]).group_by(
+            pg_index.c.indrelid
+        )
 
-    def _foreign_key_view_statement(self, tables, values=None):
+        if PRIMARY_KEY_VIEW in views:
+            values = self.fetchall(sa.select([
+                sa.column('table_name'),
+                sa.column('primary_keys'),
+            ]).select_from(
+                sa.text(PRIMARY_KEY_VIEW)
+            ))
+            self.__engine.execute(DropView(schema, PRIMARY_KEY_VIEW))
+            if values:
+                statement = statement.union(
+                    sa.select(
+                        Values(
+                            sa.column('table_name'),
+                            sa.column('primary_keys'),
+                        ).data(
+                            [(value[0], array(value[1])) for value in values]
+                        ).alias(
+                            't'
+                        )
+                    )
+                )
+
+        return statement
+
+    def _foreign_key_view_statement(
+        self,
+        schema,
+        tables,
+        views,
+        user_defined_fkey_tables=None,
+    ):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', category=sa.exc.SAWarning)
             table_constraints = self.model(
@@ -432,35 +476,45 @@ class Base(object):
                 'constraint_column_usage',
                 'information_schema',
             )
-            query = sa.select([
-                table_constraints.c.table_name,
-                sa.func.ARRAY_AGG(
-                    sa.cast(
-                        key_column_usage.c.column_name,
-                        sa.TEXT,
-                    )
-                ).label('foreign_keys'),
-            ]).join(
-                key_column_usage,
-                sa.and_(
-                    key_column_usage.c.constraint_name == table_constraints.c.constraint_name,
-                    key_column_usage.c.table_schema == table_constraints.c.table_schema,
-                 )
-            ).join(
-                constraint_column_usage,
-                sa.and_(
-                    constraint_column_usage.c.constraint_name == table_constraints.c.constraint_name,
-                    constraint_column_usage.c.table_schema == table_constraints.c.table_schema,
-                 )
-            ).where(*[
-                 table_constraints.c.table_name.in_(tables),
-                 table_constraints.c.constraint_type == 'FOREIGN KEY',
-            ]).group_by(
-                table_constraints.c.table_name
-            )
 
+        statement = sa.select([
+            table_constraints.c.table_name,
+            sa.func.ARRAY_AGG(
+                sa.cast(
+                    key_column_usage.c.column_name,
+                    sa.TEXT,
+                )
+            ).label('foreign_keys'),
+        ]).join(
+            key_column_usage,
+            sa.and_(
+                key_column_usage.c.constraint_name == table_constraints.c.constraint_name,
+                key_column_usage.c.table_schema == table_constraints.c.table_schema,
+             )
+        ).join(
+            constraint_column_usage,
+            sa.and_(
+                constraint_column_usage.c.constraint_name == table_constraints.c.constraint_name,
+                constraint_column_usage.c.table_schema == table_constraints.c.table_schema,
+             )
+        ).where(*[
+             table_constraints.c.table_name.in_(tables),
+             table_constraints.c.constraint_type == 'FOREIGN KEY',
+        ]).group_by(
+            table_constraints.c.table_name
+        )
+
+        unions = []
+        if FOREIGN_KEY_VIEW in views:
+            values = self.fetchall(sa.select([
+                sa.column('table_name'),
+                sa.column('foreign_keys'),
+            ]).select_from(
+                sa.text(FOREIGN_KEY_VIEW)
+            ))
+            self.__engine.execute(DropView(schema, FOREIGN_KEY_VIEW))
             if values:
-                query = query.union(
+                unions.append(
                     sa.select(
                         Values(
                             sa.column('table_name'),
@@ -468,24 +522,48 @@ class Base(object):
                         ).data(
                             [(value[0], array(value[1])) for value in values]
                         ).alias(
-                            't'
+                            'u'
                         )
                     )
                 )
-        return query
 
-    def create_views(self, schema, tables, other_tables):
+        if user_defined_fkey_tables:
+            unions.append(
+                sa.select(
+                    Values(
+                        sa.column('table_name'),
+                        sa.column('foreign_keys'),
+                    ).data(
+                        [
+                            (
+                                value[0], array(value[1])
+                            ) for value in user_defined_fkey_tables
+                        ]
+                    ).alias(
+                        'v'
+                    )
+                )
+            )
+
+        if unions:
+            statement = sa.union(*unions)
+
+        return statement
+
+    def create_views(self, schema, tables, user_defined_fkey_tables):
+
+        views = sa.inspect(self.engine).get_view_names(schema)
+
         logger.debug(f'Creating view: {schema}.{PRIMARY_KEY_VIEW}')
         self.__engine.execute(
             CreateView(
                 schema,
                 PRIMARY_KEY_VIEW,
-                self._primary_key_view_statement(),
+                self._primary_key_view_statement(schema, tables, views),
             )
         )
-        self.execute(
-            f'CREATE UNIQUE INDEX pkey_idx ON "{schema}".{PRIMARY_KEY_VIEW} '
-            f'(table_name)'
+        self.__engine.execute(
+            CreateIndex('pkey_idx', schema, PRIMARY_KEY_VIEW, ['table_name'])
         )
         logger.debug(f'Created view: {schema}.{PRIMARY_KEY_VIEW}')
 
@@ -494,12 +572,16 @@ class Base(object):
             CreateView(
                 schema,
                 FOREIGN_KEY_VIEW,
-                self._foreign_key_view_statement(tables, other_tables),
+                self._foreign_key_view_statement(
+                    schema,
+                    tables,
+                    views,
+                    user_defined_fkey_tables,
+                ),
             )
         )
-        self.execute(
-            f'CREATE UNIQUE INDEX fkey_idx ON "{schema}".{FOREIGN_KEY_VIEW} '
-            f'(table_name)'
+        self.__engine.execute(
+            CreateIndex('fkey_idx', schema, FOREIGN_KEY_VIEW, ['table_name'])
         )
         logger.debug(f'Created view: {schema}.{FOREIGN_KEY_VIEW}')
 

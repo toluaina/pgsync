@@ -22,7 +22,7 @@ DECLARE
   primary_keys TEXT [] := (
       SELECT primary_keys
       FROM _pkey_view
-      WHERE table_name = TG_TABLE_NAME::REGCLASS
+      WHERE table_name = TG_TABLE_NAME
   );
   foreign_keys TEXT [] := (
       SELECT foreign_keys

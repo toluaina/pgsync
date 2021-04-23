@@ -39,3 +39,19 @@ def compile_drop_view(element, compiler, **kwargs):
         f'DROP {materialized} VIEW IF EXISTS '
         f'"{element.schema}"."{element.name}" {cascade}'
     )
+
+
+class CreateIndex(DDLElement):
+    def __init__(self, name, schema, view, columns):
+        self.schema = schema
+        self.name = name
+        self.view = view
+        self.columns = columns
+
+
+@compiler.compiles(CreateIndex)
+def compile_create_index(element, compiler, **kwargs):
+    return (
+        f'CREATE UNIQUE INDEX {element.name} ON '
+        f'"{element.schema}"."{element.view}" ({", ".join(element.columns)})'
+    )

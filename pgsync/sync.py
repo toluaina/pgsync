@@ -140,12 +140,12 @@ class Sync(Base):
 
     def setup(self):
         """Create the database triggers and replication slot."""
-        self.teardown()
+        self.teardown(drop_views=False)
 
         for schema in self.schemas:
             tables = set([])
-            # tables with manual foreign keys
-            other_tables = []
+            # tables with user defined foreign keys
+            user_defined_fkey_tables = []
 
             root = self.tree.build(self.nodes[0])
             for node in traverse_breadth_first(root):
@@ -158,13 +158,13 @@ class Sync(Base):
                 if node.relationship.foreign_key.child:
                     columns.extend(node.relationship.foreign_key.child)
                 if columns:
-                    other_tables.append((node.table, columns))
+                    user_defined_fkey_tables.append((node.table, columns))
 
             self.create_triggers(schema, tables=tables)
-            self.create_views(schema, tables, other_tables)
+            self.create_views(schema, tables, user_defined_fkey_tables)
         self.create_replication_slot(self.__name)
 
-    def teardown(self):
+    def teardown(self, drop_views=True):
         """Drop the database triggers and replication slot."""
 
         try:
@@ -179,7 +179,8 @@ class Sync(Base):
                 tables |= set(node.relationship.through_tables)
                 tables |= set([node.table])
             self.drop_triggers(schema=schema, tables=tables)
-            self.drop_views(schema=schema)
+            if drop_views:
+                self.drop_views(schema=schema)
         self.drop_replication_slot(self.__name)
 
     def get_doc_id(self, primary_keys):
@@ -329,12 +330,14 @@ class Sync(Base):
             payload_data = self._payload_data(payload)
             # this is only required for the non truncate tg_ops
             if payload_data:
-                if not set(model.primary_keys).issubset(set(payload_data.keys())):
+                if not set(model.primary_keys).issubset(
+                    set(payload_data.keys())
+                ):
                     table = payload['table']
                     schema = payload['schema']
                     logger.exception(
-                        f'Primary keys {model.primary_keys} not subset of payload '
-                        f'data {payload_data.keys()} for table '
+                        f'Primary keys {model.primary_keys} not subset of '
+                        f'payload data {payload_data.keys()} for table '
                         f'{schema}.{table}'
                     )
                     raise
