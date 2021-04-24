@@ -168,8 +168,8 @@ PLUGIN = 'test_decoding'
 TRIGGER_FUNC = 'table_notify'
 
 # Views
-PRIMARY_KEY_VIEW = '_pkey_view'
-FOREIGN_KEY_VIEW = '_fkey_view'
+PRIMARY_KEY_VIEWNAME = '_pkey_view'
+FOREIGN_KEY_VIEWNAME = '_fkey_view'
 
 # Primary key delimiter
 PRIMARY_KEY_DELIMITER = '|'

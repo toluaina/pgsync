@@ -14,11 +14,11 @@ from sqlalchemy.sql import Values
 
 from .constants import (
     BUILTIN_SCHEMAS,
-    FOREIGN_KEY_VIEW,
+    FOREIGN_KEY_VIEWNAME,
     LOGICAL_SLOT_PREFIX,
     LOGICAL_SLOT_SUFFIX,
     PLUGIN,
-    PRIMARY_KEY_VIEW,
+    PRIMARY_KEY_VIEWNAME,
     SCHEMA,
     TG_OP,
     TRIGGER_FUNC,
@@ -382,6 +382,25 @@ class Base(object):
 
     # Views...
     def _primary_key_view_statement(self, schema, tables, views):
+        """
+        Table name and primary keys association where the table name
+        is the index.
+        This is only called once on bootstrap.
+        It is used within the trigger function to determine what payload
+        values to send to pg_notify.
+
+        Since views cannot be modified, we query the existing view for exiting
+        rows and union this to the next query.
+
+        So if 'specie' was the only row before, and the next query returns
+        'unit' and 'structure', we want to end up with the result below.
+
+        table_name | primary_keys
+        ------------+--------------
+        specie     | {id}
+        unit       | {id}
+        structure  | {id}
+        """
 
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', category=sa.exc.SAWarning)
@@ -431,14 +450,14 @@ class Base(object):
             pg_index.c.indrelid
         )
 
-        if PRIMARY_KEY_VIEW in views:
+        if PRIMARY_KEY_VIEWNAME in views:
             values = self.fetchall(sa.select([
                 sa.column('table_name'),
                 sa.column('primary_keys'),
             ]).select_from(
-                sa.text(PRIMARY_KEY_VIEW)
+                sa.text(PRIMARY_KEY_VIEWNAME)
             ))
-            self.__engine.execute(DropView(schema, PRIMARY_KEY_VIEW))
+            self.__engine.execute(DropView(schema, PRIMARY_KEY_VIEWNAME))
             if values:
                 statement = statement.union(
                     sa.select(
@@ -462,6 +481,22 @@ class Base(object):
         views,
         user_defined_fkey_tables=None,
     ):
+        """
+        Table name and foreign keys association where the table name
+        is the index.
+        This is also only called once on bootstrap.
+        It is used within the trigger function to determine what payload
+        values to send to pg_notify.
+
+        Similar to _primary_key_view_statement, we want to union the result of
+        this table onto itself.
+
+        table_name | foreign_keys
+        ------------+--------------
+        specie     | {id}
+        unit       | {id}
+        structure  | {id}
+        """
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', category=sa.exc.SAWarning)
             table_constraints = self.model(
@@ -505,14 +540,14 @@ class Base(object):
         )
 
         unions = []
-        if FOREIGN_KEY_VIEW in views:
+        if FOREIGN_KEY_VIEWNAME in views:
             values = self.fetchall(sa.select([
                 sa.column('table_name'),
                 sa.column('foreign_keys'),
             ]).select_from(
-                sa.text(FOREIGN_KEY_VIEW)
+                sa.text(FOREIGN_KEY_VIEWNAME)
             ))
-            self.__engine.execute(DropView(schema, FOREIGN_KEY_VIEW))
+            self.__engine.execute(DropView(schema, FOREIGN_KEY_VIEWNAME))
             if values:
                 unions.append(
                     sa.select(
@@ -554,24 +589,29 @@ class Base(object):
 
         views = sa.inspect(self.engine).get_view_names(schema)
 
-        logger.debug(f'Creating view: {schema}.{PRIMARY_KEY_VIEW}')
+        logger.debug(f'Creating view: {schema}.{PRIMARY_KEY_VIEWNAME}')
         self.__engine.execute(
             CreateView(
                 schema,
-                PRIMARY_KEY_VIEW,
+                PRIMARY_KEY_VIEWNAME,
                 self._primary_key_view_statement(schema, tables, views),
             )
         )
         self.__engine.execute(
-            CreateIndex('pkey_idx', schema, PRIMARY_KEY_VIEW, ['table_name'])
+            CreateIndex(
+                'pkey_idx',
+                schema,
+                PRIMARY_KEY_VIEWNAME,
+                ['table_name'],
+            )
         )
-        logger.debug(f'Created view: {schema}.{PRIMARY_KEY_VIEW}')
+        logger.debug(f'Created view: {schema}.{PRIMARY_KEY_VIEWNAME}')
 
-        logger.debug(f'Creating view: {schema}.{FOREIGN_KEY_VIEW}')
+        logger.debug(f'Creating view: {schema}.{FOREIGN_KEY_VIEWNAME}')
         self.__engine.execute(
             CreateView(
                 schema,
-                FOREIGN_KEY_VIEW,
+                FOREIGN_KEY_VIEWNAME,
                 self._foreign_key_view_statement(
                     schema,
                     tables,
@@ -581,12 +621,17 @@ class Base(object):
             )
         )
         self.__engine.execute(
-            CreateIndex('fkey_idx', schema, FOREIGN_KEY_VIEW, ['table_name'])
+            CreateIndex(
+                'fkey_idx',
+                schema,
+                FOREIGN_KEY_VIEWNAME,
+                ['table_name'],
+            )
         )
-        logger.debug(f'Created view: {schema}.{FOREIGN_KEY_VIEW}')
+        logger.debug(f'Created view: {schema}.{FOREIGN_KEY_VIEWNAME}')
 
     def drop_views(self, schema):
-        for view in [PRIMARY_KEY_VIEW, FOREIGN_KEY_VIEW]:
+        for view in [PRIMARY_KEY_VIEWNAME, FOREIGN_KEY_VIEWNAME]:
             logger.debug(f'Dropping view: {schema}.{view}')
             self.__engine.execute(DropView(schema, view))
             logger.debug(f'Dropped view: {schema}.{view}')

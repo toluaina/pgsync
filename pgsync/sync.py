@@ -151,7 +151,10 @@ class Sync(Base):
             for node in traverse_breadth_first(root):
                 tables |= set(node.relationship.through_tables)
                 tables |= set([node.table])
-
+                # we want to get both the parent and the child keys here
+                # even though only one of them is the foreign_key.
+                # this is because we specify both in the schema but
+                # do not indicate which table defines the foreign key.
                 columns = []
                 if node.relationship.foreign_key.parent:
                     columns.extend(node.relationship.foreign_key.parent)
@@ -159,7 +162,6 @@ class Sync(Base):
                     columns.extend(node.relationship.foreign_key.child)
                 if columns:
                     user_defined_fkey_tables.append((node.table, columns))
-
             self.create_triggers(schema, tables=tables)
             self.create_views(schema, tables, user_defined_fkey_tables)
         self.create_replication_slot(self.__name)
