@@ -539,7 +539,7 @@ class Base(object):
             table_constraints.c.table_name
         )
 
-        unions = []
+        unions = [statement]
         if FOREIGN_KEY_VIEWNAME in views:
             values = self.fetchall(sa.select([
                 sa.column('table_name'),
@@ -580,10 +580,7 @@ class Base(object):
                 )
             )
 
-        if unions:
-            statement = sa.union(*unions)
-
-        return statement
+        return sa.union(*unions)
 
     def create_views(self, schema, tables, user_defined_fkey_tables):
 
