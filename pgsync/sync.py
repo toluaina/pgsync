@@ -145,7 +145,7 @@ class Sync(Base):
         for schema in self.schemas:
             tables = set([])
             # tables with user defined foreign keys
-            user_defined_fkey_tables = []
+            user_defined_fkey_tables = {}
 
             root = self.tree.build(self.nodes[0])
             for node in traverse_breadth_first(root):
@@ -161,7 +161,8 @@ class Sync(Base):
                 if node.relationship.foreign_key.child:
                     columns.extend(node.relationship.foreign_key.child)
                 if columns:
-                    user_defined_fkey_tables.append((node.table, columns))
+                    user_defined_fkey_tables.setdefault(node.table, set([]))
+                    user_defined_fkey_tables[node.table] |= set(columns)
             self.create_triggers(schema, tables=tables)
             self.create_views(schema, tables, user_defined_fkey_tables)
         self.create_replication_slot(self.__name)

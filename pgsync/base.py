@@ -568,13 +568,11 @@ class Base(object):
                     Values(
                         sa.column('table_name'),
                         sa.column('foreign_keys'),
-                    ).data(
-                        [
-                            (
-                                value[0], array(value[1])
-                            ) for value in user_defined_fkey_tables
-                        ]
-                    ).alias(
+                    ).data([
+                        (
+                            key, array(value)
+                        ) for key, value in user_defined_fkey_tables.items()
+                    ]).alias(
                         'v'
                     )
                 )
