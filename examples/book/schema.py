@@ -4,30 +4,13 @@ import click
 import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.schema import UniqueConstraint
-from sqlalchemy.types import UserDefinedType
 
-from pgsync.base import (
-    create_database,
-    create_extension,
-    create_schema,
-    pg_engine,
-)
+from pgsync.base import create_database, create_schema, pg_engine
 from pgsync.constants import SCHEMA
 from pgsync.helper import teardown
 from pgsync.utils import get_config
 
 Base = declarative_base()
-
-
-class Geometry(UserDefinedType):
-    def get_col_spec(self):
-        return 'GEOMETRY'
-
-    def bind_expression(self, bindvalue):
-        return sa.func.ST_GeomFromText(bindvalue, type_=self)
-
-    def column_expression(self, col):
-        return sa.func.ST_AsText(col, type_=self)
 
 
 class Continent(Base):
@@ -136,8 +119,6 @@ class Book(Base):
     copyright = sa.Column(sa.String, nullable=True)
     tags = sa.Column(sa.dialects.postgresql.JSONB, nullable=True)
     doc = sa.Column(sa.dialects.postgresql.JSONB, nullable=True)
-    point = sa.Column(Geometry)
-    polygon = sa.Column(Geometry)
     publisher_id = sa.Column(
         sa.Integer, sa.ForeignKey(Publisher.id)
     )
@@ -245,7 +226,6 @@ def setup(config=None):
         database = document.get('database', document['index'])
         schema = document.get('schema', SCHEMA)
         create_database(database)
-        create_extension(database, 'POSTGIS', echo=True)
         engine = pg_engine(database=database)
         create_schema(engine, schema)
         engine = engine.connect().execution_options(
