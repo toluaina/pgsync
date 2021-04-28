@@ -307,3 +307,13 @@ def node_from_table(base, table, schema):
         label=table,
         primary_key=[],
     )
+
+
+def get_node(tree, table, nodes):
+    root = tree.build(nodes[0])
+    for node in traverse_post_order(root):
+        if table == node.table:
+            return node
+            break
+    else:
+        raise RuntimeError(f'Node for {table} not found')
