@@ -128,6 +128,13 @@ class Sync(Base):
         if self.index is None:
             raise ValueError('Index is missing for document')
 
+        # ensure we have bootstrapped and replication slot exists
+        if not self.replication_slots(self.__name):
+            raise RuntimeError(
+                f'Replication slot "{self.__name}" does not exist.\n'
+                f'Make sure you have run "bootstrap".'
+            )
+
         root = self.tree.build(self.node)
         root.display()
         for node in traverse_breadth_first(root):
