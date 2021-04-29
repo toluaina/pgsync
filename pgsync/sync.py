@@ -129,7 +129,7 @@ class Sync(Base):
         if self.index is None:
             raise ValueError('Index is missing for document')
 
-        # ensure we have bootstrapped and replication slot exists
+        # ensure we have bootstrapped and the replication slot exists
         if repl_slots:
             if not self.replication_slots(self.__name):
                 raise RuntimeError(

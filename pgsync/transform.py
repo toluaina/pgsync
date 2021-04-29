@@ -58,7 +58,9 @@ def _concat_fields(data, node, result=None):
             values = [data.get(key) for key in node['columns'] if key in data]
             delimiter = node.get('delimiter', '')
             destination = node['destination']
-            data[destination] = f'{delimiter}'.join(map(str, values))
+            data[destination] = f'{delimiter}'.join(
+                map(str, filter(None, values))
+            )
         for key, value in data.items():
             if key in node:
                 if isinstance(value, dict):
