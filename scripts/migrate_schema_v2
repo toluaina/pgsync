@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+
+"""Schema migration."""
+import json
+import os
+import shutil
+from datetime import datetime
+
+import click
+
+
+@click.command()
+@click.option(
+    '--config',
+    '-c',
+    help='Schema config',
+    type=click.Path(exists=True),
+    required=True,
+)
+def main(config):
+    """Schema migration script."""
+    timestamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+    basename = os.path.basename(config)
+    filepath = os.path.dirname(config)
+    backup = os.path.join(filepath, f'{basename}.{timestamp}')
+
+    print(f'Migrating "{config}" and saving backup to {backup}')
+
+    shutil.copy(config, backup)
+
+    changed = False
+
+    documents = []
+    for document in json.load(open(config)):
+        new_doc = {}
+        for key, value in document.items():
+            if key == 'nodes':
+                new_doc['node'] = value[0]
+                changed = True
+                continue
+            new_doc[key] = value
+        documents.append(new_doc)
+
+    if changed:
+        with open(config, 'w') as fp:
+            fp.write(json.dumps(documents, indent=4))
+    else:
+        os.unlink(backup)
+
+
+if __name__ == '__main__':
+    main()

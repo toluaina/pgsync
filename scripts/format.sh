@@ -2,4 +2,4 @@
 
 set -x
 
-isort pgsync tests examples demo bin
+isort pgsync tests examples demo bin scripts
