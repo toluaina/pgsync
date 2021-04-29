@@ -55,6 +55,7 @@ class Sync(Base):
         verbose=False,
         params=None,
         validate=True,
+        repl_slots=True,
     ):
         """Constructor."""
         params = params or {}
@@ -77,11 +78,11 @@ class Sync(Base):
         self.tree = Tree(self)
         self._last_truncate_timestamp = datetime.now()
         if validate:
-            self.validate()
+            self.validate(repl_slots=repl_slots)
             self.create_setting()
         self.query_builder = QueryBuilder(self, verbose=self.verbose)
 
-    def validate(self):
+    def validate(self, repl_slots=True):
         """Perform all validation right away."""
         self.connect()
         if self.plugins:
@@ -129,11 +130,12 @@ class Sync(Base):
             raise ValueError('Index is missing for document')
 
         # ensure we have bootstrapped and replication slot exists
-        if not self.replication_slots(self.__name):
-            raise RuntimeError(
-                f'Replication slot "{self.__name}" does not exist.\n'
-                f'Make sure you have run "bootstrap".'
-            )
+        if repl_slots:
+            if not self.replication_slots(self.__name):
+                raise RuntimeError(
+                    f'Replication slot "{self.__name}" does not exist.\n'
+                    f'Make sure you have run "bootstrap".'
+                )
 
         root = self.tree.build(self.node)
         root.display()

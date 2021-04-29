@@ -56,7 +56,7 @@ def main(teardown, config, user, password, host, port, verbose):
     config = get_config(config)
 
     for document in json.load(open(config)):
-        sync = Sync(document, verbose=verbose, **params)
+        sync = Sync(document, verbose=verbose, repl_slots=False, **params)
         if teardown:
             sync.teardown()
             continue
