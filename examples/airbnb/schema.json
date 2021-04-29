@@ -2,91 +2,89 @@
     {
         "database": "airbnb",
         "index": "reservations",
-        "nodes": [
-            {
-                "table": "users",
-                "schema": "public",
-                "columns": [
-                ],
-                "children": [
-                    {
-                        "table": "bookings",
-                        "schema": "public",
-                        "columns": [
-                        ],
-                        "transform": {
-                            "rename": {
-                                "start_date": "from_date",
-                                "end_date": "to_date",
-                                "price_per_night": "nightly_price"
+        "node": {
+            "table": "users",
+            "schema": "public",
+            "columns": [
+            ],
+            "children": [
+                {
+                    "table": "bookings",
+                    "schema": "public",
+                    "columns": [
+                    ],
+                    "transform": {
+                        "rename": {
+                            "start_date": "from_date",
+                            "end_date": "to_date",
+                            "price_per_night": "nightly_price"
+                        },
+                        "mapping": {
+                            "from_date": {
+                                "type": "date"
                             },
-                            "mapping": {
-                                "from_date": {
-                                    "type": "date"
-                                },
-                                "to_date": {
-                                    "type": "date"
-                                }
+                            "to_date": {
+                                "type": "date"
                             }
-                        },
-                        "relationship": {
-                            "variant": "object",
-                            "type": "one_to_one"
-                        },
-                        "children":[
-                            {
-                                "table": "places",
-                                "schema": "public",
-                                "relationship": {
-                                    "variant": "object",
-                                    "type": "one_to_one"
-                                },
-                                "children": [
-                                    {
-                                        "table": "cities",
-                                        "schema": "public",
-                                        "relationship": {
-                                            "variant": "object",
-                                            "type": "one_to_one"
-                                        },
-                                        "children": [
-                                            {
-                                                "table": "countries",
-                                                "schema": "public",
-                                                "relationship": {
-                                                    "variant": "object",
-                                                    "type": "one_to_one"
-                                                }
-                                            }
-                                        ]
+                        }
+                    },
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_one"
+                    },
+                    "children":[
+                        {
+                            "table": "places",
+                            "schema": "public",
+                            "relationship": {
+                                "variant": "object",
+                                "type": "one_to_one"
+                            },
+                            "children": [
+                                {
+                                    "table": "cities",
+                                    "schema": "public",
+                                    "relationship": {
+                                        "variant": "object",
+                                        "type": "one_to_one"
                                     },
-                                    {  
-                                        "table": "hosts",
-                                        "schema": "public",
-                                        "columns": [
-                                            "email"
-                                        ],
-                                        "relationship": {
-                                            "variant": "scalar",
-                                            "type": "one_to_one"
+                                    "children": [
+                                        {
+                                            "table": "countries",
+                                            "schema": "public",
+                                            "relationship": {
+                                                "variant": "object",
+                                                "type": "one_to_one"
+                                            }
                                         }
+                                    ]
+                                },
+                                {  
+                                    "table": "hosts",
+                                    "schema": "public",
+                                    "columns": [
+                                        "email"
+                                    ],
+                                    "relationship": {
+                                        "variant": "scalar",
+                                        "type": "one_to_one"
                                     }
-                                ]
-                            },
-                            {
-                                "table": "reviews",
-                                "schema": "public",
-                                "columns": [
-                                ],
-                                "relationship": {
-                                    "variant": "object",
-                                    "type": "one_to_one"
                                 }
+                            ]
+                        },
+                        {
+                            "table": "reviews",
+                            "schema": "public",
+                            "columns": [
+                            ],
+                            "relationship": {
+                                "variant": "object",
+                                "type": "one_to_one"
                             }
-                        ]
-                    }
-                ]
-            }
-        ]
+                        }
+                    ]
+                }
+            ]
+        }
     }
 ]

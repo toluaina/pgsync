@@ -2,15 +2,13 @@
     {
         "database": "index",
         "index": "index",
-        "nodes": [
-           {
-              "table": "book",
-              "columns": [
-                  "isbn",
-                  "title",
-                  "description"
-              ]
-          }
-        ]
-    }
+        "node": {
+            "table": "book",
+            "columns": [
+                "isbn",
+                "title",
+                "description"
+            ]
+        }
+  }
 ]

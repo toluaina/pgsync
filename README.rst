@@ -44,36 +44,34 @@ Example spec
         {
             "database": "[database name]",
             "index": "[elasticsearch index]",
-            "nodes": [
-                {
-                    "table": "[table A]",
-                    "schema": "[table A schema]",
-                    "columns": [
-                        "column 1 from table A",
-                        "column 2 from table A",
-                        ... additional columns
-                    ],
-                    "children": [
-                        {
-                            "table": "[table B with relationship to table A]",
-                            "schema": "[table B schema]",
-                            "columns": [
-                              "column 1 from table B",
-                              "column 2 from table B",
-                              ... additional columns
-                            ],
-                            "relationship": {
-                                "variant": "object",
-                                "type": "one_to_many"
-                            },
-                            ...
+            "node": {
+                "table": "[table A]",
+                "schema": "[table A schema]",
+                "columns": [
+                    "column 1 from table A",
+                    "column 2 from table A",
+                    ... additional columns
+                ],
+                "children": [
+                    {
+                        "table": "[table B with relationship to table A]",
+                        "schema": "[table B schema]",
+                        "columns": [
+                          "column 1 from table B",
+                          "column 2 from table B",
+                          ... additional columns
+                        ],
+                        "relationship": {
+                            "variant": "object",
+                            "type": "one_to_many"
                         },
-                        {
-                            ... any other additional children
-                        }
-                    ]
-                }
-            ]
+                        ...
+                    },
+                    {
+                        ... any other additional children
+                    }
+                ]
+            }
         }
     ]
 

@@ -1,3 +1,4 @@
+"""PGSync views."""
 from sqlalchemy.ext import compiler
 from sqlalchemy.schema import DDLElement
 

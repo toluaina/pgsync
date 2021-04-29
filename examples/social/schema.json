@@ -2,63 +2,61 @@
     {
         "database": "social",
         "index": "social1",
-        "nodes": [
-            {
-                "table": "user",
-                "columns": [
-                    "name",
-                    "age",
-                    "gender"
-                ] ,
-                "children": [
-                    {
-                        "table": "tag",
-                        "label": "tags",
-                        "columns": [
-                            "name"
-                        ],
-                        "relationship": {
-                            "type": "one_to_many",
-                            "variant": "scalar",
-                            "through_tables": [
-                                "user_tag"
-                            ]
-                        }
-                    },
-                    {
-                        "table": "post",
-                        "label": "posts",
-                        "columns": [
-                            "slug",
-                            "title"
-                        ],
-                        "relationship": {
-                            "type": "one_to_many",
-                            "variant": "object",
-                            "through_tables": [
-                                "user_post"
-                            ]
-                        },
-                        "children": [
-                            {
-                                "table": "comment",
-                                "label": "comments",
-                                "columns": [
-                                    "title",
-                                    "content"
-                                ],
-                                "relationship": {
-                                    "type": "one_to_many",
-                                    "variant": "object",
-                                    "through_tables": [
-                                        "post_comment"
-                                    ]
-                                }
-                            }
+        "node": {
+            "table": "user",
+            "columns": [
+                "name",
+                "age",
+                "gender"
+            ] ,
+            "children": [
+                {
+                    "table": "tag",
+                    "label": "tags",
+                    "columns": [
+                        "name"
+                    ],
+                    "relationship": {
+                        "type": "one_to_many",
+                        "variant": "scalar",
+                        "through_tables": [
+                            "user_tag"
                         ]
                     }
-                ]
-            }
-        ]
+                },
+                {
+                    "table": "post",
+                    "label": "posts",
+                    "columns": [
+                        "slug",
+                        "title"
+                    ],
+                    "relationship": {
+                        "type": "one_to_many",
+                        "variant": "object",
+                        "through_tables": [
+                            "user_post"
+                        ]
+                    },
+                    "children": [
+                        {
+                            "table": "comment",
+                            "label": "comments",
+                            "columns": [
+                                "title",
+                                "content"
+                            ],
+                            "relationship": {
+                                "type": "one_to_many",
+                                "variant": "object",
+                                "through_tables": [
+                                    "post_comment"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
     }
 ]

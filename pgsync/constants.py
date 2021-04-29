@@ -168,6 +168,7 @@ PLUGIN = 'test_decoding'
 TRIGGER_FUNC = 'table_notify'
 
 # Views
+# added underscore to reduce collision
 PRIMARY_KEY_VIEWNAME = '_pkey_view'
 FOREIGN_KEY_VIEWNAME = '_fkey_view'
 

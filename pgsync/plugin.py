@@ -1,3 +1,4 @@
+"""PGSync plugin."""
 import importlib
 import inspect
 import logging
@@ -58,9 +59,7 @@ class Plugins(object):
         if isinstance(plugins.__path__, str):
             paths.append(plugins.__path__)
         else:
-            paths.extend(
-                [path for path in plugins.__path__]
-            )
+            paths.extend([path for path in plugins.__path__])
 
         for pkg_path in paths:
             if pkg_path in self._paths:

@@ -2,179 +2,177 @@
     {
         "database": "rental",
         "index": "rental",
-        "nodes": [
-            {
-                "table": "film",
-                "columns": [
-                    "film_id",
-                    "title",
-                    "description",
-                    "release_year",
-                    "rental_duration",
-                    "rental_rate",
-                    "length",
-                    "replacement_cost",
-                    "rating",
-                    "special_features",
-                    "fulltext"
-                ],
-                "children": [
-                    {
-                        "table": "language",
-                        "columns": [
-                            "name"
-                        ],
-                        "relationship": {
-                            "type": "one_to_many",
-                            "variant": "object"
-                        }
-                    },
-                    {
-                        "table": "category",
-                        "columns": [
-                            "name"
-                        ],
-                        "relationship": {
-                            "type": "one_to_many",
-                            "variant": "scalar",
-                            "through_tables": [
-                                "film_category"
-                            ]
-                        }
-                    },
-                    {
-                        "table": "actor",
-                        "columns": [
-                            "first_name",
-                            "last_name"
-                        ],
-                        "relationship": {
-                            "type": "one_to_many",
-                            "variant": "object",
-                            "through_tables": [
-                                "film_actor"
-                            ]
-                        }
-                    },
-                    {
-                        "table": "inventory",
-                        "columns": [
-                            "film_id",
-                            "store_id"
-                        ],
-                        "relationship": {
-                            "type": "one_to_many",
-                            "variant": "object"
-                        },
-                        "children": [
-                            {
-                                "table": "staff",
-                                "columns": [
-                                    "first_name",
-                                    "last_name",
-                                    "email",
-                                    "active",
-                                    "username",
-                                    "password"
-                                ],
-                                "relationship": {
-                                    "type": "one_to_many",
-                                    "variant": "object",
-                                    "through_tables": [
-                                        "rental"
-                                    ]
-                                },
-                                "children": [
-                                    {
-                                        "table": "address",
-                                        "columns": [
-                                            "address",
-                                            "address2",
-                                            "district",
-                                            "phone"
-                                        ],
-                                        "relationship": {
-                                            "type": "one_to_many",
-                                            "variant": "object",
-                                            "through_tables": [
-                                                "store"
-                                            ]
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                "table": "payment",
-                                "columns": [
-                                    "amount",
-                                    "payment_date"
-                                ],
-                                "relationship": {
-                                    "type": "one_to_one",
-                                    "variant": "object",
-                                    "through_tables": [
-                                        "rental"
-                                    ]
-                                },
-                                "children": [
-                                    {
-                                        "table": "customer",
-                                        "columns": [
-                                            "first_name",
-                                            "last_name",
-                                            "email",
-                                            "active"
-                                        ],
-                                        "relationship": {
-                                            "type": "one_to_many",
-                                            "variant": "object"
-                                        },
-                                        "children": [
-                                            {
-                                                "table": "address",
-                                                "columns": [
-                                                    "address",
-                                                    "address2",
-                                                    "phone",
-                                                    "district"
-                                                ],
-                                                "relationship": {
-                                                    "type": "one_to_many",
-                                                    "variant": "object"
-                                                },
-                                                "children": [
-                                                    {
-                                                        "table": "city",
-                                                        "columns": [
-                                                            "city"
-                                                        ],
-                                                        "relationship": {
-                                                            "type": "one_to_many",
-                                                            "variant": "object"
-                                                        },
-                                                        "children": [
-                                                            {
-                                                                "table": "country",
-                                                                "columns": [
-                                                                    "country"
-                                                                ],
-                                                                "relationship": {
-                                                                    "type": "one_to_many",
-                                                                    "variant": "object"
-                                                                }
-                                                            }
-                                                        ]
-                                                    }
-                                                ]
-                                            }
-                                        ]
-                                    }
-                                ]
-                            }
+        "node": {
+            "table": "film",
+            "columns": [
+                "film_id",
+                "title",
+                "description",
+                "release_year",
+                "rental_duration",
+                "rental_rate",
+                "length",
+                "replacement_cost",
+                "rating",
+                "special_features",
+                "fulltext"
+            ],
+            "children": [
+                {
+                    "table": "language",
+                    "columns": [
+                        "name"
+                    ],
+                    "relationship": {
+                        "type": "one_to_many",
+                        "variant": "object"
+                    }
+                },
+                {
+                    "table": "category",
+                    "columns": [
+                        "name"
+                    ],
+                    "relationship": {
+                        "type": "one_to_many",
+                        "variant": "scalar",
+                        "through_tables": [
+                            "film_category"
                         ]
                     }
-                ]
-            }
-        ]
+                },
+                {
+                    "table": "actor",
+                    "columns": [
+                        "first_name",
+                        "last_name"
+                    ],
+                    "relationship": {
+                        "type": "one_to_many",
+                        "variant": "object",
+                        "through_tables": [
+                            "film_actor"
+                        ]
+                    }
+                },
+                {
+                    "table": "inventory",
+                    "columns": [
+                        "film_id",
+                        "store_id"
+                    ],
+                    "relationship": {
+                        "type": "one_to_many",
+                        "variant": "object"
+                    },
+                    "children": [
+                        {
+                            "table": "staff",
+                            "columns": [
+                                "first_name",
+                                "last_name",
+                                "email",
+                                "active",
+                                "username",
+                                "password"
+                            ],
+                            "relationship": {
+                                "type": "one_to_many",
+                                "variant": "object",
+                                "through_tables": [
+                                    "rental"
+                                ]
+                            },
+                            "children": [
+                                {
+                                    "table": "address",
+                                    "columns": [
+                                        "address",
+                                        "address2",
+                                        "district",
+                                        "phone"
+                                    ],
+                                    "relationship": {
+                                        "type": "one_to_many",
+                                        "variant": "object",
+                                        "through_tables": [
+                                            "store"
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "table": "payment",
+                            "columns": [
+                                "amount",
+                                "payment_date"
+                            ],
+                            "relationship": {
+                                "type": "one_to_one",
+                                "variant": "object",
+                                "through_tables": [
+                                    "rental"
+                                ]
+                            },
+                            "children": [
+                                {
+                                    "table": "customer",
+                                    "columns": [
+                                        "first_name",
+                                        "last_name",
+                                        "email",
+                                        "active"
+                                    ],
+                                    "relationship": {
+                                        "type": "one_to_many",
+                                        "variant": "object"
+                                    },
+                                    "children": [
+                                        {
+                                            "table": "address",
+                                            "columns": [
+                                                "address",
+                                                "address2",
+                                                "phone",
+                                                "district"
+                                            ],
+                                            "relationship": {
+                                                "type": "one_to_many",
+                                                "variant": "object"
+                                            },
+                                            "children": [
+                                                {
+                                                    "table": "city",
+                                                    "columns": [
+                                                        "city"
+                                                    ],
+                                                    "relationship": {
+                                                        "type": "one_to_many",
+                                                        "variant": "object"
+                                                    },
+                                                    "children": [
+                                                        {
+                                                            "table": "country",
+                                                            "columns": [
+                                                                "country"
+                                                            ],
+                                                            "relationship": {
+                                                                "type": "one_to_many",
+                                                                "variant": "object"
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
     }
 ]

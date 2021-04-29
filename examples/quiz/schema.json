@@ -2,43 +2,41 @@
     {
         "database": "quiz",
         "index": "quiz",
-        "nodes": [
-            {
-                "table": "question",
-                "columns": [
-                    "id",
-                    "text"
-                ] ,
-                "children": [
-                   
-                    {
-                        "table": "answer",
-                        "label": "possible_answers",
-                        "columns": [
-                            "id",
-                            "text"
-                        ],
-                        "relationship": {
-                            "type": "one_to_many",
-                            "variant": "object",
-                            "through_tables": ["possible_answer"]
-                        }
-                    },
-                    {
-                        "table": "answer",
-                        "label": "real_answers",
-                        "columns": [
-                            "id",
-                            "text"
-                        ],
-                        "relationship": {
-                            "type": "one_to_one",
-                            "variant": "object",
-                            "through_tables": ["real_answer"]
-                        }
+        "node": {
+            "table": "question",
+            "columns": [
+                "id",
+                "text"
+            ] ,
+            "children": [
+               
+                {
+                    "table": "answer",
+                    "label": "possible_answers",
+                    "columns": [
+                        "id",
+                        "text"
+                    ],
+                    "relationship": {
+                        "type": "one_to_many",
+                        "variant": "object",
+                        "through_tables": ["possible_answer"]
                     }
-                ]
-            }
-        ]
+                },
+                {
+                    "table": "answer",
+                    "label": "real_answers",
+                    "columns": [
+                        "id",
+                        "text"
+                    ],
+                    "relationship": {
+                        "type": "one_to_one",
+                        "variant": "object",
+                        "through_tables": ["real_answer"]
+                    }
+                }
+            ]
+        }
     }
 ]

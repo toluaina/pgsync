@@ -42,7 +42,9 @@
                 "doc#>{a,b,c}->4",
                 "doc->x",
                 "doc->x->0->y",
-                "doc->x->1->z"
+                "doc->x->1->z",
+                "point",
+                "polygon"
             ],
             "transform": {
                 "rename": {
@@ -69,6 +71,12 @@
                                 "fielddata": true
                             }
                         }
+                    },
+                    "coordinates": {
+                        "type": "geo_point"
+                    },
+                    "shape": {
+                        "type": "geo_shape"
                     }
                 }
             },

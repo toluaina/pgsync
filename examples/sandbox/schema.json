@@ -1,0 +1,34 @@
+[
+   {
+      "database": "sandbox",
+      "index": "sandbox",
+      "node": {
+         "table": "parent",
+         "columns": [],
+         "children": [
+            {
+               "table": "middle",
+               "columns": [
+               ],
+               "label": "mid",
+               "relationship": {
+                  "variant": "object",
+                  "type": "one_to_one"
+               },
+               "children": [
+                  {
+                     "table": "child",
+                     "columns": [
+                     ],
+                     "label": "children",
+                     "relationship": {
+                        "variant": "object",
+                        "type": "one_to_many"
+                     }
+                  }
+               ]
+            }
+         ]
+      }
+   }
+]

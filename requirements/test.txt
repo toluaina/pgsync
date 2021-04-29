@@ -6,9 +6,9 @@
 #
 attrs==20.3.0
     # via pytest
-boto3==1.17.55
+boto3==1.17.60
     # via -r requirements/base.in
-botocore==1.20.55
+botocore==1.20.60
     # via
     #   boto3
     #   s3transfer
@@ -28,11 +28,11 @@ coverage==5.5
     # via pytest-cov
 elasticsearch-dsl==7.3.0
     # via -r requirements/base.in
-elasticsearch==7.12.0
+elasticsearch==7.12.1
     # via elasticsearch-dsl
 environs==9.3.2
     # via -r requirements/base.in
-faker==8.1.0
+faker==8.1.1
     # via -r requirements/base.in
 flake8-debugger==4.0.0
     # via -r requirements/test.in
@@ -98,7 +98,7 @@ pyparsing==2.4.7
     # via packaging
 pytest-cov==2.11.1
     # via -r requirements/test.in
-pytest-mock==3.5.1
+pytest-mock==3.6.0
     # via -r requirements/test.in
 pytest-runner==5.3.0
     # via -r requirements/test.in
@@ -123,7 +123,7 @@ requests-aws4auth==1.0.1
     # via -r requirements/base.in
 requests==2.25.1
     # via requests-aws4auth
-s3transfer==0.4.1
+s3transfer==0.4.2
     # via boto3
 six==1.15.0
     # via
@@ -133,7 +133,7 @@ six==1.15.0
     #   python-dateutil
 snowballstemmer==2.1.0
     # via pydocstyle
-sqlalchemy==1.4.10
+sqlalchemy==1.4.11
     # via -r requirements/base.in
 sqlparse==0.4.1
     # via -r requirements/base.in

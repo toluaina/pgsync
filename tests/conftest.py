@@ -54,9 +54,9 @@ def session(connection):
 def sync():
     _sync = Sync({
         'index': 'testdb',
-        'nodes': [{
+        'node': {
             'table': 'book'
-        }],
+        },
     })
     yield _sync
     _sync.logical_slot_get_changes(

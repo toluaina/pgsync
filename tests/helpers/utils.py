@@ -34,12 +34,8 @@ def search(es, index, body=None, _id=None):
         return get_docs(results, _id=_id)
 
 
-def assert_resync_empty(sync, nodes, index, txmin=None):
+def assert_resync_empty(sync, node, txmin=None):
     # re-sync and ensure we are not syncing more data
     txmin = txmin or sync.txid_current
-    docs = [
-        doc for doc in sync._sync(
-            nodes, index, txmin=txmin
-        )
-    ]
+    docs = [doc for doc in sync._sync(node, txmin=txmin)]
     assert docs == []

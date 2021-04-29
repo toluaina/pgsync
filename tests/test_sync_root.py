@@ -95,17 +95,13 @@ class TestRoot(object):
 
     def test_sync(self, sync, data):
         """Test the sync with a root only node."""
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': ['isbn', 'title', 'description']
-        }]
+        }
         txmin = sync.checkpoint
         txmax = sync.txid_current
-        docs = [
-            doc for doc in sync._sync(
-                nodes, 'testdb', txmin=txmin, txmax=txmax
-            )
-        ]
+        docs = [doc for doc in sync._sync(node, txmin=txmin, txmax=txmax)]
         assert docs == [
             {
                 '_id': 'abc',
@@ -138,20 +134,20 @@ class TestRoot(object):
                 }
             }
         ]
-        assert_resync_empty(sync, nodes, 'testdb', txmin=txmax)
+        assert_resync_empty(sync, node, txmin=txmax)
 
     def test_label(self, sync, data):
         """There is no possible test for label at root level."""
-        nodes = [{
+        node = {
             'table': 'book',
             'label': 'some_label',
             'columns': ['isbn']
-        }]
-        nodes
+        }
+        node
 
     def test_transform(self, sync, data):
         """Test transform for node attributes."""
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': ['isbn', 'title', 'description'],
             'transform': {
@@ -160,8 +156,8 @@ class TestRoot(object):
                     'title': 'book_title'
                 }
             }
-        }]
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        }
+        docs = [doc for doc in sync._sync(node)]
         assert docs == [
             {
                 '_id': 'abc',
@@ -194,37 +190,37 @@ class TestRoot(object):
                 }
             }
         ]
-        assert_resync_empty(sync, nodes, 'testdb')
+        assert_resync_empty(sync, node)
 
     def test_doc_includes_all_columns(self, sync, data):
         """Test the doc includes all selected columns."""
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': ['isbn', 'title', 'description', 'xmin']
-        }]
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        }
+        docs = [doc for doc in sync._sync(node)]
         assert sorted(docs[0]['_source'].keys()) == sorted([
             'isbn', 'title', 'description', 'xmin', '_meta'
         ])
-        assert_resync_empty(sync, nodes, 'testdb')
+        assert_resync_empty(sync, node)
 
     def test_select_xmin_column(self, sync, data):
         """Test the doc includes xmin column."""
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': ['isbn', 'xmin']
-        }]
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        }
+        docs = [doc for doc in sync._sync(node)]
         assert 'xmin' in docs[0]['_source']
-        assert_resync_empty(sync, nodes, 'testdb')
+        assert_resync_empty(sync, node)
 
     def test_no_column_specified(self, sync, data):
         """Test we include all columns when no columns are specified."""
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': []
-        }]
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        }
+        docs = [doc for doc in sync._sync(node)]
         assert sorted(docs[0]['_source'].keys()) == sorted([
             '_meta',
             'copyright',
@@ -234,10 +230,10 @@ class TestRoot(object):
             'title'
         ])
 
-        nodes = [{
+        node = {
             'table': 'book'
-        }]
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        }
+        docs = [doc for doc in sync._sync(node)]
         assert sorted(docs[0]['_source'].keys()) == sorted([
             '_meta',
             'copyright',
@@ -246,48 +242,48 @@ class TestRoot(object):
             'publisher_id',
             'title'
         ])
-        assert_resync_empty(sync, nodes, 'testdb')
+        assert_resync_empty(sync, node)
 
     def test_invalid_column(self, sync, data):
         """Test an invalid column raises ColumnNotFoundError."""
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': ['foo']
-        }]
+        }
         with pytest.raises(ColumnNotFoundError) as excinfo:
-            [doc for doc in sync._sync(nodes, 'testdb')]
+            [doc for doc in sync._sync(node)]
         assert 'Column "foo" not present on table "book"' in str(excinfo.value)
 
     def test_primary_key_is_doc_id(self, sync, data):
         """Test the db primary key is used as the doc_id."""
         # TODO also repeat this test for composite primary key
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': ['title']
-        }]
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        }
+        docs = [doc for doc in sync._sync(node)]
         assert 'abc' == docs[0]['_id']
         assert 'def' == docs[1]['_id']
         assert 'ghi' == docs[2]['_id']
-        assert_resync_empty(sync, nodes, 'testdb')
+        assert_resync_empty(sync, node)
 
     def test_meta_in_docs(self, sync, data):
         """Test the private key is contained in the doc."""
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': ['isbn']
-        }]
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        }
+        docs = [doc for doc in sync._sync(node)]
         assert '_meta' in docs[0]['_source']
-        assert_resync_empty(sync, nodes, 'testdb')
+        assert_resync_empty(sync, node)
 
     def test_doc_only_includes_selected_columns(self, sync, data):
         """Ensure the doc only selected columns and builtins."""
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': ['isbn', 'xmin']
-        }]
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        }
+        docs = [doc for doc in sync._sync(node)]
         sources = {doc['_id']: doc['_source'] for doc in docs}
 
         assert sorted(
@@ -295,7 +291,7 @@ class TestRoot(object):
         ) == sorted(
             ['isbn', 'xmin', '_meta']
         )
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': [
                 'isbn',
@@ -304,9 +300,9 @@ class TestRoot(object):
                 'copyright',
                 'publisher_id',
             ]
-        }]
+        }
 
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        docs = [doc for doc in sync._sync(node)]
         sources = {doc['_id']: doc['_source'] for doc in docs}
 
         assert sorted(
@@ -319,12 +315,12 @@ class TestRoot(object):
             'copyright',
             'publisher_id',
         ])
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': ['copyright', 'publisher_id']
-        }]
+        }
 
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        docs = [doc for doc in sync._sync(node)]
         sources = {doc['_id']: doc['_source'] for doc in docs}
 
         assert sorted(
@@ -333,15 +329,15 @@ class TestRoot(object):
                 'copyright',
                 'publisher_id',
             ])
-        assert_resync_empty(sync, nodes, 'testdb')
+        assert_resync_empty(sync, node)
 
     def test_doc_includes_nulls(self, sync, data):
         """Elasticsearch doc should include nulls from db."""
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': ['isbn', 'description', 'copyright']
-        }]
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        }
+        docs = [doc for doc in sync._sync(node)]
         sources = {doc['_id']: doc['_source'] for doc in docs}
 
         assert sources == {
@@ -364,40 +360,40 @@ class TestRoot(object):
                 u'isbn': u'ghi'
             }
         }
-        assert_resync_empty(sync, nodes, 'testdb')
+        assert_resync_empty(sync, node)
 
     def test_meta_keys(self, sync, data):
         """Private keys should be included even if null."""
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': ['description']
-        }]
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        }
+        docs = [doc for doc in sync._sync(node)]
         sources = {doc['_id']: doc['_source'] for doc in docs}
 
         assert sources['abc']['_meta'] == {}
         assert sources['def']['_meta'] == {}
         assert sources['ghi']['_meta'] == {}
-        assert_resync_empty(sync, nodes, 'testdb')
+        assert_resync_empty(sync, node)
 
-    def test_nodes_include_table(self, sync, data):
-        """All nodes must include the table name."""
-        nodes = [{
+    def test_node_include_table(self, sync, data):
+        """All node must include the table name."""
+        node = {
             'no_table_specified': 'book',
             'columns': ['description']
-        }]
+        }
         with pytest.raises(TableNotInNodeError):
-            [doc for doc in sync._sync(nodes, 'testdb')]
+            [doc for doc in sync._sync(node)]
 
-    def test_nodes_valid_attributes(self, sync, data):
-        """All nodes must have valid attributes."""
-        nodes = [{
+    def test_node_valid_attributes(self, sync, data):
+        """All node must have valid attributes."""
+        node = {
             'table': 'book',
             'unknown': 'xyz',
             'columns': ['description']
-        }]
+        }
         with pytest.raises(NodeAttributeError):
-            [doc for doc in sync._sync(nodes, 'testdb')]
+            [doc for doc in sync._sync(node)]
 
     def test_update_primary_key_non_concurrent(self, data, book_cls):
         """
@@ -409,10 +405,10 @@ class TestRoot(object):
         """
         document = {
             'index': 'testdb',
-            'nodes': [{
+            'node': {
                 'table': 'book',
                 'columns': ['isbn', 'title']
-            }]
+            }
         }
         sync = Sync(document)
         sync.sync()
@@ -473,11 +469,7 @@ class TestRoot(object):
                 u'title': u'The Rabbit Club'
             }
         ]
-        assert_resync_empty(
-            sync,
-            document.get('nodes', []),
-            document.get('index'),
-        )
+        assert_resync_empty(sync, document.get('node', {}))
 
     # TODO: Add another test like this and change
     # both primary key and non primary key column
@@ -485,10 +477,10 @@ class TestRoot(object):
         """Test sync updates primary_key and then sync in concurrent mode."""
         document = {
             'index': 'testdb',
-            'nodes': [{
+            'node': {
                 'table': 'book',
                 'columns': ['isbn', 'title']
-            }]
+            }
         }
         sync = Sync(document)
         sync.sync()
@@ -566,20 +558,16 @@ class TestRoot(object):
                 u'title': u'The Rabbit Club'
             }
         ]
-        assert_resync_empty(
-            sync,
-            document.get('nodes', []),
-            document.get('index'),
-        )
+        assert_resync_empty(sync, document.get('node', {}))
 
     def test_insert_non_concurrent(self, data, book_cls):
         """Test sync insert and then sync in non-concurrent mode."""
         document = {
             'index': 'testdb',
-            'nodes': [{
+            'node': {
                 'table': 'book',
                 'columns': ['isbn', 'title']
-            }]
+            }
         }
         sync = Sync(document)
         sync.sync()
@@ -641,20 +629,16 @@ class TestRoot(object):
                 u'title': u'Encyclopedia'
             }
         ]
-        assert_resync_empty(
-            sync,
-            document.get('nodes', []),
-            document.get('index'),
-        )
+        assert_resync_empty(sync, document.get('node', {}))
 
     def test_update_non_concurrent(self, data, book_cls):
         """Test sync update and then sync in non-concurrent mode."""
         document = {
             'index': 'testdb',
-            'nodes': [{
+            'node': {
                 'table': 'book',
                 'columns': ['isbn', 'title']
-            }]
+            }
         }
         sync = Sync(document)
         sync.sync()
@@ -711,20 +695,16 @@ class TestRoot(object):
                 u'title': u'The Rabbit Club'
             }
         ]
-        assert_resync_empty(
-            sync,
-            document.get('nodes', []),
-            document.get('index'),
-        )
+        assert_resync_empty(sync, document.get('node', {}))
 
     def test_update_concurrent(self, data, book_cls):
         """Test sync update and then sync in concurrent mode."""
         document = {
             'index': 'testdb',
-            'nodes': [{
+            'node': {
                 'table': 'book',
                 'columns': ['isbn', 'title']
-            }]
+            }
         }
         sync = Sync(document)
         sync.sync()
@@ -798,20 +778,16 @@ class TestRoot(object):
                 u'title': u'The Rabbit Club'
             }
         ]
-        assert_resync_empty(
-            sync,
-            document.get('nodes', []),
-            document.get('index'),
-        )
+        assert_resync_empty(sync, document.get('node', {}))
 
     def test_delete_concurrent(self, data, book_cls):
         """Test sync delete and then sync in concurrent mode."""
         document = {
             'index': 'testdb',
-            'nodes': [{
+            'node': {
                 'table': 'book',
                 'columns': ['isbn', 'title']
-            }]
+            }
         }
         sync = Sync(document)
         sync.sync()
@@ -878,11 +854,7 @@ class TestRoot(object):
                 u'title': u'The Rabbit Club'
             }
         ]
-        assert_resync_empty(
-            sync,
-            document.get('nodes', []),
-            document.get('index'),
-        )
+        assert_resync_empty(sync, document.get('node', {}))
 
     def test_truncate(self, data, book_cls):
         """Test truncate."""

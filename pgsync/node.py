@@ -309,8 +309,8 @@ def node_from_table(base, table, schema):
     )
 
 
-def get_node(tree, table, nodes):
-    root = tree.build(nodes[0])
+def get_node(tree, table, node):
+    root = tree.build(node)
     for node in traverse_post_order(root):
         if table == node.table:
             return node

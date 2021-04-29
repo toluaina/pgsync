@@ -2,48 +2,46 @@
     {
         "database": "starcraft",
         "index": "campaign",
-        "nodes": [
-            {
-                "table": "specie",
-                "columns": [
-                    "id",
-                    "name"
-                ],
-                "children": [
-                    {
-                        "table": "unit",
-                        "columns": [
-                            "name",
-                            "details"
-                        ],
-                        "label": "units",
-                        "relationship": {
-                            "variant": "object",
-                            "type": "one_to_many",
-                            "foreign_key": {
-                                "parent": ["id"],
-                                "child": ["specie_id"]
-                            }
-                        }
-                    },
-                    {
-                        "table": "structure",
-                        "columns": [
-                            "name",
-                            "details"
-                        ],
-                        "label": "structure",
-                        "relationship": {
-                            "variant": "object",
-                            "type": "one_to_many",
-                            "foreign_key": {
-                                "parent": ["id"],
-                                "child": ["specie_id"]
-                            }
+        "node": {
+            "table": "specie",
+            "columns": [
+                "id",
+                "name"
+            ],
+            "children": [
+                {
+                    "table": "unit",
+                    "columns": [
+                        "name",
+                        "details"
+                    ],
+                    "label": "units",
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_many",
+                        "foreign_key": {
+                            "parent": ["id"],
+                            "child": ["specie_id"]
                         }
                     }
-                ]
-            }
-        ]
+                },
+                {
+                    "table": "structure",
+                    "columns": [
+                        "name",
+                        "details"
+                    ],
+                    "label": "structure",
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_many",
+                        "foreign_key": {
+                            "parent": ["id"],
+                            "child": ["specie_id"]
+                        }
+                    }
+                }
+            ]
+        }
     }
 ]

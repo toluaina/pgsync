@@ -99,10 +99,10 @@ class TestParentSingleChildFkOnChild(object):
         session.connection().engine.dispose()
 
     def test_relationship_object_one_to_one(self, sync, data):
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': ['isbn', 'title', 'description'],
-            'children':[{
+            'children': [{
                 'table': 'rating',
                 'columns': ['id', 'value'],
                 'relationship': {
@@ -110,8 +110,8 @@ class TestParentSingleChildFkOnChild(object):
                     'type': 'one_to_one'
                 }
             }]
-        }]
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        }
+        docs = [doc for doc in sync._sync(node)]
         assert docs[0]['_id'] == u'abc'
         assert docs[0]['_source'] == {
             '_meta': {
@@ -153,13 +153,13 @@ class TestParentSingleChildFkOnChild(object):
             },
             u'title': u'The Rabbit Club'
         }
-        assert_resync_empty(sync, nodes, 'testdb')
+        assert_resync_empty(sync, node)
 
     def test_relationship_object_one_to_many(self, sync, data):
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': ['isbn', 'title', 'description'],
-            'children':[{
+            'children': [{
                 'table': 'rating',
                 'columns': ['id', 'value'],
                 'relationship': {
@@ -167,8 +167,8 @@ class TestParentSingleChildFkOnChild(object):
                     'type': 'one_to_many'
                 }
             }]
-        }]
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        }
+        docs = [doc for doc in sync._sync(node)]
 
         assert docs[0]['_id'] == u'abc'
         assert docs[0]['_source'] == {
@@ -208,13 +208,13 @@ class TestParentSingleChildFkOnChild(object):
             ],
             u'title': u'The Rabbit Club'
         }
-        assert_resync_empty(sync, nodes, 'testdb')
+        assert_resync_empty(sync, node)
 
     def test_relationship_scalar_one_to_one(self, sync, data):
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': ['isbn', 'title', 'description'],
-            'children':[{
+            'children': [{
                 'table': 'rating',
                 'columns': ['value'],
                 'relationship': {
@@ -222,8 +222,8 @@ class TestParentSingleChildFkOnChild(object):
                     'type': 'one_to_one'
                 }
             }]
-        }]
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        }
+        docs = [doc for doc in sync._sync(node)]
         assert docs[0]['_id'] == u'abc'
         assert docs[0]['_source'] == {
             '_meta': {
@@ -256,13 +256,13 @@ class TestParentSingleChildFkOnChild(object):
             'rating': 3.3,
             u'title': u'The Rabbit Club'
         }
-        assert_resync_empty(sync, nodes, 'testdb')
+        assert_resync_empty(sync, node)
 
     def test_relationship_scalar_one_to_many(self, sync, data):
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': ['isbn', 'title', 'description'],
-            'children':[{
+            'children': [{
                 'table': 'rating',
                 'columns': ['value'],
                 'relationship': {
@@ -270,8 +270,8 @@ class TestParentSingleChildFkOnChild(object):
                     'type': 'one_to_many'
                 }
             }]
-        }]
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        }
+        docs = [doc for doc in sync._sync(node)]
         assert docs[0]['_id'] == u'abc'
         assert docs[0]['_source'] == {
             '_meta': {
@@ -304,13 +304,13 @@ class TestParentSingleChildFkOnChild(object):
             'rating': [3.3],
             u'title': u'The Rabbit Club'
         }
-        assert_resync_empty(sync, nodes, 'testdb')
+        assert_resync_empty(sync, node)
 
     def test_label(self, sync, data):
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': ['isbn', 'title', 'description'],
-            'children':[{
+            'children': [{
                 'table': 'rating',
                 'label': 'rating_x',
                 'columns': ['value'],
@@ -319,8 +319,8 @@ class TestParentSingleChildFkOnChild(object):
                     'type': 'one_to_one'
                 }
             }]
-        }]
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        }
+        docs = [doc for doc in sync._sync(node)]
         assert docs[0]['_id'] == u'abc'
         assert docs[0]['_source'] == {
             '_meta': {
@@ -353,15 +353,15 @@ class TestParentSingleChildFkOnChild(object):
             u'rating_x': 3.3,
             u'title': u'The Rabbit Club'
         }
-        assert_resync_empty(sync, nodes, 'testdb')
+        assert_resync_empty(sync, node)
 
     def test_null_label(self, sync, data):
         """ null label should revert back to the table name
         """
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': ['isbn', 'title', 'description'],
-            'children':[{
+            'children': [{
                 'table': 'rating',
                 'label': None,
                 'columns': ['value'],
@@ -370,8 +370,8 @@ class TestParentSingleChildFkOnChild(object):
                     'type': 'one_to_one'
                 }
             }]
-        }]
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        }
+        docs = [doc for doc in sync._sync(node)]
         assert docs[0]['_id'] == u'abc'
         assert docs[0]['_source'] == {
             '_meta': {
@@ -382,10 +382,10 @@ class TestParentSingleChildFkOnChild(object):
             u'rating': 1.1,
             u'title': u'The Tiger Club'
         }
-        assert_resync_empty(sync, nodes, 'testdb')
+        assert_resync_empty(sync, node)
 
     def test_transform(self, sync, data):
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': ['isbn', 'title', 'description'],
             'transform': {
@@ -408,8 +408,8 @@ class TestParentSingleChildFkOnChild(object):
                     'type': 'one_to_one'
                 }
             }]
-        }]
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        }
+        docs = [doc for doc in sync._sync(node)]
         assert docs[0]['_id'] == u'abc'
 
         assert docs[0]['_source'] == {
@@ -451,10 +451,10 @@ class TestParentSingleChildFkOnChild(object):
                 'rating_value': 3.3
             }
         }
-        assert_resync_empty(sync, nodes, 'testdb')
+        assert_resync_empty(sync, node)
 
     def test_schema(self, sync, data):
-        nodes = [{
+        node = {
             'table': 'book',
             'columns': ['isbn', 'title', 'description'],
             'children': [{
@@ -465,8 +465,8 @@ class TestParentSingleChildFkOnChild(object):
                     'type': 'one_to_one'
                 }
             }]
-        }]
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        }
+        docs = [doc for doc in sync._sync(node)]
 
         fields = [
             '_meta', 'description', 'isbn', 'rating', 'title'
@@ -479,10 +479,10 @@ class TestParentSingleChildFkOnChild(object):
         assert sorted(docs[1]['_source']['rating'].keys()) == sorted(
             ['id', 'value']
         )
-        assert_resync_empty(sync, nodes, 'testdb')
+        assert_resync_empty(sync, node)
 
     def test_schema_with_no_column_specified(self, sync, data):
-        nodes = [{
+        node = {
             'table': 'book',
             'children': [{
                 'table': 'rating',
@@ -491,8 +491,8 @@ class TestParentSingleChildFkOnChild(object):
                     'type': 'one_to_one'
                 }
             }]
-        }]
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        }
+        docs = [doc for doc in sync._sync(node)]
         assert docs[2]['_source'] == {
             '_meta': {'rating': {'id': [3]}},
             'copyright': None,
@@ -506,10 +506,10 @@ class TestParentSingleChildFkOnChild(object):
             },
             'title': 'The Rabbit Club'
         }
-        assert_resync_empty(sync, nodes, 'testdb')
+        assert_resync_empty(sync, node)
 
     def test_invalid_relationship_type(self, sync):
-        nodes = [{
+        node = {
             'table': 'book',
             'children': [{
                 'table': 'rating',
@@ -518,15 +518,15 @@ class TestParentSingleChildFkOnChild(object):
                     'type': 'qwerty'
                 }
             }]
-        }]
+        }
         with pytest.raises(RelationshipTypeError) as excinfo:
-            Tree(sync).build(nodes[0])
+            Tree(sync).build(node)
         assert 'Relationship type "qwerty" is invalid' in str(
             excinfo.value
         )
 
     def test_invalid_relationship_variant(self, sync):
-        nodes = [{
+        node = {
             'table': 'book',
             'children': [{
                 'table': 'rating',
@@ -535,15 +535,15 @@ class TestParentSingleChildFkOnChild(object):
                     'type': 'one_to_one'
                 }
             }]
-        }]
+        }
         with pytest.raises(RelationshipVariantError) as excinfo:
-            Tree(sync).build(nodes[0])
+            Tree(sync).build(node)
         assert 'Relationship variant "abcdefg" is invalid' in str(
             excinfo.value
         )
 
     def test_invalid_relationship_attribute(self, sync):
-        nodes = [{
+        node = {
             'table': 'book',
             'children': [{
                 'table': 'rating',
@@ -552,16 +552,16 @@ class TestParentSingleChildFkOnChild(object):
                     'type': 'one_to_one'
                 }
             }]
-        }]
+        }
         with pytest.raises(RelationshipAttributeError) as excinfo:
-            Tree(sync).build(nodes[0])
+            Tree(sync).build(node)
         assert f"Relationship attribute {set(['foo'])} is invalid" in str(
             excinfo.value
         )
 
     def test_meta_keys(self, sync, data):
         """Private keys should be correct"""
-        nodes = [{
+        node = {
             'table': 'book',
             'children': [{
                 'table': 'rating',
@@ -570,17 +570,17 @@ class TestParentSingleChildFkOnChild(object):
                     'type': 'one_to_one'
                 }
             }]
-        }]
-        docs = [doc for doc in sync._sync(nodes, 'testdb')]
+        }
+        docs = [doc for doc in sync._sync(node)]
         sources = {doc['_id']: doc['_source'] for doc in docs}
         assert sources['abc']['_meta'] == {'rating': {'id': [1]}}
         assert sources['def']['_meta'] == {'rating': {'id': [2]}}
         assert sources['ghi']['_meta'] == {'rating': {'id': [3]}}
-        assert_resync_empty(sync, nodes, 'testdb')
+        assert_resync_empty(sync, node)
 
     def test_missing_foreign_keys(self, sync, data):
         """Foreign keys must be present between parent and child"""
-        nodes = [{
+        node = {
             'table': 'book',
             'children': [{
                 'table': 'city',
@@ -589,10 +589,10 @@ class TestParentSingleChildFkOnChild(object):
                     'type': 'one_to_one'
                 }
             }]
-        }]
+        }
 
         with pytest.raises(ForeignKeyError) as excinfo:
-            [doc for doc in sync._sync(nodes, 'testdb')]
+            [doc for doc in sync._sync(node)]
         msg = (
             'No foreign key relationship between '
             '"public.book" and "public.city"'
@@ -603,15 +603,15 @@ class TestParentSingleChildFkOnChild(object):
 
     def test_missing_relationships(self, sync, data):
         """Relationships must be present between parent and child"""
-        nodes = [{
+        node = {
             'table': 'book',
             'children': [{
                 'table': 'rating'
             }]
-        }]
+        }
 
         with pytest.raises(RelationshipError) as excinfo:
-            [doc for doc in sync._sync(nodes, 'testdb')]
+            [doc for doc in sync._sync(node)]
         assert 'Relationship not present on "public.rating"' in str(
             excinfo.value
         )
@@ -624,7 +624,7 @@ class TestParentSingleChildFkOnChild(object):
         """
         document = {
             'index': 'testdb',
-            'nodes': [{
+            'node': {
                 'table': 'book',
                 'columns': ['isbn', 'title'],
                 'children': [{
@@ -635,7 +635,7 @@ class TestParentSingleChildFkOnChild(object):
                         'type': 'one_to_one'
                     }
                 }]
-            }]
+            }
         }
         sync = Sync(document)
         sync.sync()
@@ -712,11 +712,7 @@ class TestParentSingleChildFkOnChild(object):
                 u'title': u'Milli and the Ants',
             }
         ]
-        assert_resync_empty(
-            sync,
-            document.get('nodes', []),
-            document.get('index'),
-        )
+        assert_resync_empty(sync, document.get('node', {}))
 
     # TODO: Add another test like this and change
     # both primary key and non pkey column
@@ -726,7 +722,7 @@ class TestParentSingleChildFkOnChild(object):
         """Test sync updates primary_key and then sync in concurrent mode."""
         document = {
             'index': 'testdb',
-            'nodes': [{
+            'node': {
                 'table': 'book',
                 'columns': ['isbn', 'title'],
                 'children': [{
@@ -737,7 +733,7 @@ class TestParentSingleChildFkOnChild(object):
                         'type': 'one_to_one'
                     }
                 }]
-            }]
+            }
         }
         sync = Sync(document)
         sync.sync()
@@ -831,17 +827,13 @@ class TestParentSingleChildFkOnChild(object):
                 u'title': u'Milli and the Ants'
             }
         ]
-        assert_resync_empty(
-            sync,
-            document.get('nodes', []),
-            document.get('index'),
-        )
+        assert_resync_empty(sync, document.get('node', {}))
 
     def test_insert_non_concurrent(self, data, book_cls, rating_cls):
         """Test sync insert and then sync in non-concurrent mode."""
         document = {
             'index': 'testdb',
-            'nodes': [{
+            'node': {
                 'table': 'book',
                 'columns': ['isbn', 'title'],
                 'children': [{
@@ -852,7 +844,7 @@ class TestParentSingleChildFkOnChild(object):
                         'type': 'one_to_one'
                     }
                 }]
-            }]
+            }
         }
         sync = Sync(document)
         sync.sync()
@@ -932,11 +924,7 @@ class TestParentSingleChildFkOnChild(object):
                 u'title': u'Encyclopedia'
             }
         ]
-        assert_resync_empty(
-            sync,
-            document.get('nodes', []),
-            document.get('index'),
-        )
+        assert_resync_empty(sync, document.get('node', {}))
 
     def test_update_non_primary_key_non_concurrent(
         self, data, book_cls, rating_cls
@@ -944,7 +932,7 @@ class TestParentSingleChildFkOnChild(object):
         """Test sync update and then sync in non-concurrent mode."""
         document = {
             'index': 'testdb',
-            'nodes': [{
+            'node': {
                 'table': 'book',
                 'columns': ['isbn', 'title'],
                 'children': [{
@@ -955,7 +943,7 @@ class TestParentSingleChildFkOnChild(object):
                         'type': 'one_to_one'
                     }
                 }]
-            }]
+            }
         }
         sync = Sync(document)
         sync.sync()
@@ -1022,11 +1010,7 @@ class TestParentSingleChildFkOnChild(object):
                 u'title': u'The Rabbit Club'
             }
         ]
-        assert_resync_empty(
-            sync,
-            document.get('nodes', []),
-            document.get('index'),
-        )
+        assert_resync_empty(sync, document.get('node', {}))
 
     def test_update_non_primary_key_concurrent(
         self, data, book_cls, rating_cls
@@ -1034,7 +1018,7 @@ class TestParentSingleChildFkOnChild(object):
         """Test sync update and then sync in concurrent mode."""
         document = {
             'index': 'testdb',
-            'nodes': [{
+            'node': {
                 'table': 'book',
                 'columns': ['isbn', 'title'],
                 'children': [{
@@ -1045,7 +1029,7 @@ class TestParentSingleChildFkOnChild(object):
                         'type': 'one_to_one'
                     }
                 }]
-            }]
+            }
         }
         sync = Sync(document)
         sync.sync()
@@ -1125,17 +1109,13 @@ class TestParentSingleChildFkOnChild(object):
                 u'title': u'The Rabbit Club'
             }
         ]
-        assert_resync_empty(
-            sync,
-            document.get('nodes', []),
-            document.get('index'),
-        )
+        assert_resync_empty(sync, document.get('node', {}))
 
     def test_delete_concurrent(self, data, book_cls, rating_cls):
         """Test sync delete and then sync in concurrent mode."""
         document = {
             'index': 'testdb',
-            'nodes': [{
+            'node': {
                 'table': 'book',
                 'columns': ['isbn', 'title'],
                 'children': [{
@@ -1146,7 +1126,7 @@ class TestParentSingleChildFkOnChild(object):
                         'type': 'one_to_one'
                     }
                 }]
-            }]
+            }
         }
 
         sync = Sync(document)
@@ -1240,8 +1220,4 @@ class TestParentSingleChildFkOnChild(object):
                 u'title': u'The End of time'
             }
         ]
-        assert_resync_empty(
-            sync,
-            document.get('nodes', []),
-            document.get('index'),
-        )
+        assert_resync_empty(sync, document.get('node', {}))

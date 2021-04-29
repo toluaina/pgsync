@@ -95,7 +95,7 @@ class ElasticHelper(object):
         """Refresh the Elasticsearch index."""
         self.__es.indices.refresh(index=indices)
 
-    def _search(self, index, table, fields):
+    def _search(self, index, table, fields=None):
         """
         Search private area for matching docs in Elasticsearch.
 
@@ -106,6 +106,7 @@ class ElasticHelper(object):
             'uid': ['a002', 'a009']
         }
         """
+        fields = fields or {}
         search = Search(using=self.__es, index=index)
         # explicitly exclude all fields since we only need the doc _id
         search = search.source(excludes=['*'])
