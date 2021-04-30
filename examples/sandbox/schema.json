@@ -24,7 +24,31 @@
                      "relationship": {
                         "variant": "object",
                         "type": "one_to_many"
-                     }
+                     },
+                     "children": [
+                        {
+                           "table": "grandchild",
+                           "columns": [
+                           ],
+                           "label": "grandchildren",
+                           "relationship": {
+                              "variant": "object",
+                              "type": "one_to_many"
+                           },
+                           "children": [
+                              {
+                                 "table": "greatgrandchild",
+                                 "columns": [
+                                 ],
+                                 "label": "greatgrandchildren",
+                                 "relationship": {
+                                    "variant": "object",
+                                    "type": "one_to_many"
+                                 }
+                              }
+                           ]
+                        }
+                     ]
                   }
                ]
             }

@@ -2,13 +2,12 @@ import json
 
 import click
 import sqlalchemy as sa
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.schema import UniqueConstraint
-
 from pgsync.base import create_database, create_schema, pg_engine
 from pgsync.constants import SCHEMA
 from pgsync.helper import teardown
 from pgsync.utils import get_config
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.schema import UniqueConstraint
 
 Base = declarative_base()
 
@@ -18,7 +17,7 @@ class Continent(Base):
     __table_args__ = (
         UniqueConstraint('name'),
     )
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     name = sa.Column(sa.String, nullable=False)
 
 
@@ -27,7 +26,7 @@ class Country(Base):
     __table_args__ = (
         UniqueConstraint('name', 'continent_id'),
     )
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     name = sa.Column(sa.String, nullable=False)
     continent_id = sa.Column(
         sa.Integer, sa.ForeignKey(Continent.id)
@@ -43,7 +42,7 @@ class City(Base):
     __table_args__ = (
         UniqueConstraint('name', 'country_id'),
     )
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     name = sa.Column(sa.String, nullable=False)
     country_id = sa.Column(
         sa.Integer,
@@ -60,7 +59,7 @@ class Publisher(Base):
     __table_args__ = (
         UniqueConstraint('name'),
     )
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     name = sa.Column(sa.String, nullable=False)
     is_active = sa.Column(sa.Boolean, default=False)
 
@@ -70,7 +69,7 @@ class Author(Base):
     __table_args__ = (
         UniqueConstraint('name'),
     )
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     name = sa.Column(sa.String, nullable=False)
     date_of_birth = sa.Column(sa.DateTime, nullable=True)
     city_id = sa.Column(sa.Integer, sa.ForeignKey(City.id))
@@ -85,7 +84,7 @@ class Shelf(Base):
     __table_args__ = (
         UniqueConstraint('shelf'),
     )
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     shelf = sa.Column(sa.String, nullable=False)
 
 
@@ -94,7 +93,7 @@ class Subject(Base):
     __table_args__ = (
         UniqueConstraint('name'),
     )
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     name = sa.Column(sa.String, nullable=False)
 
 
@@ -103,7 +102,7 @@ class Language(Base):
     __table_args__ = (
         UniqueConstraint('code'),
     )
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     code = sa.Column(sa.String, nullable=False)
 
 
@@ -133,7 +132,7 @@ class Rating(Base):
     __table_args__ = (
         UniqueConstraint('book_isbn'),
     )
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     book_isbn = sa.Column(
         sa.String, sa.ForeignKey(Book.isbn)
     )
@@ -149,7 +148,7 @@ class BookAuthor(Base):
     __table_args__ = (
         UniqueConstraint('book_isbn', 'author_id'),
     )
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     book_isbn = sa.Column(sa.String, sa.ForeignKey(Book.isbn))
     book = sa.orm.relationship(
         Book,
@@ -169,7 +168,7 @@ class BookSubject(Base):
     __table_args__ = (
         UniqueConstraint('book_isbn', 'subject_id'),
     )
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     book_isbn = sa.Column(
         sa.String, sa.ForeignKey(Book.isbn)
     )
@@ -192,7 +191,7 @@ class BookLanguage(Base):
         UniqueConstraint('book_isbn', 'language_id'),
     )
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     book_isbn = sa.Column(sa.String, sa.ForeignKey(Book.isbn))
     book = sa.orm.relationship(
         Book,
@@ -211,7 +210,7 @@ class BookShelf(Base):
         UniqueConstraint('book_isbn', 'shelf_id'),
     )
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     book_isbn = sa.Column(sa.String, sa.ForeignKey(Book.isbn))
     book = sa.orm.relationship(
         Book,
