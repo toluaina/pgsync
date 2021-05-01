@@ -2,7 +2,7 @@
    {
       "database": "sandbox",
       "index": "sandbox",
-      "node": {
+      "nodes": {
          "table": "parent",
          "columns": [],
          "children": [

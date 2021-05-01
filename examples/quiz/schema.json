@@ -2,7 +2,7 @@
     {
         "database": "quiz",
         "index": "quiz",
-        "node": {
+        "nodes": {
             "table": "question",
             "columns": [
                 "id",

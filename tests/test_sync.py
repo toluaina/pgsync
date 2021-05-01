@@ -1,4 +1,4 @@
-"""Node tests."""
+"""Sync tests."""
 from collections import namedtuple
 
 import pytest

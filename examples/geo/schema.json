@@ -29,7 +29,7 @@
             }
         },
         "plugins": ["Groot", "Hero", "Villain", "Geometry"],
-        "node": {
+        "nodes": {
             "table": "book",
             "columns": [
                 "id",

@@ -288,7 +288,7 @@ class TestNestedChildren(object):
         session.connection().engine.dispose()
 
     @pytest.fixture(scope='function')
-    def node(self):
+    def nodes(self):
         return {
             "table": "book",
             "columns": [
@@ -412,9 +412,10 @@ class TestNestedChildren(object):
             ]
         }
 
-    def test_sync(self, sync, node, data):
+    def test_sync(self, sync, nodes, data):
         """test regular sync produces the correct result."""
-        docs = [doc for doc in sync._sync(node)]
+        sync.nodes = nodes
+        docs = [doc for doc in sync._sync()]
         assert len(docs) == 3
         docs = sorted(docs, key=lambda k: k['_id'])
         assert docs == [
@@ -622,12 +623,12 @@ class TestNestedChildren(object):
                 },
             },
         ]
-        assert_resync_empty(sync, node)
+        assert_resync_empty(sync, nodes)
 
     def test_insert_root(
         self,
         data,
-        node,
+        nodes,
         book_cls,
         publisher_cls,
         author_cls,
@@ -724,7 +725,7 @@ class TestNestedChildren(object):
 
         document = {
             'index': 'testdb',
-            'node': node,
+            'nodes': nodes,
         }
 
         # 1. sync first to add the initial document
@@ -742,7 +743,8 @@ class TestNestedChildren(object):
             session.add_all(book_shelves)
 
         txmin = sync.checkpoint
-        docs = [doc for doc in sync._sync(node, txmin=txmin)]
+        sync.nodes = nodes
+        docs = [doc for doc in sync._sync(txmin=txmin)]
         assert len(docs) == 2
         docs = sorted(docs, key=lambda k: k['_id'])
         assert docs == [
@@ -843,12 +845,12 @@ class TestNestedChildren(object):
                 }
             }
         ]
-        assert_resync_empty(sync, node)
+        assert_resync_empty(sync, nodes)
 
-    def test_update_root(self, data, node, book_cls):
+    def test_update_root(self, data, nodes, book_cls):
         document = {
             'index': 'testdb',
-            'node': node,
+            'nodes': nodes,
         }
         # 1. sync first to add the initial document
         sync = Sync(document)
@@ -864,7 +866,8 @@ class TestNestedChildren(object):
             )
 
         txmin = sync.checkpoint
-        docs = [doc for doc in sync._sync(node, txmin=txmin)]
+        sync.nodes = nodes
+        docs = [doc for doc in sync._sync(txmin=txmin)]
 
         assert len(docs) == 1
         docs = sorted(docs, key=lambda k: k['_id'])
@@ -932,12 +935,12 @@ class TestNestedChildren(object):
                 }
             }
         ]
-        assert_resync_empty(sync, node)
+        assert_resync_empty(sync, nodes)
 
     def test_delete_root(
         self,
         data,
-        node,
+        nodes,
         book_cls,
         book_shelf_cls,
         book_language_cls,
@@ -946,7 +949,7 @@ class TestNestedChildren(object):
     ):
         document = {
             'index': 'testdb',
-            'node': node,
+            'nodes': nodes,
         }
         # 1. sync first to add the initial document
         sync = Sync(document)
@@ -1002,7 +1005,8 @@ class TestNestedChildren(object):
                         sync.es.refresh('testdb')
 
         txmin = sync.checkpoint
-        docs = [doc for doc in sync._sync(node, txmin=txmin)]
+        sync.nodes = nodes
+        docs = [doc for doc in sync._sync(txmin=txmin)]
         assert len(docs) == 0
 
         docs = search(sync.es, 'testdb')
@@ -1124,7 +1128,7 @@ class TestNestedChildren(object):
                 'title': 'The Rabbit Club'
             }
         ]
-        assert_resync_empty(sync, node)
+        assert_resync_empty(sync, nodes)
 
     def test_insert_through_child_noop(self, sync, data):
         # insert a new through child with noop
@@ -1141,7 +1145,7 @@ class TestNestedChildren(object):
     def test_insert_through_child_op(
         self,
         data,
-        node,
+        nodes,
         book_cls,
         author_cls,
         city_cls,
@@ -1174,7 +1178,7 @@ class TestNestedChildren(object):
 
         document = {
             'index': 'testdb',
-            'node': node,
+            'nodes': nodes,
         }
 
         # 1. sync first to add the initial document
@@ -1380,12 +1384,12 @@ class TestNestedChildren(object):
                 'title': 'The Rabbit Club'
             }
         ]
-        assert_resync_empty(sync, node)
+        assert_resync_empty(sync, nodes)
 
     def test_update_through_child_op(
         self,
         sync,
-        node,
+        nodes,
         data,
         book_author_cls,
         author_cls,
@@ -1397,7 +1401,7 @@ class TestNestedChildren(object):
 
         document = {
             'index': 'testdb',
-            'node': node,
+            'nodes': nodes,
         }
 
         # 1. sync first to add the initial document
@@ -1613,13 +1617,13 @@ class TestNestedChildren(object):
                 'title': 'The Rabbit Club'
             }
         ]
-        assert_resync_empty(sync, node)
+        assert_resync_empty(sync, nodes)
 
-    def test_delete_through_child_op(self, sync, data, node, book_author_cls):
+    def test_delete_through_child_op(self, sync, data, nodes, book_author_cls):
         # delete a new through child with op
         document = {
             'index': 'testdb',
-            'node': node,
+            'nodes': nodes,
         }
 
         # 1. sync first to add the initial document
@@ -1780,12 +1784,12 @@ class TestNestedChildren(object):
                 'title': 'The Rabbit Club'
             }
         ]
-        assert_resync_empty(sync, node)
+        assert_resync_empty(sync, nodes)
 
     def test_insert_nonthrough_child_noop(
         self,
         data,
-        node,
+        nodes,
         city_cls,
         country_cls,
         continent_cls,
@@ -1806,7 +1810,7 @@ class TestNestedChildren(object):
 
         document = {
             'index': 'testdb',
-            'node': node,
+            'nodes': nodes,
         }
 
         # 1. sync first to add the initial document
@@ -1823,21 +1827,22 @@ class TestNestedChildren(object):
             session.add(city)
 
         txmin = sync.checkpoint
-        docs = [doc for doc in sync._sync(node, txmin=txmin)]
+        sync.nodes = nodes
+        docs = [doc for doc in sync._sync(txmin=txmin)]
         assert len(docs) == 0
 
-        assert_resync_empty(sync, node)
+        assert_resync_empty(sync, nodes)
 
     def test_update_nonthrough_child_noop(
         self,
         data,
-        node,
+        nodes,
         shelf_cls
     ):
         # update a new non-through child with noop
         document = {
             'index': 'testdb',
-            'node': node,
+            'nodes': nodes,
         }
 
         # 1. sync first to add the initial document
@@ -1858,21 +1863,22 @@ class TestNestedChildren(object):
             )
 
         txmin = sync.checkpoint
-        docs = [doc for doc in sync._sync(node, txmin=txmin)]
+        sync.nodes = nodes
+        docs = [doc for doc in sync._sync(txmin=txmin)]
         assert len(docs) == 0
 
-        assert_resync_empty(sync, node)
+        assert_resync_empty(sync, nodes)
 
     def test_delete_nonthrough_child_noop(
         self,
         data,
-        node,
+        nodes,
         shelf_cls
     ):
         # delete a new non-through child with noop
         document = {
             'index': 'testdb',
-            'node': node,
+            'nodes': nodes,
         }
 
         # 1. sync first to add the initial document
@@ -1893,10 +1899,11 @@ class TestNestedChildren(object):
             )
 
         txmin = sync.checkpoint
-        docs = [doc for doc in sync._sync(node, txmin=txmin)]
+        sync.nodes = nodes
+        docs = [doc for doc in sync._sync(txmin=txmin)]
         assert len(docs) == 0
 
-        assert_resync_empty(sync, node)
+        assert_resync_empty(sync, nodes)
 
     def test_insert_nonthrough_child_op(self, sync, data):
         # insert a new non-through child with op
@@ -2038,7 +2045,7 @@ class TestNestedChildren(object):
     def test_insert_deep_nested_nonthrough_child_noop(
         self,
         data,
-        node,
+        nodes,
         city_cls,
         country_cls,
         continent_cls,
@@ -2055,7 +2062,7 @@ class TestNestedChildren(object):
 
         document = {
             'index': 'testdb',
-            'node': node,
+            'nodes': nodes,
         }
         # sync first to add the initial document
         sync = Sync(document)
@@ -2086,21 +2093,22 @@ class TestNestedChildren(object):
                         sync.es.refresh('testdb')
 
         txmin = sync.checkpoint
-        docs = [doc for doc in sync._sync(node, txmin=txmin)]
+        sync.nodes = nodes
+        docs = [doc for doc in sync._sync(txmin=txmin)]
         assert docs == []
         docs = search(sync.es, 'testdb')
-        assert_resync_empty(sync, node)
+        assert_resync_empty(sync, nodes)
 
     def test_insert_deep_nested_fk_nonthrough_child_op(
         self,
         data,
-        node,
+        nodes,
         city_cls,
         country_cls,
         continent_cls,
     ):
         """insert a new deep nested non-through fk child with op."""
-        node['children'].append(
+        nodes['children'].append(
             {
                 "table": "book_rating",
                 "columns": [

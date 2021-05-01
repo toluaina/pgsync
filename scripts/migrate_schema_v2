@@ -34,8 +34,8 @@ def main(config):
     for document in json.load(open(config)):
         new_doc = {}
         for key, value in document.items():
-            if key == 'nodes':
-                new_doc['node'] = value[0]
+            if key == 'nodes' and isinstance(value, list):
+                new_doc['nodes'] = value[0]
                 changed = True
                 continue
             new_doc[key] = value

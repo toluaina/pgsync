@@ -27,7 +27,7 @@ class Plugins(object):
         self.reload()
 
     def reload(self):
-        """Reload the pluging from the available list."""
+        """Reload the plugin from the available list."""
         self.plugins = []
         self._paths = []
         logger.debug(f'Reloading plugins from package: {self.package}')

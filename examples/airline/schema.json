@@ -2,7 +2,7 @@
     {
         "database": "airline",
         "index": "airline",
-        "node": {
+        "nodes": {
             "table": "bookings",
             "schema": "bookings",
             "children": [

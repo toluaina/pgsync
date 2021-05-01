@@ -2,7 +2,7 @@
     {
         "database": "starcraft",
         "index": "campaign",
-        "node": {
+        "nodes": {
             "table": "specie",
             "columns": [
                 "id",

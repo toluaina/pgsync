@@ -8,12 +8,12 @@ from .constants import CONCAT_TRANSFORM, RENAME_TRANSFORM, REPLACE_TRANSFORM
 logger = logging.getLogger(__name__)
 
 
-def _get_transform(node, key):
+def _get_transform(nodes, key):
     transform_node = {}
-    if 'transform' in node.keys():
-        if key in node['transform']:
-            transform_node = node['transform'][key]
-    for child in node.get('children', {}):
+    if 'transform' in nodes.keys():
+        if key in nodes['transform']:
+            transform_node = nodes['transform'][key]
+    for child in nodes.get('children', {}):
         txfm_node = _get_transform(child, key)
         if txfm_node:
             transform_node[
@@ -22,14 +22,14 @@ def _get_transform(node, key):
     return transform_node
 
 
-def _rename_fields(data, node, result=None):
+def _rename_fields(data, nodes, result=None):
     """Rename keys in a nested dictionary based on transform_node."""
     result = result or {}
     if isinstance(data, dict):
         for key, value in data.items():
             if isinstance(value, dict):
-                if key in node:
-                    value = _rename_fields(value, node[key])
+                if key in nodes:
+                    value = _rename_fields(value, nodes[key])
             elif isinstance(value, list) and value and not isinstance(
                 value[0],
                 dict,
@@ -38,50 +38,50 @@ def _rename_fields(data, node, result=None):
                     value = sorted(value)
                 except TypeError:
                     pass
-            elif key in node.keys():
+            elif key in nodes.keys():
                 if isinstance(value, list):
                     value = [
-                        _rename_fields(v, node[key]) for v in value
+                        _rename_fields(v, nodes[key]) for v in value
                     ]
                 elif isinstance(value, (string_types, int, float)):
-                    if node[key]:
-                        key = str(node[key])
+                    if nodes[key]:
+                        key = str(nodes[key])
             result[key] = value
     return result
 
 
-def _concat_fields(data, node, result=None):
+def _concat_fields(data, nodes, result=None):
     """Concatenate fields."""
     result = result or {}
     if isinstance(data, dict):
-        if 'columns' in node:
-            values = [data.get(key) for key in node['columns'] if key in data]
-            delimiter = node.get('delimiter', '')
-            destination = node['destination']
+        if 'columns' in nodes:
+            values = [data.get(key) for key in nodes['columns'] if key in data]
+            delimiter = nodes.get('delimiter', '')
+            destination = nodes['destination']
             data[destination] = f'{delimiter}'.join(
                 map(str, filter(None, values))
             )
         for key, value in data.items():
-            if key in node:
+            if key in nodes:
                 if isinstance(value, dict):
-                    value = _concat_fields(value, node[key])
+                    value = _concat_fields(value, nodes[key])
                 elif isinstance(value, list):
                     value = [
                         _concat_fields(
                             v,
-                            node[key],
-                        ) for v in value if key in node
+                            nodes[key],
+                        ) for v in value if key in nodes
                     ]
             result[key] = value
     return result
 
 
-# def _replace_fields(data, node, result_dict=None):
+# def _replace_fields(data, nodes, result_dict=None):
 #     """Replace field values"""
 #     result_dict = result_dict or {}
 #     if isinstance(data, dict):
-#         if node:
-#             for key, values in node.items():
+#         if nodes:
+#             for key, values in nodes.items():
 #                 if key not in data:
 #                     continue
 #                 if isinstance(data[key], list):
@@ -96,22 +96,22 @@ def _concat_fields(data, node, result=None):
 
 #         for key, value in data.items():
 #             if isinstance(value, dict):
-#                 value = _replace_fields(value, node.get(key))
+#                 value = _replace_fields(value, nodes.get(key))
 #             elif isinstance(value, list):
 #                 value = [
 #                     _replace_fields(
 #                         v,
-#                         node[key],
-#                     ) for v in value if key in node
+#                         nodes[key],
+#                     ) for v in value if key in nodes
 #                 ]
 #             result_dict[key] = value
 #     return result_dict
 
 
-def transform(data, node):
-    transform_node = _get_transform(node, RENAME_TRANSFORM)
+def transform(data, nodes):
+    transform_node = _get_transform(nodes, RENAME_TRANSFORM)
     data = _rename_fields(data, transform_node)
-    transform_node = _get_transform(node, CONCAT_TRANSFORM)
+    transform_node = _get_transform(nodes, CONCAT_TRANSFORM)
     data = _concat_fields(data, transform_node)
     # transform_node = _get_transform(node, REPLACE_TRANSFORM)
     # _replace_fields(data, transform_node)

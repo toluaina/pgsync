@@ -2,7 +2,7 @@
     {
         "database": "airbnb",
         "index": "reservations",
-        "node": {
+        "nodes": {
             "table": "users",
             "schema": "public",
             "columns": [

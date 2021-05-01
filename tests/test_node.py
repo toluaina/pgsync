@@ -9,7 +9,7 @@ class TestNode(object):
     """Node tests."""
 
     @pytest.fixture(scope='function')
-    def node(self):
+    def nodes(self):
         return {
             "table": "book",
             "columns": [
@@ -133,9 +133,9 @@ class TestNode(object):
             ]
         }
 
-    def test_traverse_breadth_first(self, sync, node):
+    def test_traverse_breadth_first(self, sync, nodes):
         tree = Tree(sync)
-        root = tree.build(node)
+        root = tree.build(nodes)
         root.display()
         for i, node in enumerate(traverse_breadth_first(root)):
             if i == 0:
@@ -157,9 +157,9 @@ class TestNode(object):
             if i == 8:
                 assert node.table == 'continent'
 
-    def test_traverse_post_order(self, sync, node):
+    def test_traverse_post_order(self, sync, nodes):
         tree = Tree(sync)
-        root = tree.build(node)
+        root = tree.build(nodes)
         root.display()
         for i, node in enumerate(traverse_post_order(root)):
             if i == 0:

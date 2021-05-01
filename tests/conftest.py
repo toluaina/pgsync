@@ -54,7 +54,7 @@ def session(connection):
 def sync():
     _sync = Sync({
         'index': 'testdb',
-        'node': {
+        'nodes': {
             'table': 'book'
         },
     })

@@ -15,7 +15,7 @@ class TestTransform(object):
     '''Transform tests.'''
 
     def test_get_transform(self):
-        node = {
+        nodes = {
             'table': 'tableau',
             'columns': [
                 'id',
@@ -79,7 +79,7 @@ class TestTransform(object):
             }
         }
 
-        transform_node = _get_transform(node, RENAME_TRANSFORM)
+        transform_node = _get_transform(nodes, RENAME_TRANSFORM)
         assert transform_node == {
             'id': 'my_id',
             'code': 'my_code',
@@ -92,7 +92,7 @@ class TestTransform(object):
             },
         }
 
-        transform_node = _get_transform(node, CONCAT_TRANSFORM)
+        transform_node = _get_transform(nodes, CONCAT_TRANSFORM)
         assert transform_node == {
             'Child1': {
                 'Grandchild_1': {
@@ -107,7 +107,7 @@ class TestTransform(object):
         }
 
     def test_transform_rename(self):
-        node = {
+        nodes = {
             'table': 'tableau',
             'columns': [
                 'id',
@@ -172,7 +172,7 @@ class TestTransform(object):
                 {'column_1': 3, 'column_2': 'bb'},
             ],
         }
-        row = transform(row, node)
+        row = transform(row, nodes)
         assert row == {
             'Child1': [
                 {'column1': 2, 'column_2': 'aa'},
@@ -188,7 +188,7 @@ class TestTransform(object):
         }
 
     def test_rename_fields(self):
-        node = {
+        nodes = {
             'id': 'my_id',
             'code': 'my_code',
             'level': 'levelup',
@@ -208,7 +208,7 @@ class TestTransform(object):
                 {'column_1': 3, 'column_2': 'bb'},
             ],
         }
-        row = _rename_fields(row, node)
+        row = _rename_fields(row, nodes)
 
         assert row == {
             'levelup': 1,
@@ -225,7 +225,7 @@ class TestTransform(object):
         }
 
     def test_transform_concat(self):
-        node = {
+        nodes = {
             'table': 'tableau',
             'columns': [
                 'id',
@@ -314,7 +314,7 @@ class TestTransform(object):
                 'column_2': 'ee',
             },
         }
-        row = transform(row, node)
+        row = transform(row, nodes)
         assert row == {
             'Child1': [
                 {'column_1': 2, 'column_2': 'aa', 'column_3': '2_aa'},
@@ -332,7 +332,7 @@ class TestTransform(object):
         }
 
     def test_concat_fields(self):
-        node = {
+        nodes = {
             'Child1': {
                 'columns': ['column_1', 'column_2'],
                 'delimiter': '_',
@@ -357,7 +357,7 @@ class TestTransform(object):
                 {'column_1': 3, 'column_2': 'bb'},
             ],
         }
-        row = _concat_fields(row, node)
+        row = _concat_fields(row, nodes)
         assert row == {
             'level': 1,
             'id': '007',

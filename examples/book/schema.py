@@ -2,12 +2,13 @@ import json
 
 import click
 import sqlalchemy as sa
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.schema import UniqueConstraint
+
 from pgsync.base import create_database, create_schema, pg_engine
 from pgsync.constants import SCHEMA
 from pgsync.helper import teardown
 from pgsync.utils import get_config
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.schema import UniqueConstraint
 
 Base = declarative_base()
 

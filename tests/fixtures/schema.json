@@ -2,7 +2,7 @@
     {
         "database": "index",
         "index": "index",
-        "node": {
+        "nodes": {
             "table": "book",
             "columns": [
                 "isbn",

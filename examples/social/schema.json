@@ -2,7 +2,7 @@
     {
         "database": "social",
         "index": "social1",
-        "node": {
+        "nodes": {
             "table": "user",
             "columns": [
                 "name",

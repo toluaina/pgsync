@@ -299,6 +299,7 @@ class Tree(object):
         return node
 
 
+# TODO: deprecate this method
 def node_from_table(base, table, schema):
     return Node(
         model=base.model(table, schema=schema),
@@ -309,11 +310,19 @@ def node_from_table(base, table, schema):
     )
 
 
-def get_node(tree, table, node):
-    root = tree.build(node)
+def get_node(tree, table, node_dict):
+
+    root = tree.build(node_dict)
     for node in traverse_post_order(root):
         if table == node.table:
             return node
-            break
+        elif table in node.relationship.through_tables:
+            return Node(
+                model=tree.base.model(table, schema=node.schema),
+                table=table,
+                label=table,
+                schema=node.schema,
+                primary_key=[],
+            )
     else:
         raise RuntimeError(f'Node for {table} not found')
