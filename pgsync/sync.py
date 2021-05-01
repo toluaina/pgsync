@@ -29,7 +29,7 @@ from .constants import (
     UPDATE,
 )
 from .elastichelper import ElasticHelper
-from .exc import RDSError, SuperUserError
+from .exc import RDSError, SchemaError, SuperUserError
 from .node import get_node, traverse_breadth_first, traverse_post_order, Tree
 from .plugin import Plugins
 from .querybuilder import QueryBuilder
@@ -83,6 +83,13 @@ class Sync(Base):
 
     def validate(self, repl_slots=True):
         """Perform all validation right away."""
+
+        # ensure v2 compatible schema
+        if not isinstance(self.nodes, dict):
+            raise SchemaError(
+                'Incompatible schema. Please run v2 schema migration'
+            )
+
         self.connect()
         if self.plugins:
             self._plugins = Plugins('plugins', self.plugins)
