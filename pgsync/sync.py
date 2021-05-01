@@ -327,7 +327,7 @@ class Sync(Base):
                     raise
 
                 # set the parent as the new entity that has changed
-                filters[node.parent.name] = []
+                filters[node.parent.table] = []
                 foreign_keys = self.query_builder._get_foreign_keys(
                     node.parent,
                     node,
@@ -337,7 +337,7 @@ class Sync(Base):
                     payload_data = self._payload_data(payload)
                     for i, key in enumerate(foreign_keys[node.name]):
                         value = payload_data[key]
-                        filters[node.parent.name].append({
+                        filters[node.parent.table].append({
                             foreign_keys[node.parent.name][i]: value
                         })
 
@@ -345,7 +345,7 @@ class Sync(Base):
 
             # handle case where we insert into a through table
             # set the parent as the new entity that has changed
-            filters[node.parent.name] = []
+            filters[node.parent.table] = []
             foreign_keys = self.query_builder._get_foreign_keys(
                 node.parent,
                 node,
@@ -355,7 +355,7 @@ class Sync(Base):
                 payload_data = self._payload_data(payload)
                 for i, key in enumerate(foreign_keys[node.name]):
                     value = payload_data[key]
-                    filters[node.parent.name].append({
+                    filters[node.parent.table].append({
                         foreign_keys[node.parent.name][i]: value
                     })
 
