@@ -1,0 +1,49 @@
+[
+   {
+      "database": "ancestry",
+      "index": "ancestry",
+      "nodes": {
+         "table": "parent",
+         "columns": [],
+         "children": [
+            {
+               "table": "child",
+               "columns": [
+               ],
+               "label": "children",
+               "relationship": {
+                  "variant": "object",
+                  "type": "one_to_many",
+                  "through_tables": [
+                      "surrogate"
+                  ]
+               },
+               "children": [
+                  {
+                     "table": "grand_child",
+                     "columns": [
+                     ],
+                     "label": "grand_children",
+                     "relationship": {
+                        "variant": "object",
+                        "type": "one_to_many"
+                     },
+                     "children": [
+                        {
+                           "table": "great_grand_child",
+                           "columns": [
+                           ],
+                           "label": "great_grand_children",
+                           "relationship": {
+                              "variant": "object",
+                              "type": "one_to_many"
+                           }
+                        }
+                     ]
+                  }
+               ]
+            }
+         ]
+      }
+   }
+]
