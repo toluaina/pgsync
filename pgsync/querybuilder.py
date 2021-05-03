@@ -196,8 +196,7 @@ class QueryBuilder(object):
                         getattr(
                             child._subquery.c,
                             left_foreign_keys[i],
-                        ) ==
-                        getattr(
+                        ) == getattr(
                             child.parent.model.c,
                             right_foreign_keys[i],
                         )
@@ -231,8 +230,7 @@ class QueryBuilder(object):
                         getattr(
                             child._subquery.c,
                             left_foreign_keys[i],
-                        ) ==
-                        getattr(
+                        ) == getattr(
                             child.parent.model.c,
                             right_foreign_keys[i],
                         )
@@ -415,8 +413,7 @@ class QueryBuilder(object):
                     getattr(
                         child._subquery.c,
                         left_foreign_keys[i],
-                    ) ==
-                    getattr(
+                    ) == getattr(
                         child.parent.model.c,
                         right_foreign_keys[i],
                     )
@@ -554,8 +551,7 @@ class QueryBuilder(object):
                 getattr(
                     outer_subquery.c,
                     left_foreign_keys[i],
-                ) ==
-                getattr(
+                ) == getattr(
                     through.model.c,
                     right_foreign_keys[i],
                 )
@@ -620,8 +616,7 @@ class QueryBuilder(object):
                     getattr(
                         child._subquery.c,
                         foreign_key_columns[i],
-                    ) ==
-                    getattr(
+                    ) == getattr(
                         node.model.c,
                         foreign_keys[node.name][i],
                     )
@@ -665,10 +660,13 @@ class QueryBuilder(object):
                                                 column._orig_key,
                                             ) == column.value
                                         )
+
+            isouter = len(child.parent.children) > 1
+
             from_obj = from_obj.join(
                 child._subquery,
                 onclause=sa.and_(*onclause),
-                isouter=self.isouter,
+                isouter=isouter,
             )
 
         foreign_keys = get_foreign_keys(node.parent, node)
