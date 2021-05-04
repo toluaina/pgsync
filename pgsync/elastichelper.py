@@ -130,7 +130,7 @@ class ElasticHelper(object):
         """
         return self.__es.search(index=index, body=body)
 
-    def _create_setting(self, index, node, setting=None):
+    def _create_setting(self, index, node, setting=None, routing=None):
         """Create Elasticsearch setting and mapping if required."""
         body = defaultdict(lambda: defaultdict(dict))
 
@@ -145,7 +145,7 @@ class ElasticHelper(object):
                     }
                 )
 
-            mapping = self._build_mapping(node)
+            mapping = self._build_mapping(node, routing)
             if mapping:
                 body.update(**mapping)
 
@@ -167,7 +167,7 @@ class ElasticHelper(object):
                 f'created setting: {self.__es.indices.get_settings(index)}'
             )
 
-    def _build_mapping(self, root):
+    def _build_mapping(self, root, routing):
         """Get the Elasticsearch mapping from the schema transform."""
 
         for node in traverse_post_order(root):
@@ -207,6 +207,11 @@ class ElasticHelper(object):
                 if 'properties' not in node.parent._mapping:
                     node.parent._mapping['properties'] = {}
                 node.parent._mapping['properties'][node.label] = node._mapping
+
+        if routing:
+            root._mapping['_routing'] = {
+                'required': True
+            }
 
         if root._mapping:
             if self.version[0] < 7:

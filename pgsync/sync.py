@@ -63,6 +63,7 @@ class Sync(Base):
         self.plugins = document.get('plugins', [])
         self.nodes = document.get('nodes', {})
         self.setting = document.get('setting')
+        self.routing = document.get('routing')
         super().__init__(document.get('database', self.index), **params)
         self.es = ElasticHelper()
         self.__name = re.sub(
@@ -151,7 +152,7 @@ class Sync(Base):
     def create_setting(self):
         """Create Elasticsearch setting and mapping if required."""
         root = self.tree.build(self.nodes)
-        self.es._create_setting(self.index, root, setting=self.setting)
+        self.es._create_setting(self.index, root, setting=self.setting, routing=self.routing)
 
     def setup(self):
         """Create the database triggers and replication slot."""
@@ -402,6 +403,8 @@ class Sync(Base):
                         '_index': self.index,
                         '_op_type': 'delete',
                     }
+                    if self.routing:
+                        doc['_routing'] = old_values[self.routing]
                     if self.es.version[0] < 7:
                         doc['_type'] = '_doc'
                     docs.append(doc)
@@ -493,6 +496,8 @@ class Sync(Base):
                     '_index': self.index,
                     '_op_type': 'delete',
                 }
+                if self.routing:
+                    doc['_routing'] = payload_data[self.routing]
                 if self.es.version[0] < 7:
                     doc['_type'] = '_doc'
                 docs.append(doc)
@@ -661,7 +666,7 @@ class Sync(Base):
 
             filters = self._truncate(node, root, filters)
 
-        # If there are no filters, then don't execute the sync query 
+        # If there are no filters, then don't execute the sync query
         # otherwise we would end up performing a full query
         # and sync the entire db!
         if not any(filters.values()):
@@ -775,6 +780,9 @@ class Sync(Base):
                 '_index': self.index,
                 '_source': row,
             }
+
+            if self.routing:
+                doc['_routing'] = row[self.routing]
 
             if self.es.version[0] < 7:
                 doc['_type'] = '_doc'
