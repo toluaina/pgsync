@@ -195,10 +195,13 @@ class ElasticHelper(object):
 
                     if parameter not in ELASTICSEARCH_MAPPING_PARAMETERS:
                         raise RuntimeError(
-                            f'Invalid Elasticsearch mapping parameter {parameter}'
+                            f'Invalid Elasticsearch mapping parameter '
+                            f'{parameter}'
                         )
 
-                    node._mapping['properties'][column][parameter] = parameter_value
+                    node._mapping['properties'][column][
+                        parameter
+                    ] = parameter_value
 
             if node.parent and node._mapping:
                 if 'properties' not in node.parent._mapping:

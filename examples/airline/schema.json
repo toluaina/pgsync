@@ -1,6 +1,6 @@
 [
     {
-        "database": "airline",
+        "database": "demo",
         "index": "airline",
         "nodes": {
             "table": "bookings",

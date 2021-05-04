@@ -1,11 +1,12 @@
 import json
 
 import click
+from schema import Child, GrandChild, GreatGrandChild, Parent, Surrogate
+from sqlalchemy.orm import sessionmaker
+
 from pgsync.base import pg_engine, subtransactions
 from pgsync.helper import teardown
 from pgsync.utils import get_config
-from schema import Child, GrandChild, GreatGrandChild, Parent, Surrogate
-from sqlalchemy.orm import sessionmaker
 
 
 @click.command()

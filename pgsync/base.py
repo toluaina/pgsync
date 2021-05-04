@@ -188,12 +188,6 @@ class Base(object):
             f'Invalid definition {table} for schema: {schema}'
         )
 
-    def _absolute_table(self, schema, table):
-        """Get fully qualified table name."""
-        if not table.startswith(f'{schema}.'):
-            return f'{schema}.{table}'
-        return table
-
     def truncate_table(self, table, schema=SCHEMA):
         """Truncate a table.
 
@@ -206,7 +200,8 @@ class Base(object):
             schema (str): The database schema
 
         """
-        table = self._absolute_table(schema, table)
+        if not table.startswith(f'{schema}.'):
+            table = f'{schema}.{table}'
         schema, table = self._get_schema(schema, table)
         logger.debug(f'Truncating table: {schema}.{table}')
         query = f'TRUNCATE TABLE "{schema}"."{table}" CASCADE'
@@ -708,16 +703,6 @@ class Base(object):
             logger.exception(f'Exception {e}')
             raise
 
-    def update(self, query):
-        """Update query command."""
-        conn = self.__engine.connect()
-        try:
-            conn.execute(query)
-            conn.close()
-        except Exception as e:
-            logger.exception(f'Exception {e}')
-            raise
-
     def fetchall(self, query):
         """Fetch all rows from a query."""
         conn = self.__engine.connect()
@@ -870,25 +855,6 @@ class Base(object):
                 payload['new'][key] = value
 
         return payload
-
-    def get_columns(self, model, column_names=None):
-        if column_names:
-            return [
-                getattr(
-                    model.__table__.c, column_name
-                ) for column_name in column_names
-            ]
-        return [column for column in model.__table__.columns]
-
-    def get_column_names(self, model):
-        return model.__table__.columns.keys()
-
-    def get_column_labels(self, columns, column_labels):
-        for i, column in enumerate(columns):
-            if column.name in column_labels:
-                column_label = column_labels[column.name]
-                columns[i] = column.label(column_label)
-        return columns
 
     # Querying...
 
@@ -1122,30 +1088,6 @@ def drop_extension(database, extension, echo=False):
     engine = pg_engine(database=database, echo=echo)
     pg_execute(engine, f'DROP EXTENSION IF EXISTS "{extension}"')
     logger.debug(f'Dropped extension: {extension}')
-
-
-def create_materialized_view(database, view, query, echo=False):
-    """Create a materialized database view."""
-    logger.debug(f'Creating materialized view: {view} with {query}')
-    engine = pg_engine(database=database, echo=echo)
-    pg_execute(engine, f'CREATE MATERIALIZED VIEW {view} AS {query}')
-    logger.debug(f'Created materialized view: {view}')
-
-
-def refresh_materialized_view(database, view, echo=False):
-    """Refresh a materialized database view."""
-    logger.debug(f'Refreshing materialized view: {view}')
-    engine = pg_engine(database=database, echo=echo)
-    pg_execute(engine, f'REFRESH MATERIALIZED VIEW {view}')
-    logger.debug(f'Refreshed materialized view: {view}')
-
-
-def drop_materialized_view(database, view, echo=False):
-    """Drop a materialized database view."""
-    logger.debug(f'Dropping materialized view: {view}')
-    engine = pg_engine(database=database, echo=echo)
-    pg_execute(engine, f'DROP MATERIALIZED VIEW IF EXISTS {view}')
-    logger.debug(f'Dropped materialized view: {view}')
 
 
 def compiled_query(query, label=None, literal_binds=False):

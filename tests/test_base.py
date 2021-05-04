@@ -7,11 +7,8 @@ from pgsync.base import (
     Base,
     create_database,
     create_extension,
-    create_materialized_view,
     drop_database,
     drop_extension,
-    drop_materialized_view,
-    refresh_materialized_view,
 )
 from pgsync.exc import ParseLogicalSlotError, TableNotFoundError
 
@@ -118,15 +115,6 @@ class TestBase(object):
                 excinfo.value
             )
 
-    def test_absolute_table(self, connection):
-        pg_base = Base(connection.engine.url.database)
-
-        table = pg_base._absolute_table('public', 'public.my_table')
-        assert table == 'public.my_table'
-
-        table = pg_base._absolute_table('public', 'my_table')
-        assert table == 'public.my_table'
-
     @patch('pgsync.base.pg_execute')
     @patch('pgsync.base.pg_engine')
     @patch('pgsync.base.logger')
@@ -213,84 +201,6 @@ class TestBase(object):
         mock_pg_execute.assert_any_call(
             connection.engine,
             'DROP EXTENSION IF EXISTS "my_ext"',
-        )
-
-    @patch('pgsync.base.pg_execute')
-    @patch('pgsync.base.pg_engine')
-    @patch('pgsync.base.logger')
-    def test_create_materialized_view(
-        self,
-        mock_logger,
-        mock_pg_engine,
-        mock_pg_execute,
-        connection,
-    ):
-        database = connection.engine.url.database
-        mock_pg_engine.return_value = connection.engine
-        create_materialized_view(database, 'my_view', 'SELECT 1', echo=True)
-        assert mock_logger.debug.call_count == 2
-        mock_logger.debug.assert_any_call(
-            'Creating materialized view: my_view with SELECT 1'
-        )
-        mock_logger.debug.assert_any_call(
-            'Created materialized view: my_view'
-        )
-        mock_pg_engine.assert_any_call(database=database, echo=True)
-        mock_pg_execute.assert_any_call(
-            connection.engine,
-            'CREATE MATERIALIZED VIEW my_view AS SELECT 1',
-        )
-
-    @patch('pgsync.base.pg_execute')
-    @patch('pgsync.base.pg_engine')
-    @patch('pgsync.base.logger')
-    def test_refresh_materialized_view(
-        self,
-        mock_logger,
-        mock_pg_engine,
-        mock_pg_execute,
-        connection,
-    ):
-        database = connection.engine.url.database
-        mock_pg_engine.return_value = connection.engine
-        refresh_materialized_view(database, 'my_view')
-        assert mock_logger.debug.call_count == 2
-        mock_logger.debug.assert_any_call(
-            'Refreshing materialized view: my_view'
-        )
-        mock_logger.debug.assert_any_call(
-            'Refreshed materialized view: my_view'
-        )
-        mock_pg_engine.assert_any_call(database=database, echo=False)
-        mock_pg_execute.assert_any_call(
-            connection.engine,
-            'REFRESH MATERIALIZED VIEW my_view',
-        )
-
-    @patch('pgsync.base.pg_execute')
-    @patch('pgsync.base.pg_engine')
-    @patch('pgsync.base.logger')
-    def test_drop_materialized_view(
-        self,
-        mock_logger,
-        mock_pg_engine,
-        mock_pg_execute,
-        connection,
-    ):
-        database = connection.engine.url.database
-        mock_pg_engine.return_value = connection.engine
-        drop_materialized_view(database, 'my_view')
-        assert mock_logger.debug.call_count == 2
-        mock_logger.debug.assert_any_call(
-            'Dropping materialized view: my_view'
-        )
-        mock_logger.debug.assert_any_call(
-            'Dropped materialized view: my_view'
-        )
-        mock_pg_engine.assert_any_call(database=database, echo=False)
-        mock_pg_execute.assert_any_call(
-            connection.engine,
-            'DROP MATERIALIZED VIEW IF EXISTS my_view',
         )
 
     def test_parse_logical_slot(

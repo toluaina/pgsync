@@ -2,10 +2,11 @@ import json
 
 import click
 import sqlalchemy as sa
+from sqlalchemy.ext.declarative import declarative_base
+
 from pgsync.base import create_database, pg_engine
 from pgsync.helper import teardown
 from pgsync.utils import get_config
-from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
