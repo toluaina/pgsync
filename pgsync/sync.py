@@ -152,7 +152,12 @@ class Sync(Base):
     def create_setting(self):
         """Create Elasticsearch setting and mapping if required."""
         root = self.tree.build(self.nodes)
-        self.es._create_setting(self.index, root, setting=self.setting, routing=self.routing)
+        self.es._create_setting(
+            self.index,
+            root,
+            setting=self.setting,
+            routing=self.routing,
+        )
 
     def setup(self):
         """Create the database triggers and replication slot."""

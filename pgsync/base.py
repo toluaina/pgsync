@@ -594,8 +594,9 @@ class Base(object):
             Values(
                 sa.column('table_name'),
                 sa.column('foreign_keys'),
-            ).data(
-                [(key, array(value)) for key, value in rows.items()]).alias(
+            ).data([
+                (key, array(value)) for key, value in rows.items()
+            ]).alias(
                 'v'
             )
         )
@@ -771,7 +772,7 @@ class Base(object):
             'varchar',
         ):
             value = value.lstrip("'").rstrip("'")
-        if type_.lower() in ('boolean',):
+        if type_.lower() == 'boolean':
             try:
                 value = bool(value)
             except ValueError:

@@ -41,8 +41,8 @@ RELATIONSHIP_ATTRIBUTES = [
 
 # Relationship foreign keys
 RELATIONSHIP_FOREIGN_KEYS = [
-     'child',
-     'parent',
+    'child',
+    'parent',
 ]
 
 
