@@ -56,3 +56,13 @@ def compile_create_index(element, compiler, **kwargs):
         f'CREATE UNIQUE INDEX {element.name} ON '
         f'"{element.schema}"."{element.view}" ({", ".join(element.columns)})'
     )
+
+
+class DropIndex(DDLElement):
+    def __init__(self, name):
+        self.name = name
+
+
+@compiler.compiles(DropIndex)
+def compile_drop_index(element, compiler, **kwargs):
+    return f'DROP INDEX IF EXISTS {element.name}'

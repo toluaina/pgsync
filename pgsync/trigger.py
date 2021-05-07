@@ -1,5 +1,5 @@
 """PGSync Trigger template."""
-from .constants import FOREIGN_KEY_VIEWNAME, PRIMARY_KEY_VIEWNAME, TRIGGER_FUNC
+from .constants import FOREIGN_KEY_VIEW, PRIMARY_KEY_VIEW, TRIGGER_FUNC
 
 CREATE_TRIGGER_TEMPLATE = f"""
 CREATE OR REPLACE FUNCTION {TRIGGER_FUNC}() RETURNS TRIGGER AS $$
@@ -12,12 +12,12 @@ DECLARE
 
   primary_keys TEXT [] := (
       SELECT primary_keys
-      FROM {PRIMARY_KEY_VIEWNAME}
+      FROM {PRIMARY_KEY_VIEW}
       WHERE table_name = TG_TABLE_NAME
   );
   foreign_keys TEXT [] := (
       SELECT foreign_keys
-      FROM {FOREIGN_KEY_VIEWNAME}
+      FROM {FOREIGN_KEY_VIEW}
       WHERE table_name = TG_TABLE_NAME
   );
 

@@ -14,11 +14,13 @@ from sqlalchemy.sql import Values
 
 from .constants import (
     BUILTIN_SCHEMAS,
-    FOREIGN_KEY_VIEWNAME,
+    FOREIGN_KEY_INDEX,
+    FOREIGN_KEY_VIEW,
     LOGICAL_SLOT_PREFIX,
     LOGICAL_SLOT_SUFFIX,
     PLUGIN,
-    PRIMARY_KEY_VIEWNAME,
+    PRIMARY_KEY_INDEX,
+    PRIMARY_KEY_VIEW,
     SCHEMA,
     TG_OP,
     TRIGGER_FUNC,
@@ -28,7 +30,7 @@ from .exc import ForeignKeyError, ParseLogicalSlotError, TableNotFoundError
 from .settings import PG_SSLMODE, PG_SSLROOTCERT, QUERY_CHUNK_SIZE
 from .trigger import CREATE_TRIGGER_TEMPLATE
 from .utils import get_postgres_url
-from .view import CreateIndex, CreateView, DropView
+from .view import CreateIndex, CreateView, DropIndex, DropView
 
 try:
     import citext  # noqa
@@ -445,14 +447,14 @@ class Base(object):
             pg_index.c.indrelid
         )
 
-        if PRIMARY_KEY_VIEWNAME in views:
+        if PRIMARY_KEY_VIEW in views:
             values = self.fetchall(sa.select([
                 sa.column('table_name'),
                 sa.column('primary_keys'),
             ]).select_from(
-                sa.text(PRIMARY_KEY_VIEWNAME)
+                sa.text(PRIMARY_KEY_VIEW)
             ))
-            self.__engine.execute(DropView(schema, PRIMARY_KEY_VIEWNAME))
+            self.__engine.execute(DropView(schema, PRIMARY_KEY_VIEW))
             if values:
                 statement = statement.union(
                     sa.select(
@@ -469,22 +471,13 @@ class Base(object):
 
         return statement
 
-    def _foreign_key_view_statement(
-        self,
-        schema,
-        tables,
-        views,
-        user_defined_fkey_tables=None,
-    ):
+    def _foreign_key_view_statement(self, tables):
         """
         Table name and foreign keys association where the table name
         is the index.
         This is also only called once on bootstrap.
         It is used within the trigger function to determine what payload
         values to send to pg_notify.
-
-        Similar to _primary_key_view_statement, we want to union the result of
-        this table onto itself.
 
         table_name | foreign_keys
         ------------+--------------
@@ -507,7 +500,7 @@ class Base(object):
                 'information_schema',
             )
 
-        statement = sa.select([
+        return sa.select([
             table_constraints.c.table_name,
             sa.func.ARRAY_AGG(
                 sa.cast(
@@ -534,94 +527,98 @@ class Base(object):
             table_constraints.c.table_name
         )
 
-        unions = [statement]
-        if FOREIGN_KEY_VIEWNAME in views:
-            values = self.fetchall(sa.select([
-                sa.column('table_name'),
-                sa.column('foreign_keys'),
-            ]).select_from(
-                sa.text(FOREIGN_KEY_VIEWNAME)
-            ))
-            self.__engine.execute(DropView(schema, FOREIGN_KEY_VIEWNAME))
-            if values:
-                unions.append(
-                    sa.select(
-                        Values(
-                            sa.column('table_name'),
-                            sa.column('foreign_keys'),
-                        ).data(
-                            [(value[0], array(value[1])) for value in values]
-                        ).alias(
-                            'u'
-                        )
-                    )
-                )
-
-        if user_defined_fkey_tables:
-            unions.append(
-                sa.select(
-                    Values(
-                        sa.column('table_name'),
-                        sa.column('foreign_keys'),
-                    ).data([
-                        (
-                            key, array(value)
-                        ) for key, value in user_defined_fkey_tables.items()
-                    ]).alias(
-                        'v'
-                    )
-                )
-            )
-
-        return sa.union(*unions)
-
     def create_views(self, schema, tables, user_defined_fkey_tables):
 
         views = sa.inspect(self.engine).get_view_names(schema)
 
-        logger.debug(f'Creating view: {schema}.{PRIMARY_KEY_VIEWNAME}')
+        logger.debug(f'Creating view: {schema}.{PRIMARY_KEY_VIEW}')
         self.__engine.execute(
             CreateView(
                 schema,
-                PRIMARY_KEY_VIEWNAME,
+                PRIMARY_KEY_VIEW,
                 self._primary_key_view_statement(schema, tables, views),
             )
         )
+        self.__engine.execute(DropIndex(PRIMARY_KEY_INDEX))
         self.__engine.execute(
             CreateIndex(
-                'pkey_idx',
+                PRIMARY_KEY_INDEX,
                 schema,
-                PRIMARY_KEY_VIEWNAME,
+                PRIMARY_KEY_VIEW,
                 ['table_name'],
             )
         )
-        logger.debug(f'Created view: {schema}.{PRIMARY_KEY_VIEWNAME}')
+        logger.debug(f'Created view: {schema}.{PRIMARY_KEY_VIEW}')
 
-        logger.debug(f'Creating view: {schema}.{FOREIGN_KEY_VIEWNAME}')
+        logger.debug(f'Creating view: {schema}.{FOREIGN_KEY_VIEW}')
+
+        # if view exists, query it first
+        rows = {}
+        if FOREIGN_KEY_VIEW in views:
+            _rows = self.fetchall(
+                sa.select([
+                    sa.column('table_name').label('table_name'),
+                    sa.func.ARRAY_AGG(
+                        sa.column('fkeys')
+                    ).label(
+                        'foreign_keys'
+                    ),
+                ]).select_from(
+                    sa.text(FOREIGN_KEY_VIEW),
+                    sa.func.unnest(
+                        sa.column('foreign_keys')
+                    ).alias(
+                        'fkeys'
+                    )
+                ).group_by(
+                    sa.column('table_name')
+                )
+            )
+            rows = _rows_to_dict(_rows)
+
+        _rows = self.fetchall(
+            self._foreign_key_view_statement(tables)
+        )
+        if _rows:
+            _rows = _rows_to_dict(_rows)
+            rows = _merge_dict(rows, _rows)
+
+        if user_defined_fkey_tables:
+            rows = _merge_dict(rows, user_defined_fkey_tables)
+
+        # if view exists, drop it first, we have all the existing data
+        if FOREIGN_KEY_VIEW in views:
+            self.__engine.execute(DropView(schema, FOREIGN_KEY_VIEW))
+
+        statement = sa.select(
+            Values(
+                sa.column('table_name'),
+                sa.column('foreign_keys'),
+            ).data(
+                [(key, array(value)) for key, value in rows.items()]).alias(
+                'v'
+            )
+        )
         self.__engine.execute(
             CreateView(
                 schema,
-                FOREIGN_KEY_VIEWNAME,
-                self._foreign_key_view_statement(
-                    schema,
-                    tables,
-                    views,
-                    user_defined_fkey_tables,
-                ),
+                FOREIGN_KEY_VIEW,
+                statement,
             )
         )
+        self.__engine.execute(DropIndex(FOREIGN_KEY_INDEX))
         self.__engine.execute(
             CreateIndex(
-                'fkey_idx',
+                FOREIGN_KEY_INDEX,
                 schema,
-                FOREIGN_KEY_VIEWNAME,
+                FOREIGN_KEY_VIEW,
                 ['table_name'],
             )
         )
-        logger.debug(f'Created view: {schema}.{FOREIGN_KEY_VIEWNAME}')
+        logger.debug(f'Created view: {schema}.{FOREIGN_KEY_VIEW}')
 
     def drop_views(self, schema):
-        for view in [PRIMARY_KEY_VIEWNAME, FOREIGN_KEY_VIEWNAME]:
+        for view in [PRIMARY_KEY_VIEW, FOREIGN_KEY_VIEW]:
             logger.debug(f'Dropping view: {schema}.{view}')
             self.__engine.execute(DropView(schema, view))
             logger.debug(f'Dropped view: {schema}.{view}')
@@ -1107,3 +1104,30 @@ def compiled_query(query, label=None, literal_binds=False):
     else:
         logging.debug(f'{query}')
         sys.stdout.write(f'{query}')
+
+
+def _rows_to_dict(rows):
+    """
+    Converts list of tuples to dict of sets
+        e.g
+            [('author', ['city_id']), ('book', ['publisher_id'])]
+        becomes {
+            {'author': {'city_id'}, 'book': {'publisher_id'}}
+        }
+    """
+    values = {}
+    for key, value in rows:
+        if key in values:
+            values[key] |= set(value)
+            continue
+        values[key] = set(value)
+    return values
+
+
+def _merge_dict(rows1, rows2):
+    for key, value in rows2.items():
+        if key in rows1:
+            rows1[key] |= set(value)
+            continue
+        rows1[key] = set(value)
+    return rows1
