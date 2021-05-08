@@ -757,10 +757,10 @@ class Sync(Base):
         if self.verbose:
             compiled_query(node._subquery, 'Query')
 
-        row_count = self.query_count(node._subquery)
+        row_count = self.count(node._subquery)
 
         for i, (keys, row, primary_keys) in enumerate(
-            self.query_yield(node._subquery)
+            self.fetchmany(node._subquery)
         ):
 
             progress(i + 1, row_count)

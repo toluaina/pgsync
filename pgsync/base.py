@@ -75,7 +75,7 @@ class Base(object):
         statement = statement.where(sa.column('name') == column)
         if self.verbose:
             compiled_query(statement, 'pg_settings')
-        row = self.query_one(statement)
+        row = self.fetchone(statement)
         if row:
             return row[0]
         return None
@@ -105,7 +105,7 @@ class Base(object):
         if self.verbose:
             compiled_query(statement, 'has_permission')
         try:
-            return self.query_one(statement)[0]
+            return self.fetchone(statement)[0]
         except Exception as e:
             logger.exception(f'{e}')
         return False
@@ -137,7 +137,11 @@ class Base(object):
             model.append_column(sa.Column('xmin', sa.BigInteger))
             model.append_column(sa.Column('oid', sa.dialects.postgresql.OID))
             model = model.alias()
-            setattr(model, 'primary_keys', _get_primary_keys(model))
+            setattr(
+                model,
+                'primary_keys',
+                sorted([primary_key.key for primary_key in model.primary_key]),
+            )
             self.models[f'{model.original}'] = model
 
         return self.models[name]
@@ -247,7 +251,7 @@ class Base(object):
                 sa.column('plugin') == plugin,
             ])
         )
-        return self.query(statement)
+        return self.fetchall(statement)
 
     def create_replication_slot(self, slot_name):
         """
@@ -266,7 +270,7 @@ class Base(object):
                 PLUGIN,
             )
         )
-        return self.query_one(statement)
+        return self.fetchone(statement)
 
     def drop_replication_slot(self, slot_name):
         """
@@ -281,7 +285,7 @@ class Base(object):
                 sa.func.PG_DROP_REPLICATION_SLOT(slot_name),
             )
             try:
-                return self.query_one(statement)
+                return self.fetchone(statement)
             except Exception as e:
                 logger.exception(f'{e}')
                 raise
@@ -332,7 +336,7 @@ class Base(object):
             statement = statement.where(sa.and_(*filters))
         if self.verbose:
             compiled_query(statement, 'logical_slot_get_changes')
-        return self.query(statement)
+        return self.fetchall(statement)
 
     def logical_slot_peek_changes(
         self,
@@ -375,7 +379,7 @@ class Base(object):
             statement = statement.where(sa.and_(*filters))
         if self.verbose:
             compiled_query(statement, 'logical_slot_peek_changes')
-        return self.query(statement)
+        return self.fetchall(statement)
 
     # Views...
     def _primary_key_view_statement(self, schema, tables, views):
@@ -689,40 +693,6 @@ class Base(object):
                 )
                 self.execute(query)
 
-    def execute(self, query, values=None, options=None):
-        """Execute a query command."""
-        conn = self.__engine.connect()
-        try:
-            if options:
-                conn = conn.execution_options(**options)
-            conn.execute(query, values)
-            conn.close()
-        except Exception as e:
-            logger.exception(f'Exception {e}')
-            raise
-
-    def fetchall(self, query):
-        """Fetch all rows from a query."""
-        conn = self.__engine.connect()
-        try:
-            rows = conn.execute(query).fetchall()
-            conn.close()
-        except Exception as e:
-            logger.exception(f'Exception {e}')
-            raise
-        return rows
-
-    def fetchone(self, query):
-        """Fetch one row query."""
-        conn = self.__engine.connect()
-        try:
-            row = conn.execute(query).fetchone()
-            conn.close()
-        except Exception as e:
-            logger.exception(f'Exception {e}')
-            raise
-        return row
-
     @property
     def txid_current(self):
         """
@@ -856,31 +826,45 @@ class Base(object):
 
     # Querying...
 
-    def query_one(self, query):
+    def execute(self, statement, values=None, options=None):
+        """Execute a query statement."""
         conn = self.__engine.connect()
         try:
-            row = conn.execute(query).fetchone()
+            if options:
+                conn = conn.execution_options(**options)
+            conn.execute(statement, values)
+            conn.close()
+        except Exception as e:
+            logger.exception(f'Exception {e}')
+            raise
+
+    def fetchone(self, statement):
+        """Fetch one row query."""
+        conn = self.__engine.connect()
+        try:
+            row = conn.execute(statement).fetchone()
             conn.close()
         except Exception as e:
             logger.exception(f'Exception {e}')
             raise
         return row
 
-    def query(self, query):
+    def fetchall(self, statement):
+        """Fetch all rows from a query statement."""
         conn = self.__engine.connect()
         try:
-            rows = conn.execute(query).fetchall()
+            rows = conn.execute(statement).fetchall()
             conn.close()
         except Exception as e:
             logger.exception(f'Exception {e}')
             raise
         return rows
 
-    def query_yield(self, query, chunk_size=None):
+    def fetchmany(self, statement, chunk_size=None):
         chunk_size = chunk_size or QUERY_CHUNK_SIZE
         with self.__engine.connect() as conn:
             result = conn.execution_options(stream_results=True).execute(
-                query.select()
+                statement.select()
             )
             while True:
                 chunk = result.fetchmany(chunk_size)
@@ -889,12 +873,14 @@ class Base(object):
                 for keys, row, *primary_keys in chunk:
                     yield keys, row, primary_keys
 
-    def query_count(self, query):
+    def count(self, statement):
         with self.__engine.connect() as conn:
-            query = query.original.with_only_columns(
-                [sa.func.count()]
-            ).order_by(None)
-            return conn.execute(query).scalar()
+            statement = statement.original.with_only_columns([
+                sa.func.count()
+            ]).order_by(
+                None
+            )
+            return conn.execute(statement).scalar()
 
 
 # helper methods
@@ -916,10 +902,6 @@ def subtransactions(session):
                 self.session.rollback()
                 raise
     return ControlledExecution(session)
-
-
-def _get_primary_keys(model):
-    return sorted([primary_key.key for primary_key in model.primary_key])
 
 
 def _get_foreign_keys(model_a, model_b):
