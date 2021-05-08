@@ -40,7 +40,7 @@ from .settings import (
     REPLICATION_SLOT_CLEANUP_INTERVAL,
 )
 from .transform import get_private_keys, transform
-from .utils import get_config, progress, show_settings, threaded, Timer
+from .utils import get_config, show_settings, threaded, Timer
 
 logger = logging.getLogger(__name__)
 
@@ -759,46 +759,56 @@ class Sync(Base):
 
         row_count = self.count(node._subquery)
 
-        for i, (keys, row, primary_keys) in enumerate(
-            self.fetchmany(node._subquery)
-        ):
+        with click.progressbar(
+            length=row_count,
+            show_pos=True,
+            show_percent=True,
+            show_eta=True,
+            fill_char='=',
+            empty_char='-',
+            width=50,
+        ) as bar:
 
-            progress(i + 1, row_count)
+            for i, (keys, row, primary_keys) in enumerate(
+                self.fetchmany(node._subquery)
+            ):
 
-            row = transform(row, self.nodes)
-            row[META] = get_private_keys(keys)
-            if extra:
-                if extra['table'] not in row[META]:
-                    row[META][extra['table']] = {}
-                if extra['column'] not in row[META][extra['table']]:
-                    row[META][extra['table']][extra['column']] = []
-                row[META][extra['table']][extra['column']].append(0)
+                bar.update(1)
 
-            if self.verbose:
-                print(f'{(i+1)})')
-                print(f'Pkeys: {primary_keys}')
-                pprint.pprint(row)
-                print('-' * 10)
+                row = transform(row, self.nodes)
+                row[META] = get_private_keys(keys)
+                if extra:
+                    if extra['table'] not in row[META]:
+                        row[META][extra['table']] = {}
+                    if extra['column'] not in row[META][extra['table']]:
+                        row[META][extra['table']][extra['column']] = []
+                    row[META][extra['table']][extra['column']].append(0)
 
-            doc = {
-                '_id': self.get_doc_id(primary_keys),
-                '_index': self.index,
-                '_source': row,
-            }
+                if self.verbose:
+                    print(f'{(i+1)})')
+                    print(f'Pkeys: {primary_keys}')
+                    pprint.pprint(row)
+                    print('-' * 10)
 
-            if self.routing:
-                doc['_routing'] = row[self.routing]
+                doc = {
+                    '_id': self.get_doc_id(primary_keys),
+                    '_index': self.index,
+                    '_source': row,
+                }
 
-            if self.es.version[0] < 7:
-                doc['_type'] = '_doc'
+                if self.routing:
+                    doc['_routing'] = row[self.routing]
 
-            if self._plugins:
-                doc = list(self._plugins.transform([doc]))[0]
+                if self.es.version[0] < 7:
+                    doc['_type'] = '_doc'
 
-            if self.pipeline:
-                doc['pipeline'] = self.pipeline
+                if self._plugins:
+                    doc = list(self._plugins.transform([doc]))[0]
 
-            yield doc
+                if self.pipeline:
+                    doc['pipeline'] = self.pipeline
+
+                yield doc
 
     def sync(self, txmin=None, txmax=None):
         """
