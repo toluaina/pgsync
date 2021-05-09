@@ -64,7 +64,11 @@ class Sync(Base):
         self.nodes = document.get('nodes', {})
         self.setting = document.get('setting')
         self.routing = document.get('routing')
-        super().__init__(document.get('database', self.index), **params)
+        super().__init__(
+            document.get('database', self.index),
+            verbose=verbose,
+            **params
+        )
         self.es = ElasticHelper()
         self.__name = re.sub(
             '[^0-9a-zA-Z_]+', '', f"{self.database}_{self.index}"
@@ -72,7 +76,6 @@ class Sync(Base):
         self._checkpoint = None
         self._plugins = None
         self._truncate = False
-        self.verbose = verbose
         self._checkpoint_file = f".{self.__name}"
         self.redis = RedisQueue(self.__name)
         self.tree = Tree(self)
@@ -803,7 +806,7 @@ class Sync(Base):
                     doc['_type'] = '_doc'
 
                 if self._plugins:
-                    doc = list(self._plugins.transform([doc]))[0]
+                    doc = next(self._plugins.transform([doc]))
 
                 if self.pipeline:
                     doc['pipeline'] = self.pipeline
@@ -970,7 +973,7 @@ class Sync(Base):
         logger.debug(f'pull txmin: {txmin} txmax: {txmax}')
         # forward pass sync
         self.sync(txmin=txmin, txmax=txmax)
-        # now sync up to txmax to capture everything we might have missed
+        # now sync up to txmax to capture everything we may have missed
         self.logical_slot_changes(txmin=txmin, txmax=txmax)
         self._truncate = True
 

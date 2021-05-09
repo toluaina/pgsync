@@ -62,8 +62,10 @@ class Plugins(object):
             paths.extend([path for path in plugins.__path__])
 
         for pkg_path in paths:
+
             if pkg_path in self._paths:
                 continue
+
             self._paths.append(pkg_path)
             for pkg in [
                 path for path in os.listdir(pkg_path) if os.path.isdir(

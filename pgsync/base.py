@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 
 class Base(object):
 
-    def __init__(self, database, *args, **kwargs):
+    def __init__(self, database, verbose=False, *args, **kwargs):
         """Initialize the base class constructor.
 
         Args:
@@ -59,6 +59,7 @@ class Base(object):
         # models is a dict of f'{schema}.{table}'
         self.models = {}
         self.__metadata = {}
+        self.verbose = verbose
 
     def connect(self):
         """Connect to database."""
@@ -70,12 +71,16 @@ class Base(object):
             raise
 
     def pg_settings(self, column):
-        statement = sa.select([sa.column('setting')])
-        statement = statement.select_from(sa.text('pg_settings'))
-        statement = statement.where(sa.column('name') == column)
-        if self.verbose:
-            compiled_query(statement, 'pg_settings')
-        row = self.fetchone(statement)
+        row = self.fetchone(
+            sa.select([
+                sa.column('setting')
+            ]).select_from(
+                sa.text('pg_settings')
+            ).where(
+                sa.column('name') == column
+            ),
+            label='pg_settings',
+        )
         if row:
             return row[0]
         return None
@@ -94,18 +99,18 @@ class Base(object):
         if permission not in ('usecreatedb', 'usesuper', 'userepl'):
             raise RuntimeError(f'Invalid user permission {permission}')
 
-        statement = sa.select([sa.column(permission)]).select_from(
-            sa.text('pg_user')
-        ).where(
-            sa.and_(*[
-                sa.column('usename') == username,
-                sa.column(permission) == True, # noqa
-            ])
-        )
-        if self.verbose:
-            compiled_query(statement, 'has_permission')
         try:
-            return self.fetchone(statement)[0]
+            return self.fetchone(
+                sa.select([sa.column(permission)]).select_from(
+                    sa.text('pg_user')
+                ).where(
+                    sa.and_(*[
+                        sa.column('usename') == username,
+                        sa.column(permission) == True, # noqa
+                    ])
+                ),
+                label='has_permission',
+            )[0]
         except Exception as e:
             logger.exception(f'{e}')
         return False
@@ -140,7 +145,9 @@ class Base(object):
             setattr(
                 model,
                 'primary_keys',
-                sorted([primary_key.key for primary_key in model.primary_key]),
+                sorted([
+                    primary_key.key for primary_key in model.primary_key
+                ]),
             )
             self.models[f'{model.original}'] = model
 
@@ -242,16 +249,18 @@ class Base(object):
 
         SELECT * FROM PG_REPLICATION_SLOTS
         """
-        statement = sa.select(['*']).select_from(
-            sa.text('PG_REPLICATION_SLOTS')
-        ).where(
-            sa.and_(*[
-                sa.column('slot_name') == slot_name,
-                sa.column('slot_type') == slot_type,
-                sa.column('plugin') == plugin,
-            ])
+        return self.fetchall(
+            sa.select(['*']).select_from(
+                sa.text('PG_REPLICATION_SLOTS')
+            ).where(
+                sa.and_(*[
+                    sa.column('slot_name') == slot_name,
+                    sa.column('slot_type') == slot_type,
+                    sa.column('plugin') == plugin,
+                ])
+            ),
+            label='replication_slots',
         )
-        return self.fetchall(statement)
 
     def create_replication_slot(self, slot_name):
         """
@@ -264,13 +273,15 @@ class Base(object):
         SELECT * FROM PG_REPLICATION_SLOTS
         """
         logger.debug(f'Creating replication slot: {slot_name}')
-        statement = sa.select(['*']).select_from(
-            sa.func.PG_CREATE_LOGICAL_REPLICATION_SLOT(
-                slot_name,
-                PLUGIN,
-            )
+        return self.fetchone(
+            sa.select(['*']).select_from(
+                sa.func.PG_CREATE_LOGICAL_REPLICATION_SLOT(
+                    slot_name,
+                    PLUGIN,
+                )
+            ),
+            label='create_replication_slot',
         )
-        return self.fetchone(statement)
 
     def drop_replication_slot(self, slot_name):
         """
@@ -281,11 +292,13 @@ class Base(object):
         """
         logger.debug(f'Dropping replication slot: {slot_name}')
         if self.replication_slots(slot_name):
-            statement = sa.select(['*']).select_from(
-                sa.func.PG_DROP_REPLICATION_SLOT(slot_name),
-            )
             try:
-                return self.fetchone(statement)
+                return self.fetchone(
+                    sa.select(['*']).select_from(
+                        sa.func.PG_DROP_REPLICATION_SLOT(slot_name),
+                    ),
+                    label='drop_replication_slot',
+                )
             except Exception as e:
                 logger.exception(f'{e}')
                 raise
@@ -334,9 +347,7 @@ class Base(object):
             )
         if filters:
             statement = statement.where(sa.and_(*filters))
-        if self.verbose:
-            compiled_query(statement, 'logical_slot_get_changes')
-        return self.fetchall(statement)
+        return self.fetchall(statement, label='logical_slot_get_changes')
 
     def logical_slot_peek_changes(
         self,
@@ -377,9 +388,7 @@ class Base(object):
             )
         if filters:
             statement = statement.where(sa.and_(*filters))
-        if self.verbose:
-            compiled_query(statement, 'logical_slot_peek_changes')
-        return self.fetchall(statement)
+        return self.fetchall(statement, label='logical_slot_peek_changes')
 
     # Views...
     def _primary_key_view_statement(self, schema, tables, views):
@@ -700,10 +709,10 @@ class Base(object):
 
         SELECT txid_current()
         """
-        statement = sa.select(['*']).select_from(
-            sa.func.TXID_CURRENT()
-        )
-        return self.fetchone(statement)[0]
+        return self.fetchone(
+            sa.select(['*']).select_from(sa.func.TXID_CURRENT()),
+            label='txid_current',
+        )[0]
 
     def parse_value(self, type_, value):
         """
@@ -838,8 +847,11 @@ class Base(object):
             logger.exception(f'Exception {e}')
             raise
 
-    def fetchone(self, statement):
+    def fetchone(self, statement, label=None, literal_binds=False):
         """Fetch one row query."""
+        if self.verbose:
+            compiled_query(statement, label=label, literal_binds=literal_binds)
+
         conn = self.__engine.connect()
         try:
             row = conn.execute(statement).fetchone()
@@ -849,8 +861,11 @@ class Base(object):
             raise
         return row
 
-    def fetchall(self, statement):
+    def fetchall(self, statement, label=None, literal_binds=False):
         """Fetch all rows from a query statement."""
+        if self.verbose:
+            compiled_query(statement, label=label, literal_binds=literal_binds)
+
         conn = self.__engine.connect()
         try:
             rows = conn.execute(statement).fetchall()
@@ -875,12 +890,11 @@ class Base(object):
 
     def count(self, statement):
         with self.__engine.connect() as conn:
-            statement = statement.original.with_only_columns([
-                sa.func.count()
-            ]).order_by(
-                None
-            )
-            return conn.execute(statement).scalar()
+            return conn.execute(
+                statement.original.with_only_columns([
+                    sa.func.count()
+                ]).order_by(None)
+            ).scalar()
 
 
 # helper methods
