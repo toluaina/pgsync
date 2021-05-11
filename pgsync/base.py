@@ -286,9 +286,6 @@ class Base(object):
     def drop_replication_slot(self, slot_name):
         """
         Drop a replication slot.
-
-        TODO:
-        - Only drop the replication slot if it exists
         """
         logger.debug(f'Dropping replication slot: {slot_name}')
         if self.replication_slots(slot_name):
