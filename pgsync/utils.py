@@ -22,6 +22,7 @@ from .settings import (
     REDIS_DB,
     REDIS_HOST,
     REDIS_PORT,
+    REDIS_SCHEME,
     SCHEMA,
 )
 
@@ -80,7 +81,7 @@ def show_settings(schema=None, params={}):
             f'{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}'
         )
     logger.info('\033[4mRedis\033[0m:')
-    logger.info(f'URL: redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}')
+    logger.info(f'URL: {REDIS_SCHEME}://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}')
     logger.info('-' * 65)
 
 
@@ -134,7 +135,7 @@ def get_postgres_url(
     return f'postgresql://{user}@{host}:{port}/{database}'
 
 
-def get_redis_url(host=None, password=None, port=None, db=None):
+def get_redis_url(scheme=None, host=None, password=None, port=None, db=None):
     """
     Return the URL to connect to Redis.
     """
@@ -142,10 +143,11 @@ def get_redis_url(host=None, password=None, port=None, db=None):
     password = password or REDIS_AUTH
     port = port or REDIS_PORT
     db = db or REDIS_DB
+    scheme = scheme or REDIS_SCHEME
     if password:
-        return f'redis://:{quote_plus(password)}@{host}:{port}/{db}'
+        return f'{scheme}://:{quote_plus(password)}@{host}:{port}/{db}'
     logger.debug('Connecting to Redis without password.')
-    return f'redis://{host}:{port}/{db}'
+    return f'{scheme}://{host}:{port}/{db}'
 
 
 def get_config(config=None):

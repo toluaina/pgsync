@@ -82,8 +82,8 @@ class RedisQueue(object):
         self.__db.delete(self.key)
 
 
-def redis_engine(host=None, password=None, port=None, db=None):
-    url = get_redis_url(host=host, password=password, port=port, db=db)
+def redis_engine(scheme=None, host=None, password=None, port=None, db=None):
+    url = get_redis_url(scheme=scheme, host=host, password=password, port=port, db=db)
     try:
         conn = Redis.from_url(
             url,
