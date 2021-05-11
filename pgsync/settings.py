@@ -71,6 +71,7 @@ PG_SSLMODE = env.str('PG_SSLMODE', default=None)
 PG_SSLROOTCERT = env.str('PG_SSLROOTCERT', default=None)
 
 # Redis:
+REDIS_SCHEME = env.str('REDIS_SCHEME', default='redis')
 REDIS_HOST = env.str('REDIS_HOST', default='localhost')
 REDIS_PORT = env.int('REDIS_PORT', default=6379)
 REDIS_DB = env.int('REDIS_DB', default=0)
