@@ -27,7 +27,7 @@ class Plugins(object):
         self.reload()
 
     def reload(self):
-        """Reload the plugin from the available list."""
+        """Reload the plugins from the available list."""
         self.plugins = []
         self._paths = []
         logger.debug(f'Reloading plugins from package: {self.package}')
@@ -75,7 +75,7 @@ class Plugins(object):
                 self.walk(f'{package}.{pkg}')
 
     def transform(self, docs):
-        """Apply all of the plugins to each doc."""
+        """Apply all plugins to each doc."""
         for doc in docs:
             for plugin in self.plugins:
                 logger.debug(f'Plugin: {plugin.name}')

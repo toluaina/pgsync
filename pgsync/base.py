@@ -303,6 +303,43 @@ class Base(object):
                 logger.exception(f'{e}')
                 raise
 
+    def _logical_slot_changes(
+        self,
+        slot_name,
+        func,
+        txmin=None,
+        txmax=None,
+        upto_lsn=None,
+        upto_nchanges=None,
+    ):
+        filters = []
+        statement = sa.select(
+            [sa.column('xid'), sa.column('data')]
+        ).select_from(
+            func(
+                slot_name,
+                upto_lsn,
+                upto_nchanges,
+            )
+        )
+        if txmin:
+            filters.append(
+                sa.cast(
+                    sa.cast(sa.column('xid'), sa.Text),
+                    sa.BigInteger,
+                ) >= txmin
+            )
+        if txmax:
+            filters.append(
+                sa.cast(
+                    sa.cast(sa.column('xid'), sa.Text),
+                    sa.BigInteger,
+                ) < txmax
+            )
+        if filters:
+            statement = statement.where(sa.and_(*filters))
+        return self.fetchall(statement)
+
     def logical_slot_get_changes(
         self,
         slot_name,
@@ -320,34 +357,14 @@ class Base(object):
         To get ALL changes and data in existing replication slot:
         SELECT * FROM PG_LOGICAL_SLOT_GET_CHANGES('testdb', NULL, NULL)
         """
-        filters = []
-        statement = sa.select(
-            [sa.column('xid'), sa.column('data')]
+        return self._logical_slot_changes(
+            slot_name,
+            sa.func.PG_LOGICAL_SLOT_GET_CHANGES,
+            txmin=txmin,
+            txmax=txmax,
+            upto_lsn=upto_lsn,
+            upto_nchanges=upto_nchanges,
         )
-        statement = statement.select_from(
-            sa.func.PG_LOGICAL_SLOT_GET_CHANGES(
-                slot_name,
-                upto_lsn,
-                upto_nchanges,
-            )
-        )
-        if txmin:
-            filters.append(
-                sa.cast(
-                    sa.cast(sa.column('xid'), sa.Text),
-                    sa.BigInteger,
-                ) >= txmin
-            )
-        if txmax:
-            filters.append(
-                sa.cast(
-                    sa.cast(sa.column('xid'), sa.Text),
-                    sa.BigInteger,
-                ) < txmax
-            )
-        if filters:
-            statement = statement.where(sa.and_(*filters))
-        return self.fetchall(statement, label='logical_slot_get_changes')
 
     def logical_slot_peek_changes(
         self,
@@ -362,33 +379,14 @@ class Base(object):
 
         SELECT * FROM PG_LOGICAL_SLOT_PEEK_CHANGES('testdb', NULL, 1)
         """
-        filters = []
-        statement = sa.select(
-            [sa.column('xid'), sa.column('data')]
-        ).select_from(
-            sa.func.PG_LOGICAL_SLOT_PEEK_CHANGES(
-                slot_name,
-                upto_lsn,
-                upto_nchanges,
-            )
+        return self._logical_slot_changes(
+            slot_name,
+            sa.func.PG_LOGICAL_SLOT_PEEK_CHANGES,
+            txmin=txmin,
+            txmax=txmax,
+            upto_lsn=upto_lsn,
+            upto_nchanges=upto_nchanges,
         )
-        if txmin:
-            filters.append(
-                sa.cast(
-                    sa.cast(sa.column('xid'), sa.Text),
-                    sa.BigInteger,
-                ) >= txmin
-            )
-        if txmax:
-            filters.append(
-                sa.cast(
-                    sa.cast(sa.column('xid'), sa.Text),
-                    sa.BigInteger,
-                ) < txmax
-            )
-        if filters:
-            statement = statement.where(sa.and_(*filters))
-        return self.fetchall(statement, label='logical_slot_peek_changes')
 
     # Views...
     def _primary_key_view_statement(self, schema, tables, views):
