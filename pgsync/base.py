@@ -603,7 +603,9 @@ class Base(object):
                 sa.column('table_name'),
                 sa.column('foreign_keys'),
             ).data([
-                (key, array(value)) for key, value in rows.items()
+                (
+                    (key, array(value)) for key, value in rows.items()
+                ) if rows else (None, None)
             ]).alias(
                 'v'
             )
