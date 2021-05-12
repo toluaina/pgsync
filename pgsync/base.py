@@ -598,17 +598,17 @@ class Base(object):
         if FOREIGN_KEY_VIEW in views:
             self.__engine.execute(DropView(schema, FOREIGN_KEY_VIEW))
 
+        values = [(None, None)]
+        if rows:
+            values = [(key, array(value)) for key, value in rows.items()]
+
         statement = sa.select(
             Values(
                 sa.column('table_name'),
                 sa.column('foreign_keys'),
-            ).data([
-                (
-                    (key, array(value)) for key, value in rows.items()
-                ) if rows else (None, None)
-            ]).alias(
-                'v'
-            )
+            ).data(
+                values
+            ).alias('v')
         )
         self.__engine.execute(
             CreateView(
