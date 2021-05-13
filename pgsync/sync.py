@@ -164,7 +164,7 @@ class Sync(Base):
 
     def setup(self):
         """Create the database triggers and replication slot."""
-        self.teardown(drop_views=False)
+        self.teardown(drop_view=False)
 
         for schema in self.schemas:
             tables = set([])
@@ -188,10 +188,10 @@ class Sync(Base):
                     user_defined_fkey_tables.setdefault(node.table, set([]))
                     user_defined_fkey_tables[node.table] |= set(columns)
             self.create_triggers(schema, tables=tables)
-            self.create_views(schema, tables, user_defined_fkey_tables)
+            self.create_view(schema, tables, user_defined_fkey_tables)
         self.create_replication_slot(self.__name)
 
-    def teardown(self, drop_views=True):
+    def teardown(self, drop_view=True):
         """Drop the database triggers and replication slot."""
 
         try:
@@ -206,8 +206,8 @@ class Sync(Base):
                 tables |= set(node.relationship.through_tables)
                 tables |= set([node.table])
             self.drop_triggers(schema=schema, tables=tables)
-            if drop_views:
-                self.drop_views(schema=schema)
+            if drop_view:
+                self.drop_view(schema=schema)
         self.drop_replication_slot(self.__name)
 
     def get_doc_id(self, primary_keys):

@@ -168,13 +168,8 @@ PLUGIN = 'test_decoding'
 TRIGGER_FUNC = 'table_notify'
 
 # Views
-# added underscore to reduce collision
-PRIMARY_KEY_VIEW = '_pkey_view'
-FOREIGN_KEY_VIEW = '_fkey_view'
-# Indices
-PRIMARY_KEY_INDEX = 'pkey_idx'
-FOREIGN_KEY_INDEX = 'fkey_idx'
-
+# added underscore to reduce potential for collisions
+MATERIALIZED_VIEW = '_view'
 
 # Primary key delimiter
 PRIMARY_KEY_DELIMITER = '|'
