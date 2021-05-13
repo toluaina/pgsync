@@ -20,13 +20,13 @@ class TestElasticsearchHelper(object):
     """Elasticsearch helper tests."""
 
     def test_get_elasticsearch_init(self, mocker):
-        url = 'http://some-domain:33'
+        url = "http://some-domain:33"
         with mock.patch(
-            'pgsync.elastichelper.get_elasticsearch_url',
+            "pgsync.elastichelper.get_elasticsearch_url",
             return_value=url,
         ) as mock_get_elasticsearch_url:
             with mock.patch(
-                'pgsync.elastichelper.get_elasticsearch_client',
+                "pgsync.elastichelper.get_elasticsearch_client",
                 return_value=MagicMock(),
             ) as mock_get_elasticsearch_client:
                 ElasticHelper()
@@ -34,10 +34,10 @@ class TestElasticsearchHelper(object):
                 mock_get_elasticsearch_client.assert_called_once_with(url)
 
     def test_get_elasticsearch_client(self, mocker):
-        url = 'http://some-domain:33'
+        url = "http://some-domain:33"
 
         with mock.patch(
-            'pgsync.elastichelper.Elasticsearch',
+            "pgsync.elastichelper.Elasticsearch",
             return_value=MagicMock(),
         ) as mocker_elasticsearch:
             get_elasticsearch_client(url)
@@ -53,24 +53,24 @@ class TestElasticsearchHelper(object):
             )
 
         with mock.patch(
-            'pgsync.elastichelper.ELASTICSEARCH_AWS_HOSTED',
+            "pgsync.elastichelper.ELASTICSEARCH_AWS_HOSTED",
             returns=True,
         ):
             with mock.patch(
-                'pgsync.elastichelper.Elasticsearch',
+                "pgsync.elastichelper.Elasticsearch",
                 return_value=MagicMock(),
             ) as mocker_elasticsearch:
                 with mock.patch(
-                    'pgsync.elastichelper.AWS4Auth',
-                    return_value='foo',
+                    "pgsync.elastichelper.AWS4Auth",
+                    return_value="foo",
                 ):
                     with mock.patch(
-                        'pgsync.elastichelper.boto3',
+                        "pgsync.elastichelper.boto3",
                         return_value=MagicMock(),
                     ):
                         get_elasticsearch_client(url)
                         mocker_elasticsearch.assert_called_once_with(
-                            hosts=[{'host': url, 'port': 443}],
+                            hosts=[{"host": url, "port": 443}],
                             http_auth=ANY,
                             use_ssl=True,
                             verify_certs=True,

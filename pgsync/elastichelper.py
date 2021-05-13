@@ -48,7 +48,7 @@ class ElasticHelper(object):
         url = get_elasticsearch_url()
         self.__es = get_elasticsearch_client(url)
         self.version = list(
-            map(int, self.__es.info()['version']['number'].split('.'))
+            map(int, self.__es.info()["version"]["number"].split("."))
         )
 
     def teardown(self, index):
@@ -58,10 +58,10 @@ class ElasticHelper(object):
         :arg index: index (or list of indices) to read documents from
         """
         try:
-            logger.debug(f'Deleting index {index}')
+            logger.debug(f"Deleting index {index}")
             self.__es.indices.delete(index=index, ignore=[400, 404])
         except Exception as e:
-            logger.exception(f'Exception {e}')
+            logger.exception(f"Exception {e}")
             raise
 
     def bulk(
@@ -109,13 +109,16 @@ class ElasticHelper(object):
         fields = fields or {}
         search = Search(using=self.__es, index=index)
         # explicitly exclude all fields since we only need the doc _id
-        search = search.source(excludes=['*'])
+        search = search.source(excludes=["*"])
         for key, values in fields.items():
             search = search.query(
                 Bool(
                     filter=[
-                        Q('terms', **{f'{META}.{table}.{key}': values}) |
-                        Q('terms', **{f'{META}.{table}.{key}.keyword': values})
+                        Q("terms", **{f"{META}.{table}.{key}": values})
+                        | Q(
+                            "terms",
+                            **{f"{META}.{table}.{key}.keyword": values},
+                        )
                     ]
                 )
             )
@@ -137,13 +140,7 @@ class ElasticHelper(object):
         if not self.__es.indices.exists(index):
 
             if setting:
-                body.update(
-                    **{
-                        'settings': {
-                            'index': setting
-                        }
-                    }
-                )
+                body.update(**{"settings": {"index": setting}})
 
             mapping = self._build_mapping(node, routing)
             if mapping:
@@ -158,13 +155,13 @@ class ElasticHelper(object):
                 raise
 
             # check the response of the request
-            logger.debug(f'create index response {response}')
+            logger.debug(f"create index response {response}")
             # check the result of the mapping on the index
             logger.debug(
-                f'created mapping: {self.__es.indices.get_mapping(index)}'
+                f"created mapping: {self.__es.indices.get_mapping(index)}"
             )
             logger.debug(
-                f'created setting: {self.__es.indices.get_settings(index)}'
+                f"created setting: {self.__es.indices.get_settings(index)}"
             )
 
     def _build_mapping(self, root, routing):
@@ -172,50 +169,46 @@ class ElasticHelper(object):
 
         for node in traverse_post_order(root):
 
-            rename = node.transform.get('rename', {})
-            mapping = node.transform.get('mapping', {})
+            rename = node.transform.get("rename", {})
+            mapping = node.transform.get("mapping", {})
 
             for key, value in mapping.items():
                 column = rename.get(key, key)
-                column_type = mapping[column]['type']
+                column_type = mapping[column]["type"]
                 if column_type not in ELASTICSEARCH_TYPES:
                     raise RuntimeError(
-                        f'Invalid Elasticsearch type {column_type}'
+                        f"Invalid Elasticsearch type {column_type}"
                     )
 
-                if 'properties' not in node._mapping:
-                    node._mapping['properties'] = {}
-                node._mapping['properties'][column] = {
-                    'type': column_type
-                }
+                if "properties" not in node._mapping:
+                    node._mapping["properties"] = {}
+                node._mapping["properties"][column] = {"type": column_type}
 
                 for parameter, parameter_value in mapping[column].items():
-                    if parameter == 'type':
+                    if parameter == "type":
                         continue
 
                     if parameter not in ELASTICSEARCH_MAPPING_PARAMETERS:
                         raise RuntimeError(
-                            f'Invalid Elasticsearch mapping parameter '
-                            f'{parameter}'
+                            f"Invalid Elasticsearch mapping parameter "
+                            f"{parameter}"
                         )
 
-                    node._mapping['properties'][column][
+                    node._mapping["properties"][column][
                         parameter
                     ] = parameter_value
 
             if node.parent and node._mapping:
-                if 'properties' not in node.parent._mapping:
-                    node.parent._mapping['properties'] = {}
-                node.parent._mapping['properties'][node.label] = node._mapping
+                if "properties" not in node.parent._mapping:
+                    node.parent._mapping["properties"] = {}
+                node.parent._mapping["properties"][node.label] = node._mapping
 
         if routing:
-            root._mapping['_routing'] = {
-                'required': True
-            }
+            root._mapping["_routing"] = {"required": True}
 
         if root._mapping:
             if self.version[0] < 7:
-                root._mapping = {'_doc': root._mapping}
+                root._mapping = {"_doc": root._mapping}
 
             return dict(mappings=root._mapping)
 
@@ -228,11 +221,11 @@ def get_elasticsearch_client(url):
             credentials.access_key,
             credentials.secret_key,
             ELASTICSEARCH_AWS_REGION,
-            'es',
+            "es",
             session_token=credentials.token,
         )
         return Elasticsearch(
-            hosts=[{'host': url, 'port': 443}],
+            hosts=[{"host": url, "port": 443}],
             http_auth=http_auth,
             use_ssl=True,
             verify_certs=True,

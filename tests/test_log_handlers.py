@@ -2,7 +2,7 @@
 import pytest
 
 
-@pytest.mark.usefixtures('table_creator')
+@pytest.mark.usefixtures("table_creator")
 class TestLoghandler(object):
     """Loghandler tests."""
 

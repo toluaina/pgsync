@@ -15,18 +15,18 @@ Base = declarative_base()
 
 
 class Specie(Base):
-    __tablename__ = 'specie'
-    __table_args__ = (
-        UniqueConstraint('name'),
-    )
+    __tablename__ = "specie"
+    __table_args__ = (UniqueConstraint("name"),)
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String, nullable=False)
 
 
 class Unit(Base):
-    __tablename__ = 'unit'
+    __tablename__ = "unit"
     __table_args__ = (
-        UniqueConstraint('name',),
+        UniqueConstraint(
+            "name",
+        ),
     )
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String, nullable=False)
@@ -35,9 +35,11 @@ class Unit(Base):
 
 
 class Structure(Base):
-    __tablename__ = 'structure'
+    __tablename__ = "structure"
     __table_args__ = (
-        UniqueConstraint('name',),
+        UniqueConstraint(
+            "name",
+        ),
     )
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String, nullable=False)
@@ -47,7 +49,7 @@ class Structure(Base):
 
 def setup(config=None):
     for document in json.load(open(config)):
-        database = document.get('database', document['index'])
+        database = document.get("database", document["index"])
         create_database(database)
         engine = pg_engine(database=database)
         Base.metadata.drop_all(engine)
@@ -56,9 +58,9 @@ def setup(config=None):
 
 @click.command()
 @click.option(
-    '--config',
-    '-c',
-    help='Schema config',
+    "--config",
+    "-c",
+    help="Schema config",
     type=click.Path(exists=True),
 )
 def main(config):
@@ -68,5 +70,5 @@ def main(config):
     setup(config)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

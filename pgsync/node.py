@@ -38,19 +38,19 @@ class ForeignKey(object):
     def __init__(self, foreign_key=None):
         """ForeignKey constructor."""
         foreign_key = foreign_key or dict()
-        self.parent = foreign_key.get('parent')
-        self.child = foreign_key.get('child')
+        self.parent = foreign_key.get("parent")
+        self.child = foreign_key.get("child")
         if not set(foreign_key.keys()).issubset(
             set(RELATIONSHIP_FOREIGN_KEYS)
         ):
             raise RelationshipForeignKeyError(
-                'Relationship ForeignKey must contain a parent and child.'
+                "Relationship ForeignKey must contain a parent and child."
             )
-        self.parent = foreign_key.get('parent')
-        self.child = foreign_key.get('child')
+        self.parent = foreign_key.get("parent")
+        self.child = foreign_key.get("child")
 
     def __str__(self):
-        return f'foreign_key: {self.parent}:{self.child}'
+        return f"foreign_key: {self.parent}:{self.child}"
 
     def __repr__(self):
         return self.__str__()
@@ -60,18 +60,16 @@ class Relationship(object):
     def __init__(self, relationship=None):
         """Relationship constructor."""
         relationship = relationship or dict()
-        self.type = relationship.get('type')
-        self.variant = relationship.get('variant')
-        self.through_tables = relationship.get('through_tables', [])
+        self.type = relationship.get("type")
+        self.variant = relationship.get("variant")
+        self.through_tables = relationship.get("through_tables", [])
 
-        if not set(relationship.keys()).issubset(
-            set(RELATIONSHIP_ATTRIBUTES)
-        ):
+        if not set(relationship.keys()).issubset(set(RELATIONSHIP_ATTRIBUTES)):
             attrs = set(relationship.keys()).difference(
                 set(RELATIONSHIP_ATTRIBUTES)
             )
             raise RelationshipAttributeError(
-                f'Relationship attribute {attrs} is invalid.'
+                f"Relationship attribute {attrs} is invalid."
             )
         if self.type and self.type not in RELATIONSHIP_TYPES:
             raise RelationshipTypeError(
@@ -83,16 +81,16 @@ class Relationship(object):
             )
         if self.through_tables and len(self.through_tables) > 1:
             raise MultipleThroughTablesError(
-                f'Multiple through tables: {self.through_tables}'
+                f"Multiple through tables: {self.through_tables}"
             )
-        self.type = _safe_get(relationship, 'type')
-        self.variant = _safe_get(relationship, 'variant')
-        self.through_tables = relationship.get('through_tables', [])
-        self.foreign_key = ForeignKey(relationship.get('foreign_key'))
+        self.type = _safe_get(relationship, "type")
+        self.variant = _safe_get(relationship, "variant")
+        self.through_tables = relationship.get("through_tables", [])
+        self.foreign_key = ForeignKey(relationship.get("foreign_key"))
 
     def __str__(self):
         return (
-            f'relationship: {self.variant}.{self.type}:{self.through_tables}'
+            f"relationship: {self.variant}.{self.type}:{self.through_tables}"
         )
 
     def __repr__(self):
@@ -107,29 +105,27 @@ class Node(object):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-        if 'parent' not in self.__dict__.keys():
+        if "parent" not in self.__dict__.keys():
             self.parent = None
 
-        if 'children' not in self.__dict__.keys():
+        if "children" not in self.__dict__.keys():
             self.children = []
 
         self.table_columns = self.model.columns.keys()
 
         if not self.model.primary_keys:
-            setattr(self.model, 'primary_keys', kwargs.get('primary_key'))
+            setattr(self.model, "primary_keys", kwargs.get("primary_key"))
 
         # columns to fetch
         self.column_names = [
-            column for column in kwargs.get(
-                'columns', []
-            ) if isinstance(column, string_types)
+            column
+            for column in kwargs.get("columns", [])
+            if isinstance(column, string_types)
         ]
         if not self.column_names:
-            self.column_names = [
-                str(column) for column in self.table_columns
-            ]
-            self.column_names.remove('xmin')
-            self.column_names.remove('oid')
+            self.column_names = [str(column) for column in self.table_columns]
+            self.column_names.remove("xmin")
+            self.column_names.remove("oid")
 
         if self.label is None:
             self.label = self.table
@@ -154,7 +150,7 @@ class Node(object):
                         token = int(token)
                     tokenized = tokenized(token)
                 self.columns.append(
-                    '_'.join([x for x in tokens if x not in JSONB_OPERATORS])
+                    "_".join([x for x in tokens if x not in JSONB_OPERATORS])
                 )
                 self.columns.append(tokenized)
                 # compiled_query(self.columns[-1], 'JSONB Query')
@@ -168,13 +164,13 @@ class Node(object):
                 self.columns.append(column_name)
                 self.columns.append(getattr(self.model.c, column_name))
 
-        self.relationship = Relationship(kwargs.get('relationship'))
+        self.relationship = Relationship(kwargs.get("relationship"))
         self._subquery = None
         self._filters = []
         self._mapping = {}
 
     def __str__(self):
-        return f'node: {self.schema}.{self.table}'
+        return f"node: {self.schema}.{self.table}"
 
     def __repr__(self):
         return self.__str__()
@@ -182,9 +178,8 @@ class Node(object):
     @property
     def primary_keys(self):
         return [
-            getattr(
-                self.model.c, str(sa.text(primary_key))
-            ) for primary_key in self.model.primary_keys
+            getattr(self.model.c, str(sa.text(primary_key)))
+            for primary_key in self.model.primary_keys
         ]
 
     @property
@@ -196,7 +191,7 @@ class Node(object):
         """
         returns a fully qualified node name`
         """
-        return f'{self.schema}.{self.table}'
+        return f"{self.schema}.{self.table}"
 
     def add_child(self, node):
         """
@@ -211,9 +206,11 @@ class Node(object):
             )
         self.children.append(node)
 
-    def display(self, prefix='', leaf=True):
-        print(prefix, ' - ' if leaf else '|- ', self.table, sep='') # noqa T001
-        prefix += '   ' if leaf else '|  '
+    def display(self, prefix="", leaf=True):
+        print(
+            prefix, " - " if leaf else "|- ", self.table, sep=""
+        )  # noqa T001
+        prefix += "   " if leaf else "|  "
         for i, child in enumerate(self.children):
             leaf = i == (len(self.children) - 1)
             child.display(prefix, leaf)
@@ -235,7 +232,6 @@ def traverse_post_order(root):
 
 
 class Tree(object):
-
     def __init__(self, base, **kwargs):
         self.base = base
         self.nodes = set()
@@ -243,37 +239,27 @@ class Tree(object):
 
     def build(self, root: dict) -> Node:
 
-        table = root.get('table')
-        schema = root.get('schema', SCHEMA)
+        table = root.get("table")
+        schema = root.get("schema", SCHEMA)
 
         if table is None:
-            raise TableNotInNodeError(
-                f'Table not specified in node: {root}'
-            )
+            raise TableNotInNodeError(f"Table not specified in node: {root}")
         if schema and schema not in self.base.schemas:
-            raise InvalidSchemaError(
-                f'Unknown schema name(s): {schema}'
-            )
+            raise InvalidSchemaError(f"Unknown schema name(s): {schema}")
 
-        if not set(root.keys()).issubset(
-            set(NODE_ATTRIBUTES)
-        ):
-            attrs = set(root.keys()).difference(
-                set(NODE_ATTRIBUTES)
-            )
-            raise NodeAttributeError(
-                f'Unknown node attribute(s): {attrs}'
-            )
+        if not set(root.keys()).issubset(set(NODE_ATTRIBUTES)):
+            attrs = set(root.keys()).difference(set(NODE_ATTRIBUTES))
+            raise NodeAttributeError(f"Unknown node attribute(s): {attrs}")
 
         node = Node(
             model=self.base.model(table, schema=schema),
             table=table,
             schema=schema,
-            primary_key=root.get('primary_key', []),
-            label=root.get('label', table),
-            transform=root.get('transform', {}),
-            columns=root.get('columns', []),
-            relationship=root.get('relationship', {}),
+            primary_key=root.get("primary_key", []),
+            label=root.get("label", table),
+            transform=root.get("transform", {}),
+            columns=root.get("columns", []),
+            relationship=root.get("relationship", {}),
         )
 
         self.nodes.add(node.table)
@@ -281,20 +267,14 @@ class Tree(object):
         for through_table in node.relationship.through_tables:
             self.through_nodes.add(through_table)
 
-        for child in root.get('children', []):
-            if 'table' not in child:
+        for child in root.get("children", []):
+            if "table" not in child:
                 raise TableNotInNodeError(
-                    f'Table not specified in node: {child}'
+                    f"Table not specified in node: {child}"
                 )
-            if not set(child.keys()).issubset(
-                set(NODE_ATTRIBUTES)
-            ):
-                attrs = set(child.keys()).difference(
-                    set(NODE_ATTRIBUTES)
-                )
-                raise NodeAttributeError(
-                    f'Unknown node attribute(s): {attrs}'
-                )
+            if not set(child.keys()).issubset(set(NODE_ATTRIBUTES)):
+                attrs = set(child.keys()).difference(set(NODE_ATTRIBUTES))
+                raise NodeAttributeError(f"Unknown node attribute(s): {attrs}")
             node.add_child(self.build(child))
         return node
 
@@ -325,4 +305,4 @@ def get_node(tree, table, node_dict):
                 primary_key=[],
             )
     else:
-        raise RuntimeError(f'Node for {table} not found')
+        raise RuntimeError(f"Node for {table} not found")

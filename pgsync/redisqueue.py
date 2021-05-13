@@ -14,13 +14,13 @@ logger = logging.getLogger(__name__)
 class RedisQueue(object):
     """Simple Queue with Redis Backend."""
 
-    def __init__(self, name, namespace='queue', **kwargs):
+    def __init__(self, name, namespace="queue", **kwargs):
         """
         The default connection parameters are:
         host = 'localhost', port = 6379, db = 0
         """
         url = get_redis_url(**kwargs)
-        self.key = f'{namespace}:{name}'
+        self.key = f"{namespace}:{name}"
         try:
             self.__db = Redis.from_url(
                 url,
@@ -28,7 +28,7 @@ class RedisQueue(object):
             )
             self.__db.ping()
         except ConnectionError as e:
-            logger.exception(f'Redis server is not running: {e}')
+            logger.exception(f"Redis server is not running: {e}")
             raise
 
     def qsize(self):
@@ -78,12 +78,14 @@ class RedisQueue(object):
         return self.pop(False)
 
     def _delete(self):
-        logger.info(f'Deleting redis key: {self.key}')
+        logger.info(f"Deleting redis key: {self.key}")
         self.__db.delete(self.key)
 
 
 def redis_engine(scheme=None, host=None, password=None, port=None, db=None):
-    url = get_redis_url(scheme=scheme, host=host, password=password, port=port, db=db)
+    url = get_redis_url(
+        scheme=scheme, host=host, password=password, port=port, db=db
+    )
     try:
         conn = Redis.from_url(
             url,
@@ -91,6 +93,6 @@ def redis_engine(scheme=None, host=None, password=None, port=None, db=None):
         )
         conn.ping()
     except ConnectionError as e:
-        logger.exception(f'Redis server is not running: {e}')
+        logger.exception(f"Redis server is not running: {e}")
         raise
     return conn

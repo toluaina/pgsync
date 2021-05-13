@@ -12,9 +12,9 @@ from pgsync.utils import get_config
 
 @click.command()
 @click.option(
-    '--config',
-    '-c',
-    help='Schema config',
+    "--config",
+    "-c",
+    help="Schema config",
     type=click.Path(exists=True),
 )
 def main(config):
@@ -23,71 +23,71 @@ def main(config):
     teardown(drop_db=False, config=config)
     documents = json.load(open(config))
     engine = pg_engine(
-        database=documents[0].get('database', documents[0]['index'])
+        database=documents[0].get("database", documents[0]["index"])
     )
     Session = sessionmaker(bind=engine, autoflush=True)
     session = Session()
 
     users = [
-        Users(email='stephanie.miller@aol.com'),
-        Users(email='nancy.gaines@ibm.com'),
-        Users(email='andrea.cabrera@gmail.com'),
-        Users(email='brandon86@yahoo.com'),
-        Users(email='traci.williams@amazon.com'),
-        Users(email='john.brown@apple.com'),
+        Users(email="stephanie.miller@aol.com"),
+        Users(email="nancy.gaines@ibm.com"),
+        Users(email="andrea.cabrera@gmail.com"),
+        Users(email="brandon86@yahoo.com"),
+        Users(email="traci.williams@amazon.com"),
+        Users(email="john.brown@apple.com"),
     ]
 
     hosts = [
-        Hosts(email='kermit@muppet-labs.inc'),
-        Hosts(email='bert@sesame.street'),
-        Hosts(email='big.bird@sesame.street'),
-        Hosts(email='cookie.monster@sesame.street'),
-        Hosts(email='mr.snuffleupagus@sesame.street'),
-        Hosts(email='grover@sesame.street'),
-        Hosts(email='miss.piggy@muppet-labs.inc'),
+        Hosts(email="kermit@muppet-labs.inc"),
+        Hosts(email="bert@sesame.street"),
+        Hosts(email="big.bird@sesame.street"),
+        Hosts(email="cookie.monster@sesame.street"),
+        Hosts(email="mr.snuffleupagus@sesame.street"),
+        Hosts(email="grover@sesame.street"),
+        Hosts(email="miss.piggy@muppet-labs.inc"),
     ]
 
     cities = [
         Cities(
-            name='Manila',
+            name="Manila",
             country=Countries(
-                name='Philippines',
-                country_code='PH',
-            )
-        ),
-        Cities(
-            name='Lisbon',
-            country=Countries(
-                name='Portugal',
-                country_code='PT',
+                name="Philippines",
+                country_code="PH",
             ),
         ),
         Cities(
-            name='Havana',
+            name="Lisbon",
             country=Countries(
-                name='Cuba',
-                country_code='CU',
+                name="Portugal",
+                country_code="PT",
             ),
         ),
         Cities(
-            name='Copenhagen',
+            name="Havana",
             country=Countries(
-                name='Denmark',
-                country_code='DK',
+                name="Cuba",
+                country_code="CU",
             ),
         ),
         Cities(
-            name='London',
+            name="Copenhagen",
             country=Countries(
-                name='United Kingdom',
-                country_code='UK',
+                name="Denmark",
+                country_code="DK",
             ),
         ),
         Cities(
-            name='Casablanca',
+            name="London",
             country=Countries(
-                name='Morocco',
-                country_code='MA',
+                name="United Kingdom",
+                country_code="UK",
+            ),
+        ),
+        Cities(
+            name="Casablanca",
+            country=Countries(
+                name="Morocco",
+                country_code="MA",
             ),
         ),
     ]
@@ -96,32 +96,32 @@ def main(config):
         Places(
             host=hosts[0],
             city=cities[0],
-            address='Quezon Boulevard',
+            address="Quezon Boulevard",
         ),
         Places(
             host=hosts[1],
             city=cities[1],
-            address='Castelo de São Jorge',
+            address="Castelo de São Jorge",
         ),
         Places(
             host=hosts[2],
             city=cities[2],
-            address='Old Havana',
+            address="Old Havana",
         ),
         Places(
             host=hosts[3],
             city=cities[3],
-            address='Tivoli Gardens',
+            address="Tivoli Gardens",
         ),
         Places(
             host=hosts[4],
             city=cities[4],
-            address='Buckingham Palace',
+            address="Buckingham Palace",
         ),
         Places(
             host=hosts[5],
             city=cities[5],
-            address='Medina',
+            address="Medina",
         ),
     ]
 
@@ -136,7 +136,7 @@ def main(config):
                 num_nights=4,
             ),
             rating=1,
-            review_body='The rooms were left in a tolerable state',
+            review_body="The rooms were left in a tolerable state",
         ),
         Reviews(
             booking=Bookings(
@@ -148,7 +148,7 @@ def main(config):
                 num_nights=3,
             ),
             rating=2,
-            review_body='I found my place wonderfully taken care of',
+            review_body="I found my place wonderfully taken care of",
         ),
         Reviews(
             booking=Bookings(
@@ -160,7 +160,7 @@ def main(config):
                 num_nights=4,
             ),
             rating=3,
-            review_body='All of my house rules were respected',
+            review_body="All of my house rules were respected",
         ),
         Reviews(
             booking=Bookings(
@@ -172,7 +172,7 @@ def main(config):
                 num_nights=5,
             ),
             rating=4,
-            review_body='Such a pleasure to host and welcome these guests',
+            review_body="Such a pleasure to host and welcome these guests",
         ),
         Reviews(
             booking=Bookings(
@@ -184,7 +184,7 @@ def main(config):
                 num_nights=3,
             ),
             rating=5,
-            review_body='We would be happy to host them again',
+            review_body="We would be happy to host them again",
         ),
         Reviews(
             booking=Bookings(
@@ -196,7 +196,7 @@ def main(config):
                 num_nights=10,
             ),
             rating=3,
-            review_body='Please do not visit our town ever again!',
+            review_body="Please do not visit our town ever again!",
         ),
     ]
 
@@ -208,5 +208,5 @@ def main(config):
         session.add_all(reviews)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

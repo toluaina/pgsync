@@ -22,23 +22,23 @@ def do_insert(session, nsize):
         )
         books.add(book)
 
-    with Timer(f'Created {nsize} books in'):
+    with Timer(f"Created {nsize} books in"):
         try:
             session.add_all(books)
             session.commit()
         except Exception as e:
-            print(f'Exception {e}')
+            print(f"Exception {e}")
             session.rollback()
 
 
 @click.command()
 @click.option(
-    '--config',
-    '-c',
-    help='Schema config',
+    "--config",
+    "-c",
+    help="Schema config",
     type=click.Path(exists=True),
 )
-@click.option('--nsize', '-n', default=5000, help='Number of samples')
+@click.option("--nsize", "-n", default=5000, help="Number of samples")
 def main(config, nsize):
 
     show_settings()
@@ -46,7 +46,7 @@ def main(config, nsize):
     config = get_config(config)
     documents = json.load(open(config))
     engine = pg_engine(
-        database=documents[0].get('database', documents[0]['index'])
+        database=documents[0].get("database", documents[0]["index"])
     )
     Session = sessionmaker(bind=engine, autoflush=False, autocommit=False)
     session = Session()
@@ -54,5 +54,5 @@ def main(config, nsize):
     do_insert(session, nsize)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

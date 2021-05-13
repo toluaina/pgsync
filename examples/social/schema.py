@@ -13,10 +13,8 @@ Base = declarative_base()
 
 
 class User(Base):
-    __tablename__ = 'user'
-    __table_args__ = (
-        UniqueConstraint('name'),
-    )
+    __tablename__ = "user"
+    __table_args__ = (UniqueConstraint("name"),)
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String, nullable=False)
     age = sa.Column(sa.Integer, nullable=True)
@@ -24,7 +22,7 @@ class User(Base):
 
 
 class Post(Base):
-    __tablename__ = 'post'
+    __tablename__ = "post"
     __table_args__ = ()
     id = sa.Column(sa.Integer, primary_key=True)
     title = sa.Column(sa.String, nullable=False)
@@ -32,7 +30,7 @@ class Post(Base):
 
 
 class Comment(Base):
-    __tablename__ = 'comment'
+    __tablename__ = "comment"
     __table_args__ = ()
     id = sa.Column(sa.Integer, primary_key=True)
     title = sa.Column(sa.String, nullable=True)
@@ -40,81 +38,60 @@ class Comment(Base):
 
 
 class Tag(Base):
-    __tablename__ = 'tag'
-    __table_args__ = (
-        UniqueConstraint('name'),
-    )
+    __tablename__ = "tag"
+    __table_args__ = (UniqueConstraint("name"),)
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String, nullable=False)
 
 
 class UserPost(Base):
-    __tablename__ = 'user_post'
+    __tablename__ = "user_post"
     __table_args__ = ()
     id = sa.Column(sa.Integer, primary_key=True)
-    user_id = sa.Column(
-        sa.Integer, sa.ForeignKey(User.id)
-    )
+    user_id = sa.Column(sa.Integer, sa.ForeignKey(User.id))
     user = sa.orm.relationship(
         User,
-        backref=sa.orm.backref('users'),
+        backref=sa.orm.backref("users"),
     )
-    post_id = sa.Column(
-        sa.Integer, sa.ForeignKey(Post.id)
-    )
+    post_id = sa.Column(sa.Integer, sa.ForeignKey(Post.id))
     post = sa.orm.relationship(
         Post,
-        backref=sa.orm.backref('posts'),
+        backref=sa.orm.backref("posts"),
     )
 
 
 class PostComment(Base):
-    __tablename__ = 'post_comment'
-    __table_args__ = (
-        UniqueConstraint('post_id', 'comment_id'),
-    )
+    __tablename__ = "post_comment"
+    __table_args__ = (UniqueConstraint("post_id", "comment_id"),)
     id = sa.Column(sa.Integer, primary_key=True)
-    post_id = sa.Column(
-        sa.Integer, sa.ForeignKey(Post.id)
-    )
+    post_id = sa.Column(sa.Integer, sa.ForeignKey(Post.id))
     post = sa.orm.relationship(
         Post,
-        backref=sa.orm.backref('post'),
+        backref=sa.orm.backref("post"),
     )
-    comment_id = sa.Column(
-        sa.Integer, sa.ForeignKey(Comment.id)
-    )
-    comment = sa.orm.relationship(
-        Comment,
-        backref=sa.orm.backref('comments')
-    )
+    comment_id = sa.Column(sa.Integer, sa.ForeignKey(Comment.id))
+    comment = sa.orm.relationship(Comment, backref=sa.orm.backref("comments"))
 
 
 class UserTag(Base):
-    __tablename__ = 'user_tag'
-    __table_args__ = (
-        UniqueConstraint('user_id', 'tag_id'),
-    )
+    __tablename__ = "user_tag"
+    __table_args__ = (UniqueConstraint("user_id", "tag_id"),)
     id = sa.Column(sa.Integer, primary_key=True)
-    user_id = sa.Column(
-        sa.Integer, sa.ForeignKey(User.id)
-    )
+    user_id = sa.Column(sa.Integer, sa.ForeignKey(User.id))
     user = sa.orm.relationship(
         User,
-        backref=sa.orm.backref('user'),
+        backref=sa.orm.backref("user"),
     )
-    tag_id = sa.Column(
-        sa.Integer, sa.ForeignKey(Tag.id)
-    )
+    tag_id = sa.Column(sa.Integer, sa.ForeignKey(Tag.id))
     tag = sa.orm.relationship(
         Tag,
-        backref=sa.orm.backref('tags'),
+        backref=sa.orm.backref("tags"),
     )
 
 
 def setup(config=None):
     for document in json.load(open(config)):
-        database = document.get('database', document['index'])
+        database = document.get("database", document["index"])
         create_database(database)
         engine = pg_engine(database=database)
         Base.metadata.drop_all(engine)
@@ -123,9 +100,9 @@ def setup(config=None):
 
 @click.command()
 @click.option(
-    '--config',
-    '-c',
-    help='Schema config',
+    "--config",
+    "-c",
+    help="Schema config",
     type=click.Path(exists=True),
 )
 def main(config):
@@ -135,5 +112,5 @@ def main(config):
     setup(config)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

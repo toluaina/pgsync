@@ -30,12 +30,12 @@ from pgsync.utils import get_config
 
 @click.command()
 @click.option(
-    '--config',
-    '-c',
-    help='Schema config',
+    "--config",
+    "-c",
+    help="Schema config",
     type=click.Path(exists=True),
 )
-@click.option('--nsize', '-n', default=1, help='Number of dummy data samples')
+@click.option("--nsize", "-n", default=1, help="Number of dummy data samples")
 def main(config, nsize):
 
     config = get_config(config)
@@ -44,126 +44,130 @@ def main(config, nsize):
     for document in json.load(open(config)):
 
         engine = pg_engine(
-            database=document.get('database', document['index'])
+            database=document.get("database", document["index"])
         )
-        schema = document.get('schema', SCHEMA)
+        schema = document.get("schema", SCHEMA)
         connection = engine.connect().execution_options(
-            schema_translate_map={
-                None: schema
-            }
+            schema_translate_map={None: schema}
         )
         Session = sessionmaker(bind=connection, autoflush=True)
         session = Session()
 
         # Bootstrap
         continents = {
-            'Europe': Continent(name='Europe'),
-            'North America': Continent(name='North America'),
+            "Europe": Continent(name="Europe"),
+            "North America": Continent(name="North America"),
         }
         with subtransactions(session):
             session.add_all(continents.values())
 
         countries = {
-            'United Kingdom': Country(
-                name='United Kingdom',
-                continent=continents['Europe'],
+            "United Kingdom": Country(
+                name="United Kingdom",
+                continent=continents["Europe"],
             ),
-            'France': Country(
-                name='France',
-                continent=continents['Europe'],
+            "France": Country(
+                name="France",
+                continent=continents["Europe"],
             ),
-            'United States': Country(
-                name='United States',
-                continent=continents['North America'],
+            "United States": Country(
+                name="United States",
+                continent=continents["North America"],
             ),
         }
         with subtransactions(session):
             session.add_all(countries.values())
 
         cities = {
-            'London': City(name='London', country=countries['United Kingdom']),
-            'Paris': City(name='Paris', country=countries['France']),
-            'New York': City(name='New York', country=countries['United States']),
+            "London": City(name="London", country=countries["United Kingdom"]),
+            "Paris": City(name="Paris", country=countries["France"]),
+            "New York": City(
+                name="New York", country=countries["United States"]
+            ),
         }
         with subtransactions(session):
             session.add_all(cities.values())
 
         publishers = {
-            'Oxford Press': Publisher(name='Oxford Press', is_active=True),
-            'Penguin Books': Publisher(name='Penguin Books', is_active=False),
-            'Pearson Press': Publisher(name='Pearson Press', is_active=True),
-            'Reutgers Press': Publisher(name='Reutgers Press', is_active=False),
+            "Oxford Press": Publisher(name="Oxford Press", is_active=True),
+            "Penguin Books": Publisher(name="Penguin Books", is_active=False),
+            "Pearson Press": Publisher(name="Pearson Press", is_active=True),
+            "Reutgers Press": Publisher(
+                name="Reutgers Press", is_active=False
+            ),
         }
         with subtransactions(session):
             session.add_all(publishers.values())
 
         authors = {
-            'Stephen King': Author(
-                name='Stephen King',
+            "Stephen King": Author(
+                name="Stephen King",
                 date_of_birth=datetime.datetime(1947, 9, 21),
-                city=cities['London'],
+                city=cities["London"],
             ),
-            'J. K. Rowling': Author(
-                name='J. K. Rowling',
+            "J. K. Rowling": Author(
+                name="J. K. Rowling",
                 date_of_birth=datetime.datetime(1965, 7, 31),
-                city=cities['Paris'],
+                city=cities["Paris"],
             ),
-            'James Patterson': Author(
-                name='James Patterson',
+            "James Patterson": Author(
+                name="James Patterson",
                 date_of_birth=datetime.datetime(1947, 3, 22),
-                city=cities['New York'],
+                city=cities["New York"],
             ),
-            'Melinda Leigh': Author(
-                name='Melinda Leigh',
+            "Melinda Leigh": Author(
+                name="Melinda Leigh",
                 date_of_birth=datetime.datetime(1980, 1, 1),
-                city=cities['Paris'],
+                city=cities["Paris"],
             ),
-            'Tolu Aina': Author(
-                name='Tolu Aina',
+            "Tolu Aina": Author(
+                name="Tolu Aina",
                 date_of_birth=datetime.datetime(1980, 5, 21),
-                city=cities['London'],
+                city=cities["London"],
             ),
         }
         with subtransactions(session):
             session.add_all(authors.values())
 
         subjects = {
-            'Literature': Subject(name='Literature'),
-            'Poetry': Subject(name='Poetry'),
-            'Romance': Subject(name='Romance'),
-            'Science Fiction & Fantasy': Subject(name='Science Fiction & Fantasy'),
-            'Westerns': Subject(name='Westerns'),
+            "Literature": Subject(name="Literature"),
+            "Poetry": Subject(name="Poetry"),
+            "Romance": Subject(name="Romance"),
+            "Science Fiction & Fantasy": Subject(
+                name="Science Fiction & Fantasy"
+            ),
+            "Westerns": Subject(name="Westerns"),
         }
         with subtransactions(session):
             session.add_all(subjects.values())
 
         languages = {
-            'en-GB': Language(code='en-GB'),
-            'en-US': Language(code='en-US'),
-            'de-DE': Language(code='de-DE'),
-            'af-ZA': Language(code='af-ZA'),
-            'es-ES': Language(code='es-ES'),
-            'fr-FR': Language(code='fr-FR'),
-            'it-IT': Language(code='it-IT'),
-            'ja-JP': Language(code='ja-JP'),
+            "en-GB": Language(code="en-GB"),
+            "en-US": Language(code="en-US"),
+            "de-DE": Language(code="de-DE"),
+            "af-ZA": Language(code="af-ZA"),
+            "es-ES": Language(code="es-ES"),
+            "fr-FR": Language(code="fr-FR"),
+            "it-IT": Language(code="it-IT"),
+            "ja-JP": Language(code="ja-JP"),
         }
         with subtransactions(session):
             session.add_all(languages.values())
 
         shelves = {
-            'Shelf A': Shelf(shelf='Shelf A'),
-            'Shelf B': Shelf(shelf='Shelf B'),
+            "Shelf A": Shelf(shelf="Shelf A"),
+            "Shelf B": Shelf(shelf="Shelf B"),
         }
         with subtransactions(session):
             session.add_all(shelves.values())
 
         books = {
-            '001': Book(
-                isbn='001',
-                title='It',
-                description='Stephens Kings It',
-                publisher=publishers['Oxford Press'],
-                tags=['a', 'b', 'c'],
+            "001": Book(
+                isbn="001",
+                title="It",
+                description="Stephens Kings It",
+                publisher=publishers["Oxford Press"],
+                tags=["a", "b", "c"],
                 doc={
                     "i": 73,
                     "bool": True,
@@ -174,38 +178,20 @@ def main(config, nsize):
                         "Jean",
                         "Carilyn",
                         "Carol-Jean",
-                        "Sara-Ann"
+                        "Sara-Ann",
                     ],
-                    "coordinates": {
-                        "lat": 21.1,
-                        "lon": 32.9
-                    },
-                    "a": {
-                        "b": {
-                            "c": [0, 1, 2, 3, 4]
-                        }
-                    },
-                    "x": [
-                        {
-                            "y": 0,
-                            "z": 5
-                        },
-                        {
-                            "y": 1,
-                            "z": 6
-                        }
-                    ],
-                    "generation": {
-                        "name": 'X'
-                    }
-                }
+                    "coordinates": {"lat": 21.1, "lon": 32.9},
+                    "a": {"b": {"c": [0, 1, 2, 3, 4]}},
+                    "x": [{"y": 0, "z": 5}, {"y": 1, "z": 6}],
+                    "generation": {"name": "X"},
+                },
             ),
-            '002': Book(
-                isbn='002',
-                title='The Body',
-                description='Lodsdcsdrem ipsum dodscdslor sit amet',
-                publisher=publishers['Oxford Press'],
-                tags=['d', 'e', 'f'],
+            "002": Book(
+                isbn="002",
+                title="The Body",
+                description="Lodsdcsdrem ipsum dodscdslor sit amet",
+                publisher=publishers["Oxford Press"],
+                tags=["d", "e", "f"],
                 doc={
                     "i": 99,
                     "bool": False,
@@ -216,231 +202,165 @@ def main(config, nsize):
                         "Jones",
                         "Jay",
                         "Jay-Jay",
-                        "Jackie"
+                        "Jackie",
                     ],
-                    "coordinates": {
-                        "lat": 25.1,
-                        "lon": 52.2
-                    },
-                    "a": {
-                        "b": {
-                            "c": [2, 3, 4, 5, 6]
-                        }
-                    },
-                    "x": [
-                        {
-                            "y": 2,
-                            "z": 3
-                        },
-                        {
-                            "y": 7,
-                            "z": 2
-                        }
-                    ],
-                    "generation": {
-                        "name": 'X'
-                    }
-                }
+                    "coordinates": {"lat": 25.1, "lon": 52.2},
+                    "a": {"b": {"c": [2, 3, 4, 5, 6]}},
+                    "x": [{"y": 2, "z": 3}, {"y": 7, "z": 2}],
+                    "generation": {"name": "X"},
+                },
             ),
-            '003': Book(
-                isbn='003',
-                title='Harry Potter and the Sorcerer\'s Stone',
-                description='Harry Potter has never been',
-                publisher=publishers['Penguin Books'],
-                tags=['g', 'h', 'i'],
+            "003": Book(
+                isbn="003",
+                title="Harry Potter and the Sorcerer's Stone",
+                description="Harry Potter has never been",
+                publisher=publishers["Penguin Books"],
+                tags=["g", "h", "i"],
                 doc={
                     "i": 13,
                     "bool": True,
                     "firstname": "Mary",
                     "lastname": "Jane",
-                    "nick_names": [
-                        "Mariane",
-                        "May",
-                        "Maey",
-                        "M-Jane",
-                        "Jane"
-                    ],
-                    "coordinates": {
-                        "lat": 24.9,
-                        "lon": 93.2
-                    },
-                    "a": {
-                        "b": {
-                            "c": [9, 8, 7, 6, 5]
-                        }
-                    },
-                    "x": [
-                        {
-                            "y": 3,
-                            "z": 5
-                        },
-                        {
-                            "y": 8,
-                            "z": 2
-                        }
-                    ],
-                    "generation": {
-                        "name": 'X'
-                    }
-                }
+                    "nick_names": ["Mariane", "May", "Maey", "M-Jane", "Jane"],
+                    "coordinates": {"lat": 24.9, "lon": 93.2},
+                    "a": {"b": {"c": [9, 8, 7, 6, 5]}},
+                    "x": [{"y": 3, "z": 5}, {"y": 8, "z": 2}],
+                    "generation": {"name": "X"},
+                },
             ),
-            '004': Book(
-                isbn='004',
-                title='Harry Potter and the Chamber of Secrets',
-                description='The Dursleys were so mean and hideous that summer '
-                            'that all Harry Potter wanted was to get back to the '
-                            'Hogwarts School for Witchcraft and Wizardry',
-                publisher=publishers['Penguin Books'],
-                tags=['j', 'k', 'l'],
+            "004": Book(
+                isbn="004",
+                title="Harry Potter and the Chamber of Secrets",
+                description="The Dursleys were so mean and hideous that summer "
+                "that all Harry Potter wanted was to get back to the "
+                "Hogwarts School for Witchcraft and Wizardry",
+                publisher=publishers["Penguin Books"],
+                tags=["j", "k", "l"],
                 doc={
                     "i": 43,
                     "bool": False,
                     "firstname": "Kermit",
                     "lastname": "Frog",
-                    "nick_names": [
-                        "Kermit",
-                        "Frog",
-                        "Ker",
-                        "Boss",
-                        "K"
-                    ],
-                    "coordinates": {
-                        "lat": 22.7,
-                        "lon": 35.2
-                    },
-                    "a": {
-                        "b": {
-                            "c": [9, 1, 2, 8, 4]
-                        }
-                    },
-                    "x": [
-                        {
-                            "y": 3,
-                            "z": 2
-                        },
-                        {
-                            "y": 9,
-                            "z": 2
-                        }
-                    ],
-                    "generation": {
-                        "name": 'Z'
-                    }
-                }
+                    "nick_names": ["Kermit", "Frog", "Ker", "Boss", "K"],
+                    "coordinates": {"lat": 22.7, "lon": 35.2},
+                    "a": {"b": {"c": [9, 1, 2, 8, 4]}},
+                    "x": [{"y": 3, "z": 2}, {"y": 9, "z": 2}],
+                    "generation": {"name": "Z"},
+                },
             ),
-            '005': Book(
-                isbn='005',
-                title='The 17th Suspect',
-                description='A series of shootings exposes San Francisco to a '
-                            'methodical yet unpredictable killer, and a reluctant '
-                            'woman decides to put her trust in Sergeant Lindsay '
-                            'Boxer',
-                publisher=publishers['Pearson Press'],
-                tags=['m', 'n', 'o'],
+            "005": Book(
+                isbn="005",
+                title="The 17th Suspect",
+                description="A series of shootings exposes San Francisco to a "
+                "methodical yet unpredictable killer, and a reluctant "
+                "woman decides to put her trust in Sergeant Lindsay "
+                "Boxer",
+                publisher=publishers["Pearson Press"],
+                tags=["m", "n", "o"],
             ),
-            '006': Book(
-                isbn='006',
-                title='The President Is Missing',
-                description='The publishing event of 2018: Bill Clinton and James '
-                            'Patterson\'s The President Is Missing is a '
-                            'superlative thriller',
-                publisher=publishers['Pearson Press'],
+            "006": Book(
+                isbn="006",
+                title="The President Is Missing",
+                description="The publishing event of 2018: Bill Clinton and James "
+                "Patterson's The President Is Missing is a "
+                "superlative thriller",
+                publisher=publishers["Pearson Press"],
             ),
-            '007': Book(
-                isbn='007',
-                title='Say You\'re Sorry',
-                description='deserunt mollit anim id est laborum',
-                publisher=publishers['Reutgers Press'],
+            "007": Book(
+                isbn="007",
+                title="Say You're Sorry",
+                description="deserunt mollit anim id est laborum",
+                publisher=publishers["Reutgers Press"],
             ),
-            '008': Book(
-                isbn='008',
-                title='Bones Don\'t Lie',
-                description='Lorem ipsum',
-                publisher=publishers['Reutgers Press'],
+            "008": Book(
+                isbn="008",
+                title="Bones Don't Lie",
+                description="Lorem ipsum",
+                publisher=publishers["Reutgers Press"],
             ),
         }
         with subtransactions(session):
             session.add_all(books.values())
 
         ratings = [
-            Rating(value=1.1, book=books['001']),
-            Rating(value=2.1, book=books['002']),
-            Rating(value=3.1, book=books['003']),
-            Rating(value=4.1, book=books['004']),
-            Rating(value=5.1, book=books['005']),
-            Rating(value=6.1, book=books['006']),
-            Rating(value=7.1, book=books['007']),
-            Rating(value=8.1, book=books['008']),
+            Rating(value=1.1, book=books["001"]),
+            Rating(value=2.1, book=books["002"]),
+            Rating(value=3.1, book=books["003"]),
+            Rating(value=4.1, book=books["004"]),
+            Rating(value=5.1, book=books["005"]),
+            Rating(value=6.1, book=books["006"]),
+            Rating(value=7.1, book=books["007"]),
+            Rating(value=8.1, book=books["008"]),
         ]
         with subtransactions(session):
             session.add_all(ratings)
 
         book_authors = [
-            BookAuthor(book=books['001'], author=authors['Stephen King']),
-            BookAuthor(book=books['002'], author=authors['Stephen King']),
-            BookAuthor(book=books['003'], author=authors['J. K. Rowling']),
-            BookAuthor(book=books['004'], author=authors['J. K. Rowling']),
-            BookAuthor(book=books['005'], author=authors['James Patterson']),
-            BookAuthor(book=books['006'], author=authors['James Patterson']),
-            BookAuthor(book=books['007'], author=authors['Melinda Leigh']),
-            BookAuthor(book=books['008'], author=authors['Melinda Leigh']),
-            BookAuthor(book=books['007'], author=authors['Tolu Aina']),
-            BookAuthor(book=books['008'], author=authors['Tolu Aina']),
+            BookAuthor(book=books["001"], author=authors["Stephen King"]),
+            BookAuthor(book=books["002"], author=authors["Stephen King"]),
+            BookAuthor(book=books["003"], author=authors["J. K. Rowling"]),
+            BookAuthor(book=books["004"], author=authors["J. K. Rowling"]),
+            BookAuthor(book=books["005"], author=authors["James Patterson"]),
+            BookAuthor(book=books["006"], author=authors["James Patterson"]),
+            BookAuthor(book=books["007"], author=authors["Melinda Leigh"]),
+            BookAuthor(book=books["008"], author=authors["Melinda Leigh"]),
+            BookAuthor(book=books["007"], author=authors["Tolu Aina"]),
+            BookAuthor(book=books["008"], author=authors["Tolu Aina"]),
         ]
         with subtransactions(session):
             session.add_all(book_authors)
 
         book_subjects = [
-            BookSubject(book=books['001'], subject=subjects['Literature']),
-            BookSubject(book=books['002'], subject=subjects['Literature']),
-            BookSubject(book=books['003'], subject=subjects['Poetry']),
-            BookSubject(book=books['004'], subject=subjects['Poetry']),
-            BookSubject(book=books['005'], subject=subjects['Romance']),
-            BookSubject(book=books['006'], subject=subjects['Romance']),
+            BookSubject(book=books["001"], subject=subjects["Literature"]),
+            BookSubject(book=books["002"], subject=subjects["Literature"]),
+            BookSubject(book=books["003"], subject=subjects["Poetry"]),
+            BookSubject(book=books["004"], subject=subjects["Poetry"]),
+            BookSubject(book=books["005"], subject=subjects["Romance"]),
+            BookSubject(book=books["006"], subject=subjects["Romance"]),
             BookSubject(
-                book=books['007'],
-                subject=subjects['Science Fiction & Fantasy'],
+                book=books["007"],
+                subject=subjects["Science Fiction & Fantasy"],
             ),
             BookSubject(
-                book=books['008'],
-                subject=subjects['Science Fiction & Fantasy'],
+                book=books["008"],
+                subject=subjects["Science Fiction & Fantasy"],
             ),
         ]
         with subtransactions(session):
             session.add_all(book_subjects)
 
         book_languages = [
-            BookLanguage(book=books['001'], language=languages['en-GB']),
-            BookLanguage(book=books['002'], language=languages['en-GB']),
-            BookLanguage(book=books['003'], language=languages['en-GB']),
-            BookLanguage(book=books['004'], language=languages['en-GB']),
-            BookLanguage(book=books['005'], language=languages['en-GB']),
-            BookLanguage(book=books['006'], language=languages['en-GB']),
-            BookLanguage(book=books['007'], language=languages['en-GB']),
-            BookLanguage(book=books['008'], language=languages['en-GB']),
-            BookLanguage(book=books['001'], language=languages['fr-FR']),
-            BookLanguage(book=books['002'], language=languages['fr-FR']),
-            BookLanguage(book=books['003'], language=languages['fr-FR']),
-            BookLanguage(book=books['004'], language=languages['fr-FR']),
-            BookLanguage(book=books['005'], language=languages['fr-FR']),
-            BookLanguage(book=books['006'], language=languages['fr-FR']),
-            BookLanguage(book=books['007'], language=languages['fr-FR']),
-            BookLanguage(book=books['008'], language=languages['fr-FR']),
+            BookLanguage(book=books["001"], language=languages["en-GB"]),
+            BookLanguage(book=books["002"], language=languages["en-GB"]),
+            BookLanguage(book=books["003"], language=languages["en-GB"]),
+            BookLanguage(book=books["004"], language=languages["en-GB"]),
+            BookLanguage(book=books["005"], language=languages["en-GB"]),
+            BookLanguage(book=books["006"], language=languages["en-GB"]),
+            BookLanguage(book=books["007"], language=languages["en-GB"]),
+            BookLanguage(book=books["008"], language=languages["en-GB"]),
+            BookLanguage(book=books["001"], language=languages["fr-FR"]),
+            BookLanguage(book=books["002"], language=languages["fr-FR"]),
+            BookLanguage(book=books["003"], language=languages["fr-FR"]),
+            BookLanguage(book=books["004"], language=languages["fr-FR"]),
+            BookLanguage(book=books["005"], language=languages["fr-FR"]),
+            BookLanguage(book=books["006"], language=languages["fr-FR"]),
+            BookLanguage(book=books["007"], language=languages["fr-FR"]),
+            BookLanguage(book=books["008"], language=languages["fr-FR"]),
         ]
         with subtransactions(session):
             session.add_all(book_languages)
 
         book_shelves = [
-            BookShelf(book=books['001'], shelf=shelves['Shelf A']),
-            BookShelf(book=books['001'], shelf=shelves['Shelf B']),
-            BookShelf(book=books['002'], shelf=shelves['Shelf A']),
-            BookShelf(book=books['002'], shelf=shelves['Shelf B']),
-            BookShelf(book=books['003'], shelf=shelves['Shelf A']),
-            BookShelf(book=books['004'], shelf=shelves['Shelf A']),
-            BookShelf(book=books['005'], shelf=shelves['Shelf A']),
-            BookShelf(book=books['006'], shelf=shelves['Shelf A']),
-            BookShelf(book=books['007'], shelf=shelves['Shelf A']),
-            BookShelf(book=books['008'], shelf=shelves['Shelf A']),
+            BookShelf(book=books["001"], shelf=shelves["Shelf A"]),
+            BookShelf(book=books["001"], shelf=shelves["Shelf B"]),
+            BookShelf(book=books["002"], shelf=shelves["Shelf A"]),
+            BookShelf(book=books["002"], shelf=shelves["Shelf B"]),
+            BookShelf(book=books["003"], shelf=shelves["Shelf A"]),
+            BookShelf(book=books["004"], shelf=shelves["Shelf A"]),
+            BookShelf(book=books["005"], shelf=shelves["Shelf A"]),
+            BookShelf(book=books["006"], shelf=shelves["Shelf A"]),
+            BookShelf(book=books["007"], shelf=shelves["Shelf A"]),
+            BookShelf(book=books["008"], shelf=shelves["Shelf A"]),
         ]
         with subtransactions(session):
             session.add_all(book_shelves)
@@ -449,7 +369,7 @@ def main(config, nsize):
         if nsize > 1:
             nsamples = int(nsize)
             faker = Faker()
-            print('Adding {} books'.format(nsamples))
+            print("Adding {} books".format(nsamples))
 
             for _ in range(nsamples):
                 book = Book(
@@ -460,7 +380,7 @@ def main(config, nsize):
                 )
                 session.add(book)
                 author = Author(
-                    name='{} .{} {}'.format(
+                    name="{} .{} {}".format(
                         faker.first_name(),
                         faker.random_letter(),
                         faker.last_name(),
@@ -489,5 +409,5 @@ def main(config, nsize):
             session.commit()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

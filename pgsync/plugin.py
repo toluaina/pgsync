@@ -14,13 +14,11 @@ class Plugin(ABC):
 
     @abstractmethod
     def transform(self, doc, **kwargs):
-        """Must be implemented by all derived classes.
-        """
+        """Must be implemented by all derived classes."""
         pass
 
 
 class Plugins(object):
-
     def __init__(self, package, names=None):
         self.package = package
         self.names = names or []
@@ -30,16 +28,15 @@ class Plugins(object):
         """Reload the plugins from the available list."""
         self.plugins = []
         self._paths = []
-        logger.debug(f'Reloading plugins from package: {self.package}')
+        logger.debug(f"Reloading plugins from package: {self.package}")
         self.walk(self.package)
 
     def walk(self, package):
-        """Recursively walk the supplied package and fetch all plugins
-        """
+        """Recursively walk the supplied package and fetch all plugins"""
         plugins = importlib.import_module(package)
         for _, name, ispkg in pkgutil.iter_modules(
             plugins.__path__,
-            f'{plugins.__name__}.',
+            f"{plugins.__name__}.",
         ):
             if ispkg:
                 continue
@@ -51,7 +48,7 @@ class Plugins(object):
                     if klass.name not in self.names:
                         continue
                     logger.debug(
-                        f'Plugin class: {klass.__module__}.{klass.__name__}'
+                        f"Plugin class: {klass.__module__}.{klass.__name__}"
                     )
                     self.plugins.append(klass())
 
@@ -68,20 +65,20 @@ class Plugins(object):
 
             self._paths.append(pkg_path)
             for pkg in [
-                path for path in os.listdir(pkg_path) if os.path.isdir(
-                    os.path.join(pkg_path, path)
-                )
+                path
+                for path in os.listdir(pkg_path)
+                if os.path.isdir(os.path.join(pkg_path, path))
             ]:
-                self.walk(f'{package}.{pkg}')
+                self.walk(f"{package}.{pkg}")
 
     def transform(self, docs):
         """Apply all plugins to each doc."""
         for doc in docs:
             for plugin in self.plugins:
-                logger.debug(f'Plugin: {plugin.name}')
-                doc['_source'] = plugin.transform(
-                    doc['_source'],
-                    _id=doc['_id'],
-                    _index=doc['_index'],
+                logger.debug(f"Plugin: {plugin.name}")
+                doc["_source"] = plugin.transform(
+                    doc["_source"],
+                    _id=doc["_id"],
+                    _index=doc["_index"],
                 )
             yield doc

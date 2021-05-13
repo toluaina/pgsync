@@ -5,7 +5,7 @@ from pgsync.base import Base
 from pgsync.trigger import CREATE_TRIGGER_TEMPLATE
 
 
-@pytest.mark.usefixtures('table_creator')
+@pytest.mark.usefixtures("table_creator")
 class TestTrigger(object):
     """Trigger tests."""
 
@@ -87,15 +87,15 @@ $$ LANGUAGE plpgsql;
 
     def test_trigger_primary_key_function(self, connection):
         tables = {
-            'book': ['isbn'],
-            'publisher': ['id'],
-            'book_language': ['id'],
-            'author': ['id'],
-            'language': ['id'],
-            'subject': ['id'],
-            'city': ['id'],
-            'country': ['id'],
-            'continent': ['id'],
+            "book": ["isbn"],
+            "publisher": ["id"],
+            "book_language": ["id"],
+            "author": ["id"],
+            "language": ["id"],
+            "subject": ["id"],
+            "city": ["id"],
+            "country": ["id"],
+            "continent": ["id"],
         }
         pg_base = Base(connection.engine.url.database)
         for table_name, primary_keys in tables.items():
@@ -110,15 +110,15 @@ $$ LANGUAGE plpgsql;
 
     def test_trigger_foreign_key_function(self, connection):
         tables = {
-            'book': ['publisher_id'],
-            'publisher': None,
-            'book_language': ['book_isbn', 'language_id'],
-            'author': ['city_id'],
-            'language': None,
-            'subject': None,
-            'city': ['country_id'],
-            'country': ['continent_id'],
-            'continent': None,
+            "book": ["publisher_id"],
+            "publisher": None,
+            "book_language": ["book_isbn", "language_id"],
+            "author": ["city_id"],
+            "language": None,
+            "subject": None,
+            "city": ["country_id"],
+            "country": ["continent_id"],
+            "continent": None,
         }
         pg_base = Base(connection.engine.url.database)
         for table_name, foreign_keys in tables.items():

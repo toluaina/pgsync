@@ -17,10 +17,10 @@ def compile_create_view(element, compiler, **kwargs):
         element.selectable,
         literal_binds=True,
     )
-    materialized = 'MATERIALIZED' if element.materialized else ''
+    materialized = "MATERIALIZED" if element.materialized else ""
     return (
         f'CREATE {materialized} VIEW "{element.schema}"."{element.name}" AS '
-        f'{statement}'
+        f"{statement}"
     )
 
 
@@ -34,10 +34,10 @@ class DropView(DDLElement):
 
 @compiler.compiles(DropView)
 def compile_drop_view(element, compiler, **kwargs):
-    materialized = 'MATERIALIZED' if element.materialized else ''
-    cascade = 'CASCADE' if element.cascade else ''
+    materialized = "MATERIALIZED" if element.materialized else ""
+    cascade = "CASCADE" if element.cascade else ""
     return (
-        f'DROP {materialized} VIEW IF EXISTS '
+        f"DROP {materialized} VIEW IF EXISTS "
         f'"{element.schema}"."{element.name}" {cascade}'
     )
 
@@ -53,7 +53,7 @@ class CreateIndex(DDLElement):
 @compiler.compiles(CreateIndex)
 def compile_create_index(element, compiler, **kwargs):
     return (
-        f'CREATE UNIQUE INDEX {element.name} ON '
+        f"CREATE UNIQUE INDEX {element.name} ON "
         f'"{element.schema}"."{element.view}" ({", ".join(element.columns)})'
     )
 
@@ -65,4 +65,4 @@ class DropIndex(DDLElement):
 
 @compiler.compiles(DropIndex)
 def compile_drop_index(element, compiler, **kwargs):
-    return f'DROP INDEX IF EXISTS {element.name}'
+    return f"DROP INDEX IF EXISTS {element.name}"

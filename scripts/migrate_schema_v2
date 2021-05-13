@@ -11,18 +11,18 @@ import click
 
 @click.command()
 @click.option(
-    '--config',
-    '-c',
-    help='Schema config',
+    "--config",
+    "-c",
+    help="Schema config",
     type=click.Path(exists=True),
     required=True,
 )
 def main(config):
     """Schema migration script."""
-    timestamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+    timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     basename = os.path.basename(config)
     filepath = os.path.dirname(config)
-    backup = os.path.join(filepath, f'{basename}.{timestamp}')
+    backup = os.path.join(filepath, f"{basename}.{timestamp}")
 
     print(f'Migrating "{config}" and saving backup to {backup}')
 
@@ -34,19 +34,19 @@ def main(config):
     for document in json.load(open(config)):
         new_doc = {}
         for key, value in document.items():
-            if key == 'nodes' and isinstance(value, list):
-                new_doc['nodes'] = value[0]
+            if key == "nodes" and isinstance(value, list):
+                new_doc["nodes"] = value[0]
                 changed = True
                 continue
             new_doc[key] = value
         documents.append(new_doc)
 
     if changed:
-        with open(config, 'w') as fp:
+        with open(config, "w") as fp:
             fp.write(json.dumps(documents, indent=4))
     else:
         os.unlink(backup)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

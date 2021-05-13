@@ -11,9 +11,9 @@ from pgsync.utils import get_config
 
 @click.command()
 @click.option(
-    '--config',
-    '-c',
-    help='Schema config',
+    "--config",
+    "-c",
+    help="Schema config",
     type=click.Path(exists=True),
 )
 def main(config):
@@ -22,7 +22,7 @@ def main(config):
     teardown(drop_db=False, config=config)
     documents = json.load(open(config))
     engine = pg_engine(
-        database=documents[0].get('database', documents[0]['index'])
+        database=documents[0].get("database", documents[0]["index"])
     )
     Session = sessionmaker(bind=engine, autoflush=True)
     session = Session()
@@ -70,7 +70,6 @@ def main(config):
         GrandChild(id=10, name="Grand Child J Child E", child_id=5),
         GrandChild(id=11, name="Grand Child K Child F", child_id=6),
         GrandChild(id=12, name="Grand Child L Child F", child_id=6),
-
     ]
     with subtransactions(session):
         session.add_all(grand_children)
@@ -141,5 +140,5 @@ def main(config):
         session.add_all(great_grand_children)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

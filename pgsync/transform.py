@@ -10,15 +10,13 @@ logger = logging.getLogger(__name__)
 
 def _get_transform(nodes, key):
     transform_node = {}
-    if 'transform' in nodes.keys():
-        if key in nodes['transform']:
-            transform_node = nodes['transform'][key]
-    for child in nodes.get('children', {}):
+    if "transform" in nodes.keys():
+        if key in nodes["transform"]:
+            transform_node = nodes["transform"][key]
+    for child in nodes.get("children", {}):
         txfm_node = _get_transform(child, key)
         if txfm_node:
-            transform_node[
-                child.get('label', child['table'])
-            ] = txfm_node
+            transform_node[child.get("label", child["table"])] = txfm_node
     return transform_node
 
 
@@ -30,9 +28,13 @@ def _rename_fields(data, nodes, result=None):
             if isinstance(value, dict):
                 if key in nodes:
                     value = _rename_fields(value, nodes[key])
-            elif isinstance(value, list) and value and not isinstance(
-                value[0],
-                dict,
+            elif (
+                isinstance(value, list)
+                and value
+                and not isinstance(
+                    value[0],
+                    dict,
+                )
             ):
                 try:
                     value = sorted(value)
@@ -40,9 +42,7 @@ def _rename_fields(data, nodes, result=None):
                     pass
             elif key in nodes.keys():
                 if isinstance(value, list):
-                    value = [
-                        _rename_fields(v, nodes[key]) for v in value
-                    ]
+                    value = [_rename_fields(v, nodes[key]) for v in value]
                 elif isinstance(value, (string_types, int, float)):
                     if nodes[key]:
                         key = str(nodes[key])
@@ -54,11 +54,11 @@ def _concat_fields(data, nodes, result=None):
     """Concatenate fields."""
     result = result or {}
     if isinstance(data, dict):
-        if 'columns' in nodes:
-            values = [data.get(key) for key in nodes['columns'] if key in data]
-            delimiter = nodes.get('delimiter', '')
-            destination = nodes['destination']
-            data[destination] = f'{delimiter}'.join(
+        if "columns" in nodes:
+            values = [data.get(key) for key in nodes["columns"] if key in data]
+            delimiter = nodes.get("delimiter", "")
+            destination = nodes["destination"]
+            data[destination] = f"{delimiter}".join(
                 map(str, filter(None, values))
             )
         for key, value in data.items():
@@ -70,7 +70,9 @@ def _concat_fields(data, nodes, result=None):
                         _concat_fields(
                             v,
                             nodes[key],
-                        ) for v in value if key in nodes
+                        )
+                        for v in value
+                        if key in nodes
                     ]
             result[key] = value
     return result
@@ -123,6 +125,7 @@ def get_private_keys(primary_keys):
     Get private keys entry from a nested dict.
     re-write someday!
     """
+
     def squash_list(values, _values=None):
         if not _values:
             _values = []
@@ -131,14 +134,10 @@ def get_private_keys(primary_keys):
                 _values.append(values)
             else:
                 for key, value in values.items():
-                    _values.extend(
-                        squash_list({key: value})
-                    )
+                    _values.extend(squash_list({key: value}))
         elif isinstance(values, list):
             for value in values:
-                _values.extend(
-                    squash_list(value)
-                )
+                _values.extend(squash_list(value))
         return _values
 
     target = []

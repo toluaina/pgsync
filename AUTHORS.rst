@@ -10,6 +10,6 @@ Development Lead
 Contributors
 ------------
 
-Francois Deschenes
-chokosabe
-Densol92
+- Francois Deschenes
+- chokosabe
+- Densol92

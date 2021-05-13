@@ -13,22 +13,19 @@ Base = declarative_base()
 
 
 class Category(Base):
-    __tablename__ = 'category'
-    __table_args__ = (
-        UniqueConstraint('text'),
-    )
+    __tablename__ = "category"
+    __table_args__ = (UniqueConstraint("text"),)
     id = sa.Column(sa.Integer, primary_key=True)
     uid = sa.Column(sa.String, primary_key=True)
     text = sa.Column(sa.String, nullable=False)
 
 
 class Question(Base):
-    __tablename__ = 'question'
+    __tablename__ = "question"
     __table_args__ = (
-        UniqueConstraint('text'),
+        UniqueConstraint("text"),
         ForeignKeyConstraint(
-            ['category_id', 'category_uid'],
-            ['category.id', 'category.uid']
+            ["category_id", "category_uid"], ["category.id", "category.uid"]
         ),
     )
     id = sa.Column(sa.Integer, primary_key=True)
@@ -39,74 +36,55 @@ class Question(Base):
 
 
 class Answer(Base):
-    __tablename__ = 'answer'
-    __table_args__ = (
-        UniqueConstraint('text'),
-    )
+    __tablename__ = "answer"
+    __table_args__ = (UniqueConstraint("text"),)
     id = sa.Column(sa.Integer, primary_key=True)
     uid = sa.Column(sa.String, primary_key=True)
     text = sa.Column(sa.String, nullable=False)
 
 
 class PossibleAnswer(Base):
-    __tablename__ = 'possible_answer'
+    __tablename__ = "possible_answer"
     __table_args__ = (
         UniqueConstraint(
-            'question_id',
-            'question_uid',
-            'answer_id',
-            'answer_uid',
+            "question_id",
+            "question_uid",
+            "answer_id",
+            "answer_uid",
         ),
         ForeignKeyConstraint(
-            ['answer_id', 'answer_uid'],
-            ['answer.id', 'answer.uid'],
+            ["answer_id", "answer_uid"],
+            ["answer.id", "answer.uid"],
         ),
         ForeignKeyConstraint(
-            ['question_id', 'question_uid'],
-            ['question.id', 'question.uid'],
+            ["question_id", "question_uid"],
+            ["question.id", "question.uid"],
         ),
     )
-    question_id = sa.Column(
-        sa.Integer,
-        primary_key=True
-    )
-    question_uid = sa.Column(
-        sa.String,
-        primary_key=True
-    )
-    answer_id = sa.Column(
-        sa.Integer,
-        primary_key=True
-    )
-    answer_uid = sa.Column(
-        sa.String,
-        primary_key=True
-    )
-    answer = sa.orm.relationship(
-        Answer,
-        backref=sa.orm.backref('answer')
-    )
+    question_id = sa.Column(sa.Integer, primary_key=True)
+    question_uid = sa.Column(sa.String, primary_key=True)
+    answer_id = sa.Column(sa.Integer, primary_key=True)
+    answer_uid = sa.Column(sa.String, primary_key=True)
+    answer = sa.orm.relationship(Answer, backref=sa.orm.backref("answer"))
 
 
 class RealAnswer(Base):
-    __tablename__ = 'real_answer'
+    __tablename__ = "real_answer"
     __table_args__ = (
         UniqueConstraint(
-            'question_id',
-            'question_uid',
-            'answer_id',
-            'answer_uid',
+            "question_id",
+            "question_uid",
+            "answer_id",
+            "answer_uid",
         ),
         ForeignKeyConstraint(
-            ['answer_id', 'answer_uid'],
-            ['answer.id', 'answer.uid'],
+            ["answer_id", "answer_uid"],
+            ["answer.id", "answer.uid"],
         ),
         ForeignKeyConstraint(
-            ['question_id', 'question_uid'],
-            ['question.id', 'question.uid'],
+            ["question_id", "question_uid"],
+            ["question.id", "question.uid"],
         ),
-
-
     )
     question_id = sa.Column(
         sa.Integer,
@@ -128,7 +106,7 @@ class RealAnswer(Base):
 
 def setup(config=None):
     for document in json.load(open(config)):
-        database = document.get('database', document['index'])
+        database = document.get("database", document["index"])
         create_database(database)
         engine = pg_engine(database=database)
         Base.metadata.drop_all(engine)
@@ -137,9 +115,9 @@ def setup(config=None):
 
 @click.command()
 @click.option(
-    '--config',
-    '-c',
-    help='Schema config',
+    "--config",
+    "-c",
+    help="Schema config",
     type=click.Path(exists=True),
 )
 def main(config):
@@ -149,5 +127,5 @@ def main(config):
     setup(config)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

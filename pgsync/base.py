@@ -44,7 +44,6 @@ logger = logging.getLogger(__name__)
 
 
 class Base(object):
-
     def __init__(self, database, verbose=False, *args, **kwargs):
         """Initialize the base class constructor.
 
@@ -64,19 +63,15 @@ class Base(object):
             conn = self.__engine.connect()
             conn.close()
         except Exception as e:
-            logger.exception(f'Cannot connect to database: {e}')
+            logger.exception(f"Cannot connect to database: {e}")
             raise
 
     def pg_settings(self, column):
         row = self.fetchone(
-            sa.select([
-                sa.column('setting')
-            ]).select_from(
-                sa.text('pg_settings')
-            ).where(
-                sa.column('name') == column
-            ),
-            label='pg_settings',
+            sa.select([sa.column("setting")])
+            .select_from(sa.text("pg_settings"))
+            .where(sa.column("name") == column),
+            label="pg_settings",
         )
         if row:
             return row[0]
@@ -93,23 +88,25 @@ class Base(object):
             True if successful, False otherwise.
 
         """
-        if permission not in ('usecreatedb', 'usesuper', 'userepl'):
-            raise RuntimeError(f'Invalid user permission {permission}')
+        if permission not in ("usecreatedb", "usesuper", "userepl"):
+            raise RuntimeError(f"Invalid user permission {permission}")
 
         try:
             return self.fetchone(
-                sa.select([sa.column(permission)]).select_from(
-                    sa.text('pg_user')
-                ).where(
-                    sa.and_(*[
-                        sa.column('usename') == username,
-                        sa.column(permission) == True, # noqa
-                    ])
+                sa.select([sa.column(permission)])
+                .select_from(sa.text("pg_user"))
+                .where(
+                    sa.and_(
+                        *[
+                            sa.column("usename") == username,
+                            sa.column(permission) == True,  # noqa
+                        ]
+                    )
                 ),
-                label='has_permission',
+                label="has_permission",
             )[0]
         except Exception as e:
-            logger.exception(f'{e}')
+            logger.exception(f"{e}")
         return False
 
     # Tables...
@@ -124,7 +121,7 @@ class Base(object):
             The SQLAlchemy aliased model representation
 
         """
-        name = f'{schema}.{table}'
+        name = f"{schema}.{table}"
         if name not in self.models:
             if schema not in self.__metadata:
                 metadata = sa.MetaData(schema=schema)
@@ -136,17 +133,15 @@ class Base(object):
                     f'Table "{name}" not found in registry'
                 )
             model = metadata.tables[name]
-            model.append_column(sa.Column('xmin', sa.BigInteger))
-            model.append_column(sa.Column('oid', sa.dialects.postgresql.OID))
+            model.append_column(sa.Column("xmin", sa.BigInteger))
+            model.append_column(sa.Column("oid", sa.dialects.postgresql.OID))
             model = model.alias()
             setattr(
                 model,
-                'primary_keys',
-                sorted([
-                    primary_key.key for primary_key in model.primary_key
-                ]),
+                "primary_keys",
+                sorted([primary_key.key for primary_key in model.primary_key]),
             )
-            self.models[f'{model.original}'] = model
+            self.models[f"{model.original}"] = model
 
         return self.models[name]
 
@@ -189,14 +184,12 @@ class Base(object):
         return metadata.tables.keys()
 
     def _get_schema(self, schema, table):
-        pairs = table.split('.')
+        pairs = table.split(".")
         if len(pairs) == 2:
             return pairs[0], pairs[1]
         if len(pairs) == 1:
             return schema, pairs[0]
-        raise ValueError(
-            f'Invalid definition {table} for schema: {schema}'
-        )
+        raise ValueError(f"Invalid definition {table} for schema: {schema}")
 
     def truncate_table(self, table, schema=SCHEMA):
         """Truncate a table.
@@ -210,22 +203,22 @@ class Base(object):
             schema (str): The database schema
 
         """
-        if not table.startswith(f'{schema}.'):
-            table = f'{schema}.{table}'
+        if not table.startswith(f"{schema}."):
+            table = f"{schema}.{table}"
         schema, table = self._get_schema(schema, table)
-        logger.debug(f'Truncating table: {schema}.{table}')
+        logger.debug(f"Truncating table: {schema}.{table}")
         query = f'TRUNCATE TABLE "{schema}"."{table}" CASCADE'
         self.execute(query)
 
     def truncate_tables(self, tables, schema=SCHEMA):
         """Truncate all tables."""
-        logger.debug(f'Truncating tables: {tables}')
+        logger.debug(f"Truncating tables: {tables}")
         for table in tables:
             self.truncate_table(table, schema=schema)
 
     def truncate_schema(self, schema):
         """Truncate all tables in a schema."""
-        logger.debug(f'Truncating schema: {schema}')
+        logger.debug(f"Truncating schema: {schema}")
         tables = self.tables(schema)
         self.truncate_tables(tables, schema=schema)
 
@@ -239,7 +232,7 @@ class Base(object):
         self,
         slot_name,
         plugin=PLUGIN,
-        slot_type='logical',
+        slot_type="logical",
     ):
         """
         List replication slots.
@@ -247,16 +240,18 @@ class Base(object):
         SELECT * FROM PG_REPLICATION_SLOTS
         """
         return self.fetchall(
-            sa.select(['*']).select_from(
-                sa.text('PG_REPLICATION_SLOTS')
-            ).where(
-                sa.and_(*[
-                    sa.column('slot_name') == slot_name,
-                    sa.column('slot_type') == slot_type,
-                    sa.column('plugin') == plugin,
-                ])
+            sa.select(["*"])
+            .select_from(sa.text("PG_REPLICATION_SLOTS"))
+            .where(
+                sa.and_(
+                    *[
+                        sa.column("slot_name") == slot_name,
+                        sa.column("slot_type") == slot_type,
+                        sa.column("plugin") == plugin,
+                    ]
+                )
             ),
-            label='replication_slots',
+            label="replication_slots",
         )
 
     def create_replication_slot(self, slot_name):
@@ -269,32 +264,32 @@ class Base(object):
 
         SELECT * FROM PG_REPLICATION_SLOTS
         """
-        logger.debug(f'Creating replication slot: {slot_name}')
+        logger.debug(f"Creating replication slot: {slot_name}")
         return self.fetchone(
-            sa.select(['*']).select_from(
+            sa.select(["*"]).select_from(
                 sa.func.PG_CREATE_LOGICAL_REPLICATION_SLOT(
                     slot_name,
                     PLUGIN,
                 )
             ),
-            label='create_replication_slot',
+            label="create_replication_slot",
         )
 
     def drop_replication_slot(self, slot_name):
         """
         Drop a replication slot.
         """
-        logger.debug(f'Dropping replication slot: {slot_name}')
+        logger.debug(f"Dropping replication slot: {slot_name}")
         if self.replication_slots(slot_name):
             try:
                 return self.fetchone(
-                    sa.select(['*']).select_from(
+                    sa.select(["*"]).select_from(
                         sa.func.PG_DROP_REPLICATION_SLOT(slot_name),
                     ),
-                    label='drop_replication_slot',
+                    label="drop_replication_slot",
                 )
             except Exception as e:
-                logger.exception(f'{e}')
+                logger.exception(f"{e}")
                 raise
 
     def _logical_slot_changes(
@@ -308,7 +303,7 @@ class Base(object):
     ):
         filters = []
         statement = sa.select(
-            [sa.column('xid'), sa.column('data')]
+            [sa.column("xid"), sa.column("data")]
         ).select_from(
             func(
                 slot_name,
@@ -319,16 +314,18 @@ class Base(object):
         if txmin:
             filters.append(
                 sa.cast(
-                    sa.cast(sa.column('xid'), sa.Text),
+                    sa.cast(sa.column("xid"), sa.Text),
                     sa.BigInteger,
-                ) >= txmin
+                )
+                >= txmin
             )
         if txmax:
             filters.append(
                 sa.cast(
-                    sa.cast(sa.column('xid'), sa.Text),
+                    sa.cast(sa.column("xid"), sa.Text),
                     sa.BigInteger,
-                ) < txmax
+                )
+                < txmax
             )
         if filters:
             statement = statement.where(sa.and_(*filters))
@@ -385,95 +382,115 @@ class Base(object):
     # Views...
     def _primary_keys(self, schema, tables):
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore', category=sa.exc.SAWarning)
-            pg_class = self.model('pg_class', 'pg_catalog')
-            pg_index = self.model('pg_index', 'pg_catalog')
-            pg_attribute = self.model('pg_attribute', 'pg_catalog')
-            pg_namespace = self.model('pg_namespace', 'pg_catalog')
+            warnings.simplefilter("ignore", category=sa.exc.SAWarning)
+            pg_class = self.model("pg_class", "pg_catalog")
+            pg_index = self.model("pg_index", "pg_catalog")
+            pg_attribute = self.model("pg_attribute", "pg_catalog")
+            pg_namespace = self.model("pg_namespace", "pg_catalog")
 
-        alias = pg_class.alias('x')
-        return sa.select([
-            sa.cast(
-                sa.cast(
-                    pg_index.c.indrelid,
-                    sa.dialects.postgresql.REGCLASS,
-                ), sa.Text,
-            ).label(
-                'table_name'
-            ),
-            sa.func.ARRAY_AGG(pg_attribute.c.attname).label(
-                'primary_keys'
-            ),
-        ]).join(
-            pg_attribute,
-            pg_attribute.c.attrelid == pg_index.c.indrelid,
-        ).join(
-            pg_class,
-            pg_class.c.oid == pg_index.c.indexrelid,
-        ).join(
-            alias,
-            alias.c.oid == pg_index.c.indrelid,
-        ).join(
-            pg_namespace,
-            pg_namespace.c.oid == pg_class.c.relnamespace,
-        ).where(*[
-            pg_namespace.c.nspname.notin_(
-                ['pg_catalog', 'pg_toast']
-            ),
-            pg_index.c.indisprimary,
-            sa.cast(
-                sa.cast(
-                    pg_index.c.indrelid,
-                    sa.dialects.postgresql.REGCLASS,
-                ), sa.Text,
-            ).in_(tables),
-            pg_attribute.c.attnum == sa.any_(pg_index.c.indkey),
-        ]).group_by(
-            pg_index.c.indrelid
+        alias = pg_class.alias("x")
+        return (
+            sa.select(
+                [
+                    sa.cast(
+                        sa.cast(
+                            pg_index.c.indrelid,
+                            sa.dialects.postgresql.REGCLASS,
+                        ),
+                        sa.Text,
+                    ).label("table_name"),
+                    sa.func.ARRAY_AGG(pg_attribute.c.attname).label(
+                        "primary_keys"
+                    ),
+                ]
+            )
+            .join(
+                pg_attribute,
+                pg_attribute.c.attrelid == pg_index.c.indrelid,
+            )
+            .join(
+                pg_class,
+                pg_class.c.oid == pg_index.c.indexrelid,
+            )
+            .join(
+                alias,
+                alias.c.oid == pg_index.c.indrelid,
+            )
+            .join(
+                pg_namespace,
+                pg_namespace.c.oid == pg_class.c.relnamespace,
+            )
+            .where(
+                *[
+                    pg_namespace.c.nspname.notin_(["pg_catalog", "pg_toast"]),
+                    pg_index.c.indisprimary,
+                    sa.cast(
+                        sa.cast(
+                            pg_index.c.indrelid,
+                            sa.dialects.postgresql.REGCLASS,
+                        ),
+                        sa.Text,
+                    ).in_(tables),
+                    pg_attribute.c.attnum == sa.any_(pg_index.c.indkey),
+                ]
+            )
+            .group_by(pg_index.c.indrelid)
         )
 
     def _foreign_keys(self, schema, tables):
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore', category=sa.exc.SAWarning)
+            warnings.simplefilter("ignore", category=sa.exc.SAWarning)
             table_constraints = self.model(
-                'table_constraints',
-                'information_schema',
+                "table_constraints",
+                "information_schema",
             )
             key_column_usage = self.model(
-                'key_column_usage',
-                'information_schema',
+                "key_column_usage",
+                "information_schema",
             )
             constraint_column_usage = self.model(
-                'constraint_column_usage',
-                'information_schema',
+                "constraint_column_usage",
+                "information_schema",
             )
 
-        return sa.select([
-            table_constraints.c.table_name,
-            sa.func.ARRAY_AGG(
-                sa.cast(
-                    key_column_usage.c.column_name,
-                    sa.TEXT,
-                )
-            ).label('foreign_keys'),
-        ]).join(
-            key_column_usage,
-            sa.and_(
-                key_column_usage.c.constraint_name == table_constraints.c.constraint_name,
-                key_column_usage.c.table_schema == table_constraints.c.table_schema,
-                key_column_usage.c.table_schema == schema,
-             )
-        ).join(
-            constraint_column_usage,
-            sa.and_(
-                constraint_column_usage.c.constraint_name == table_constraints.c.constraint_name,
-                constraint_column_usage.c.table_schema == table_constraints.c.table_schema,
-             )
-        ).where(*[
-             table_constraints.c.table_name.in_(tables),
-             table_constraints.c.constraint_type == 'FOREIGN KEY',
-        ]).group_by(
-            table_constraints.c.table_name
+        return (
+            sa.select(
+                [
+                    table_constraints.c.table_name,
+                    sa.func.ARRAY_AGG(
+                        sa.cast(
+                            key_column_usage.c.column_name,
+                            sa.TEXT,
+                        )
+                    ).label("foreign_keys"),
+                ]
+            )
+            .join(
+                key_column_usage,
+                sa.and_(
+                    key_column_usage.c.constraint_name
+                    == table_constraints.c.constraint_name,
+                    key_column_usage.c.table_schema
+                    == table_constraints.c.table_schema,
+                    key_column_usage.c.table_schema == schema,
+                ),
+            )
+            .join(
+                constraint_column_usage,
+                sa.and_(
+                    constraint_column_usage.c.constraint_name
+                    == table_constraints.c.constraint_name,
+                    constraint_column_usage.c.table_schema
+                    == table_constraints.c.table_schema,
+                ),
+            )
+            .where(
+                *[
+                    table_constraints.c.table_name.in_(tables),
+                    table_constraints.c.constraint_type == "FOREIGN KEY",
+                ]
+            )
+            .group_by(table_constraints.c.table_name)
         )
 
     def create_view(self, schema, tables, user_defined_fkey_tables):
@@ -503,16 +520,16 @@ class Base(object):
         rows = {}
         if MATERIALIZED_VIEW in views:
             for table_name, primary_keys, foreign_keys in self.fetchall(
-                sa.select(['*']).select_from(sa.text(MATERIALIZED_VIEW))
+                sa.select(["*"]).select_from(sa.text(MATERIALIZED_VIEW))
             ):
                 rows.setdefault(
                     table_name,
-                    {'primary_keys': set([]), 'foreign_keys': set([])},
+                    {"primary_keys": set([]), "foreign_keys": set([])},
                 )
                 if primary_keys:
-                    rows[table_name]['primary_keys'] = set(primary_keys)
+                    rows[table_name]["primary_keys"] = set(primary_keys)
                 if foreign_keys:
-                    rows[table_name]['foreign_keys'] = set(foreign_keys)
+                    rows[table_name]["foreign_keys"] = set(foreign_keys)
 
             self.__engine.execute(DropView(schema, MATERIALIZED_VIEW))
 
@@ -521,62 +538,65 @@ class Base(object):
         ):
             rows.setdefault(
                 table_name,
-                {'primary_keys': set([]), 'foreign_keys': set([])},
+                {"primary_keys": set([]), "foreign_keys": set([])},
             )
             if columns:
-                rows[table_name]['primary_keys'] |= set(columns)
+                rows[table_name]["primary_keys"] |= set(columns)
 
         for table_name, columns in self.fetchall(
             self._foreign_keys(schema, tables)
         ):
             rows.setdefault(
                 table_name,
-                {'primary_keys': set([]), 'foreign_keys': set([])},
+                {"primary_keys": set([]), "foreign_keys": set([])},
             )
             if columns:
-                rows[table_name]['foreign_keys'] |= set(columns)
+                rows[table_name]["foreign_keys"] |= set(columns)
 
         if user_defined_fkey_tables:
             for table_name, columns in user_defined_fkey_tables.items():
                 rows.setdefault(
                     table_name,
-                    {'primary_keys': set([]), 'foreign_keys': set([])},
+                    {"primary_keys": set([]), "foreign_keys": set([])},
                 )
                 if columns:
-                    rows[table_name]['foreign_keys'] |= set(columns)
+                    rows[table_name]["foreign_keys"] |= set(columns)
 
         statement = sa.select(
             Values(
-                sa.column('table_name'),
-                sa.column('primary_keys'),
-                sa.column('foreign_keys'),
-            ).data([
-                (
-                    table_name,
-                    array(
-                        fields['primary_keys']
-                    ) if fields.get('primary_keys') else None,
-                    array(
-                        fields.get('foreign_keys')
-                    ) if fields.get('foreign_keys') else None,
-                ) for table_name, fields in rows.items()
-            ]).alias(
-                't'
+                sa.column("table_name"),
+                sa.column("primary_keys"),
+                sa.column("foreign_keys"),
             )
+            .data(
+                [
+                    (
+                        table_name,
+                        array(fields["primary_keys"])
+                        if fields.get("primary_keys")
+                        else None,
+                        array(fields.get("foreign_keys"))
+                        if fields.get("foreign_keys")
+                        else None,
+                    )
+                    for table_name, fields in rows.items()
+                ]
+            )
+            .alias("t")
         )
 
-        logger.debug(f'Creating view: {schema}.{MATERIALIZED_VIEW}')
+        logger.debug(f"Creating view: {schema}.{MATERIALIZED_VIEW}")
         self.__engine.execute(CreateView(schema, MATERIALIZED_VIEW, statement))
-        self.__engine.execute(DropIndex('_idx'))
+        self.__engine.execute(DropIndex("_idx"))
         self.__engine.execute(
-            CreateIndex('_idx', schema, MATERIALIZED_VIEW, ['table_name'])
+            CreateIndex("_idx", schema, MATERIALIZED_VIEW, ["table_name"])
         )
-        logger.debug(f'Created view: {schema}.{MATERIALIZED_VIEW}')
+        logger.debug(f"Created view: {schema}.{MATERIALIZED_VIEW}")
 
     def drop_view(self, schema):
-        logger.debug(f'Dropping view: {schema}.{MATERIALIZED_VIEW}')
+        logger.debug(f"Dropping view: {schema}.{MATERIALIZED_VIEW}")
         self.__engine.execute(DropView(schema, MATERIALIZED_VIEW))
-        logger.debug(f'Dropped view: {schema}.{MATERIALIZED_VIEW}')
+        logger.debug(f"Dropped view: {schema}.{MATERIALIZED_VIEW}")
 
     # Triggers...
     def create_triggers(self, schema, tables=None):
@@ -588,17 +608,17 @@ class Base(object):
             schema, table = self._get_schema(schema, table)
             if (tables and table not in tables) or (table in views):
                 continue
-            logger.debug(f'Creating trigger on table: {schema}.{table}')
+            logger.debug(f"Creating trigger on table: {schema}.{table}")
             for name, for_each, tg_op in [
-                ('notify', 'ROW', ['INSERT', 'UPDATE', 'DELETE']),
-                ('truncate', 'STATEMENT', ['TRUNCATE']),
+                ("notify", "ROW", ["INSERT", "UPDATE", "DELETE"]),
+                ("truncate", "STATEMENT", ["TRUNCATE"]),
             ]:
                 queries.append(
                     sa.DDL(
-                        f'CREATE TRIGGER {table}_{name} '
+                        f"CREATE TRIGGER {table}_{name} "
                         f'AFTER {" OR ".join(tg_op)} ON "{schema}"."{table}" '
-                        f'FOR EACH {for_each} EXECUTE PROCEDURE '
-                        f'{TRIGGER_FUNC}()',
+                        f"FOR EACH {for_each} EXECUTE PROCEDURE "
+                        f"{TRIGGER_FUNC}()",
                     )
                 )
 
@@ -611,10 +631,10 @@ class Base(object):
             schema, table = self._get_schema(schema, table)
             if tables and table not in tables:
                 continue
-            logger.debug(f'Dropping trigger on table: {schema}.{table}')
-            for name in ('notify', 'truncate'):
+            logger.debug(f"Dropping trigger on table: {schema}.{table}")
+            for name in ("notify", "truncate"):
                 query = (
-                    f'DROP TRIGGER IF EXISTS {table}_{name} ON '
+                    f"DROP TRIGGER IF EXISTS {table}_{name} ON "
                     f'"{schema}"."{table}"'
                 )
                 self.execute(query)
@@ -623,11 +643,11 @@ class Base(object):
         """Disable all pgsync defined triggers in database."""
         for table in self.tables(schema):
             schema, table = self._get_schema(schema, table)
-            logger.debug(f'Disabling trigger on table: {schema}.{table}')
-            for name in ('notify', 'truncate'):
+            logger.debug(f"Disabling trigger on table: {schema}.{table}")
+            for name in ("notify", "truncate"):
                 query = (
                     f'ALTER TABLE "{schema}"."{table}" '
-                    f'DISABLE TRIGGER {table}_{name}'
+                    f"DISABLE TRIGGER {table}_{name}"
                 )
                 self.execute(query)
 
@@ -635,11 +655,11 @@ class Base(object):
         """Enable all pgsync defined triggers in database."""
         for table in self.tables(schema):
             schema, table = self._get_schema(schema, table)
-            logger.debug(f'Enabling trigger on table: {schema}.{table}')
-            for name in ('notify', 'truncate'):
+            logger.debug(f"Enabling trigger on table: {schema}.{table}")
+            for name in ("notify", "truncate"):
                 query = (
                     f'ALTER TABLE "{schema}"."{table}" '
-                    f'ENABLE TRIGGER {table}_{name}'
+                    f"ENABLE TRIGGER {table}_{name}"
                 )
                 self.execute(query)
 
@@ -651,8 +671,8 @@ class Base(object):
         SELECT txid_current()
         """
         return self.fetchone(
-            sa.select(['*']).select_from(sa.func.TXID_CURRENT()),
-            label='txid_current',
+            sa.select(["*"]).select_from(sa.func.TXID_CURRENT()),
+            label="txid_current",
         )[0]
 
     def parse_value(self, type_, value):
@@ -661,47 +681,47 @@ class Base(object):
 
         NB: All integers are long in python3 and call to convert is just int
         """
-        if value.lower() == 'null':
+        if value.lower() == "null":
             return None
 
         if type_.lower() in (
-            'bigint',
-            'bigserial',
-            'int',
-            'int2',
-            'int4',
-            'int8',
-            'integer',
-            'serial',
-            'serial2',
-            'serial4',
-            'serial8',
-            'smallint',
-            'smallserial',
+            "bigint",
+            "bigserial",
+            "int",
+            "int2",
+            "int4",
+            "int8",
+            "integer",
+            "serial",
+            "serial2",
+            "serial4",
+            "serial8",
+            "smallint",
+            "smallserial",
         ):
             try:
                 value = int(value)
             except ValueError:
                 raise
         if type_.lower() in (
-            'char',
-            'character',
-            'character varying',
-            'text',
-            'uuid',
-            'varchar',
+            "char",
+            "character",
+            "character varying",
+            "text",
+            "uuid",
+            "varchar",
         ):
             value = value.lstrip("'").rstrip("'")
-        if type_.lower() == 'boolean':
+        if type_.lower() == "boolean":
             try:
                 value = bool(value)
             except ValueError:
                 raise
         if type_.lower() in (
-            'double precision',
-            'float4',
-            'float8',
-            'real',
+            "double precision",
+            "float4",
+            "float8",
+            "real",
         ):
             try:
                 value = float(value)
@@ -710,7 +730,6 @@ class Base(object):
         return value
 
     def parse_logical_slot(self, row):
-
         def _parse_logical_slot(data):
 
             while True:
@@ -719,58 +738,58 @@ class Base(object):
                 if not match:
                     break
 
-                key = match.groupdict().get('key')
+                key = match.groupdict().get("key")
                 if key:
-                    key = key.replace('"', '')
-                value = match.groupdict().get('value')
-                type_ = match.groupdict().get('type')
+                    key = key.replace('"', "")
+                value = match.groupdict().get("value")
+                type_ = match.groupdict().get("type")
 
                 value = self.parse_value(type_, value)
 
                 # set data for next iteration of the loop
-                data = f'{data[match.span()[1]:]} '
+                data = f"{data[match.span()[1]:]} "
                 yield key, value
 
         payload = dict(schema=None, tg_op=None, table=None, old={}, new={})
 
         match = LOGICAL_SLOT_PREFIX.search(row)
         if not match:
-            logger.exception(f'No match for row: {row}')
-            raise ParseLogicalSlotError(f'No match for row: {row}')
+            logger.exception(f"No match for row: {row}")
+            raise ParseLogicalSlotError(f"No match for row: {row}")
 
         payload.update(match.groupdict())
         span = match.span()
         # trailing space is deliberate
-        suffix = f'{row[span[1]:]} '
+        suffix = f"{row[span[1]:]} "
 
-        if 'old-key' and 'new-tuple' in suffix:
+        if "old-key" and "new-tuple" in suffix:
             # this can only be an UPDATE operation
-            if payload['tg_op'] != UPDATE:
+            if payload["tg_op"] != UPDATE:
                 msg = f"Unknown {payload['tg_op']} operation for row: {row}"
                 logger.exception(msg)
                 raise ParseLogicalSlotError(msg)
 
-            i = suffix.index('old-key:')
+            i = suffix.index("old-key:")
             if i > -1:
-                j = suffix.index('new-tuple:')
-                s = suffix[i + len('old-key:'): j]
+                j = suffix.index("new-tuple:")
+                s = suffix[i + len("old-key:") : j]
                 for key, value in _parse_logical_slot(s):
-                    payload['old'][key] = value
+                    payload["old"][key] = value
 
-            i = suffix.index('new-tuple:')
+            i = suffix.index("new-tuple:")
             if i > -1:
-                s = suffix[i + len('new-tuple:'):]
+                s = suffix[i + len("new-tuple:") :]
                 for key, value in _parse_logical_slot(s):
-                    payload['new'][key] = value
+                    payload["new"][key] = value
         else:
             # this can be an INSERT, DELETE, UPDATE or TRUNCATE operation
-            if payload['tg_op'] not in TG_OP:
+            if payload["tg_op"] not in TG_OP:
                 msg = f"Unknown {payload['tg_op']} operation for row: {row}"
                 logger.exception(msg)
                 raise ParseLogicalSlotError(msg)
 
             for key, value in _parse_logical_slot(suffix):
-                payload['new'][key] = value
+                payload["new"][key] = value
 
         return payload
 
@@ -785,7 +804,7 @@ class Base(object):
             conn.execute(statement, values)
             conn.close()
         except Exception as e:
-            logger.exception(f'Exception {e}')
+            logger.exception(f"Exception {e}")
             raise
 
     def fetchone(self, statement, label=None, literal_binds=False):
@@ -798,7 +817,7 @@ class Base(object):
             row = conn.execute(statement).fetchone()
             conn.close()
         except Exception as e:
-            logger.exception(f'Exception {e}')
+            logger.exception(f"Exception {e}")
             raise
         return row
 
@@ -812,7 +831,7 @@ class Base(object):
             rows = conn.execute(statement).fetchall()
             conn.close()
         except Exception as e:
-            logger.exception(f'Exception {e}')
+            logger.exception(f"Exception {e}")
             raise
         return rows
 
@@ -832,9 +851,9 @@ class Base(object):
     def count(self, statement):
         with self.__engine.connect() as conn:
             return conn.execute(
-                statement.original.with_only_columns([
-                    sa.func.count()
-                ]).order_by(None)
+                statement.original.with_only_columns(
+                    [sa.func.count()]
+                ).order_by(None)
             ).scalar()
 
 
@@ -843,6 +862,7 @@ class Base(object):
 
 def subtransactions(session):
     """Context manager for executing code within a sub-transaction."""
+
     class ControlledExecution:
         def __init__(self, session):
             self.session = session
@@ -856,6 +876,7 @@ def subtransactions(session):
             except Exception:
                 self.session.rollback()
                 raise
+
     return ControlledExecution(session)
 
 
@@ -881,7 +902,7 @@ def _get_foreign_keys(model_a, model_b):
 
     if not foreign_keys:
         raise ForeignKeyError(
-            f'No foreign key relationship between '
+            f"No foreign key relationship between "
             f'"{model_a.original}" and '
             f'"{model_b.original}"'
         )
@@ -903,8 +924,8 @@ def get_foreign_keys(node_a, node_b):
     foreign_keys = {}
     # if either offers a foreign_key via relationship, use it!
     if (
-        node_a.relationship.foreign_key.parent or
-        node_b.relationship.foreign_key.parent
+        node_a.relationship.foreign_key.parent
+        or node_b.relationship.foreign_key.parent
     ):
         if node_a.relationship.foreign_key.parent:
             foreign_keys[node_a.parent.name] = sorted(
@@ -945,24 +966,24 @@ def pg_engine(
 
     if sslmode:
         if sslmode not in (
-             'allow',
-             'disable',
-             'prefer',
-             'require',
-             'verify-ca',
-             'verify-full',
+            "allow",
+            "disable",
+            "prefer",
+            "require",
+            "verify-ca",
+            "verify-full",
         ):
             raise ValueError(f'Invalid sslmode: "{sslmode}"')
-        connect_args['sslmode'] = sslmode
+        connect_args["sslmode"] = sslmode
 
     if sslrootcert:
         if not os.path.exists(sslrootcert):
             raise IOError(
                 f'"{sslrootcert}" not found.\n'
-                f'Provide a valid file containing SSL certificate '
-                f'authority (CA) certificate(s).'
+                f"Provide a valid file containing SSL certificate "
+                f"authority (CA) certificate(s)."
             )
-        connect_args['sslrootcert'] = sslrootcert
+        connect_args["sslrootcert"] = sslrootcert
 
     url = get_postgres_url(
         database,
@@ -975,7 +996,7 @@ def pg_engine(
 
 
 def pg_execute(engine, query, values=None, options=None):
-    options = options or {'isolation_level': 'AUTOCOMMIT'}
+    options = options or {"isolation_level": "AUTOCOMMIT"}
     conn = engine.connect()
     try:
         if options:
@@ -983,7 +1004,7 @@ def pg_execute(engine, query, values=None, options=None):
         conn.execute(query, values)
         conn.close()
     except Exception as e:
-        logger.exception(f'Exception {e}')
+        logger.exception(f"Exception {e}")
         raise
 
 
@@ -995,34 +1016,34 @@ def create_schema(engine, schema):
 
 def create_database(database, echo=False):
     """Create a database."""
-    logger.debug(f'Creating database: {database}')
-    engine = pg_engine(database='postgres', echo=echo)
-    pg_execute(engine, f'CREATE DATABASE {database}')
-    logger.debug(f'Created database: {database}')
+    logger.debug(f"Creating database: {database}")
+    engine = pg_engine(database="postgres", echo=echo)
+    pg_execute(engine, f"CREATE DATABASE {database}")
+    logger.debug(f"Created database: {database}")
 
 
 def drop_database(database, echo=False):
     """Drop a database."""
-    logger.debug(f'Dropping database: {database}')
-    engine = pg_engine(database='postgres', echo=echo)
-    pg_execute(engine, f'DROP DATABASE IF EXISTS {database}')
-    logger.debug(f'Dropped database: {database}')
+    logger.debug(f"Dropping database: {database}")
+    engine = pg_engine(database="postgres", echo=echo)
+    pg_execute(engine, f"DROP DATABASE IF EXISTS {database}")
+    logger.debug(f"Dropped database: {database}")
 
 
 def create_extension(database, extension, echo=False):
     """Create a database extension."""
-    logger.debug(f'Creating extension: {extension}')
+    logger.debug(f"Creating extension: {extension}")
     engine = pg_engine(database=database, echo=echo)
     pg_execute(engine, f'CREATE EXTENSION IF NOT EXISTS "{extension}"')
-    logger.debug(f'Created extension: {extension}')
+    logger.debug(f"Created extension: {extension}")
 
 
 def drop_extension(database, extension, echo=False):
     """Drop a database extension."""
-    logger.debug(f'Dropping extension: {extension}')
+    logger.debug(f"Dropping extension: {extension}")
     engine = pg_engine(database=database, echo=echo)
     pg_execute(engine, f'DROP EXTENSION IF EXISTS "{extension}"')
-    logger.debug(f'Dropped extension: {extension}')
+    logger.debug(f"Dropped extension: {extension}")
 
 
 def compiled_query(query, label=None, literal_binds=False):
@@ -1030,18 +1051,16 @@ def compiled_query(query, label=None, literal_binds=False):
     query = str(
         query.compile(
             dialect=postgresql.dialect(),
-            compile_kwargs={
-                'literal_binds': literal_binds
-            },
+            compile_kwargs={"literal_binds": literal_binds},
         )
     )
-    query = sqlparse.format(query, reindent=True, keyword_case='upper')
+    query = sqlparse.format(query, reindent=True, keyword_case="upper")
     if label:
-        logger.debug(f'\033[4m{label}:\033[0m\n{query}')
-        sys.stdout.write(f'\033[4m{label}:\033[0m\n{query}')
+        logger.debug(f"\033[4m{label}:\033[0m\n{query}")
+        sys.stdout.write(f"\033[4m{label}:\033[0m\n{query}")
     else:
-        logging.debug(f'{query}')
-        sys.stdout.write(f'{query}')
+        logging.debug(f"{query}")
+        sys.stdout.write(f"{query}")
 
 
 def _rows_to_dict(rows):
