@@ -8,9 +8,9 @@ appdirs==1.4.4
     # via black
 black==21.5b1
     # via -r requirements/base.in
-boto3==1.17.72
+boto3==1.17.73
     # via -r requirements/base.in
-botocore==1.20.72
+botocore==1.20.73
     # via
     #   boto3
     #   s3transfer
