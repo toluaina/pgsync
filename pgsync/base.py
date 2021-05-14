@@ -234,8 +234,7 @@ class Base(object):
         plugin=PLUGIN,
         slot_type="logical",
     ):
-        """
-        List replication slots.
+        """List replication slots.
 
         SELECT * FROM PG_REPLICATION_SLOTS
         """
@@ -255,8 +254,7 @@ class Base(object):
         )
 
     def create_replication_slot(self, slot_name):
-        """
-        Create a replication slot.
+        """Create a replication slot.
 
         TODO:
         - Only create the replication slot if it does not exist
@@ -276,9 +274,7 @@ class Base(object):
         )
 
     def drop_replication_slot(self, slot_name):
-        """
-        Drop a replication slot.
-        """
+        """Drop a replication slot."""
         logger.debug(f"Dropping replication slot: {slot_name}")
         if self.replication_slots(slot_name):
             try:
@@ -339,8 +335,7 @@ class Base(object):
         upto_lsn=None,
         upto_nchanges=None,
     ):
-        """
-        Get/Consume changes from a logical replication slot.
+        """Get/Consume changes from a logical replication slot.
 
         To get one change and data in existing replication slot:
         SELECT * FROM PG_LOGICAL_SLOT_GET_CHANGES('testdb', NULL, 1)
@@ -365,8 +360,7 @@ class Base(object):
         upto_lsn=None,
         upto_nchanges=None,
     ):
-        """
-        Peek a logical replication slot without consuming changes.
+        """Peek a logical replication slot without consuming changes.
 
         SELECT * FROM PG_LOGICAL_SLOT_PEEK_CHANGES('testdb', NULL, 1)
         """
@@ -1061,30 +1055,3 @@ def compiled_query(query, label=None, literal_binds=False):
     else:
         logging.debug(f"{query}")
         sys.stdout.write(f"{query}")
-
-
-def _rows_to_dict(rows):
-    """
-    Converts list of tuples to dict of sets
-        e.g
-            [('author', ['city_id']), ('book', ['publisher_id'])]
-        becomes {
-            {'author': {'city_id'}, 'book': {'publisher_id'}}
-        }
-    """
-    values = {}
-    for key, value in rows:
-        if key in values:
-            values[key] |= set(value)
-            continue
-        values[key] = set(value)
-    return values
-
-
-def _merge_dict(rows1, rows2):
-    for key, value in rows2.items():
-        if key in rows1:
-            rows1[key] |= set(value)
-            continue
-        rows1[key] = set(value)
-    return rows1

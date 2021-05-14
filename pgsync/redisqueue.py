@@ -15,8 +15,8 @@ class RedisQueue(object):
     """Simple Queue with Redis Backend."""
 
     def __init__(self, name, namespace="queue", **kwargs):
-        """
-        The default connection parameters are:
+        """The default connection parameters are:
+
         host = 'localhost', port = 6379, db = 0
         """
         url = get_redis_url(**kwargs)
@@ -44,8 +44,7 @@ class RedisQueue(object):
         self.__db.rpush(self.key, json.dumps(item))
 
     def pop(self, block=True, timeout=None):
-        """
-        Remove and return an item from the queue.
+        """Remove and return an item from the queue.
 
         If optional args block is true and timeout is None (the default), block
         if necessary until an item is available.

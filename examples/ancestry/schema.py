@@ -23,10 +23,7 @@ class Surrogate(Base):
     __table_args__ = ()
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     name = sa.Column(sa.String)
-    parent_id = sa.Column(
-        sa.Integer,
-        sa.ForeignKey(Parent.id),
-    )
+    parent_id = sa.Column(sa.Integer, sa.ForeignKey(Parent.id))
 
 
 class Child(Base):
@@ -34,10 +31,7 @@ class Child(Base):
     __table_args__ = ()
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     name = sa.Column(sa.String)
-    surrogate_id = sa.Column(
-        sa.Integer,
-        sa.ForeignKey(Surrogate.id),
-    )
+    parent_id = sa.Column(sa.Integer, sa.ForeignKey(Surrogate.id))
 
 
 class GrandChild(Base):
@@ -45,10 +39,7 @@ class GrandChild(Base):
     __table_args__ = ()
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     name = sa.Column(sa.String)
-    child_id = sa.Column(
-        sa.Integer,
-        sa.ForeignKey(Child.id),
-    )
+    parent_id = sa.Column(sa.Integer, sa.ForeignKey(Child.id))
 
 
 class GreatGrandChild(Base):
@@ -56,10 +47,7 @@ class GreatGrandChild(Base):
     __table_args__ = ()
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     name = sa.Column(sa.String)
-    grand_child_id = sa.Column(
-        sa.Integer,
-        sa.ForeignKey(GrandChild.id),
-    )
+    parent_id = sa.Column(sa.Integer, sa.ForeignKey(GrandChild.id))
 
 
 def setup(config=None):
