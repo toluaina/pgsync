@@ -44,7 +44,7 @@ Example spec
         {
             "database": "[database name]",
             "index": "[elasticsearch index]",
-            "node": {
+            "nodes": {
                 "table": "[table A]",
                 "schema": "[table A schema]",
                 "columns": [
