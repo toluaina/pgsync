@@ -53,18 +53,6 @@ class RelationshipAttributeError(Exception):
         return repr(self.value)
 
 
-class LabelError(Exception):
-    """
-    This error is raised if the label is invalid
-    """
-
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
-
-
 class TableNotFoundError(Exception):
     def __init__(self, value):
         self.value = value
@@ -105,14 +93,6 @@ class ColumnNotFoundError(Exception):
         return repr(self.value)
 
 
-class ColumnNotSpecifiedError(Exception):
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
-
-
 class ForeignKeyError(Exception):
     def __init__(self, value):
         self.value = value
@@ -122,30 +102,6 @@ class ForeignKeyError(Exception):
 
 
 class RelationshipError(Exception):
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
-
-
-class IndexError(Exception):
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
-
-
-class DocTypeError(Exception):
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
-
-
-class MultipleForeignKeysError(Exception):
     def __init__(self, value):
         self.value = value
 
@@ -170,14 +126,6 @@ class SuperUserError(Exception):
 
 
 class SchemaError(Exception):
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
-
-
-class CompositeKeyError(Exception):
     def __init__(self, value):
         self.value = value
 
