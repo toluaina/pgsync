@@ -3,7 +3,6 @@ import logging
 from copy import deepcopy
 
 from aiohttp import web
-from app.constants import META, POST_HIGHLIGHT_TAG, PRE_HIGHLIGHT_TAG
 from app.settings import (
     ELASTICSEARCH_INDEX,
     ELASTICSEARCH_TIMEOUT,
@@ -17,6 +16,9 @@ from elasticsearch_dsl.query import Bool, Match
 logger = logging.getLogger(__name__)
 
 HIGHLIGHT = True
+META = "_meta"
+PRE_HIGHLIGHT_TAG = "<u><mark><b>"
+POST_HIGHLIGHT_TAG = "</b></mark></u>"
 
 
 class DictQuery(dict):

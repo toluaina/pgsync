@@ -132,10 +132,12 @@ def get_postgres_url(
     host = host or PG_HOST
     password = password or PG_PASSWORD
     port = port or PG_PORT
-    if password:
-        return f"postgresql://{user}:{quote_plus(password)}@{host}:{port}/{database}"
-    logger.debug("Connecting to Postgres without password.")
-    return f"postgresql://{user}@{host}:{port}/{database}"
+    if not password:
+        logger.debug("Connecting to Postgres without password.")
+        return f"postgresql://{user}@{host}:{port}/{database}"
+    return (
+        f"postgresql://{user}:{quote_plus(password)}@{host}:{port}/{database}"
+    )
 
 
 def get_redis_url(scheme=None, host=None, password=None, port=None, db=None):

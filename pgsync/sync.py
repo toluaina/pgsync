@@ -582,16 +582,16 @@ class Sync(Base):
             {
                 'tg_op': 'INSERT',
                 'table': 'book',
-                'old': {'id': 1}'new': {'id': 4}
+                'old': {'id': 1}, 'new': {'id': 4}
             },
             {
                 'tg_op': 'INSERT',
                 'table': 'book',
-                'old': {'id': 2}'new': {'id': 5}
+                'old': {'id': 2}, 'new': {'id': 5}
             },
             {   'tg_op': 'INSERT',
                 'table': 'book',
-                'old': {'id': 3}'new': {'id': 6},
+                'old': {'id': 3}, 'new': {'id': 6},
             }
             ...
         ]

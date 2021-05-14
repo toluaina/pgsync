@@ -72,6 +72,7 @@ class ElasticHelper(object):
         max_chunk_bytes=None,
         queue_size=None,
         thread_count=None,
+        refresh=False,
     ):
         """Bulk index, update, delete docs to Elasticsearch."""
         chunk_size = chunk_size or ELASTICSEARCH_CHUNK_SIZE
@@ -87,7 +88,7 @@ class ElasticHelper(object):
             chunk_size=chunk_size,
             max_chunk_bytes=max_chunk_bytes,
             queue_size=queue_size,
-            refresh=False,
+            refresh=refresh,
         ):
             pass
 
@@ -103,7 +104,7 @@ class ElasticHelper(object):
 
         fields = {
             'id': [1, 2],
-            'uid': ['a002', 'a009']
+            'uid': ['a002', 'a009'],
         }
         """
         fields = fields or {}
@@ -217,16 +218,15 @@ def get_elasticsearch_client(url):
 
     if ELASTICSEARCH_AWS_HOSTED:
         credentials = boto3.Session().get_credentials()
-        http_auth = AWS4Auth(
-            credentials.access_key,
-            credentials.secret_key,
-            ELASTICSEARCH_AWS_REGION,
-            "es",
-            session_token=credentials.token,
-        )
         return Elasticsearch(
             hosts=[{"host": url, "port": 443}],
-            http_auth=http_auth,
+            http_auth=AWS4Auth(
+                credentials.access_key,
+                credentials.secret_key,
+                ELASTICSEARCH_AWS_REGION,
+                "es",
+                session_token=credentials.token,
+            ),
             use_ssl=True,
             verify_certs=True,
             connection_class=RequestsHttpConnection,
