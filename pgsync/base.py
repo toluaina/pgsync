@@ -67,15 +67,15 @@ class Base(object):
             raise
 
     def pg_settings(self, column):
-        row = self.fetchone(
-            sa.select([sa.column("setting")])
-            .select_from(sa.text("pg_settings"))
-            .where(sa.column("name") == column),
-            label="pg_settings",
-        )
-        if row:
-            return row[0]
-        return None
+        try:
+            return self.fetchone(
+                sa.select([sa.column("setting")])
+                .select_from(sa.text("pg_settings"))
+                .where(sa.column("name") == column),
+                label="pg_settings",
+            )[0]
+        except Exception:
+            return None
 
     def has_permission(self, username, permission):
         """Check if the given user is a superuser or replication user.
@@ -748,7 +748,6 @@ class Base(object):
 
         match = LOGICAL_SLOT_PREFIX.search(row)
         if not match:
-            logger.exception(f"No match for row: {row}")
             raise ParseLogicalSlotError(f"No match for row: {row}")
 
         payload.update(match.groupdict())
@@ -760,7 +759,6 @@ class Base(object):
             # this can only be an UPDATE operation
             if payload["tg_op"] != UPDATE:
                 msg = f"Unknown {payload['tg_op']} operation for row: {row}"
-                logger.exception(msg)
                 raise ParseLogicalSlotError(msg)
 
             i = suffix.index("old-key:")
@@ -779,7 +777,6 @@ class Base(object):
             # this can be an INSERT, DELETE, UPDATE or TRUNCATE operation
             if payload["tg_op"] not in TG_OP:
                 msg = f"Unknown {payload['tg_op']} operation for row: {row}"
-                logger.exception(msg)
                 raise ParseLogicalSlotError(msg)
 
             for key, value in _parse_logical_slot(suffix):
@@ -842,7 +839,7 @@ class Base(object):
                 for keys, row, *primary_keys in chunk:
                     yield keys, row, primary_keys
 
-    def count(self, statement):
+    def fetchcount(self, statement):
         with self.__engine.connect() as conn:
             return conn.execute(
                 statement.original.with_only_columns(

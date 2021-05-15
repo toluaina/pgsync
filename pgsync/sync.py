@@ -753,10 +753,8 @@ class Sync(Base):
         if self.verbose:
             compiled_query(node._subquery, "Query")
 
-        row_count = self.count(node._subquery)
-
         with click.progressbar(
-            length=row_count,
+            length=self.fetchcount(node._subquery),
             show_pos=True,
             show_percent=True,
             show_eta=True,
