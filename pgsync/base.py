@@ -386,12 +386,20 @@ class Base(object):
         return (
             sa.select(
                 [
-                    sa.cast(
-                        sa.cast(
-                            pg_index.c.indrelid,
-                            sa.dialects.postgresql.REGCLASS,
-                        ),
-                        sa.Text,
+                    sa.func.REVERSE(
+                        sa.func.SPLIT_PART(
+                            sa.func.REVERSE(
+                                sa.cast(
+                                    sa.cast(
+                                        pg_index.c.indrelid,
+                                        sa.dialects.postgresql.REGCLASS,
+                                    ),
+                                    sa.Text,
+                                )
+                            ),
+                            ".",
+                            1,
+                        )
                     ).label("table_name"),
                     sa.func.ARRAY_AGG(pg_attribute.c.attname).label(
                         "primary_keys"
@@ -514,7 +522,9 @@ class Base(object):
         rows = {}
         if MATERIALIZED_VIEW in views:
             for table_name, primary_keys, foreign_keys in self.fetchall(
-                sa.select(["*"]).select_from(sa.text(MATERIALIZED_VIEW))
+                sa.select(["*"]).select_from(
+                    sa.text(f"{schema}.{MATERIALIZED_VIEW}")
+                )
             ):
                 rows.setdefault(
                     table_name,
@@ -526,6 +536,10 @@ class Base(object):
                     rows[table_name]["foreign_keys"] = set(foreign_keys)
 
             self.__engine.execute(DropView(schema, MATERIALIZED_VIEW))
+
+        if schema != SCHEMA:
+            for table in set(tables):
+                tables.add(f"{schema}.{table}")
 
         for table_name, columns in self.fetchall(
             self._primary_keys(schema, tables)
@@ -555,6 +569,9 @@ class Base(object):
                 )
                 if columns:
                     rows[table_name]["foreign_keys"] |= set(columns)
+
+        if not rows:
+            return
 
         statement = sa.select(
             Values(
@@ -607,6 +624,7 @@ class Base(object):
                 ("notify", "ROW", ["INSERT", "UPDATE", "DELETE"]),
                 ("truncate", "STATEMENT", ["TRUNCATE"]),
             ]:
+                self.drop_triggers(schema, [table])
                 queries.append(
                     sa.DDL(
                         f"CREATE TRIGGER {table}_{name} "
@@ -843,7 +861,7 @@ class Base(object):
         with self.__engine.connect() as conn:
             return conn.execute(
                 statement.original.with_only_columns(
-                    [sa.func.count()]
+                    [sa.func.COUNT()]
                 ).order_by(None)
             ).scalar()
 
