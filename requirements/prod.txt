@@ -8,9 +8,9 @@ appdirs==1.4.4
     # via black
 black==21.5b1
     # via -r requirements/base.in
-boto3==1.17.73
+boto3==1.17.83
     # via -r requirements/base.in
-botocore==1.20.73
+botocore==1.20.83
     # via
     #   boto3
     #   s3transfer
@@ -24,24 +24,26 @@ certifi==2020.12.5
     #   requests
 chardet==4.0.0
     # via requests
-click==8.0.0
+click==8.0.1
     # via
     #   -r requirements/base.in
     #   black
 elasticsearch-dsl==7.3.0
     # via -r requirements/base.in
-elasticsearch==7.12.1
+elasticsearch==7.13.0
     # via elasticsearch-dsl
 environs==9.3.2
     # via -r requirements/base.in
-faker==8.1.4
+faker==8.4.0
     # via -r requirements/base.in
 greenlet==1.1.0
     # via sqlalchemy
 idna==2.10
     # via requests
-importlib-metadata==4.0.1
-    # via sqlalchemy
+importlib-metadata==4.3.0
+    # via
+    #   click
+    #   sqlalchemy
 jmespath==0.10.0
     # via
     #   boto3
@@ -50,7 +52,7 @@ marshmallow==3.12.1
     # via environs
 mypy-extensions==0.4.3
     # via black
-newrelic==6.2.0.156
+newrelic==6.4.0.157
     # via -r requirements/prod.in
 pathspec==0.8.1
     # via black
@@ -67,7 +69,7 @@ redis==3.5.3
     # via -r requirements/base.in
 regex==2021.4.4
     # via black
-requests-aws4auth==1.0.1
+requests-aws4auth==1.1.0
     # via -r requirements/base.in
 requests==2.25.1
     # via requests-aws4auth
@@ -77,6 +79,7 @@ six==1.16.0
     # via
     #   elasticsearch-dsl
     #   python-dateutil
+    #   requests-aws4auth
 sqlalchemy==1.4.15
     # via -r requirements/base.in
 sqlparse==0.4.1
@@ -91,7 +94,7 @@ typing-extensions==3.10.0.0
     # via
     #   black
     #   importlib-metadata
-urllib3==1.26.4
+urllib3==1.26.5
     # via
     #   botocore
     #   elasticsearch

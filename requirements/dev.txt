@@ -12,9 +12,9 @@ attrs==21.2.0
     # via pytest
 black==21.5b1
     # via -r requirements/base.in
-boto3==1.17.73
+boto3==1.17.83
     # via -r requirements/base.in
-botocore==1.20.73
+botocore==1.20.83
     # via
     #   boto3
     #   s3transfer
@@ -26,11 +26,11 @@ certifi==2020.12.5
     # via
     #   elasticsearch
     #   requests
-cfgv==3.2.0
+cfgv==3.3.0
     # via pre-commit
 chardet==4.0.0
     # via requests
-click==8.0.0
+click==8.0.1
     # via
     #   -r requirements/base.in
     #   black
@@ -43,11 +43,11 @@ distlib==0.3.1
     # via virtualenv
 elasticsearch-dsl==7.3.0
     # via -r requirements/base.in
-elasticsearch==7.12.1
+elasticsearch==7.13.0
     # via elasticsearch-dsl
 environs==9.3.2
     # via -r requirements/base.in
-faker==8.1.4
+faker==8.4.0
     # via -r requirements/base.in
 filelock==3.0.12
     # via virtualenv
@@ -69,12 +69,13 @@ flake8==3.9.2
     #   flake8-print
 greenlet==1.1.0
     # via sqlalchemy
-identify==2.2.4
+identify==2.2.6
     # via pre-commit
 idna==2.10
     # via requests
-importlib-metadata==4.0.1
+importlib-metadata==4.3.0
     # via
+    #   click
     #   flake8
     #   pep517
     #   pluggy
@@ -94,7 +95,7 @@ mccabe==0.6.1
     # via flake8
 mock==4.0.3
     # via -r requirements/test.in
-more-itertools==8.7.0
+more-itertools==8.8.0
     # via pytest
 mypy-extensions==0.4.3
     # via black
@@ -112,7 +113,7 @@ pip-tools==6.1.0
     # via -r requirements/dev.in
 pluggy==0.13.1
     # via pytest
-pre-commit==2.12.1
+pre-commit==2.13.0
     # via -r requirements/dev.in
 psycopg2-binary==2.8.6
     # via -r requirements/base.in
@@ -124,7 +125,7 @@ pycodestyle==2.7.0
     #   flake8-debugger
     #   flake8-print
     #   flake8-todo
-pydocstyle==6.0.0
+pydocstyle==6.1.1
     # via flake8-docstrings
 pyflakes==2.3.1
     # via flake8
@@ -134,7 +135,7 @@ pytest-cov==2.12.0
     # via -r requirements/test.in
 pytest-mock==3.6.1
     # via -r requirements/test.in
-pytest-runner==5.3.0
+pytest-runner==5.3.1
     # via -r requirements/test.in
 pytest-sugar==0.9.4
     # via -r requirements/test.in
@@ -157,7 +158,7 @@ redis==3.5.3
     # via -r requirements/base.in
 regex==2021.4.4
     # via black
-requests-aws4auth==1.0.1
+requests-aws4auth==1.1.0
     # via -r requirements/base.in
 requests==2.25.1
     # via requests-aws4auth
@@ -169,6 +170,7 @@ six==1.16.0
     #   flake8-debugger
     #   flake8-print
     #   python-dateutil
+    #   requests-aws4auth
     #   virtualenv
 snowballstemmer==2.1.0
     # via pydocstyle
@@ -194,12 +196,12 @@ typing-extensions==3.10.0.0
     # via
     #   black
     #   importlib-metadata
-urllib3==1.26.4
+urllib3==1.26.5
     # via
     #   botocore
     #   elasticsearch
     #   requests
-virtualenv==20.4.6
+virtualenv==20.4.7
     # via pre-commit
 wcwidth==0.2.5
     # via pytest

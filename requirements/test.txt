@@ -10,9 +10,9 @@ attrs==21.2.0
     # via pytest
 black==21.5b1
     # via -r requirements/base.in
-boto3==1.17.73
+boto3==1.17.83
     # via -r requirements/base.in
-botocore==1.20.73
+botocore==1.20.83
     # via
     #   boto3
     #   s3transfer
@@ -26,7 +26,7 @@ certifi==2020.12.5
     #   requests
 chardet==4.0.0
     # via requests
-click==8.0.0
+click==8.0.1
     # via
     #   -r requirements/base.in
     #   black
@@ -34,11 +34,11 @@ coverage[toml]==5.5
     # via pytest-cov
 elasticsearch-dsl==7.3.0
     # via -r requirements/base.in
-elasticsearch==7.12.1
+elasticsearch==7.13.0
     # via elasticsearch-dsl
 environs==9.3.2
     # via -r requirements/base.in
-faker==8.1.4
+faker==8.4.0
     # via -r requirements/base.in
 flake8-debugger==4.0.0
     # via -r requirements/test.in
@@ -60,8 +60,9 @@ greenlet==1.1.0
     # via sqlalchemy
 idna==2.10
     # via requests
-importlib-metadata==4.0.1
+importlib-metadata==4.3.0
     # via
+    #   click
     #   flake8
     #   pluggy
     #   pytest
@@ -78,7 +79,7 @@ mccabe==0.6.1
     # via flake8
 mock==4.0.3
     # via -r requirements/test.in
-more-itertools==8.7.0
+more-itertools==8.8.0
     # via pytest
 mypy-extensions==0.4.3
     # via black
@@ -100,7 +101,7 @@ pycodestyle==2.7.0
     #   flake8-debugger
     #   flake8-print
     #   flake8-todo
-pydocstyle==6.0.0
+pydocstyle==6.1.1
     # via flake8-docstrings
 pyflakes==2.3.1
     # via flake8
@@ -110,7 +111,7 @@ pytest-cov==2.12.0
     # via -r requirements/test.in
 pytest-mock==3.6.1
     # via -r requirements/test.in
-pytest-runner==5.3.0
+pytest-runner==5.3.1
     # via -r requirements/test.in
 pytest-sugar==0.9.4
     # via -r requirements/test.in
@@ -131,7 +132,7 @@ redis==3.5.3
     # via -r requirements/base.in
 regex==2021.4.4
     # via black
-requests-aws4auth==1.0.1
+requests-aws4auth==1.1.0
     # via -r requirements/base.in
 requests==2.25.1
     # via requests-aws4auth
@@ -143,6 +144,7 @@ six==1.16.0
     #   flake8-debugger
     #   flake8-print
     #   python-dateutil
+    #   requests-aws4auth
 snowballstemmer==2.1.0
     # via pydocstyle
 sqlalchemy==1.4.15
@@ -165,7 +167,7 @@ typing-extensions==3.10.0.0
     # via
     #   black
     #   importlib-metadata
-urllib3==1.26.4
+urllib3==1.26.5
     # via
     #   botocore
     #   elasticsearch

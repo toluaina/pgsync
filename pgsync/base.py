@@ -571,7 +571,10 @@ class Base(object):
                     rows[table_name]["foreign_keys"] |= set(columns)
 
         if not rows:
-            return
+            rows.setdefault(
+                None,
+                {"primary_keys": set([]), "foreign_keys": set([])},
+            )
 
         statement = sa.select(
             Values(
@@ -612,7 +615,11 @@ class Base(object):
     # Triggers...
     def create_triggers(self, schema, tables=None):
         """Create a database triggers."""
-        self.execute(CREATE_TRIGGER_TEMPLATE)
+        self.execute(
+            CREATE_TRIGGER_TEMPLATE.replace(
+                MATERIALIZED_VIEW, f"{schema}.{MATERIALIZED_VIEW}"
+            )
+        )
         views = sa.inspect(self.engine).get_view_names(schema)
         queries = []
         for table in self.tables(schema):
