@@ -2,7 +2,7 @@
     {
         "database": "rental",
         "index": "rental",
-        "node": {
+        "nodes": {
             "table": "film",
             "columns": [
                 "film_id",
