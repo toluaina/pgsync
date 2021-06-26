@@ -178,8 +178,8 @@ class Sync(Base):
                 tables |= set([node.table])
                 # we want to get both the parent and the child keys here
                 # even though only one of them is the foreign_key.
-                # this is because we specify both in the schema but
-                # do not indicate which table defines the foreign key.
+                # this is because we define both in the schema but
+                # do not specify which table is the foreign key.
                 columns = []
                 if node.relationship.foreign_key.parent:
                     columns.extend(node.relationship.foreign_key.parent)

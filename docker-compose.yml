@@ -13,7 +13,7 @@ services:
     image: redis
     command: redis-server --requirepass PLEASE_CHANGE_ME
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.12.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.13.2
     ports:
       - "9201:9200"
       - "9301:9300"

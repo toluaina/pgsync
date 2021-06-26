@@ -74,7 +74,7 @@ class Base(object):
                 .where(sa.column("name") == column),
                 label="pg_settings",
             )[0]
-        except Exception:
+        except IndexError:
             return None
 
     def has_permission(self, username, permission):
