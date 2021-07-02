@@ -28,8 +28,7 @@ from .settings import (
     ELASTICSEARCH_THREAD_COUNT,
     ELASTICSEARCH_TIMEOUT,
     ELASTICSEARCH_USE_SSL,
-    ELASTICSEARCH_VERIFY_CERTS,
-    ELASTICSEARCH_HOST
+    ELASTICSEARCH_VERIFY_CERTS
 )
 from .utils import get_elasticsearch_url
 
@@ -220,7 +219,7 @@ def get_elasticsearch_client(url):
     if ELASTICSEARCH_AWS_HOSTED:
         credentials = boto3.Session().get_credentials()
         return Elasticsearch(
-            hosts=[{"host": ELASTICSEARCH_HOST, "port": 443}],
+            hosts=[url],
             http_auth=AWS4Auth(
                 credentials.access_key,
                 credentials.secret_key,
