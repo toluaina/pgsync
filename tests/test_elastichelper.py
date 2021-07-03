@@ -70,7 +70,7 @@ class TestElasticsearchHelper(object):
                     ):
                         get_elasticsearch_client(url)
                         mocker_elasticsearch.assert_called_once_with(
-                            hosts=[{"host": url, "port": 443}],
+                            hosts=[url],
                             http_auth=ANY,
                             use_ssl=True,
                             verify_certs=True,
