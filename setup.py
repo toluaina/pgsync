@@ -14,7 +14,7 @@ def get_version():
     filename = os.path.join(HERE, "pgsync", "__init__.py")
     with open(filename) as f:
         contents = f.read()
-    pattern = r"^__version__ = '(.*?)'$"
+    pattern = r"^__version__ = \"(.*?)\"$"
     return re.search(pattern, contents, re.MULTILINE).group(1)
 
 
