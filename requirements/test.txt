@@ -10,9 +10,9 @@ attrs==21.2.0
     # via pytest
 black==21.6b0
     # via -r requirements/base.in
-boto3==1.17.101
+boto3==1.17.111
     # via -r requirements/base.in
-botocore==1.20.101
+botocore==1.20.111
     # via
     #   boto3
     #   s3transfer
@@ -24,7 +24,7 @@ certifi==2021.5.30
     # via
     #   elasticsearch
     #   requests
-chardet==4.0.0
+charset-normalizer==2.0.1
     # via requests
 click==8.0.1
     # via
@@ -32,13 +32,13 @@ click==8.0.1
     #   black
 coverage==5.5
     # via pytest-cov
-elasticsearch==7.13.1
+elasticsearch==7.13.3
     # via elasticsearch-dsl
 elasticsearch-dsl==7.3.0
     # via -r requirements/base.in
 environs==9.3.2
     # via -r requirements/base.in
-faker==8.8.2
+faker==8.10.1
     # via -r requirements/base.in
 flake8==3.9.2
     # via
@@ -58,15 +58,15 @@ flake8-todo==0.7
     # via -r requirements/test.in
 greenlet==1.1.0
     # via sqlalchemy
-idna==2.10
+idna==3.2
     # via requests
-isort==5.9.1
+isort==5.9.2
     # via flake8-isort
 jmespath==0.10.0
     # via
     #   boto3
     #   botocore
-marshmallow==3.12.1
+marshmallow==3.12.2
     # via environs
 mccabe==0.6.1
     # via flake8
@@ -76,7 +76,7 @@ more-itertools==8.8.0
     # via pytest
 mypy-extensions==0.4.3
     # via black
-packaging==20.9
+packaging==21.0
     # via
     #   pytest
     #   pytest-sugar
@@ -114,7 +114,7 @@ pytest-runner==5.3.1
     # via -r requirements/test.in
 pytest-sugar==0.9.4
     # via -r requirements/test.in
-python-dateutil==2.8.1
+python-dateutil==2.8.2
     # via
     #   botocore
     #   elasticsearch-dsl
@@ -123,9 +123,9 @@ python-dotenv==0.18.0
     # via environs
 redis==3.5.3
     # via -r requirements/base.in
-regex==2021.4.4
+regex==2021.7.6
     # via black
-requests==2.25.1
+requests==2.26.0
     # via requests-aws4auth
 requests-aws4auth==1.1.1
     # via -r requirements/base.in
@@ -140,7 +140,7 @@ six==1.16.0
     #   requests-aws4auth
 snowballstemmer==2.1.0
     # via pydocstyle
-sqlalchemy==1.4.19
+sqlalchemy==1.4.20
     # via -r requirements/base.in
 sqlparse==0.4.1
     # via -r requirements/base.in
