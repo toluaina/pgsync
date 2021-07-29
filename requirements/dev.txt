@@ -12,9 +12,9 @@ backports.entry-points-selectable==1.1.0
     # via virtualenv
 black==21.7b0
     # via -r requirements/base.in
-boto3==1.18.3
+boto3==1.18.10
     # via -r requirements/base.in
-botocore==1.21.3
+botocore==1.21.10
     # via
     #   boto3
     #   s3transfer
@@ -47,7 +47,7 @@ elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
 environs==9.3.2
     # via -r requirements/base.in
-faker==8.10.1
+faker==8.10.3
     # via -r requirements/base.in
 filelock==3.0.12
     # via virtualenv
@@ -73,13 +73,13 @@ identify==2.2.11
     # via pre-commit
 idna==3.2
     # via requests
-isort==5.9.2
+isort==5.9.3
     # via flake8-isort
 jmespath==0.10.0
     # via
     #   boto3
     #   botocore
-marshmallow==3.12.2
+marshmallow==3.13.0
     # via environs
 mccabe==0.6.1
     # via flake8
@@ -101,7 +101,7 @@ pep517==0.11.0
     # via pip-tools
 pip-tools==6.2.0
     # via -r requirements/dev.in
-platformdirs==2.0.2
+platformdirs==2.2.0
     # via virtualenv
 pluggy==0.13.1
     # via pytest
@@ -142,7 +142,7 @@ python-dateutil==2.8.2
     #   botocore
     #   elasticsearch-dsl
     #   faker
-python-dotenv==0.18.0
+python-dotenv==0.19.0
     # via environs
 pyyaml==5.4.1
     # via pre-commit
@@ -166,7 +166,7 @@ six==1.16.0
     #   virtualenv
 snowballstemmer==2.1.0
     # via pydocstyle
-sqlalchemy==1.4.21
+sqlalchemy==1.4.22
     # via -r requirements/base.in
 sqlparse==0.4.1
     # via -r requirements/base.in
@@ -180,7 +180,7 @@ toml==0.10.2
     # via
     #   pre-commit
     #   pytest-cov
-tomli==1.0.4
+tomli==1.1.0
     # via
     #   black
     #   pep517

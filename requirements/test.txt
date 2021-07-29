@@ -10,9 +10,9 @@ attrs==21.2.0
     # via pytest
 black==21.7b0
     # via -r requirements/base.in
-boto3==1.18.3
+boto3==1.18.10
     # via -r requirements/base.in
-botocore==1.21.3
+botocore==1.21.10
     # via
     #   boto3
     #   s3transfer
@@ -38,7 +38,7 @@ elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
 environs==9.3.2
     # via -r requirements/base.in
-faker==8.10.1
+faker==8.10.3
     # via -r requirements/base.in
 flake8==3.9.2
     # via
@@ -60,13 +60,13 @@ greenlet==1.1.0
     # via sqlalchemy
 idna==3.2
     # via requests
-isort==5.9.2
+isort==5.9.3
     # via flake8-isort
 jmespath==0.10.0
     # via
     #   boto3
     #   botocore
-marshmallow==3.12.2
+marshmallow==3.13.0
     # via environs
 mccabe==0.6.1
     # via flake8
@@ -119,7 +119,7 @@ python-dateutil==2.8.2
     #   botocore
     #   elasticsearch-dsl
     #   faker
-python-dotenv==0.18.0
+python-dotenv==0.19.0
     # via environs
 redis==3.5.3
     # via -r requirements/base.in
@@ -140,7 +140,7 @@ six==1.16.0
     #   requests-aws4auth
 snowballstemmer==2.1.0
     # via pydocstyle
-sqlalchemy==1.4.21
+sqlalchemy==1.4.22
     # via -r requirements/base.in
 sqlparse==0.4.1
     # via -r requirements/base.in
@@ -152,7 +152,7 @@ text-unidecode==1.3
     # via faker
 toml==0.10.2
     # via pytest-cov
-tomli==1.0.4
+tomli==1.1.0
     # via black
 urllib3==1.26.6
     # via
