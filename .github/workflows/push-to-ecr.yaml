@@ -26,7 +26,8 @@ jobs:
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: pgsync
-        IMAGE_TAG: 1.0.0
+        IMAGE_TAG: ${{ github.event.release.tag_name }}
+        # IMAGE_TAG: ${GITHUB_REF:10}
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY .
         docker image tag $ECR_REGISTRY/$ECR_REPOSITORY $ECR_REGISTRY/$ECR_REPOSITORY:latest
