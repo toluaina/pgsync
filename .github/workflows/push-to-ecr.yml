@@ -3,7 +3,12 @@ name: Push to ECR
 on:
   release:
     types: [published]
-
+  workflow_dispatch:
+    inputs:
+      version:  
+        description: 'Name of version  (ie 5.5.0)'
+        required: true
+        
 jobs:
   build:
     runs-on: ubuntu-latest
