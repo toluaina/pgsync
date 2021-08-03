@@ -12,9 +12,9 @@ backports.entry-points-selectable==1.1.0
     # via virtualenv
 black==21.7b0
     # via -r requirements/base.in
-boto3==1.18.10
+boto3==1.18.13
     # via -r requirements/base.in
-botocore==1.21.10
+botocore==1.21.13
     # via
     #   boto3
     #   s3transfer
@@ -28,7 +28,7 @@ certifi==2021.5.30
     #   requests
 cfgv==3.3.0
     # via pre-commit
-charset-normalizer==2.0.3
+charset-normalizer==2.0.4
     # via requests
 click==8.0.1
     # via
@@ -41,13 +41,13 @@ coverage==5.5
     #   pytest-cov
 distlib==0.3.2
     # via virtualenv
-elasticsearch==7.13.4
+elasticsearch==7.14.0
     # via elasticsearch-dsl
 elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
 environs==9.3.2
     # via -r requirements/base.in
-faker==8.10.3
+faker==8.11.0
     # via -r requirements/base.in
 filelock==3.0.12
     # via virtualenv
@@ -79,8 +79,10 @@ jmespath==0.10.0
     # via
     #   boto3
     #   botocore
-marshmallow==3.13.0
-    # via environs
+marshmallow==3.12.0
+    # via
+    #   -r requirements/base.in
+    #   environs
 mccabe==0.6.1
     # via flake8
 mock==4.0.3
@@ -148,7 +150,7 @@ pyyaml==5.4.1
     # via pre-commit
 redis==3.5.3
     # via -r requirements/base.in
-regex==2021.7.6
+regex==2021.8.3
     # via black
 requests==2.26.0
     # via requests-aws4auth
@@ -180,7 +182,7 @@ toml==0.10.2
     # via
     #   pre-commit
     #   pytest-cov
-tomli==1.1.0
+tomli==1.2.0
     # via
     #   black
     #   pep517
@@ -189,7 +191,7 @@ urllib3==1.26.6
     #   botocore
     #   elasticsearch
     #   requests
-virtualenv==20.6.0
+virtualenv==20.7.0
     # via pre-commit
 wcwidth==0.2.5
     # via pytest
