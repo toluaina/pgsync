@@ -23,26 +23,26 @@ def teardown(
     """Teardown helper."""
     config = get_config(config)
 
-    for document in json.load(open(config)):
-
-        sync = Sync(document, validate=False)
-        if truncate_db:
-            try:
-                sync.truncate_schemas()
-                sync.engine.connect().close()
-                sync.engine.dispose()
-            except sa.exc.OperationalError as e:
-                logger.warning(
-                    f'Database "{sync.database}" does not exist: {e}'
-                )
-        if drop_db:
-            drop_database(sync.database)
-        if drop_index:
-            sync.es.teardown(sync.index)
-        if delete_redis:
-            sync.redis._delete()
-        if delete_checkpoint:
-            try:
-                os.unlink(sync._checkpoint_file)
-            except OSError:
-                pass
+    with open(config, "r") as documents:
+        for document in json.load(documents):
+            sync = Sync(document, validate=False)
+            if truncate_db:
+                try:
+                    sync.truncate_schemas()
+                    sync.engine.connect().close()
+                    sync.engine.dispose()
+                except sa.exc.OperationalError as e:
+                    logger.warning(
+                        f'Database "{sync.database}" does not exist: {e}'
+                    )
+            if drop_db:
+                drop_database(sync.database)
+            if drop_index:
+                sync.es.teardown(sync.index)
+            if delete_redis:
+                sync.redis._delete()
+            if delete_checkpoint:
+                try:
+                    os.unlink(sync._checkpoint_file)
+                except OSError:
+                    pass

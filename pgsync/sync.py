@@ -18,7 +18,7 @@ import psycopg2
 import sqlalchemy as sa
 
 from . import __version__
-from .base import Base, compiled_query
+from .base import Base, compiled_query, get_foreign_keys
 from .constants import (
     DELETE,
     INSERT,
@@ -354,7 +354,7 @@ class Sync(Base):
             # handle case where we insert into a through table
             # set the parent as the new entity that has changed
             filters[node.parent.table] = []
-            foreign_keys = self.query_builder._get_foreign_keys(
+            foreign_keys = get_foreign_keys(
                 node.parent,
                 node,
             )

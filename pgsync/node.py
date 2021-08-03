@@ -303,6 +303,7 @@ def get_node(tree, table, node_dict):
                 label=table,
                 schema=node.schema,
                 primary_key=[],
+                parent=node,
             )
     else:
         raise RuntimeError(f"Node for {table} not found")

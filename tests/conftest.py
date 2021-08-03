@@ -26,7 +26,7 @@ def dns():
     return get_postgres_url("testdb")
 
 
-@pytest.yield_fixture(scope="session")
+@pytest.fixture(scope="session")
 def engine(dns):
     engine = sa.create_engine(dns)
     drop_database("testdb")
@@ -35,14 +35,14 @@ def engine(dns):
     engine.dispose()
 
 
-@pytest.yield_fixture(scope="session")
+@pytest.fixture(scope="session")
 def connection(engine):
     conn = engine.connect()
     yield conn
     conn.close()
 
 
-@pytest.yield_fixture(scope="session")
+@pytest.fixture(scope="session")
 def session(connection):
     Session = sessionmaker(bind=connection, autoflush=True)
     session = Session()
@@ -50,7 +50,7 @@ def session(connection):
     session.close_all()
 
 
-@pytest.yield_fixture(scope="function")
+@pytest.fixture(scope="function")
 def sync():
     _sync = Sync(
         {
@@ -327,7 +327,7 @@ def model_mapping(
     }
 
 
-@pytest.yield_fixture(scope="session")
+@pytest.fixture(scope="session")
 def table_creator(base, connection, model_mapping):
     sa.orm.configure_mappers()
     base.metadata.create_all(connection)
