@@ -455,7 +455,7 @@ class Sync(Base):
                 # also handle foreign_keys
                 if node.parent:
                     fields = collections.defaultdict(list)
-                    foreign_keys = self.query_builder._get_foreign_keys(
+                    foreign_keys = get_foreign_keys(
                         node.parent,
                         node,
                     )

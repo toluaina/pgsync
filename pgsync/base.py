@@ -386,20 +386,24 @@ class Base(object):
         return (
             sa.select(
                 [
-                    sa.func.REVERSE(
-                        sa.func.SPLIT_PART(
-                            sa.func.REVERSE(
-                                sa.cast(
+                    sa.func.REPLACE(
+                        sa.func.REVERSE(
+                            sa.func.SPLIT_PART(
+                                sa.func.REVERSE(
                                     sa.cast(
-                                        pg_index.c.indrelid,
-                                        sa.dialects.postgresql.REGCLASS,
-                                    ),
-                                    sa.Text,
-                                )
-                            ),
-                            ".",
-                            1,
-                        )
+                                        sa.cast(
+                                            pg_index.c.indrelid,
+                                            sa.dialects.postgresql.REGCLASS,
+                                        ),
+                                        sa.Text,
+                                    )
+                                ),
+                                ".",
+                                1,
+                            )
+                        ),
+                        '"',
+                        "",
                     ).label("table_name"),
                     sa.func.ARRAY_AGG(pg_attribute.c.attname).label(
                         "primary_keys"
@@ -432,7 +436,12 @@ class Base(object):
                             sa.dialects.postgresql.REGCLASS,
                         ),
                         sa.Text,
-                    ).in_(tables),
+                    ).in_(
+                        map(
+                            self.__engine.dialect.identifier_preparer.quote,
+                            tables,
+                        )
+                    ),
                     pg_attribute.c.attnum == sa.any_(pg_index.c.indkey),
                 ]
             )
