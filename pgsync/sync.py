@@ -189,8 +189,8 @@ class Sync(Base):
                     user_defined_fkey_tables.setdefault(node.table, set([]))
                     user_defined_fkey_tables[node.table] |= set(columns)
             if tables:
-                self.create_triggers(schema, tables=tables)
                 self.create_view(schema, tables, user_defined_fkey_tables)
+                self.create_triggers(schema, tables=tables)
         self.create_replication_slot(self.__name)
 
     def teardown(self, drop_view=True):
