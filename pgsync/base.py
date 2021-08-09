@@ -23,7 +23,7 @@ from .constants import (
     TRIGGER_FUNC,
     UPDATE,
 )
-from .exc import ForeignKeyError, ParseLogicalSlotError, TableNotFoundError
+from .exc import ForeignKeyError, LogicalSlotParseError, TableNotFoundError
 from .settings import PG_SSLMODE, PG_SSLROOTCERT, QUERY_CHUNK_SIZE
 from .trigger import CREATE_TRIGGER_TEMPLATE
 from .utils import get_postgres_url
@@ -782,7 +782,7 @@ class Base(object):
 
         match = LOGICAL_SLOT_PREFIX.search(row)
         if not match:
-            raise ParseLogicalSlotError(f"No match for row: {row}")
+            raise LogicalSlotParseError(f"No match for row: {row}")
 
         payload.update(match.groupdict())
         span = match.span()
@@ -793,7 +793,7 @@ class Base(object):
             # this can only be an UPDATE operation
             if payload["tg_op"] != UPDATE:
                 msg = f"Unknown {payload['tg_op']} operation for row: {row}"
-                raise ParseLogicalSlotError(msg)
+                raise LogicalSlotParseError(msg)
 
             i = suffix.index("old-key:")
             if i > -1:
@@ -811,7 +811,7 @@ class Base(object):
             # this can be an INSERT, DELETE, UPDATE or TRUNCATE operation
             if payload["tg_op"] not in TG_OP:
                 msg = f"Unknown {payload['tg_op']} operation for row: {row}"
-                raise ParseLogicalSlotError(msg)
+                raise LogicalSlotParseError(msg)
 
             for key, value in _parse_logical_slot(suffix):
                 payload["new"][key] = value

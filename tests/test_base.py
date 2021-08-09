@@ -10,7 +10,7 @@ from pgsync.base import (
     drop_database,
     drop_extension,
 )
-from pgsync.exc import ParseLogicalSlotError, TableNotFoundError
+from pgsync.exc import LogicalSlotParseError, TableNotFoundError
 
 
 @pytest.mark.usefixtures("table_creator")
@@ -208,7 +208,7 @@ class TestBase(object):
         connection,
     ):
         pg_base = Base(connection.engine.url.database)
-        with pytest.raises(ParseLogicalSlotError) as excinfo:
+        with pytest.raises(LogicalSlotParseError) as excinfo:
             pg_base.parse_logical_slot("")
             assert "No match for row:" in str(excinfo.value)
 

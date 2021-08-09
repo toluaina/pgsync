@@ -8,9 +8,9 @@ appdirs==1.4.4
     # via black
 black==21.7b0
     # via -r requirements/base.in
-boto3==1.18.13
+boto3==1.18.17
     # via -r requirements/base.in
-botocore==1.21.13
+botocore==1.21.17
     # via
     #   boto3
     #   s3transfer
@@ -32,11 +32,11 @@ elasticsearch==7.14.0
     # via elasticsearch-dsl
 elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
-environs==9.3.2
+environs==9.3.3
     # via -r requirements/base.in
 faker==8.11.0
     # via -r requirements/base.in
-greenlet==1.1.0
+greenlet==1.1.1
     # via sqlalchemy
 idna==3.2
     # via requests
@@ -50,7 +50,7 @@ marshmallow==3.12.0
     #   environs
 mypy-extensions==0.4.3
     # via black
-newrelic==6.6.0.162
+newrelic==6.8.0.163
     # via -r requirements/prod.in
 pathspec==0.9.0
     # via black
@@ -84,7 +84,7 @@ sqlparse==0.4.1
     # via -r requirements/base.in
 text-unidecode==1.3
     # via faker
-tomli==1.2.0
+tomli==1.2.1
     # via black
 urllib3==1.26.6
     # via

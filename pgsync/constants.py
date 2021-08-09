@@ -168,7 +168,7 @@ PLUGIN = "test_decoding"
 TRIGGER_FUNC = "table_notify"
 
 # Views
-# added underscore to reduce potential for collisions
+# added underscore to reduce chance of collisions
 MATERIALIZED_VIEW = "_view"
 
 # Primary key delimiter
