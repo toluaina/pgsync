@@ -873,7 +873,7 @@ class Sync(Base):
         )
         cursor = conn.cursor()
         channel = self.database
-        cursor.execute(f"LISTEN {channel}")
+        cursor.execute(f'LISTEN "{channel}"')
         logger.debug(f'Listening for notifications on channel "{channel}"')
 
         i = 0

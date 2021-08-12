@@ -1043,7 +1043,7 @@ def create_database(database, echo=False):
     """Create a database."""
     logger.debug(f"Creating database: {database}")
     engine = pg_engine(database="postgres", echo=echo)
-    pg_execute(engine, f"CREATE DATABASE {database}")
+    pg_execute(engine, f'CREATE DATABASE "{database}"')
     logger.debug(f"Created database: {database}")
 
 
@@ -1051,7 +1051,7 @@ def drop_database(database, echo=False):
     """Drop a database."""
     logger.debug(f"Dropping database: {database}")
     engine = pg_engine(database="postgres", echo=echo)
-    pg_execute(engine, f"DROP DATABASE IF EXISTS {database}")
+    pg_execute(engine, f'DROP DATABASE IF EXISTS "{database}"')
     logger.debug(f"Dropped database: {database}")
 
 
