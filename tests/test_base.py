@@ -2,7 +2,6 @@
 
 import pytest
 from mock import patch
-
 from pgsync.base import (
     Base,
     create_database,
@@ -134,7 +133,7 @@ class TestBase(object):
         mock_pg_engine.assert_any_call(database="postgres", echo=True)
         mock_pg_execute.assert_any_call(
             connection.engine,
-            f"CREATE DATABASE {database}",
+            f'CREATE DATABASE "{database}"',
         )
 
     @patch("pgsync.base.pg_execute")
@@ -156,7 +155,7 @@ class TestBase(object):
         mock_pg_engine.assert_any_call(database="postgres", echo=True)
         mock_pg_execute.assert_any_call(
             connection.engine,
-            f"DROP DATABASE IF EXISTS {database}",
+            f'DROP DATABASE IF EXISTS "{database}"',
         )
 
     @patch("pgsync.base.pg_execute")
