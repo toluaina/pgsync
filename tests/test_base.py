@@ -2,6 +2,7 @@
 
 import pytest
 from mock import patch
+
 from pgsync.base import (
     Base,
     create_database,

@@ -380,7 +380,7 @@ class TestRoot(object):
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -399,7 +399,7 @@ class TestRoot(object):
                 .values(isbn="cba")
             )
 
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -421,7 +421,7 @@ class TestRoot(object):
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -481,7 +481,7 @@ class TestRoot(object):
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
 
         session = sync.session
@@ -500,7 +500,7 @@ class TestRoot(object):
                 )
             )
 
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -520,7 +520,7 @@ class TestRoot(object):
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
 
         session = sync.session
@@ -540,7 +540,7 @@ class TestRoot(object):
                 .values(title="Tiger Club")
             )
 
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -559,7 +559,7 @@ class TestRoot(object):
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
 
         session = sync.session
@@ -615,7 +615,7 @@ class TestRoot(object):
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
         session = sync.session
         docs = search(sync.es, "testdb")

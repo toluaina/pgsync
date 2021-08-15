@@ -16,7 +16,7 @@ class TestSync(object):
             mock_peek.return_value = [
                 ROW("BEGIN: blah", 1234),
             ]
-            with patch("pgsync.sync.Sync.sync_payloads") as mock_sync_payloads:
+            with patch("pgsync.sync.Sync.sync") as mock_sync:
                 sync.logical_slot_changes()
                 mock_peek.assert_called_once_with(
                     "testdb_testdb",
@@ -24,13 +24,13 @@ class TestSync(object):
                     txmax=None,
                     upto_nchanges=None,
                 )
-                mock_sync_payloads.assert_not_called()
+                mock_sync.assert_not_called()
 
         with patch("pgsync.sync.Sync.logical_slot_peek_changes") as mock_peek:
             mock_peek.return_value = [
                 ROW("COMMIT: blah", 1234),
             ]
-            with patch("pgsync.sync.Sync.sync_payloads") as mock_sync_payloads:
+            with patch("pgsync.sync.Sync.sync") as mock_sync:
                 sync.logical_slot_changes()
                 mock_peek.assert_called_once_with(
                     "testdb_testdb",
@@ -38,7 +38,7 @@ class TestSync(object):
                     txmax=None,
                     upto_nchanges=None,
                 )
-                mock_sync_payloads.assert_not_called()
+                mock_sync.assert_not_called()
 
         with patch("pgsync.sync.Sync.logical_slot_peek_changes") as mock_peek:
             mock_peek.return_value = [
@@ -53,9 +53,7 @@ class TestSync(object):
             with patch(
                 "pgsync.sync.Sync.logical_slot_get_changes"
             ) as mock_get:
-                with patch(
-                    "pgsync.sync.Sync.sync_payloads"
-                ) as mock_sync_payloads:
+                with patch("pgsync.sync.Sync.sync") as mock_sync:
                     sync.logical_slot_changes()
                     mock_peek.assert_called_once_with(
                         "testdb_testdb",
@@ -64,4 +62,4 @@ class TestSync(object):
                         upto_nchanges=None,
                     )
                     mock_get.assert_called_once()
-                    mock_sync_payloads.assert_called_once()
+                    mock_sync.assert_called_once()

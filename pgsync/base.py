@@ -152,8 +152,7 @@ class Base(object):
 
     @property
     def session(self):
-        connection = self.__engine.connect()
-        Session = sessionmaker(bind=connection, autoflush=True)
+        Session = sessionmaker(bind=self.__engine.connect(), autoflush=True)
         return Session()
 
     @property
@@ -219,8 +218,7 @@ class Base(object):
     def truncate_schema(self, schema):
         """Truncate all tables in a schema."""
         logger.debug(f"Truncating schema: {schema}")
-        tables = self.tables(schema)
-        self.truncate_tables(tables, schema=schema)
+        self.truncate_tables(self.tables(schema), schema=schema)
 
     def truncate_schemas(self):
         """Truncate all tables in a database."""
@@ -866,11 +864,8 @@ class Base(object):
             result = conn.execution_options(stream_results=True).execute(
                 statement.select()
             )
-            while True:
-                chunk = result.fetchmany(chunk_size)
-                if not chunk:
-                    break
-                for keys, row, *primary_keys in chunk:
+            for partition in result.partitions(chunk_size):
+                for keys, row, *primary_keys in partition:
                     yield keys, row, primary_keys
 
     def fetchcount(self, statement):

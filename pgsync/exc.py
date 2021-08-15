@@ -141,6 +141,14 @@ class FetchColumnForeignKeysError(Exception):
         return repr(self.value)
 
 
+class PrimaryKeyNotFoundError(Exception):
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
+
+
 class LogicalSlotParseError(Exception):
     def __init__(self, value):
         self.value = value

@@ -588,7 +588,7 @@ class TestParentSingleChildFkOnParent(object):
             },
         }
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -631,7 +631,7 @@ class TestParentSingleChildFkOnParent(object):
             session.rollback()
             raise
 
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -682,7 +682,7 @@ class TestParentSingleChildFkOnParent(object):
             },
         }
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -789,7 +789,7 @@ class TestParentSingleChildFkOnParent(object):
             },
         }
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
 
         session = sync.session
@@ -832,7 +832,7 @@ class TestParentSingleChildFkOnParent(object):
             session.rollback()
             raise
 
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -887,7 +887,7 @@ class TestParentSingleChildFkOnParent(object):
             },
         }
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -926,7 +926,7 @@ class TestParentSingleChildFkOnParent(object):
             session.rollback()
             raise
 
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -975,7 +975,7 @@ class TestParentSingleChildFkOnParent(object):
             },
         }
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -1075,7 +1075,7 @@ class TestParentSingleChildFkOnParent(object):
         }
 
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")

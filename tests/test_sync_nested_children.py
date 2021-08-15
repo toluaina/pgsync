@@ -650,7 +650,8 @@ class TestNestedChildren(object):
 
         # 1. sync first to add the initial document
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
+        sync.checkpoint = sync.txid_current
 
         session = sync.session
 
@@ -771,7 +772,8 @@ class TestNestedChildren(object):
         }
         # 1. sync first to add the initial document
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
+        sync.checkpoint = sync.txid_current
 
         session = sync.session
 
@@ -866,7 +868,8 @@ class TestNestedChildren(object):
         }
         # 1. sync first to add the initial document
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
+        sync.checkpoint = sync.txid_current
 
         session = sync.session
 
@@ -1094,7 +1097,7 @@ class TestNestedChildren(object):
         with subtransactions(session):
             session.add(book_author)
 
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -1297,7 +1300,7 @@ class TestNestedChildren(object):
 
         # 1. sync first to add the initial document
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
 
         author = author_cls(
             id=5,
@@ -1325,7 +1328,7 @@ class TestNestedChildren(object):
                 .values(author_id=5)
             )
 
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -1504,7 +1507,7 @@ class TestNestedChildren(object):
 
         # 1. sync first to add the initial document
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
 
         session = sync.session
 
@@ -1516,7 +1519,7 @@ class TestNestedChildren(object):
             )
             session.commit()
 
-        sync.sync()
+        sync.sync(sync._sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -1680,7 +1683,8 @@ class TestNestedChildren(object):
 
         # 1. sync first to add the initial document
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
+        sync.checkpoint = sync.txid_current
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -1707,7 +1711,8 @@ class TestNestedChildren(object):
 
         # 1. sync first to add the initial document
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
+        sync.checkpoint = sync.txid_current
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -1738,7 +1743,9 @@ class TestNestedChildren(object):
 
         # 1. sync first to add the initial document
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
+        sync.checkpoint = sync.txid_current
+        sync.checkpoint = sync.txid_current
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -1887,7 +1894,8 @@ class TestNestedChildren(object):
         }
         # sync first to add the initial document
         sync = Sync(document)
-        sync.sync()
+        sync.sync(sync._sync())
+        sync.checkpoint = sync.txid_current
         session = sync.session
         sync.es.refresh("testdb")
 
