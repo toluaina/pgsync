@@ -61,6 +61,19 @@ ELASTICSEARCH_CLIENT_CERT = env.str("ELASTICSEARCH_CLIENT_CERT", default=None)
 ELASTICSEARCH_CLIENT_KEY = env.str("ELASTICSEARCH_CLIENT_KEY", default=None)
 ELASTICSEARCH_AWS_REGION = env.str("ELASTICSEARCH_AWS_REGION", default=None)
 ELASTICSEARCH_AWS_HOSTED = env.bool("ELASTICSEARCH_AWS_HOSTED", default=False)
+ELASTICSEARCH_STREAMING_BULK = env.bool(
+    "ELASTICSEARCH_STREAMING_BULK", default=False
+)
+# maximum number of times a document will be retried when ``429`` is received,
+# set to 0 (default) for no retries on ``429``
+ELASTICSEARCH_MAX_RETRIES = env.int("ELASTICSEARCH_MAX_RETRIES", default=0)
+# number of seconds we should wait before the first retry.
+# Any subsequent retries will be powers of ``initial_backoff * 2**retry_number``
+ELASTICSEARCH_INITIAL_BACKOFF = env.int(
+    "ELASTICSEARCH_INITIAL_BACKOFF", default=2
+)
+# maximum number of seconds a retry will wait
+ELASTICSEARCH_MAX_BACKOFF = env.int("ELASTICSEARCH_MAX_BACKOFF", default=600)
 
 # Postgres:
 PG_HOST = env.str("PG_HOST", default="localhost")

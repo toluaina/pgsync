@@ -1,10 +1,10 @@
 """PGSync Elasticsearch helper."""
 import logging
 from collections import defaultdict
+from typing import Dict
 
 import boto3
-from elasticsearch import Elasticsearch, RequestsHttpConnection
-from elasticsearch.helpers import parallel_bulk
+from elasticsearch import Elasticsearch, helpers, RequestsHttpConnection
 from elasticsearch_dsl import Q, Search
 from elasticsearch_dsl.query import Bool
 from requests_aws4auth import AWS4Auth
@@ -22,9 +22,13 @@ from .settings import (
     ELASTICSEARCH_CHUNK_SIZE,
     ELASTICSEARCH_CLIENT_CERT,
     ELASTICSEARCH_CLIENT_KEY,
+    ELASTICSEARCH_INITIAL_BACKOFF,
+    ELASTICSEARCH_MAX_BACKOFF,
     ELASTICSEARCH_MAX_CHUNK_BYTES,
+    ELASTICSEARCH_MAX_RETRIES,
     ELASTICSEARCH_QUEUE_SIZE,
     ELASTICSEARCH_SSL_SHOW_WARN,
+    ELASTICSEARCH_STREAMING_BULK,
     ELASTICSEARCH_THREAD_COUNT,
     ELASTICSEARCH_TIMEOUT,
     ELASTICSEARCH_USE_SSL,
@@ -51,7 +55,7 @@ class ElasticHelper(object):
             map(int, self.__es.info()["version"]["number"].split("."))
         )
 
-    def teardown(self, index):
+    def teardown(self, index: str) -> None:
         """
         Teardown the Elasticsearch index.
 
@@ -73,24 +77,47 @@ class ElasticHelper(object):
         queue_size=None,
         thread_count=None,
         refresh=False,
+        max_retries=None,
+        initial_backoff=None,
+        max_backoff=None,
     ):
         """Bulk index, update, delete docs to Elasticsearch."""
         chunk_size = chunk_size or ELASTICSEARCH_CHUNK_SIZE
         max_chunk_bytes = max_chunk_bytes or ELASTICSEARCH_MAX_CHUNK_BYTES
         thread_count = thread_count or ELASTICSEARCH_THREAD_COUNT
         queue_size = queue_size or ELASTICSEARCH_QUEUE_SIZE
+        # the next 3 variables only apply when streaming bulk is in use
+        max_retries = max_retries or ELASTICSEARCH_MAX_RETRIES
+        initial_backoff = initial_backoff or ELASTICSEARCH_INITIAL_BACKOFF
+        max_backoff = max_backoff or ELASTICSEARCH_MAX_BACKOFF
 
-        for _ in parallel_bulk(
-            self.__es,
-            docs,
-            index=index,
-            thread_count=thread_count,
-            chunk_size=chunk_size,
-            max_chunk_bytes=max_chunk_bytes,
-            queue_size=queue_size,
-            refresh=refresh,
-        ):
-            pass
+        if ELASTICSEARCH_STREAMING_BULK:
+            for _ in helpers.streaming_bulk(
+                self.__es,
+                docs,
+                index=index,
+                chunk_size=chunk_size,
+                max_chunk_bytes=max_chunk_bytes,
+                max_retries=max_retries,
+                max_backoff=max_backoff,
+                initial_backoff=initial_backoff,
+                refresh=refresh,
+            ):
+                pass
+        else:
+            # parallel bulk consumes more memory
+            # parallel bulk is also more likely to result in 429 errors
+            for _ in helpers.parallel_bulk(
+                self.__es,
+                docs,
+                index=index,
+                thread_count=thread_count,
+                chunk_size=chunk_size,
+                max_chunk_bytes=max_chunk_bytes,
+                queue_size=queue_size,
+                refresh=refresh,
+            ):
+                pass
 
     def refresh(self, indices):
         """Refresh the Elasticsearch index."""
@@ -126,7 +153,7 @@ class ElasticHelper(object):
         for hit in search.scan():
             yield hit.meta.id
 
-    def search(self, index, body):
+    def search(self, index: str, body: Dict):
         """
         Search in Elasticsearch.
 
