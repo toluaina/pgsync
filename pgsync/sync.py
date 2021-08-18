@@ -69,7 +69,7 @@ class Sync(Base):
         )
         self.es = ElasticHelper()
         self.__name = re.sub(
-            "[^0-9a-zA-Z_]+", "", f"{self.database}_{self.index}"
+            "[^0-9a-zA-Z_]+", "", f"{self.database.lower()}_{self.index}"
         )
         self._checkpoint = None
         self._plugins = None
