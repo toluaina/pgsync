@@ -11,11 +11,12 @@ import select
 import sys
 import time
 from datetime import datetime, timedelta
-from typing import Dict, Generator, List
+from typing import Dict, Generator, List, Optional
 
 import click
 import psycopg2
 import sqlalchemy as sa
+from sqlalchemy.sql import Values
 
 from . import __version__
 from .base import Base, compiled_query, get_foreign_keys
@@ -30,7 +31,13 @@ from .constants import (
 )
 from .elastichelper import ElasticHelper
 from .exc import PrimaryKeyNotFoundError, RDSError, SchemaError, SuperUserError
-from .node import get_node, traverse_breadth_first, traverse_post_order, Tree
+from .node import (
+    get_node,
+    Node,
+    traverse_breadth_first,
+    traverse_post_order,
+    Tree,
+)
 from .plugin import Plugins
 from .querybuilder import QueryBuilder
 from .redisqueue import RedisQueue
@@ -50,11 +57,11 @@ class Sync(Base):
 
     def __init__(
         self,
-        document,
-        verbose=False,
-        params=None,
-        validate=True,
-        repl_slots=True,
+        document: Dict,
+        verbose: Optional[bool] = False,
+        params: Optional[Dict] = None,
+        validate: Optional[bool] = True,
+        repl_slots: Optional[bool] = True,
     ):
         """Constructor."""
         params = params or {}
@@ -83,7 +90,7 @@ class Sync(Base):
             self.create_setting()
         self.query_builder = QueryBuilder(self, verbose=self.verbose)
 
-    def validate(self, repl_slots=True):
+    def validate(self, repl_slots: Optional[bool] = True):
         """Perform all validation right away."""
 
         # ensure v2 compatible schema
@@ -151,7 +158,7 @@ class Sync(Base):
         for node in traverse_breadth_first(root):
             pass
 
-    def create_setting(self):
+    def create_setting(self) -> None:
         """Create Elasticsearch setting and mapping if required."""
         root = self.tree.build(self.nodes)
         self.es._create_setting(
@@ -193,7 +200,7 @@ class Sync(Base):
                 self.create_view(schema, tables, user_defined_fkey_tables)
         self.create_replication_slot(self.__name)
 
-    def teardown(self, drop_view: bool = True) -> None:
+    def teardown(self, drop_view: Optional[bool] = True) -> None:
         """Drop the database triggers and replication slot."""
 
         try:
@@ -221,7 +228,7 @@ class Sync(Base):
         return f"{PRIMARY_KEY_DELIMITER}".join(map(str, primary_keys))
 
     def logical_slot_changes(
-        self, txmin: int = None, txmax: int = None
+        self, txmin: Optional[int] = None, txmax: Optional[int] = None
     ) -> None:
         """
         Process changes from the db logical replication logs.
@@ -306,7 +313,7 @@ class Sync(Base):
                 upto_nchanges=len(rows),
             )
 
-    def _payload_data(self, payload):
+    def _payload_data(self, payload: Dict) -> Dict:
         """Extract the payload data from the payload."""
         payload_data = payload.get("new")
         if payload["tg_op"] == DELETE:
@@ -314,7 +321,9 @@ class Sync(Base):
                 payload_data = payload.get("old")
         return payload_data
 
-    def _insert(self, node, root, filters, payloads):
+    def _insert(
+        self, node: Node, root: Node, filters: Dict, payloads: Dict
+    ) -> None:
 
         if node.table in self.tree.nodes:
 
@@ -375,7 +384,14 @@ class Sync(Base):
 
         return filters
 
-    def _update(self, node, root, filters, payloads, extra):
+    def _update(
+        self,
+        node: Node,
+        root: Node,
+        filters: Dict,
+        payloads: Dict,
+        extra: Dict,
+    ) -> None:
 
         if node.table == root.table:
 
@@ -492,7 +508,9 @@ class Sync(Base):
 
         return filters
 
-    def _delete(self, node, root, filters, payloads):
+    def _delete(
+        self, node: Node, root: Node, filters: Dict, payloads: Dict
+    ) -> None:
 
         # when deleting a root node, just delete the doc in Elasticsearch
         if node.table == root.table:
@@ -548,7 +566,7 @@ class Sync(Base):
 
         return filters
 
-    def _truncate(self, node, root, filters):
+    def _truncate(self, node: Node, root: Node, filters: Dict) -> None:
 
         if node.table == root.table:
 
@@ -684,7 +702,7 @@ class Sync(Base):
         if any(filters.values()):
             yield from self._sync(filters=filters, extra=extra)
 
-    def _build_filters(self, filters, node) -> None:
+    def _build_filters(self, filters: List[Dict], node: Node) -> None:
         """
         Build SQLAlchemy filters.
 
@@ -696,23 +714,49 @@ class Sync(Base):
             {'id': 2, 'uid': '002'}
         ]
         """
-        _filters = []
         if filters.get(node.table):
-
+            _filters = []
+            keys = set([])
+            values = set([])
             for _filter in filters.get(node.table):
                 where = []
                 for key, value in _filter.items():
                     where.append(getattr(node.model.c, key) == value)
+                    keys.add(key)
+                    values.add(value)
                 _filters.append(sa.and_(*where))
 
-            node._filters.append(sa.or_(*_filters))
+            if len(keys) == 1:
+                # If we have the same key then the node does not have a
+                # compound primary key
+                column = list(keys)[0]
+                node._filters.append(
+                    getattr(node.model.c, column).in_(
+                        sa.select(
+                            Values(sa.column(column))
+                            .data(
+                                [
+                                    (
+                                        getattr(
+                                            node.model.c, column
+                                        ).type.python_type(value),
+                                    )
+                                    for value in values
+                                ]
+                            )
+                            .alias("x")
+                        )
+                    )
+                )
+            else:
+                node._filters.append(sa.or_(*_filters))
 
     def _sync(
         self,
-        filters=None,
-        txmin: int = None,
-        txmax: int = None,
-        extra=None,
+        filters: Optional[Dict] = None,
+        txmin: Optional[int] = None,
+        txmax: Optional[int] = None,
+        extra: Optional[Dict] = None,
     ) -> Generator:
         if filters is None:
             filters = {}
@@ -808,7 +852,7 @@ class Sync(Base):
 
                 yield doc
 
-    def sync(self, docs: Generator):
+    def sync(self, docs: Generator) -> None:
         """
         Pull sync data from generator to Elasticsearch.
         """
@@ -827,7 +871,7 @@ class Sync(Base):
         return self._checkpoint
 
     @checkpoint.setter
-    def checkpoint(self, value=None) -> None:
+    def checkpoint(self, value: Optional[str] = None) -> None:
         if value is None:
             raise ValueError("Cannot assign a None value to checkpoint")
         with open(self._checkpoint_file, "w+") as fp:
@@ -886,7 +930,7 @@ class Sync(Base):
                 j += 1
             i = 0
 
-    def on_publish(self, payloads) -> None:
+    def on_publish(self, payloads: Dict) -> None:
         """
         Redis publish event handler.
 

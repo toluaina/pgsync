@@ -57,7 +57,7 @@ class Base(object):
         self.__metadata = {}
         self.verbose = verbose
 
-    def connect(self):
+    def connect(self) -> None:
         """Connect to database."""
         try:
             conn = self.__engine.connect()
@@ -66,7 +66,7 @@ class Base(object):
             logger.exception(f"Cannot connect to database: {e}")
             raise
 
-    def pg_settings(self, column):
+    def pg_settings(self, column) -> None:
         try:
             return self.fetchone(
                 sa.select([sa.column("setting")])
@@ -77,7 +77,7 @@ class Base(object):
         except (TypeError, IndexError):
             return None
 
-    def has_permission(self, username, permission):
+    def has_permission(self, username: str, permission: str) -> bool:
         """Check if the given user is a superuser or replication user.
 
         Args:
@@ -110,7 +110,7 @@ class Base(object):
         return False
 
     # Tables...
-    def model(self, table, schema):
+    def model(self, table: str, schema: str):
         """Get an SQLAlchemy model representation from a table.
 
         Args:
