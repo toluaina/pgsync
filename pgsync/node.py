@@ -206,7 +206,7 @@ class Node(object):
             )
         self.children.append(node)
 
-    def display(self, prefix="", leaf=True):
+    def display(self, prefix: str = "", leaf: bool = True):
         print(
             prefix, " - " if leaf else "|- ", self.table, sep=""
         )  # noqa T001
