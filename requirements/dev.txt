@@ -9,9 +9,9 @@ attrs==21.2.0
 backports.entry-points-selectable==1.1.0
     # via virtualenv
 black==21.8b0
-    # via -r requirements/base.in
+    # via -r base.in
 boto3==1.18.36
-    # via -r requirements/base.in
+    # via -r base.in
 botocore==1.21.36
     # via
     #   boto3
@@ -19,7 +19,7 @@ botocore==1.21.36
 bump2version==1.0.1
     # via bumpversion
 bumpversion==0.6.0
-    # via -r requirements/base.in
+    # via -r base.in
 certifi==2021.5.30
     # via
     #   elasticsearch
@@ -30,23 +30,23 @@ charset-normalizer==2.0.4
     # via requests
 click==8.0.1
     # via
-    #   -r requirements/base.in
+    #   -r base.in
     #   black
     #   pip-tools
 coverage==5.5
     # via
-    #   -r requirements/dev.in
+    #   -r dev.in
     #   pytest-cov
 distlib==0.3.2
     # via virtualenv
 elasticsearch==7.14.1
     # via elasticsearch-dsl
 elasticsearch-dsl==7.4.0
-    # via -r requirements/base.in
+    # via -r base.in
 environs==9.3.3
-    # via -r requirements/base.in
+    # via -r base.in
 faker==8.12.1
-    # via -r requirements/base.in
+    # via -r base.in
 filelock==3.0.12
     # via virtualenv
 flake8==3.9.2
@@ -56,15 +56,15 @@ flake8==3.9.2
     #   flake8-isort
     #   flake8-print
 flake8-debugger==4.0.0
-    # via -r requirements/test.in
+    # via -r test.in
 flake8-docstrings==1.6.0
-    # via -r requirements/test.in
+    # via -r test.in
 flake8-isort==4.0.0
-    # via -r requirements/test.in
+    # via -r test.in
 flake8-print==4.0.0
-    # via -r requirements/test.in
+    # via -r test.in
 flake8-todo==0.7
-    # via -r requirements/test.in
+    # via -r test.in
 greenlet==1.1.1
     # via sqlalchemy
 identify==2.2.13
@@ -79,12 +79,12 @@ jmespath==0.10.0
     #   botocore
 marshmallow==3.12.0
     # via
-    #   -r requirements/base.in
+    #   -r base.in
     #   environs
 mccabe==0.6.1
     # via flake8
 mock==4.0.3
-    # via -r requirements/test.in
+    # via -r test.in
 more-itertools==8.9.0
     # via pytest
 mypy-extensions==0.4.3
@@ -100,7 +100,7 @@ pathspec==0.9.0
 pep517==0.11.0
     # via pip-tools
 pip-tools==6.2.0
-    # via -r requirements/dev.in
+    # via -r dev.in
 platformdirs==2.3.0
     # via
     #   black
@@ -108,9 +108,9 @@ platformdirs==2.3.0
 pluggy==0.13.1
     # via pytest
 pre-commit==2.15.0
-    # via -r requirements/dev.in
+    # via -r dev.in
 psycopg2-binary==2.9.1
-    # via -r requirements/base.in
+    # via -r base.in
 py==1.10.0
     # via pytest
 pycodestyle==2.7.0
@@ -127,18 +127,18 @@ pyparsing==2.4.7
     # via packaging
 pytest==5.3.5
     # via
-    #   -r requirements/test.in
+    #   -r test.in
     #   pytest-cov
     #   pytest-mock
     #   pytest-sugar
 pytest-cov==2.12.1
-    # via -r requirements/test.in
+    # via -r test.in
 pytest-mock==3.6.1
-    # via -r requirements/test.in
+    # via -r test.in
 pytest-runner==5.3.1
-    # via -r requirements/test.in
+    # via -r test.in
 pytest-sugar==0.9.4
-    # via -r requirements/test.in
+    # via -r test.in
 python-dateutil==2.8.2
     # via
     #   botocore
@@ -149,13 +149,13 @@ python-dotenv==0.19.0
 pyyaml==5.4.1
     # via pre-commit
 redis==3.5.3
-    # via -r requirements/base.in
+    # via -r base.in
 regex==2021.8.28
     # via black
 requests==2.26.0
     # via requests-aws4auth
 requests-aws4auth==1.1.1
-    # via -r requirements/base.in
+    # via -r base.in
 s3transfer==0.5.0
     # via boto3
 six==1.16.0
@@ -169,9 +169,9 @@ six==1.16.0
 snowballstemmer==2.1.0
     # via pydocstyle
 sqlalchemy==1.4.23
-    # via -r requirements/base.in
-sqlparse==0.4.1
-    # via -r requirements/base.in
+    # via -r base.in
+sqlparse==0.4.2
+    # via -r base.in
 termcolor==1.1.0
     # via pytest-sugar
 testfixtures==6.18.1
