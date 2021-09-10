@@ -10,9 +10,9 @@ backports.entry-points-selectable==1.1.0
     # via virtualenv
 black==21.8b0
     # via -r requirements/base.in
-boto3==1.18.36
+boto3==1.18.40
     # via -r requirements/base.in
-botocore==1.21.36
+botocore==1.21.40
     # via
     #   boto3
     #   s3transfer
@@ -67,7 +67,7 @@ flake8-todo==0.7
     # via -r requirements/test.in
 greenlet==1.1.1
     # via sqlalchemy
-identify==2.2.13
+identify==2.2.14
     # via pre-commit
 idna==3.2
     # via requests
@@ -170,7 +170,7 @@ snowballstemmer==2.1.0
     # via pydocstyle
 sqlalchemy==1.4.23
     # via -r requirements/base.in
-sqlparse==0.4.1
+sqlparse==0.4.2
     # via -r requirements/base.in
 termcolor==1.1.0
     # via pytest-sugar
