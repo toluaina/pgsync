@@ -1,16 +1,18 @@
 """PGSync QueryBuilder."""
+from typing import Dict
+
 import sqlalchemy as sa
 
-from .base import compiled_query, get_foreign_keys
+from .base import Base, compiled_query, get_foreign_keys
 from .constants import OBJECT, ONE_TO_MANY, ONE_TO_ONE, SCALAR
 from .exc import FetchColumnForeignKeysError
-from .node import node_from_table
+from .node import Node, node_from_table
 
 
 class QueryBuilder(object):
     """Query builder."""
 
-    def __init__(self, base, verbose=False):
+    def __init__(self, base: Base, verbose: bool = False):
         """
         Query builder constructor.
 
@@ -23,7 +25,7 @@ class QueryBuilder(object):
         self.verbose = verbose
         self.isouter = True
 
-    def _get_foreign_keys(self, node_a, node_b):
+    def _get_foreign_keys(self, node_a: Node, node_b: Node) -> Dict:
         if (
             node_a.relationship.through_tables
             or node_b.relationship.through_tables

@@ -86,7 +86,8 @@ class ElasticHelper(object):
         max_chunk_bytes = max_chunk_bytes or ELASTICSEARCH_MAX_CHUNK_BYTES
         thread_count = thread_count or ELASTICSEARCH_THREAD_COUNT
         queue_size = queue_size or ELASTICSEARCH_QUEUE_SIZE
-        # the next 3 variables only apply when streaming bulk is in use
+        # max_retries, initial_backoff & max_backoff are only applicable when
+        # streaming bulk is in use
         max_retries = max_retries or ELASTICSEARCH_MAX_RETRIES
         initial_backoff = initial_backoff or ELASTICSEARCH_INITIAL_BACKOFF
         max_backoff = max_backoff or ELASTICSEARCH_MAX_BACKOFF
@@ -105,8 +106,8 @@ class ElasticHelper(object):
             ):
                 pass
         else:
-            # parallel bulk consumes more memory
-            # parallel bulk is also more likely to result in 429 errors
+            # parallel bulk consumes more memory and is also more likely
+            # to result in 429 errors.
             for _ in helpers.parallel_bulk(
                 self.__es,
                 docs,

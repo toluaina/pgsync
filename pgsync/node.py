@@ -189,13 +189,13 @@ class Node(object):
     @property
     def name(self):
         """
-        returns a fully qualified node name`
+        returns a fully qualified node name
         """
         return f"{self.schema}.{self.table}"
 
     def add_child(self, node):
         """
-        all nodes except root must have a relationship definition
+        all nodes except the root node must have a relationship defined
         """
         node.parent = self
         if not node.is_root and (
