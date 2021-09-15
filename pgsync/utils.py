@@ -5,6 +5,7 @@ import sys
 import threading
 import time
 from datetime import timedelta
+from typing import Optional
 from urllib.parse import quote_plus
 
 from .exc import SchemaError
@@ -43,7 +44,7 @@ def timeit(func):
 
 
 class Timer:
-    def __init__(self, message=None):
+    def __init__(self, message: Optional[str] = None):
         self._message = message or ""
 
     def __enter__(self):
@@ -59,7 +60,7 @@ class Timer:
         )
 
 
-def show_settings(schema=None, params={}):
+def show_settings(schema: str = None, params: dict = {}) -> None:
     """Show configuration."""
     logger.info("\033[4mSettings\033[0m:")
     logger.info(f'{"Schema":<10s}: {schema or SCHEMA}')
@@ -98,12 +99,12 @@ def threaded(fn):
 
 
 def get_elasticsearch_url(
-    scheme=None,
-    user=None,
-    host=None,
-    password=None,
-    port=None,
-):
+    scheme: Optional[str] = None,
+    user: Optional[str] = None,
+    host: Optional[str] = None,
+    password: Optional[str] = None,
+    port: Optional[int] = None,
+) -> str:
     """
     Return the URL to connect to Elasticsearch.
     """
@@ -119,12 +120,12 @@ def get_elasticsearch_url(
 
 
 def get_postgres_url(
-    database,
-    user=None,
-    host=None,
-    password=None,
-    port=None,
-):
+    database: str,
+    user: Optional[str] = None,
+    host: Optional[str] = None,
+    password: Optional[str] = None,
+    port: Optional[int] = None,
+) -> str:
     """
     Return the URL to connect to Postgres.
     """
@@ -140,7 +141,13 @@ def get_postgres_url(
     )
 
 
-def get_redis_url(scheme=None, host=None, password=None, port=None, db=None):
+def get_redis_url(
+    scheme: Optional[str] = None,
+    host: Optional[str] = None,
+    password: Optional[str] = None,
+    port: Optional[int] = None,
+    db: Optional[str] = None,
+) -> str:
     """
     Return the URL to connect to Redis.
     """
@@ -155,7 +162,7 @@ def get_redis_url(scheme=None, host=None, password=None, port=None, db=None):
     return f"{scheme}://{host}:{port}/{db}"
 
 
-def get_config(config=None):
+def get_config(config: Optional[str] = None) -> str:
     """
     Return the schema config for PGSync.
     """

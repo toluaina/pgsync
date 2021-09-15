@@ -11,7 +11,7 @@ import select
 import sys
 import time
 from datetime import datetime, timedelta
-from typing import Dict, Generator, List, Optional
+from typing import Generator, List, Optional
 
 import click
 import psycopg2
@@ -57,40 +57,42 @@ class Sync(Base):
 
     def __init__(
         self,
-        document: Dict,
+        document: dict,
         verbose: Optional[bool] = False,
-        params: Optional[Dict] = None,
+        params: Optional[dict] = None,
         validate: Optional[bool] = True,
         repl_slots: Optional[bool] = True,
     ):
         """Constructor."""
-        params = params or {}
-        self.index = document["index"]
-        self.pipeline = document.get("pipeline")
-        self.plugins = document.get("plugins", [])
-        self.nodes = document.get("nodes", {})
-        self.setting = document.get("setting")
-        self.routing = document.get("routing")
+        params: dict = params or {}
+        self.index: str = document["index"]
+        self.pipeline: str = document.get("pipeline")
+        self.plugins: List = document.get("plugins", [])
+        self.nodes: dict = document.get("nodes", {})
+        self.setting: dict = document.get("setting")
+        self.routing: str = document.get("routing")
         super().__init__(
             document.get("database", self.index), verbose=verbose, **params
         )
-        self.es = ElasticHelper()
-        self.__name = re.sub(
+        self.es: ElasticHelper = ElasticHelper()
+        self.__name: str = re.sub(
             "[^0-9a-zA-Z_]+", "", f"{self.database}_{self.index}"
         )
-        self._checkpoint = None
-        self._plugins = None
-        self._truncate = False
-        self._checkpoint_file = f".{self.__name}"
-        self.redis = RedisQueue(self.__name)
-        self.tree = Tree(self)
-        self._last_truncate_timestamp = datetime.now()
+        self._checkpoint: int = None
+        self._plugins: Plugins = None
+        self._truncate: bool = False
+        self._checkpoint_file: str = f".{self.__name}"
+        self.redis: RedisQueue = RedisQueue(self.__name)
+        self.tree: Tree = Tree(self)
+        self._last_truncate_timestamp: datetime = datetime.now()
         if validate:
             self.validate(repl_slots=repl_slots)
             self.create_setting()
-        self.query_builder = QueryBuilder(self, verbose=self.verbose)
+        self.query_builder: QueryBuilder = QueryBuilder(
+            self, verbose=self.verbose
+        )
 
-    def validate(self, repl_slots: Optional[bool] = True):
+    def validate(self, repl_slots: Optional[bool] = True) -> None:
         """Perform all validation right away."""
 
         # ensure v2 compatible schema
@@ -200,7 +202,7 @@ class Sync(Base):
                 self.create_view(schema, tables, user_defined_fkey_tables)
         self.create_replication_slot(self.__name)
 
-    def teardown(self, drop_view: Optional[bool] = True) -> None:
+    def teardown(self, drop_view: bool = True) -> None:
         """Drop the database triggers and replication slot."""
 
         try:
@@ -253,7 +255,7 @@ class Sync(Base):
         TODO: We can also process all INSERTS together and rearrange
         them as done below
         """
-        rows = self.logical_slot_peek_changes(
+        rows: List = self.logical_slot_peek_changes(
             self.__name,
             txmin=txmin,
             txmax=txmax,
@@ -313,7 +315,7 @@ class Sync(Base):
                 upto_nchanges=len(rows),
             )
 
-    def _payload_data(self, payload: Dict) -> Dict:
+    def _payload_data(self, payload: dict) -> dict:
         """Extract the payload data from the payload."""
         payload_data = payload.get("new")
         if payload["tg_op"] == DELETE:
@@ -322,7 +324,7 @@ class Sync(Base):
         return payload_data
 
     def _insert(
-        self, node: Node, root: Node, filters: Dict, payloads: Dict
+        self, node: Node, root: Node, filters: dict, payloads: dict
     ) -> None:
 
         if node.table in self.tree.nodes:
@@ -388,9 +390,9 @@ class Sync(Base):
         self,
         node: Node,
         root: Node,
-        filters: Dict,
-        payloads: Dict,
-        extra: Dict,
+        filters: dict,
+        payloads: dict,
+        extra: dict,
     ) -> None:
 
         if node.table == root.table:
@@ -509,7 +511,7 @@ class Sync(Base):
         return filters
 
     def _delete(
-        self, node: Node, root: Node, filters: Dict, payloads: Dict
+        self, node: Node, root: Node, filters: dict, payloads: dict
     ) -> None:
 
         # when deleting a root node, just delete the doc in Elasticsearch
@@ -566,7 +568,7 @@ class Sync(Base):
 
         return filters
 
-    def _truncate(self, node: Node, root: Node, filters: Dict) -> None:
+    def _truncate(self, node: Node, root: Node, filters: dict) -> None:
 
         if node.table == root.table:
 
@@ -597,7 +599,7 @@ class Sync(Base):
 
         return filters
 
-    def _payloads(self, payloads: List[Dict]) -> None:
+    def _payloads(self, payloads: List[dict]) -> None:
         """
         The "payloads" is a list of payload operations to process together.
 
@@ -702,7 +704,7 @@ class Sync(Base):
         if any(filters.values()):
             yield from self._sync(filters=filters, extra=extra)
 
-    def _build_filters(self, filters: List[Dict], node: Node) -> None:
+    def _build_filters(self, filters: List[dict], node: Node) -> None:
         """
         Build SQLAlchemy filters.
 
@@ -753,10 +755,10 @@ class Sync(Base):
 
     def _sync(
         self,
-        filters: Optional[Dict] = None,
+        filters: Optional[dict] = None,
         txmin: Optional[int] = None,
         txmax: Optional[int] = None,
-        extra: Optional[Dict] = None,
+        extra: Optional[dict] = None,
     ) -> Generator:
         if filters is None:
             filters = {}
@@ -832,7 +834,7 @@ class Sync(Base):
                     pprint.pprint(row)
                     print("-" * 10)
 
-                doc = {
+                doc: dict = {
                     "_id": self.get_doc_id(primary_keys),
                     "_index": self.index,
                     "_source": row,
@@ -904,8 +906,8 @@ class Sync(Base):
         cursor.execute(f'LISTEN "{channel}"')
         logger.debug(f'Listening for notifications on channel "{channel}"')
 
-        i = 0
-        j = 0
+        i: int = 0
+        j: int = 0
 
         while True:
             # NB: consider reducing POLL_TIMEOUT to increase throughout
@@ -930,7 +932,7 @@ class Sync(Base):
                 j += 1
             i = 0
 
-    def on_publish(self, payloads: Dict) -> None:
+    def on_publish(self, payloads: dict) -> None:
         """
         Redis publish event handler.
 
@@ -946,7 +948,7 @@ class Sync(Base):
         # if all payload operations are INSERTS
         if set(map(lambda x: x["tg_op"], payloads)) == set([INSERT]):
 
-            _payloads = collections.defaultdict(list)
+            _payloads: dict = collections.defaultdict(list)
 
             for payload in payloads:
                 _payloads[payload["table"]].append(payload)
@@ -956,7 +958,7 @@ class Sync(Base):
 
         else:
 
-            _payloads = []
+            _payloads: List = []
             for i, payload in enumerate(payloads):
                 _payloads.append(payload)
                 j = i + 1
@@ -980,8 +982,8 @@ class Sync(Base):
 
     def pull(self) -> None:
         """Pull data from db."""
-        txmin = self.checkpoint
-        txmax = self.txid_current
+        txmin: int = self.checkpoint
+        txmax: int = self.txid_current
         logger.debug(f"pull txmin: {txmin} txmax: {txmax}")
         # forward pass sync
         self.sync(self._sync(txmin=txmin, txmax=txmax))

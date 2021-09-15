@@ -78,16 +78,7 @@ class Base(object):
             return None
 
     def has_permission(self, username: str, permission: str) -> bool:
-        """Check if the given user is a superuser or replication user.
-
-        Args:
-            username (str): The username to check
-            permission (str): The permission to check
-
-        Returns:
-            True if successful, False otherwise.
-
-        """
+        """Check if the given user is a superuser or replication user."""
         if permission not in ("usecreatedb", "usesuper", "userepl"):
             raise RuntimeError(f"Invalid user permission {permission}")
 
@@ -146,12 +137,12 @@ class Base(object):
         return self.models[name]
 
     @property
-    def database(self):
+    def database(self) -> str:
         """str: Get the database name."""
         return self.__engine.url.database
 
     @property
-    def session(self):
+    def session(self) -> sessionmaker:
         Session = sessionmaker(bind=self.__engine.connect(), autoflush=True)
         return Session()
 

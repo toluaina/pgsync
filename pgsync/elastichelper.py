@@ -1,7 +1,6 @@
 """PGSync Elasticsearch helper."""
 import logging
 from collections import defaultdict
-from typing import Dict
 
 import boto3
 from elasticsearch import Elasticsearch, helpers, RequestsHttpConnection
@@ -154,7 +153,7 @@ class ElasticHelper(object):
         for hit in search.scan():
             yield hit.meta.id
 
-    def search(self, index: str, body: Dict):
+    def search(self, index: str, body: dict):
         """
         Search in Elasticsearch.
 
@@ -242,7 +241,7 @@ class ElasticHelper(object):
             return dict(mappings=root._mapping)
 
 
-def get_elasticsearch_client(url):
+def get_elasticsearch_client(url: str) -> Elasticsearch:
 
     if ELASTICSEARCH_AWS_HOSTED:
         credentials = boto3.Session().get_credentials()
