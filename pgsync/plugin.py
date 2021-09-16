@@ -5,6 +5,7 @@ import logging
 import os
 import pkgutil
 from abc import ABC, abstractmethod
+from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -19,19 +20,19 @@ class Plugin(ABC):
 
 
 class Plugins(object):
-    def __init__(self, package, names=None):
-        self.package = package
-        self.names = names or []
+    def __init__(self, package: str, names: Optional[List] = None):
+        self.package: str = package
+        self.names: Optional[List] = names or []
         self.reload()
 
-    def reload(self):
+    def reload(self) -> None:
         """Reload the plugins from the available list."""
-        self.plugins = []
-        self._paths = []
+        self.plugins: List = []
+        self._paths: List = []
         logger.debug(f"Reloading plugins from package: {self.package}")
         self.walk(self.package)
 
-    def walk(self, package):
+    def walk(self, package: str) -> None:
         """Recursively walk the supplied package and fetch all plugins"""
         plugins = importlib.import_module(package)
         for _, name, ispkg in pkgutil.iter_modules(
@@ -52,7 +53,7 @@ class Plugins(object):
                     )
                     self.plugins.append(klass())
 
-        paths = []
+        paths: List = []
         if isinstance(plugins.__path__, str):
             paths.append(plugins.__path__)
         else:
@@ -71,7 +72,7 @@ class Plugins(object):
             ]:
                 self.walk(f"{package}.{pkg}")
 
-    def transform(self, docs):
+    def transform(self, docs: List):
         """Apply all plugins to each doc."""
         for doc in docs:
             for plugin in self.plugins:

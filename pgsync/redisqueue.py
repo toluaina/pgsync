@@ -1,6 +1,7 @@
 """PGSync RedisQueue."""
 import json
 import logging
+from typing import List, Optional
 
 from redis import Redis
 from redis.exceptions import ConnectionError
@@ -14,13 +15,13 @@ logger = logging.getLogger(__name__)
 class RedisQueue(object):
     """Simple Queue with Redis Backend."""
 
-    def __init__(self, name, namespace="queue", **kwargs):
+    def __init__(self, name: str, namespace: str = "queue", **kwargs):
         """The default connection parameters are:
 
         host = 'localhost', port = 6379, db = 0
         """
-        url = get_redis_url(**kwargs)
-        self.key = f"{namespace}:{name}"
+        url: str = get_redis_url(**kwargs)
+        self.key: str = f"{namespace}:{name}"
         try:
             self.__db = Redis.from_url(
                 url,
@@ -31,19 +32,19 @@ class RedisQueue(object):
             logger.exception(f"Redis server is not running: {e}")
             raise
 
-    def qsize(self):
+    def qsize(self) -> int:
         """Return the approximate size of the queue."""
         return self.__db.llen(self.key)
 
-    def empty(self):
+    def empty(self) -> bool:
         """Return True if the queue is empty, False otherwise."""
         return self.qsize() == 0
 
-    def push(self, item):
+    def push(self, item) -> None:
         """Push item into the queue."""
         self.__db.rpush(self.key, json.dumps(item))
 
-    def pop(self, block=True, timeout=None):
+    def pop(self, block: bool = True, timeout: int = None) -> dict:
         """Remove and return an item from the queue.
 
         If optional args block is true and timeout is None (the default), block
@@ -57,10 +58,10 @@ class RedisQueue(object):
             item = item[1]
         return json.loads(item)
 
-    def bulk_pop(self, chunk_size=None):
+    def bulk_pop(self, chunk_size: Optional[int] = None) -> List:
         """Remove and return multiple items from the queue."""
-        chunk_size = chunk_size or REDIS_CHUNK_SIZE
-        items = []
+        chunk_size: int = chunk_size or REDIS_CHUNK_SIZE
+        items: List = []
         while self.__db.llen(self.key) != 0:
             if len(items) > chunk_size:
                 break
@@ -68,7 +69,7 @@ class RedisQueue(object):
             items.append(json.loads(item))
         return items
 
-    def bulk_push(self, items):
+    def bulk_push(self, items: List) -> None:
         """Push multiple items onto the queue."""
         self.__db.rpush(self.key, *map(json.dumps, items))
 
@@ -76,13 +77,19 @@ class RedisQueue(object):
         """Equivalent to pop(False)."""
         return self.pop(False)
 
-    def _delete(self):
+    def _delete(self) -> None:
         logger.info(f"Deleting redis key: {self.key}")
         self.__db.delete(self.key)
 
 
-def redis_engine(scheme=None, host=None, password=None, port=None, db=None):
-    url = get_redis_url(
+def redis_engine(
+    scheme: Optional[str] = None,
+    host: Optional[str] = None,
+    password: Optional[str] = None,
+    port: Optional[int] = None,
+    db: Optional[str] = None,
+):
+    url: str = get_redis_url(
         scheme=scheme, host=host, password=password, port=port, db=db
     )
     try:

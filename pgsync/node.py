@@ -1,5 +1,6 @@
 """PGSync Node class representation."""
 import re
+from typing import List, Optional
 
 import sqlalchemy as sa
 from six import string_types
@@ -35,11 +36,11 @@ def _safe_get(obj, attr):
 
 
 class ForeignKey(object):
-    def __init__(self, foreign_key=None):
+    def __init__(self, foreign_key: Optional[str] = None):
         """ForeignKey constructor."""
-        foreign_key = foreign_key or dict()
-        self.parent = foreign_key.get("parent")
-        self.child = foreign_key.get("child")
+        foreign_key: str = foreign_key or dict()
+        self.parent: str = foreign_key.get("parent")
+        self.child: str = foreign_key.get("child")
         if not set(foreign_key.keys()).issubset(
             set(RELATIONSHIP_FOREIGN_KEYS)
         ):
@@ -59,10 +60,10 @@ class ForeignKey(object):
 class Relationship(object):
     def __init__(self, relationship=None):
         """Relationship constructor."""
-        relationship = relationship or dict()
-        self.type = relationship.get("type")
-        self.variant = relationship.get("variant")
-        self.through_tables = relationship.get("through_tables", [])
+        relationship: dict = relationship or dict()
+        self.type: str = relationship.get("type")
+        self.variant: str = relationship.get("variant")
+        self.through_tables: List = relationship.get("through_tables", [])
 
         if not set(relationship.keys()).issubset(set(RELATIONSHIP_ATTRIBUTES)):
             attrs = set(relationship.keys()).difference(
