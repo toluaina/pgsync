@@ -17,8 +17,8 @@ class CreateView(DDLElement):
     ):
         self.schema: str = schema
         self.name: str = name
-        self.selectable = selectable
-        self.materialized = materialized
+        self.selectable: Select = selectable
+        self.materialized: bool = materialized
 
 
 @compiler.compiles(CreateView)
