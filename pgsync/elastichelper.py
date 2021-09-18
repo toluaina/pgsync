@@ -1,6 +1,7 @@
 """PGSync Elasticsearch helper."""
 import logging
 from collections import defaultdict
+from typing import List
 
 import boto3
 from elasticsearch import Elasticsearch, helpers, RequestsHttpConnection
@@ -119,11 +120,11 @@ class ElasticHelper(object):
             ):
                 pass
 
-    def refresh(self, indices):
+    def refresh(self, indices: List[str]) -> None:
         """Refresh the Elasticsearch index."""
         self.__es.indices.refresh(index=indices)
 
-    def _search(self, index, table, fields=None):
+    def _search(self, index: str, table: str, fields: dict = None):
         """
         Search private area for matching docs in Elasticsearch.
 
@@ -134,8 +135,8 @@ class ElasticHelper(object):
             'uid': ['a002', 'a009'],
         }
         """
-        fields = fields or {}
-        search = Search(using=self.__es, index=index)
+        fields: dict = fields or {}
+        search: Search = Search(using=self.__es, index=index)
         # explicitly exclude all fields since we only need the doc _id
         search = search.source(excludes=["*"])
         for key, values in fields.items():

@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 import warnings
+from typing import List, Optional, Tuple
 
 import sqlalchemy as sa
 import sqlparse
@@ -44,7 +45,7 @@ logger = logging.getLogger(__name__)
 
 
 class Base(object):
-    def __init__(self, database, verbose=False, *args, **kwargs):
+    def __init__(self, database: str, verbose: bool = False, *args, **kwargs):
         """Initialize the base class constructor.
 
         Args:
@@ -53,9 +54,9 @@ class Base(object):
         self.__engine = pg_engine(database, **kwargs)
         self.__schemas = None
         # models is a dict of f'{schema}.{table}'
-        self.models = {}
-        self.__metadata = {}
-        self.verbose = verbose
+        self.models: dict = {}
+        self.__metadata: dict = {}
+        self.verbose: bool = verbose
 
     def connect(self) -> None:
         """Connect to database."""
@@ -66,7 +67,7 @@ class Base(object):
             logger.exception(f"Cannot connect to database: {e}")
             raise
 
-    def pg_settings(self, column) -> None:
+    def pg_settings(self, column: str) -> Optional[str]:
         try:
             return self.fetchone(
                 sa.select([sa.column("setting")])
@@ -112,7 +113,7 @@ class Base(object):
             The SQLAlchemy aliased model representation
 
         """
-        name = f"{schema}.{table}"
+        name: str = f"{schema}.{table}"
         if name not in self.models:
             if schema not in self.__metadata:
                 metadata = sa.MetaData(schema=schema)
@@ -161,7 +162,7 @@ class Base(object):
                     self.__schemas.remove(schema)
         return self.__schemas
 
-    def tables(self, schema):
+    def tables(self, schema: str) -> List:
         """:obj:`list` of :obj:`str`: Get all tables.
 
         returns the fully qualified table name with schema {schema}.{table}
@@ -173,7 +174,7 @@ class Base(object):
         metadata = self.__metadata[schema]
         return metadata.tables.keys()
 
-    def _get_schema(self, schema, table):
+    def _get_schema(self, schema: str, table: str) -> Tuple[str, str]:
         pairs = table.split(".")
         if len(pairs) == 2:
             return pairs[0], pairs[1]
@@ -181,7 +182,7 @@ class Base(object):
             return schema, pairs[0]
         raise ValueError(f"Invalid definition {table} for schema: {schema}")
 
-    def truncate_table(self, table, schema=SCHEMA):
+    def truncate_table(self, table: str, schema: str = SCHEMA) -> None:
         """Truncate a table.
 
         Note:
@@ -200,18 +201,18 @@ class Base(object):
         query = f'TRUNCATE TABLE "{schema}"."{table}" CASCADE'
         self.execute(query)
 
-    def truncate_tables(self, tables, schema=SCHEMA):
+    def truncate_tables(self, tables: List[str], schema: str = SCHEMA) -> None:
         """Truncate all tables."""
         logger.debug(f"Truncating tables: {tables}")
         for table in tables:
             self.truncate_table(table, schema=schema)
 
-    def truncate_schema(self, schema):
+    def truncate_schema(self, schema: str) -> None:
         """Truncate all tables in a schema."""
         logger.debug(f"Truncating schema: {schema}")
         self.truncate_tables(self.tables(schema), schema=schema)
 
-    def truncate_schemas(self):
+    def truncate_schemas(self) -> None:
         """Truncate all tables in a database."""
         for schema in self.schemas:
             self.truncate_schema(schema)
@@ -219,10 +220,10 @@ class Base(object):
     # Replication slots...
     def replication_slots(
         self,
-        slot_name,
-        plugin=PLUGIN,
-        slot_type="logical",
-    ):
+        slot_name: str,
+        plugin: str = PLUGIN,
+        slot_type: str = "logical",
+    ) -> List[str]:
         """List replication slots.
 
         SELECT * FROM PG_REPLICATION_SLOTS
@@ -242,7 +243,7 @@ class Base(object):
             label="replication_slots",
         )
 
-    def create_replication_slot(self, slot_name):
+    def create_replication_slot(self, slot_name: str) -> None:
         """Create a replication slot.
 
         TODO:
@@ -262,7 +263,7 @@ class Base(object):
             label="create_replication_slot",
         )
 
-    def drop_replication_slot(self, slot_name):
+    def drop_replication_slot(self, slot_name: str) -> None:
         """Drop a replication slot."""
         logger.debug(f"Dropping replication slot: {slot_name}")
         if self.replication_slots(slot_name):
@@ -279,15 +280,15 @@ class Base(object):
 
     def _logical_slot_changes(
         self,
-        slot_name,
-        func,
-        txmin=None,
-        txmax=None,
-        upto_lsn=None,
-        upto_nchanges=None,
+        slot_name: str,
+        func: sa.sql.functions._FunctionGenerator,
+        txmin: Optional[int] = None,
+        txmax: Optional[int] = None,
+        upto_lsn: Optional[int] = None,
+        upto_nchanges: Optional[int] = None,
     ):
-        filters = []
-        statement = sa.select(
+        filters: List = []
+        statement: str = sa.select(
             [sa.column("xid"), sa.column("data")]
         ).select_from(
             func(
@@ -318,11 +319,11 @@ class Base(object):
 
     def logical_slot_get_changes(
         self,
-        slot_name,
-        txmin=None,
-        txmax=None,
-        upto_lsn=None,
-        upto_nchanges=None,
+        slot_name: str,
+        txmin: Optional[int] = None,
+        txmax: Optional[int] = None,
+        upto_lsn: Optional[int] = None,
+        upto_nchanges: Optional[int] = None,
     ):
         """Get/Consume changes from a logical replication slot.
 
@@ -343,11 +344,11 @@ class Base(object):
 
     def logical_slot_peek_changes(
         self,
-        slot_name,
-        txmin=None,
-        txmax=None,
-        upto_lsn=None,
-        upto_nchanges=None,
+        slot_name: str,
+        txmin: Optional[int] = None,
+        txmax: Optional[int] = None,
+        upto_lsn: Optional[int] = None,
+        upto_nchanges: Optional[int] = None,
     ):
         """Peek a logical replication slot without consuming changes.
 
@@ -363,7 +364,7 @@ class Base(object):
         )
 
     # Views...
-    def _primary_keys(self, schema, tables):
+    def _primary_keys(self, schema: str, tables: List[str]):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=sa.exc.SAWarning)
             pg_class = self.model("pg_class", "pg_catalog")
@@ -437,7 +438,7 @@ class Base(object):
             .group_by(pg_index.c.indrelid)
         )
 
-    def _foreign_keys(self, schema, tables):
+    def _foreign_keys(self, schema: str, tables: List[str]):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=sa.exc.SAWarning)
             table_constraints = self.model(
