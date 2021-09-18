@@ -8,9 +8,9 @@ attrs==21.2.0
     # via pytest
 black==21.9b0
     # via -r requirements/base.in
-boto3==1.18.42
+boto3==1.18.44
     # via -r requirements/base.in
-botocore==1.21.42
+botocore==1.21.44
     # via
     #   boto3
     #   s3transfer
@@ -22,7 +22,7 @@ certifi==2021.5.30
     # via
     #   elasticsearch
     #   requests
-charset-normalizer==2.0.5
+charset-normalizer==2.0.6
     # via requests
 click==8.0.1
     # via
@@ -36,7 +36,7 @@ elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
 environs==9.3.3
     # via -r requirements/base.in
-faker==8.12.2
+faker==8.13.2
     # via -r requirements/base.in
 flake8==3.9.2
     # via
@@ -72,7 +72,7 @@ mccabe==0.6.1
     # via flake8
 mock==4.0.3
     # via -r requirements/test.in
-more-itertools==8.9.0
+more-itertools==8.10.0
     # via pytest
 mypy-extensions==0.4.3
     # via black

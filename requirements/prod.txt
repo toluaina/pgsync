@@ -6,9 +6,9 @@
 #
 black==21.9b0
     # via -r requirements/base.in
-boto3==1.18.42
+boto3==1.18.44
     # via -r requirements/base.in
-botocore==1.21.42
+botocore==1.21.44
     # via
     #   boto3
     #   s3transfer
@@ -20,7 +20,7 @@ certifi==2021.5.30
     # via
     #   elasticsearch
     #   requests
-charset-normalizer==2.0.5
+charset-normalizer==2.0.6
     # via requests
 click==8.0.1
     # via
@@ -32,7 +32,7 @@ elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
 environs==9.3.3
     # via -r requirements/base.in
-faker==8.12.2
+faker==8.13.2
     # via -r requirements/base.in
 greenlet==1.1.1
     # via sqlalchemy
@@ -48,7 +48,7 @@ marshmallow==3.12.0
     #   environs
 mypy-extensions==0.4.3
     # via black
-newrelic==6.8.1.164
+newrelic==6.10.0.165
     # via -r requirements/prod.in
 pathspec==0.9.0
     # via black
