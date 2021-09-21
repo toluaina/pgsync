@@ -76,7 +76,7 @@ class Sync(Base):
         )
         self.es: ElasticHelper = ElasticHelper()
         self.__name: str = re.sub(
-            "[^0-9a-zA-Z_]+", "", f"{self.database}_{self.index}"
+            "[^0-9a-zA-Z_]+", "", f"{self.database.lower()}_{self.index}"
         )
         self._checkpoint: int = None
         self._plugins: Plugins = None
