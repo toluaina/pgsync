@@ -976,7 +976,7 @@ class Sync(Base):
                         _payloads = []
                 elif j == len(payloads):
                     self.sync(self._payloads(_payloads))
-                    _payloads: Lisr = []
+                    _payloads: List = []
 
         txids: Set = set(map(lambda x: x["xmin"], payloads))
         # for truncate, tg_op txids is None so skip setting the checkpoint
