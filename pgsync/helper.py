@@ -2,6 +2,7 @@
 import json
 import logging
 import os
+from typing import Optional
 
 import sqlalchemy as sa
 
@@ -13,19 +14,19 @@ logger = logging.getLogger(__name__)
 
 
 def teardown(
-    drop_db=True,
-    truncate_db=True,
-    delete_redis=True,
-    drop_index=True,
-    delete_checkpoint=True,
-    config=None,
+    drop_db: bool = True,
+    truncate_db: bool = True,
+    delete_redis: bool = True,
+    drop_index: bool = True,
+    delete_checkpoint: bool = True,
+    config: Optional[str] = None,
 ):
     """Teardown helper."""
     config = get_config(config)
 
     with open(config, "r") as documents:
         for document in json.load(documents):
-            sync = Sync(document, validate=False)
+            sync: Sync = Sync(document, validate=False)
             if truncate_db:
                 try:
                     sync.truncate_schemas()

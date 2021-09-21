@@ -1,29 +1,26 @@
 """PGSync QueryBuilder."""
+from typing import Dict, List
+
 import sqlalchemy as sa
 
-from .base import compiled_query, get_foreign_keys
+from .base import Base, compiled_query, get_foreign_keys
 from .constants import OBJECT, ONE_TO_MANY, ONE_TO_ONE, SCALAR
 from .exc import FetchColumnForeignKeysError
-from .node import node_from_table
+from .node import Node, node_from_table
 
 
 class QueryBuilder(object):
     """Query builder."""
 
-    def __init__(self, base, verbose=False):
+    def __init__(self, base: Base, verbose: bool = False):
         """
         Query builder constructor.
-
-        :param base: base class
-        :type base: `base.class`
-        :param verbose: verbose
-        :type verbose: `bool`
         """
-        self.base = base
-        self.verbose = verbose
-        self.isouter = True
+        self.base: Base = base
+        self.verbose: bool = verbose
+        self.isouter: bool = True
 
-    def _get_foreign_keys(self, node_a, node_b):
+    def _get_foreign_keys(self, node_a: Node, node_b: Node) -> Dict:
         if (
             node_a.relationship.through_tables
             or node_b.relationship.through_tables
@@ -99,7 +96,7 @@ class QueryBuilder(object):
             msg += f" with table {table}"
         raise FetchColumnForeignKeysError(msg)
 
-    def _get_child_keys(self, node, params):
+    def _get_child_keys(self, node: Node, params: dict):
         row = sa.cast(
             sa.func.JSON_BUILD_OBJECT(
                 node.table,
@@ -151,7 +148,7 @@ class QueryBuilder(object):
             node._subquery = node._subquery.where(sa.and_(*node._filters))
         node._subquery = node._subquery.alias()
 
-    def _children(self, node):
+    def _children(self, node: Node):
 
         for child in node.children:
 
@@ -283,7 +280,7 @@ class QueryBuilder(object):
                 isouter=self.isouter,
             )
 
-    def _through(self, node):  # noqa: C901
+    def _through(self, node: Node):  # noqa: C901
 
         through = node_from_table(
             self.base,
@@ -570,7 +567,7 @@ class QueryBuilder(object):
 
         node._subquery = subquery.alias()
 
-    def _non_through(self, node):  # noqa: C901
+    def _non_through(self, node: Node):  # noqa: C901
 
         from_obj = None
 
@@ -690,7 +687,7 @@ class QueryBuilder(object):
                 node, sa.func.JSON_AGG(sa.func.JSON_BUILD_OBJECT(*params))
             )
 
-        columns = [_keys]
+        columns: List = [_keys]
 
         if node.relationship.variant == SCALAR:
             # TODO: Raise exception here if the number of columns > 1
@@ -751,7 +748,7 @@ class QueryBuilder(object):
 
         node._subquery = node._subquery.alias()
 
-    def build_queries(self, node):
+    def build_queries(self, node: Node):
         """Build node query."""
         self.from_obj = None
 

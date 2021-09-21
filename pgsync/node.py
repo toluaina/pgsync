@@ -1,5 +1,6 @@
 """PGSync Node class representation."""
 import re
+from typing import List, Optional
 
 import sqlalchemy as sa
 from six import string_types
@@ -35,11 +36,11 @@ def _safe_get(obj, attr):
 
 
 class ForeignKey(object):
-    def __init__(self, foreign_key=None):
+    def __init__(self, foreign_key: Optional[str] = None):
         """ForeignKey constructor."""
-        foreign_key = foreign_key or dict()
-        self.parent = foreign_key.get("parent")
-        self.child = foreign_key.get("child")
+        foreign_key: str = foreign_key or dict()
+        self.parent: str = foreign_key.get("parent")
+        self.child: str = foreign_key.get("child")
         if not set(foreign_key.keys()).issubset(
             set(RELATIONSHIP_FOREIGN_KEYS)
         ):
@@ -59,10 +60,10 @@ class ForeignKey(object):
 class Relationship(object):
     def __init__(self, relationship=None):
         """Relationship constructor."""
-        relationship = relationship or dict()
-        self.type = relationship.get("type")
-        self.variant = relationship.get("variant")
-        self.through_tables = relationship.get("through_tables", [])
+        relationship: dict = relationship or dict()
+        self.type: str = relationship.get("type")
+        self.variant: str = relationship.get("variant")
+        self.through_tables: List = relationship.get("through_tables", [])
 
         if not set(relationship.keys()).issubset(set(RELATIONSHIP_ATTRIBUTES)):
             attrs = set(relationship.keys()).difference(
@@ -189,13 +190,13 @@ class Node(object):
     @property
     def name(self):
         """
-        returns a fully qualified node name`
+        returns a fully qualified node name
         """
         return f"{self.schema}.{self.table}"
 
     def add_child(self, node):
         """
-        all nodes except root must have a relationship definition
+        all nodes except the root node must have a relationship defined
         """
         node.parent = self
         if not node.is_root and (
@@ -206,7 +207,7 @@ class Node(object):
             )
         self.children.append(node)
 
-    def display(self, prefix="", leaf=True):
+    def display(self, prefix: str = "", leaf: bool = True):
         print(
             prefix, " - " if leaf else "|- ", self.table, sep=""
         )  # noqa T001

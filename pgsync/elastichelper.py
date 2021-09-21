@@ -1,7 +1,7 @@
 """PGSync Elasticsearch helper."""
 import logging
 from collections import defaultdict
-from typing import Dict
+from typing import List
 
 import boto3
 from elasticsearch import Elasticsearch, helpers, RequestsHttpConnection
@@ -86,7 +86,8 @@ class ElasticHelper(object):
         max_chunk_bytes = max_chunk_bytes or ELASTICSEARCH_MAX_CHUNK_BYTES
         thread_count = thread_count or ELASTICSEARCH_THREAD_COUNT
         queue_size = queue_size or ELASTICSEARCH_QUEUE_SIZE
-        # the next 3 variables only apply when streaming bulk is in use
+        # max_retries, initial_backoff & max_backoff are only applicable when
+        # streaming bulk is in use
         max_retries = max_retries or ELASTICSEARCH_MAX_RETRIES
         initial_backoff = initial_backoff or ELASTICSEARCH_INITIAL_BACKOFF
         max_backoff = max_backoff or ELASTICSEARCH_MAX_BACKOFF
@@ -105,8 +106,8 @@ class ElasticHelper(object):
             ):
                 pass
         else:
-            # parallel bulk consumes more memory
-            # parallel bulk is also more likely to result in 429 errors
+            # parallel bulk consumes more memory and is also more likely
+            # to result in 429 errors.
             for _ in helpers.parallel_bulk(
                 self.__es,
                 docs,
@@ -119,11 +120,11 @@ class ElasticHelper(object):
             ):
                 pass
 
-    def refresh(self, indices):
+    def refresh(self, indices: List[str]) -> None:
         """Refresh the Elasticsearch index."""
         self.__es.indices.refresh(index=indices)
 
-    def _search(self, index, table, fields=None):
+    def _search(self, index: str, table: str, fields: dict = None):
         """
         Search private area for matching docs in Elasticsearch.
 
@@ -134,8 +135,8 @@ class ElasticHelper(object):
             'uid': ['a002', 'a009'],
         }
         """
-        fields = fields or {}
-        search = Search(using=self.__es, index=index)
+        fields: dict = fields or {}
+        search: Search = Search(using=self.__es, index=index)
         # explicitly exclude all fields since we only need the doc _id
         search = search.source(excludes=["*"])
         for key, values in fields.items():
@@ -153,7 +154,7 @@ class ElasticHelper(object):
         for hit in search.scan():
             yield hit.meta.id
 
-    def search(self, index: str, body: Dict):
+    def search(self, index: str, body: dict):
         """
         Search in Elasticsearch.
 
@@ -241,7 +242,7 @@ class ElasticHelper(object):
             return dict(mappings=root._mapping)
 
 
-def get_elasticsearch_client(url):
+def get_elasticsearch_client(url: str) -> Elasticsearch:
 
     if ELASTICSEARCH_AWS_HOSTED:
         credentials = boto3.Session().get_credentials()
