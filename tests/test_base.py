@@ -31,7 +31,22 @@ class TestBase(object):
             connection.engine.url.username,
             "usesuper",
         )
-        assert value is True
+        assert (
+            pg_base.has_permission(
+                connection.engine.url.username,
+                "usesuper",
+            )
+            is True
+        )
+
+        assert (
+            pg_base.has_permission(
+                "spiderman",
+                "usesuper",
+            )
+            is False
+        )
+
         with pytest.raises(RuntimeError) as excinfo:
             value = pg_base.has_permission(
                 connection.engine.url.username,

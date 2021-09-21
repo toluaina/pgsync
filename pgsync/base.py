@@ -97,8 +97,10 @@ class Base(object):
                 ),
                 label="has_permission",
             )[0]
-        except Exception as e:
+        except (Exception, TypeError) as e:
             logger.exception(f"{e}")
+            return False
+
         return False
 
     # Tables...
