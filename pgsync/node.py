@@ -240,8 +240,8 @@ class Tree(object):
 
     def build(self, root: dict) -> Node:
 
-        table = root.get("table")
-        schema = root.get("schema", SCHEMA)
+        table: str = root.get("table")
+        schema: str = root.get("schema", SCHEMA)
 
         if table is None:
             raise TableNotInNodeError(f"Table not specified in node: {root}")

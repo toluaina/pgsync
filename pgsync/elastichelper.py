@@ -1,7 +1,7 @@
 """PGSync Elasticsearch helper."""
 import logging
 from collections import defaultdict
-from typing import List
+from typing import Generator, List, Optional
 
 import boto3
 from elasticsearch import Elasticsearch, helpers, RequestsHttpConnection
@@ -14,7 +14,7 @@ from .constants import (
     ELASTICSEARCH_TYPES,
     META,
 )
-from .node import traverse_post_order
+from .node import Node, traverse_post_order
 from .settings import (
     ELASTICSEARCH_AWS_HOSTED,
     ELASTICSEARCH_AWS_REGION,
@@ -49,9 +49,9 @@ class ElasticHelper(object):
         The default connection parameters are:
         host = 'localhost', port = 9200
         """
-        url = get_elasticsearch_url()
-        self.__es = get_elasticsearch_client(url)
-        self.version = list(
+        url: str = get_elasticsearch_url()
+        self.__es: Elasticsearch = get_elasticsearch_client(url)
+        self.version: List[int] = list(
             map(int, self.__es.info()["version"]["number"].split("."))
         )
 
@@ -70,27 +70,27 @@ class ElasticHelper(object):
 
     def bulk(
         self,
-        index,
-        docs,
-        chunk_size=None,
-        max_chunk_bytes=None,
-        queue_size=None,
-        thread_count=None,
-        refresh=False,
-        max_retries=None,
-        initial_backoff=None,
-        max_backoff=None,
+        index: str,
+        docs: Generator,
+        chunk_size: Optional[int] = None,
+        max_chunk_bytes: Optional[int] = None,
+        queue_size: Optional[int] = None,
+        thread_count: Optional[int] = None,
+        refresh: bool = False,
+        max_retries: Optional[int] = None,
+        initial_backoff: Optional[int] = None,
+        max_backoff: Optional[int] = None,
     ):
         """Bulk index, update, delete docs to Elasticsearch."""
-        chunk_size = chunk_size or ELASTICSEARCH_CHUNK_SIZE
-        max_chunk_bytes = max_chunk_bytes or ELASTICSEARCH_MAX_CHUNK_BYTES
-        thread_count = thread_count or ELASTICSEARCH_THREAD_COUNT
-        queue_size = queue_size or ELASTICSEARCH_QUEUE_SIZE
+        chunk_size: int = chunk_size or ELASTICSEARCH_CHUNK_SIZE
+        max_chunk_bytes: int = max_chunk_bytes or ELASTICSEARCH_MAX_CHUNK_BYTES
+        thread_count: int = thread_count or ELASTICSEARCH_THREAD_COUNT
+        queue_size: int = queue_size or ELASTICSEARCH_QUEUE_SIZE
         # max_retries, initial_backoff & max_backoff are only applicable when
         # streaming bulk is in use
-        max_retries = max_retries or ELASTICSEARCH_MAX_RETRIES
-        initial_backoff = initial_backoff or ELASTICSEARCH_INITIAL_BACKOFF
-        max_backoff = max_backoff or ELASTICSEARCH_MAX_BACKOFF
+        max_retries: int = max_retries or ELASTICSEARCH_MAX_RETRIES
+        initial_backoff: int = initial_backoff or ELASTICSEARCH_INITIAL_BACKOFF
+        max_backoff: int = max_backoff or ELASTICSEARCH_MAX_BACKOFF
 
         if ELASTICSEARCH_STREAMING_BULK:
             for _ in helpers.streaming_bulk(
@@ -162,16 +162,22 @@ class ElasticHelper(object):
         """
         return self.__es.search(index=index, body=body)
 
-    def _create_setting(self, index, node, setting=None, routing=None):
+    def _create_setting(
+        self,
+        index: str,
+        node: None,
+        setting: Optional[dict] = None,
+        routing: Optional[str] = None,
+    ) -> None:
         """Create Elasticsearch setting and mapping if required."""
-        body = defaultdict(lambda: defaultdict(dict))
+        body: dict = defaultdict(lambda: defaultdict(dict))
 
         if not self.__es.indices.exists(index):
 
             if setting:
                 body.update(**{"settings": {"index": setting}})
 
-            mapping = self._build_mapping(node, routing)
+            mapping: dict = self._build_mapping(node, routing)
             if mapping:
                 body.update(**mapping)
 
@@ -193,7 +199,7 @@ class ElasticHelper(object):
                 f"created setting: {self.__es.indices.get_settings(index)}"
             )
 
-    def _build_mapping(self, root, routing):
+    def _build_mapping(self, root: Node, routing: str):
         """Get the Elasticsearch mapping from the schema transform."""
 
         for node in traverse_post_order(root):
@@ -202,8 +208,8 @@ class ElasticHelper(object):
             mapping = node.transform.get("mapping", {})
 
             for key, value in mapping.items():
-                column = rename.get(key, key)
-                column_type = mapping[column]["type"]
+                column: str = rename.get(key, key)
+                column_type: str = mapping[column]["type"]
                 if column_type not in ELASTICSEARCH_TYPES:
                     raise RuntimeError(
                         f"Invalid Elasticsearch type {column_type}"

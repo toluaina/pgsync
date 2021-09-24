@@ -10,9 +10,9 @@ backports.entry-points-selectable==1.1.0
     # via virtualenv
 black==21.9b0
     # via -r requirements/base.in
-boto3==1.18.47
+boto3==1.18.48
     # via -r requirements/base.in
-botocore==1.21.47
+botocore==1.21.48
     # via
     #   boto3
     #   s3transfer
@@ -79,10 +79,8 @@ jmespath==0.10.0
     # via
     #   boto3
     #   botocore
-marshmallow==3.12.0
-    # via
-    #   -r requirements/base.in
-    #   environs
+marshmallow==3.13.0
+    # via environs
 mccabe==0.6.1
     # via flake8
 mock==4.0.3
@@ -152,7 +150,7 @@ pyyaml==5.4.1
     # via pre-commit
 redis==3.5.3
     # via -r requirements/base.in
-regex==2021.8.28
+regex==2021.9.24
     # via black
 requests==2.26.0
     # via requests-aws4auth

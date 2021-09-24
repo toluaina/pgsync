@@ -608,13 +608,15 @@ class Base(object):
         )
         logger.debug(f"Created view: {schema}.{MATERIALIZED_VIEW}")
 
-    def drop_view(self, schema):
+    def drop_view(self, schema: str):
         logger.debug(f"Dropping view: {schema}.{MATERIALIZED_VIEW}")
         self.__engine.execute(DropView(schema, MATERIALIZED_VIEW))
         logger.debug(f"Dropped view: {schema}.{MATERIALIZED_VIEW}")
 
     # Triggers...
-    def create_triggers(self, schema, tables=None):
+    def create_triggers(
+        self, schema: str, tables: Optional[List[str]] = None
+    ) -> None:
         """Create a database triggers."""
         self.execute(
             CREATE_TRIGGER_TEMPLATE.replace(
@@ -645,7 +647,9 @@ class Base(object):
         for query in queries:
             self.execute(query)
 
-    def drop_triggers(self, schema, tables=None):
+    def drop_triggers(
+        self, schema: str, tables: Optional[List[str]] = None
+    ) -> None:
         """Drop all pgsync defined triggers in database."""
         for table in self.tables(schema):
             schema, table = self._get_schema(schema, table)
@@ -659,7 +663,7 @@ class Base(object):
                 )
                 self.execute(query)
 
-    def disable_triggers(self, schema):
+    def disable_triggers(self, schema: str) -> None:
         """Disable all pgsync defined triggers in database."""
         for table in self.tables(schema):
             schema, table = self._get_schema(schema, table)
@@ -671,7 +675,7 @@ class Base(object):
                 )
                 self.execute(query)
 
-    def enable_triggers(self, schema):
+    def enable_triggers(self, schema: str) -> None:
         """Enable all pgsync defined triggers in database."""
         for table in self.tables(schema):
             schema, table = self._get_schema(schema, table)
@@ -695,7 +699,7 @@ class Base(object):
             label="txid_current",
         )[0]
 
-    def parse_value(self, type_, value):
+    def parse_value(self, type_: str, value: str) -> Optional[str]:
         """
         Parse datatypes from db.
 
@@ -720,7 +724,7 @@ class Base(object):
             "smallserial",
         ):
             try:
-                value = int(value)
+                value: int = int(value)
             except ValueError:
                 raise
         if type_.lower() in (
@@ -731,10 +735,10 @@ class Base(object):
             "uuid",
             "varchar",
         ):
-            value = value.lstrip("'").rstrip("'")
+            value: str = value.lstrip("'").rstrip("'")
         if type_.lower() == "boolean":
             try:
-                value = bool(value)
+                value: bool = bool(value)
             except ValueError:
                 raise
         if type_.lower() in (
@@ -744,7 +748,7 @@ class Base(object):
             "real",
         ):
             try:
-                value = float(value)
+                value: float = float(value)
             except ValueError:
                 raise
         return value
@@ -975,8 +979,8 @@ def pg_engine(
     sslrootcert=None,
 ):
     connect_args = {}
-    sslmode = sslmode or PG_SSLMODE
-    sslrootcert = sslrootcert or PG_SSLROOTCERT
+    sslmode: str = sslmode or PG_SSLMODE
+    sslrootcert: str = sslrootcert or PG_SSLROOTCERT
 
     if sslmode:
         if sslmode not in (
@@ -999,7 +1003,7 @@ def pg_engine(
             )
         connect_args["sslrootcert"] = sslrootcert
 
-    url = get_postgres_url(
+    url: str = get_postgres_url(
         database,
         user=user,
         host=host,
@@ -1010,7 +1014,7 @@ def pg_engine(
 
 
 def pg_execute(engine, query, values=None, options=None):
-    options = options or {"isolation_level": "AUTOCOMMIT"}
+    options: dict = options or {"isolation_level": "AUTOCOMMIT"}
     conn = engine.connect()
     try:
         if options:
@@ -1028,7 +1032,7 @@ def create_schema(engine, schema):
         engine.execute(sa.schema.CreateSchema(schema))
 
 
-def create_database(database, echo=False):
+def create_database(database: str, echo: bool = False):
     """Create a database."""
     logger.debug(f"Creating database: {database}")
     engine = pg_engine(database="postgres", echo=echo)
@@ -1036,7 +1040,7 @@ def create_database(database, echo=False):
     logger.debug(f"Created database: {database}")
 
 
-def drop_database(database, echo=False):
+def drop_database(database: str, echo: bool = False):
     """Drop a database."""
     logger.debug(f"Dropping database: {database}")
     engine = pg_engine(database="postgres", echo=echo)
@@ -1044,7 +1048,7 @@ def drop_database(database, echo=False):
     logger.debug(f"Dropped database: {database}")
 
 
-def create_extension(database, extension, echo=False):
+def create_extension(database: str, extension: str, echo: bool = False):
     """Create a database extension."""
     logger.debug(f"Creating extension: {extension}")
     engine = pg_engine(database=database, echo=echo)
@@ -1052,7 +1056,7 @@ def create_extension(database, extension, echo=False):
     logger.debug(f"Created extension: {extension}")
 
 
-def drop_extension(database, extension, echo=False):
+def drop_extension(database: str, extension: str, echo: bool = False):
     """Drop a database extension."""
     logger.debug(f"Dropping extension: {extension}")
     engine = pg_engine(database=database, echo=echo)
@@ -1060,15 +1064,17 @@ def drop_extension(database, extension, echo=False):
     logger.debug(f"Dropped extension: {extension}")
 
 
-def compiled_query(query, label=None, literal_binds=False):
+def compiled_query(
+    query: str, label: Optional[str] = None, literal_binds: bool = False
+):
     """Compile an SQLAlchemy query with an optional label."""
-    query = str(
+    query: str = str(
         query.compile(
             dialect=postgresql.dialect(),
             compile_kwargs={"literal_binds": literal_binds},
         )
     )
-    query = sqlparse.format(query, reindent=True, keyword_case="upper")
+    query: str = sqlparse.format(query, reindent=True, keyword_case="upper")
     if label:
         logger.debug(f"\033[4m{label}:\033[0m\n{query}")
         sys.stdout.write(f"\033[4m{label}:\033[0m\n{query}")

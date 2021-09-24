@@ -2,9 +2,9 @@
 import logging
 import os
 import sys
-import threading
 import time
 from datetime import timedelta
+from threading import Thread
 from typing import Optional
 from urllib.parse import quote_plus
 
@@ -91,7 +91,7 @@ def threaded(fn):
     """Decorator for threaded code execution."""
 
     def wrapper(*args, **kwargs):
-        thread = threading.Thread(target=fn, args=args, kwargs=kwargs)
+        thread: Thread = Thread(target=fn, args=args, kwargs=kwargs)
         thread.start()
         return thread
 
@@ -108,11 +108,11 @@ def get_elasticsearch_url(
     """
     Return the URL to connect to Elasticsearch.
     """
-    scheme = scheme or ELASTICSEARCH_SCHEME
-    host = host or ELASTICSEARCH_HOST
-    port = port or ELASTICSEARCH_PORT
-    user = user or ELASTICSEARCH_USER
-    password = password or ELASTICSEARCH_PASSWORD
+    scheme: str = scheme or ELASTICSEARCH_SCHEME
+    host: str = host or ELASTICSEARCH_HOST
+    port: str = port or ELASTICSEARCH_PORT
+    user: str = user or ELASTICSEARCH_USER
+    password: str = password or ELASTICSEARCH_PASSWORD
     if user:
         return f"{scheme}://{user}:{quote_plus(password)}@{host}:{port}"
     logger.debug("Connecting to Elasticsearch without authentication.")
@@ -129,10 +129,10 @@ def get_postgres_url(
     """
     Return the URL to connect to Postgres.
     """
-    user = user or PG_USER
-    host = host or PG_HOST
-    password = password or PG_PASSWORD
-    port = port or PG_PORT
+    user: str = user or PG_USER
+    host: str = host or PG_HOST
+    password: str = password or PG_PASSWORD
+    port: str = port or PG_PORT
     if not password:
         logger.debug("Connecting to Postgres without password.")
         return f"postgresql://{user}@{host}:{port}/{database}"
@@ -151,11 +151,11 @@ def get_redis_url(
     """
     Return the URL to connect to Redis.
     """
-    host = host or REDIS_HOST
-    password = password or REDIS_AUTH
+    host: str = host or REDIS_HOST
+    password: str = password or REDIS_AUTH
     port = port or REDIS_PORT
-    db = db or REDIS_DB
-    scheme = scheme or REDIS_SCHEME
+    db: str = db or REDIS_DB
+    scheme: str = scheme or REDIS_SCHEME
     if password:
         return f"{scheme}://:{quote_plus(password)}@{host}:{port}/{db}"
     logger.debug("Connecting to Redis without password.")
@@ -166,7 +166,7 @@ def get_config(config: Optional[str] = None) -> str:
     """
     Return the schema config for PGSync.
     """
-    config = config or SCHEMA
+    config: str = config or SCHEMA
     if not config:
         raise SchemaError(
             "Schema config not set\n. "

@@ -103,7 +103,7 @@ class Sync(Base):
 
         self.connect()
         if self.plugins:
-            self._plugins = Plugins("plugins", self.plugins)
+            self._plugins: Plugins = Plugins("plugins", self.plugins)
 
         max_replication_slots: Optional[str] = self.pg_settings(
             "max_replication_slots"
@@ -193,7 +193,7 @@ class Sync(Base):
                 # even though only one of them is the foreign_key.
                 # this is because we define both in the schema but
                 # do not specify which table is the foreign key.
-                columns = []
+                columns: List = []
                 if node.relationship.foreign_key.parent:
                     columns.extend(node.relationship.foreign_key.parent)
                 if node.relationship.foreign_key.child:
@@ -906,7 +906,7 @@ class Sync(Base):
             psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT
         )
         cursor = conn.cursor()
-        channel = self.database
+        channel: str = self.database
         cursor.execute(f'LISTEN "{channel}"')
         logger.debug(f'Listening for notifications on channel "{channel}"')
 
