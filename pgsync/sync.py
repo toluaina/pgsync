@@ -91,6 +91,7 @@ class Sync(Base):
         self.query_builder: QueryBuilder = QueryBuilder(
             self, verbose=self.verbose
         )
+        self.count: dict = dict(db=0, redis=0, elastic=0)
 
     def validate(self, repl_slots: Optional[bool] = True) -> None:
         """Perform all validation right away."""
@@ -291,7 +292,7 @@ class Sync(Base):
                 raise
             payloads.append(payload)
 
-            j = i + 1
+            j: int = i + 1
             if j < len(_rows):
                 try:
                     payload2 = self.parse_logical_slot(_rows[j].data)
@@ -306,10 +307,10 @@ class Sync(Base):
                     or payload["table"] != payload2["table"]
                 ):
                     self.sync(self._payloads(payloads))
-                    payloads = []
+                    payloads: List = []
             elif j == len(_rows):
                 self.sync(self._payloads(payloads))
-                payloads = []
+                payloads: List = []
 
         if rows:
             self.logical_slot_get_changes(
@@ -503,7 +504,7 @@ class Sync(Base):
                         node.parent.table,
                         fields,
                     ):
-                        where = {}
+                        where: dict = {}
                         params = doc_id.split(PRIMARY_KEY_DELIMITER)
                         for i, key in enumerate(root.model.primary_keys):
                             where[key] = params[i]
@@ -630,9 +631,9 @@ class Sync(Base):
         ]
 
         """
-        payload = payloads[0]
-        tg_op = payload["tg_op"]
-        table = payload["table"]
+        payload: dict = payloads[0]
+        tg_op: str = payload["tg_op"]
+        table: str = payload["table"]
         if tg_op not in TG_OP:
             logger.exception(f"Unknown tg_op {tg_op}")
             raise
@@ -648,8 +649,8 @@ class Sync(Base):
         ):
             return
 
-        node = get_node(self.tree, table, self.nodes)
-        root = get_node(self.tree, self.nodes["table"], self.nodes)
+        node: Node = get_node(self.tree, table, self.nodes)
+        root: Node = get_node(self.tree, self.nodes["table"], self.nodes)
 
         for payload in payloads:
             payload_data: dict = self._payload_data(payload)
@@ -667,8 +668,8 @@ class Sync(Base):
 
         logger.debug(f"tg_op: {tg_op} table: {node.name}")
 
-        filters = {node.table: [], root.table: []}
-        extra = {}
+        filters: dict = {node.table: [], root.table: []}
+        extra: dict = {}
 
         if tg_op == INSERT:
 
@@ -721,11 +722,11 @@ class Sync(Base):
         ]
         """
         if filters.get(node.table):
-            _filters = []
-            keys = set([])
-            values = set([])
+            _filters: List = []
+            keys: Set = set([])
+            values: Set = set([])
             for _filter in filters.get(node.table):
-                where = []
+                where: List = []
                 for key, value in _filter.items():
                     where.append(getattr(node.model.c, key) == value)
                     keys.add(key)
@@ -735,7 +736,7 @@ class Sync(Base):
             if len(keys) == 1:
                 # If we have the same key then the node does not have a
                 # compound primary key
-                column = list(keys)[0]
+                column: List = list(keys)[0]
                 node._filters.append(
                     getattr(node.model.c, column).in_(
                         sa.select(
@@ -765,9 +766,9 @@ class Sync(Base):
         extra: Optional[dict] = None,
     ) -> Generator:
         if filters is None:
-            filters = {}
+            filters: dict = {}
 
-        root = self.tree.build(self.nodes)
+        root: Node = self.tree.build(self.nodes)
 
         self.query_builder.isouter = True
 
@@ -873,7 +874,7 @@ class Sync(Base):
         """Save the current txid as the checkpoint."""
         if os.path.exists(self._checkpoint_file):
             with open(self._checkpoint_file, "r") as fp:
-                self._checkpoint = int(fp.read().split()[0])
+                self._checkpoint: int = int(fp.read().split()[0])
         return self._checkpoint
 
     @checkpoint.setter
@@ -888,9 +889,10 @@ class Sync(Base):
     def poll_redis(self) -> None:
         """Consumer which polls Redis continuously."""
         while True:
-            payloads = self.redis.bulk_pop()
+            payloads: dict = self.redis.bulk_pop()
             if payloads:
                 logger.debug(f"poll_redis: {payloads}")
+                self.count["redis"] += len(payloads)
                 self.on_publish(payloads)
             time.sleep(REDIS_POLL_INTERVAL)
 
@@ -911,13 +913,15 @@ class Sync(Base):
         logger.debug(f'Listening for notifications on channel "{channel}"')
 
         i: int = 0
-        j: int = 0
-
         while True:
             # NB: consider reducing POLL_TIMEOUT to increase throughout
             if select.select([conn], [], [], POLL_TIMEOUT) == ([], [], []):
                 if i % 10 == 0:
-                    sys.stdout.write(f"Polling db {channel}: {j:,} item(s)\n")
+                    sys.stdout.write(
+                        f"Syncing {channel} db: [{self.count['db']:,}] => "
+                        f"redis: [{self.count['redis']:,}] => elastic: "
+                        f"[{self.count['elastic']:,}]...\n"
+                    )
                     sys.stdout.flush()
                 i += 1
                 continue
@@ -933,7 +937,7 @@ class Sync(Base):
                 payload = json.loads(notification.payload)
                 self.redis.push(payload)
                 logger.debug(f"on_notify: {payload}")
-                j += 1
+                self.count["db"] += 1
             i = 0
 
     def on_publish(self, payloads: dict) -> None:
@@ -945,6 +949,7 @@ class Sync(Base):
         Deserialize the payload from Redis and sync to Elasticsearch.
         """
         logger.debug(f"on_publish len {len(payloads)}")
+        self.count["elastic"] += len(payloads)
 
         # Safe inserts are insert operations that can be performed in any order
         # Optimize the safe INSERTS

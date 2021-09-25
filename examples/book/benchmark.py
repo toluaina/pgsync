@@ -1,5 +1,6 @@
 import json
 import uuid
+from typing import Set
 
 import click
 from faker import Faker
@@ -10,9 +11,9 @@ from pgsync.base import pg_engine
 from pgsync.utils import get_config, show_settings, Timer
 
 
-def do_insert(session, nsize):
-    faker = Faker()
-    books = set([])
+def do_insert(session: sessionmaker, nsize: int) -> None:
+    faker: Faker = Faker()
+    books: Set = set([])
     for _ in range(nsize):
         book = Book(
             isbn=faker.isbn13() + str(uuid.uuid4()),
@@ -43,8 +44,8 @@ def main(config, nsize):
 
     show_settings()
 
-    config = get_config(config)
-    documents = json.load(open(config))
+    config: str = get_config(config)
+    documents: dict = json.load(open(config))
     engine = pg_engine(
         database=documents[0].get("database", documents[0]["index"])
     )

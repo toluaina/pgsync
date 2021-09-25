@@ -33,12 +33,12 @@ class QueryBuilder(object):
                 through_tables = node_b.relationship.through_tables[0]
                 node_a, node_b = node_b, node_a
 
-            through = node_from_table(
+            through: Node = node_from_table(
                 self.base,
                 through_tables,
                 node_a.schema,
             )
-            foreign_keys = get_foreign_keys(node_a, through)
+            foreign_keys: dict = get_foreign_keys(node_a, through)
             for key, value in get_foreign_keys(through, node_b).items():
                 if key in foreign_keys:
                     foreign_keys[key].extend(value)
@@ -72,9 +72,9 @@ class QueryBuilder(object):
         """
         # TODO: normalize this elsewhere
         try:
-            column_names = [column.name for column in columns]
+            column_names: List = [column.name for column in columns]
         except AttributeError:
-            column_names = [column for column in columns]
+            column_names: List = [column for column in columns]
 
         if table is None:
             for table, cols in foreign_keys.items():
@@ -89,7 +89,7 @@ class QueryBuilder(object):
                     foreign_keys[table].pop(i)
             return foreign_keys[table]
 
-        msg = (
+        msg: str = (
             f"No keys for columns: {columns} and foreign_keys: {foreign_keys}"
         )
         if table:
@@ -152,7 +152,7 @@ class QueryBuilder(object):
 
         for child in node.children:
 
-            onclause = []
+            onclause: List = []
 
             if child.relationship.through_tables:
 
