@@ -411,17 +411,17 @@ class Sync(Base):
             docs: List = []
             for payload in payloads:
                 payload_data: dict = self._payload_data(payload)
-                primary_values = [
+                primary_values: List = [
                     payload_data[key] for key in node.model.primary_keys
                 ]
-                primary_fields = dict(
+                primary_fields: dict = dict(
                     zip(node.model.primary_keys, primary_values)
                 )
                 filters[node.table].append(
                     {key: value for key, value in primary_fields.items()}
                 )
 
-                old_values = []
+                old_values: List = []
                 for key in root.model.primary_keys:
                     if key in payload.get("old").keys():
                         old_values.append(payload.get("old")[key])
@@ -434,7 +434,7 @@ class Sync(Base):
                     len(old_values) == len(new_values)
                     and old_values != new_values
                 ):
-                    doc = {
+                    doc: dict = {
                         "_id": self.get_doc_id(old_values),
                         "_index": self.index,
                         "_op_type": "delete",
@@ -457,10 +457,10 @@ class Sync(Base):
 
                 payload_data: dict = self._payload_data(payload)
 
-                primary_values = [
+                primary_values: List = [
                     payload_data[key] for key in node.model.primary_keys
                 ]
-                primary_fields = dict(
+                primary_fields: dict = dict(
                     zip(node.model.primary_keys, primary_values)
                 )
 

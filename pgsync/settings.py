@@ -1,6 +1,7 @@
 """PGSync Settings."""
 import logging
 import logging.config
+from typing import Optional
 
 from environs import Env
 
@@ -98,11 +99,11 @@ REDIS_POLL_INTERVAL = env.float("REDIS_POLL_INTERVAL", default=0.01)
 
 
 # Logging:
-def get_logging_config(silent_loggers=None):
+def _get_logging_config(silent_loggers: Optional[str] = None):
     """
     Return the python logging configuration based on environment variables.
     """
-    logging_config = {
+    config: dict = {
         "version": 1,
         "disable_existing_loggers": False,
         "formatters": {
@@ -131,19 +132,19 @@ def get_logging_config(silent_loggers=None):
     }
     if silent_loggers:
         for silent_logger in silent_loggers:
-            logging_config["loggers"][silent_logger] = {
+            config["loggers"][silent_logger] = {
                 "level": "INFO",
             }
 
     for logger_config in env.list("CUSTOM_LOGGING", default=[]):
         logger, level = logger_config.split("=")
-        logging_config["loggers"][logger] = {
+        config["loggers"][logger] = {
             "level": level,
         }
-    return logging_config
+    return config
 
 
-LOGGING = get_logging_config(
+LOGGING = _get_logging_config(
     silent_loggers=[
         "urllib3.connectionpool",
         "urllib3.util.retry",
