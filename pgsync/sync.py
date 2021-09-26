@@ -59,12 +59,11 @@ class Sync(Base):
         self,
         document: dict,
         verbose: Optional[bool] = False,
-        params: Optional[dict] = None,
         validate: Optional[bool] = True,
         repl_slots: Optional[bool] = True,
+        **kwargs,
     ):
         """Constructor."""
-        params: dict = params or {}
         self.index: str = document["index"]
         self.pipeline: str = document.get("pipeline")
         self.plugins: List = document.get("plugins", [])
@@ -72,7 +71,7 @@ class Sync(Base):
         self.setting: dict = document.get("setting")
         self.routing: str = document.get("routing")
         super().__init__(
-            document.get("database", self.index), verbose=verbose, **params
+            document.get("database", self.index), verbose=verbose, **kwargs
         )
         self.es: ElasticHelper = ElasticHelper()
         self.__name: str = re.sub(
@@ -525,10 +524,10 @@ class Sync(Base):
             docs: List = []
             for payload in payloads:
                 payload_data: dict = self._payload_data(payload)
-                root_primary_values = [
+                root_primary_values: List = [
                     payload_data[key] for key in root.model.primary_keys
                 ]
-                doc = {
+                doc: dict = {
                     "_id": self.get_doc_id(root_primary_values),
                     "_index": self.index,
                     "_op_type": "delete",
@@ -573,13 +572,13 @@ class Sync(Base):
 
         return filters
 
-    def _truncate(self, node: Node, root: Node, filters: dict) -> None:
+    def _truncate(self, node: Node, root: Node, filters: dict) -> dict:
 
         if node.table == root.table:
 
-            docs = []
+            docs: List = []
             for doc_id in self.es._search(self.index, node.table):
-                doc = {
+                doc: dict = {
                     "_id": doc_id,
                     "_index": self.index,
                     "_op_type": "delete",
@@ -592,9 +591,9 @@ class Sync(Base):
 
         else:
 
-            _filters = []
+            _filters: List = []
             for doc_id in self.es._search(self.index, node.table):
-                where = {}
+                where: dict = {}
                 params = doc_id.split(PRIMARY_KEY_DELIMITER)
                 for i, key in enumerate(root.model.primary_keys):
                     where[key] = params[i]
@@ -770,7 +769,7 @@ class Sync(Base):
 
         root: Node = self.tree.build(self.nodes)
 
-        self.query_builder.isouter = True
+        self.query_builder.isouter: bool = True
 
         for node in traverse_post_order(root):
 
@@ -918,9 +917,10 @@ class Sync(Base):
             if select.select([conn], [], [], POLL_TIMEOUT) == ([], [], []):
                 if i % 10 == 0:
                     sys.stdout.write(
-                        f"Syncing {channel} db: [{self.count['db']:,}] => "
-                        f"redis: [{self.count['redis']:,}] => elastic: "
-                        f"[{self.count['elastic']:,}]...\n"
+                        f"Syncing {channel} "
+                        f"db: [{self.count['db']:,}] => "
+                        f"redis: [{self.count['redis']:,}] => "
+                        f"elastic: [{self.count['elastic']:,}]...\n"
                     )
                     sys.stdout.flush()
                 i += 1
@@ -1103,7 +1103,7 @@ def main(
         sys.stdout.write(f"Version: {__version__}\n")
         return
 
-    params = {
+    kwargs: dict = {
         "user": user,
         "host": host,
         "port": port,
@@ -1111,24 +1111,22 @@ def main(
         "sslrootcert": sslrootcert,
     }
     if password:
-        params["password"] = click.prompt(
+        kwargs["password"] = click.prompt(
             "Password",
             type=str,
             hide_input=True,
         )
-    params = {key: value for key, value in params.items() if value is not None}
+    kwargs: dict = {
+        key: value for key, value in kwargs.items() if value is not None
+    }
 
-    config = get_config(config)
+    config: str = get_config(config)
 
-    show_settings(config, params)
+    show_settings(config, **kwargs)
 
     with Timer():
         for document in json.load(open(config)):
-            sync = Sync(
-                document,
-                verbose=verbose,
-                params=params,
-            )
+            sync = Sync(document, verbose=verbose, **kwargs)
             sync.pull()
             if daemon:
                 sync.receive()

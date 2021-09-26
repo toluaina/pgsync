@@ -60,17 +60,21 @@ class Timer:
         )
 
 
-def show_settings(schema: str = None, params: dict = {}) -> None:
+def show_settings(schema: str = None, **kwargs) -> None:
     """Show configuration."""
     logger.info("\033[4mSettings\033[0m:")
     logger.info(f'{"Schema":<10s}: {schema or SCHEMA}')
     logger.info("-" * 65)
     logger.info("\033[4mPostgres\033[0m:")
     logger.info(
-        f'URL: postgresql://{params.get("user", PG_USER)}:*****@'
-        f'{params.get("host", PG_HOST)}:'
-        f'{params.get("port", PG_PORT)}'
+        f'URL: postgresql://{kwargs.get("user", PG_USER)}:*****@'
+        f'{kwargs.get("host", PG_HOST)}:'
+        f'{kwargs.get("port", PG_PORT)}'
     )
+    for key in kwargs:
+        if key == "password":
+            continue
+        logger.info(f"{key}: {kwargs[key]}")
     logger.info("\033[4mElasticsearch\033[0m:")
     if ELASTICSEARCH_USER:
         logger.info(

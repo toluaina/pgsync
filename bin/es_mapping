@@ -41,8 +41,8 @@ NGRAM_ANALYZER = {
 }
 
 
-def apply_analyzer_to_mapping(mapping, analyzer):
-    _mapping = {}
+def apply_analyzer_to_mapping(mapping: dict, analyzer: dict) -> dict:
+    _mapping: dict = {}
     for key, value in mapping.items():
         if isinstance(value, dict):
             if "fields" in value:
@@ -52,8 +52,8 @@ def apply_analyzer_to_mapping(mapping, analyzer):
     return _mapping
 
 
-def get_configuration(es, index):
-    configuration = es.indices.get_settings(index)[index]
+def get_configuration(es, index) -> dict:
+    configuration: dict = es.indices.get_settings(index)[index]
     # skip these attributes
     for key in [
         "uuid",
@@ -62,8 +62,8 @@ def get_configuration(es, index):
         "creation_date",
     ]:
         configuration["settings"]["index"].pop(key)
-    mapping = es.indices.get_mapping(index)
-    analyzer_mapping = apply_analyzer_to_mapping(
+    mapping: dict = es.indices.get_mapping(index)
+    analyzer_mapping: dict = apply_analyzer_to_mapping(
         mapping,
         {
             "analyzer": "ngram_analyzer",
@@ -80,23 +80,23 @@ def get_configuration(es, index):
 @timeit
 def create_es_mapping(index):
     logger.debug(f"Create Elasticsearch mapping for index {index}")
-    url = get_elasticsearch_url()
-    es = Elasticsearch(
+    url: str = get_elasticsearch_url()
+    es: Elasticsearch = Elasticsearch(
         hosts=[url],
         timeout=ELASTICSEARCH_TIMEOUT,
         verify_certs=ELASTICSEARCH_VERIFY_CERTS,
     )
 
-    tmp_index = "tmp_index"
+    tmp_index: str = "tmp_index"
     es.indices.delete(index=tmp_index, ignore=[400, 404])
     es.indices.refresh()
-    configuration = get_configuration(es, index)
+    configuration: dict = get_configuration(es, index)
     es.indices.create(index=tmp_index, body=configuration)
     helpers.reindex(es, index, tmp_index)
     es.indices.refresh()
     es.indices.delete(index=index)
     es.indices.refresh()
-    configuration = get_configuration(es, tmp_index)
+    configuration: dict = get_configuration(es, tmp_index)
     es.indices.create(index=index, body=configuration)
     helpers.reindex(es, tmp_index, index)
     es.indices.delete(index=tmp_index)
@@ -113,7 +113,7 @@ def create_es_mapping(index):
 def main(config):
     """Create custom NGram analyzer for the default mapping."""
 
-    config = get_config(config)
+    config: str = get_config(config)
     for index in set(
         [document["index"] for document in json.load(open(config))]
     ):
