@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 """Main module."""
-import collections
 import json
 import logging
 import os
@@ -10,6 +9,7 @@ import re
 import select
 import sys
 import time
+from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Generator, List, Optional, Set
 
@@ -452,7 +452,7 @@ class Sync(Base):
             # update the child tables
             for payload in payloads:
                 _filters: List = []
-                fields: dict = collections.defaultdict(list)
+                fields: dict = defaultdict(list)
 
                 payload_data: dict = self._payload_data(payload)
 
@@ -482,7 +482,7 @@ class Sync(Base):
 
                 # also handle foreign_keys
                 if node.parent:
-                    fields = collections.defaultdict(list)
+                    fields = defaultdict(list)
                     foreign_keys = get_foreign_keys(
                         node.parent,
                         node,
@@ -553,7 +553,7 @@ class Sync(Base):
                 primary_fields = dict(
                     zip(node.model.primary_keys, primary_values)
                 )
-                fields = collections.defaultdict(list)
+                fields = defaultdict(list)
 
                 _filters = []
                 for key, value in primary_fields.items():
@@ -957,7 +957,7 @@ class Sync(Base):
         # if all payload operations are INSERTS
         if set(map(lambda x: x["tg_op"], payloads)) == set([INSERT]):
 
-            _payloads: dict = collections.defaultdict(list)
+            _payloads: dict = defaultdict(list)
 
             for payload in payloads:
                 _payloads[payload["table"]].append(payload)

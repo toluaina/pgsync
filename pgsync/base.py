@@ -1,9 +1,9 @@
 """PGSync Base class."""
-import collections
 import logging
 import os
 import sys
 import warnings
+from collections import defaultdict
 from typing import List, Optional, Tuple
 
 import sqlalchemy as sa
@@ -900,7 +900,7 @@ def subtransactions(session):
 
 def _get_foreign_keys(model_a, model_b):
 
-    foreign_keys = collections.defaultdict(list)
+    foreign_keys = defaultdict(list)
 
     if model_a.foreign_keys:
 

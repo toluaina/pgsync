@@ -2,9 +2,9 @@
 import logging
 import os
 import sys
-import time
 from datetime import timedelta
 from threading import Thread
+from time import time
 from typing import Optional
 from urllib.parse import quote_plus
 
@@ -32,9 +32,9 @@ logger = logging.getLogger(__name__)
 
 def timeit(func):
     def timed(*args, **kwargs):
-        since = time.time()
+        since = time()
         retval = func(*args, **kwargs)
-        until = time.time()
+        until = time()
         sys.stdout.write(
             f"{func.__name__} ({args}, {kwargs}) {until-since} secs\n"
         )
@@ -48,11 +48,11 @@ class Timer:
         self._message = message or ""
 
     def __enter__(self):
-        self.start = time.time()
+        self.start = time()
         return self
 
     def __exit__(self, *args):
-        self.end = time.time()
+        self.end = time()
         self.elapsed = self.end - self.start
         sys.stdout.write(
             f"{self._message} {str(timedelta(seconds=self.elapsed))} "

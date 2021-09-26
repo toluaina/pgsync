@@ -1,10 +1,10 @@
 """PGSync plugin."""
-import importlib
-import inspect
 import logging
 import os
-import pkgutil
 from abc import ABC, abstractmethod
+from importlib import import_module
+from inspect import getmembers, isclass
+from pkgutil import iter_modules
 from typing import List, Optional
 
 logger = logging.getLogger(__name__)
@@ -34,16 +34,16 @@ class Plugins(object):
 
     def walk(self, package: str) -> None:
         """Recursively walk the supplied package and fetch all plugins"""
-        plugins = importlib.import_module(package)
-        for _, name, ispkg in pkgutil.iter_modules(
+        plugins = import_module(package)
+        for _, name, ispkg in iter_modules(
             plugins.__path__,
             f"{plugins.__name__}.",
         ):
             if ispkg:
                 continue
 
-            module = importlib.import_module(name)
-            members = inspect.getmembers(module, inspect.isclass)
+            module = import_module(name)
+            members = getmembers(module, isclass)
             for _, klass in members:
                 if issubclass(klass, Plugin) & (klass is not Plugin):
                     if klass.name not in self.names:
