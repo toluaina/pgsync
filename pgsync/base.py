@@ -25,6 +25,7 @@ from .constants import (
     UPDATE,
 )
 from .exc import ForeignKeyError, LogicalSlotParseError, TableNotFoundError
+from .node import Node
 from .settings import PG_SSLMODE, PG_SSLROOTCERT, QUERY_CHUNK_SIZE
 from .trigger import CREATE_TRIGGER_TEMPLATE
 from .utils import get_postgres_url

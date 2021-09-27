@@ -1,4 +1,24 @@
+from typing import Optional
+
 from pgsync import plugin
+
+
+class Auth(plugin.Plugin):
+    """Example auth plugin."""
+
+    name = "Auth"
+
+    def transform(self, doc: list, **kwargs) -> dict:
+        pass
+
+    def auth(self, key: str) -> Optional[str]:
+        """Sample auth."""
+        if key == "PG_PASSWORD":
+            return "abcd"
+        if key == "ELASTICSEARCH_PASSWORD":
+            return "ijkl"
+        if key == "REDIS_AUTH":
+            return None
 
 
 class VillainPlugin(plugin.Plugin):
@@ -6,7 +26,7 @@ class VillainPlugin(plugin.Plugin):
 
     name = "Villain"
 
-    def transform(self, doc, **kwargs):
+    def transform(self, doc: list, **kwargs) -> dict:
         """Demonstrates how to modify a document."""
         doc_id = kwargs["_id"]
         doc_index = kwargs["_index"]
@@ -27,7 +47,7 @@ class HeroPlugin(plugin.Plugin):
 
     name = "Hero"
 
-    def transform(self, doc, **kwargs):
+    def transform(self, doc: list, **kwargs) -> dict:
         """Demonstrates how to modify a document."""
         doc_id = kwargs["_id"]
         doc_index = kwargs["_index"]
@@ -48,7 +68,7 @@ class GeometryPlugin(plugin.Plugin):
 
     name = "Geometry"
 
-    def transform(self, doc, **kwargs):
+    def transform(self, doc: list, **kwargs) -> dict:
         """Demonstrates how to modify a document."""
         doc_index = kwargs["_index"]
 

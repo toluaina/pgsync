@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from importlib import import_module
 from inspect import getmembers, isclass
 from pkgutil import iter_modules
-from typing import List, Optional
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -14,21 +14,21 @@ class Plugin(ABC):
     """Plugin base class."""
 
     @abstractmethod
-    def transform(self, doc, **kwargs):
+    def transform(self, doc: list, **kwargs) -> dict:
         """Must be implemented by all derived classes."""
         pass
 
 
 class Plugins(object):
-    def __init__(self, package: str, names: Optional[List] = None):
+    def __init__(self, package: str, names: Optional[list] = None):
         self.package: str = package
-        self.names: Optional[List] = names or []
+        self.names: Optional[list] = names or []
         self.reload()
 
     def reload(self) -> None:
         """Reload the plugins from the available list."""
-        self.plugins: List = []
-        self._paths: List = []
+        self.plugins: list = []
+        self._paths: list = []
         logger.debug(f"Reloading plugins from package: {self.package}")
         self.walk(self.package)
 
@@ -53,7 +53,7 @@ class Plugins(object):
                     )
                     self.plugins.append(klass())
 
-        paths: List = []
+        paths: list = []
         if isinstance(plugins.__path__, str):
             paths.append(plugins.__path__)
         else:
@@ -72,7 +72,7 @@ class Plugins(object):
             ]:
                 self.walk(f"{package}.{pkg}")
 
-    def transform(self, docs: List):
+    def transform(self, docs: list) -> dict:
         """Apply all plugins to each doc."""
         for doc in docs:
             for plugin in self.plugins:
@@ -83,3 +83,14 @@ class Plugins(object):
                     _index=doc["_index"],
                 )
             yield doc
+
+    def auth(self, key: str) -> Optional[str]:
+        """Get an auth value from a key."""
+        for plugin in self.plugins:
+            if hasattr(plugin, "auth"):
+                logger.debug(f"Plugin: {plugin.name}")
+                try:
+                    return plugin.auth(key)
+                except Exception as e:
+                    logger.exception(f"Error calling auth: {e}")
+                    return None

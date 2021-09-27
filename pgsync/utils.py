@@ -9,6 +9,7 @@ from typing import Optional
 from urllib.parse import quote_plus
 
 from .exc import SchemaError
+from .plugin import Plugins
 from .settings import (
     ELASTICSEARCH_HOST,
     ELASTICSEARCH_PASSWORD,
@@ -112,11 +113,17 @@ def get_elasticsearch_url(
     """
     Return the URL to connect to Elasticsearch.
     """
+    plugins: Plugins = Plugins("plugins", ["Auth"])
+
     scheme: str = scheme or ELASTICSEARCH_SCHEME
     host: str = host or ELASTICSEARCH_HOST
     port: str = port or ELASTICSEARCH_PORT
     user: str = user or ELASTICSEARCH_USER
-    password: str = password or ELASTICSEARCH_PASSWORD
+    password: str = (
+        plugins.auth("ELASTICSEARCH_PASSWORD")
+        or password
+        or ELASTICSEARCH_PASSWORD
+    )
     if user:
         return f"{scheme}://{user}:{quote_plus(password)}@{host}:{port}"
     logger.debug("Connecting to Elasticsearch without authentication.")
@@ -133,9 +140,11 @@ def get_postgres_url(
     """
     Return the URL to connect to Postgres.
     """
+    plugins: Plugins = Plugins("plugins", ["Auth"])
+
     user: str = user or PG_USER
     host: str = host or PG_HOST
-    password: str = password or PG_PASSWORD
+    password: str = plugins.auth("PG_PASSWORD") or password or PG_PASSWORD
     port: str = port or PG_PORT
     if not password:
         logger.debug("Connecting to Postgres without password.")
@@ -155,8 +164,10 @@ def get_redis_url(
     """
     Return the URL to connect to Redis.
     """
+    plugins: Plugins = Plugins("plugins", ["Auth"])
+
     host: str = host or REDIS_HOST
-    password: str = password or REDIS_AUTH
+    password: str = plugins.auth("REDIS_AUTH") or password or REDIS_AUTH
     port = port or REDIS_PORT
     db: str = db or REDIS_DB
     scheme: str = scheme or REDIS_SCHEME
