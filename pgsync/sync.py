@@ -42,6 +42,7 @@ from .plugin import Plugins
 from .querybuilder import QueryBuilder
 from .redisqueue import RedisQueue
 from .settings import (
+    CHECKPOINT_PATH,
     POLL_TIMEOUT,
     REDIS_POLL_INTERVAL,
     REPLICATION_SLOT_CLEANUP_INTERVAL,
@@ -80,7 +81,9 @@ class Sync(Base):
         self._checkpoint: int = None
         self._plugins: Plugins = None
         self._truncate: bool = False
-        self._checkpoint_file: str = f".{self.__name}"
+        self._checkpoint_file: str = os.path.join(
+            CHECKPOINT_PATH, f".{self.__name}"
+        )
         self.redis: RedisQueue = RedisQueue(self.__name)
         self.tree: Tree = Tree(self)
         self._last_truncate_timestamp: datetime = datetime.now()
@@ -158,6 +161,13 @@ class Sync(Base):
                     f'Replication slot "{self.__name}" does not exist.\n'
                     f'Make sure you have run the "bootstrap" command.'
                 )
+
+        # ensure the checkpoint filepath is valid
+        if not os.path.exists(CHECKPOINT_PATH):
+            raise RuntimeError(
+                f'Ensure the checkpoint path exists "{CHECKPOINT_PATH}" '
+                f"and is readable ."
+            )
 
         root: Node = self.tree.build(self.nodes)
         root.display()

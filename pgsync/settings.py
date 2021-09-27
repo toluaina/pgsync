@@ -22,6 +22,7 @@ REPLICATION_SLOT_CLEANUP_INTERVAL = env.float(
     "REPLICATION_SLOT_CLEANUP_INTERVAL",
     default=180.0,
 )
+CHECKPOINT_PATH = env.str("CHECKPOINT_PATH", default="./")
 
 # Elasticsearch:
 ELASTICSEARCH_SCHEME = env.str("ELASTICSEARCH_SCHEME", default="http")

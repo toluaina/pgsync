@@ -928,7 +928,7 @@ def _get_foreign_keys(model_a, model_b):
     return foreign_keys
 
 
-def get_foreign_keys(node_a, node_b):
+def get_foreign_keys(node_a: Node, node_b: Node) -> dict:
     """Return dict of single foreign key with multiple columns.
 
     e.g:
@@ -939,7 +939,7 @@ def get_foreign_keys(node_a, node_b):
 
     column_1, column_2, column_N are of type ForeignKeyContraint
     """
-    foreign_keys = {}
+    foreign_keys: dict = {}
     # if either offers a foreign_key via relationship, use it!
     if (
         node_a.relationship.foreign_key.parent
@@ -1013,7 +1013,7 @@ def pg_engine(
     return sa.create_engine(url, echo=echo, connect_args=connect_args)
 
 
-def pg_execute(engine, query, values=None, options=None):
+def pg_execute(engine, query, values=None, options=None) -> None:
     options: dict = options or {"isolation_level": "AUTOCOMMIT"}
     conn = engine.connect()
     try:
@@ -1026,13 +1026,13 @@ def pg_execute(engine, query, values=None, options=None):
         raise
 
 
-def create_schema(engine, schema):
+def create_schema(engine, schema) -> None:
     """Create database schema."""
     if schema != SCHEMA:
         engine.execute(sa.schema.CreateSchema(schema))
 
 
-def create_database(database: str, echo: bool = False):
+def create_database(database: str, echo: bool = False) -> None:
     """Create a database."""
     logger.debug(f"Creating database: {database}")
     engine = pg_engine(database="postgres", echo=echo)
@@ -1040,7 +1040,7 @@ def create_database(database: str, echo: bool = False):
     logger.debug(f"Created database: {database}")
 
 
-def drop_database(database: str, echo: bool = False):
+def drop_database(database: str, echo: bool = False) -> None:
     """Drop a database."""
     logger.debug(f"Dropping database: {database}")
     engine = pg_engine(database="postgres", echo=echo)
@@ -1048,7 +1048,9 @@ def drop_database(database: str, echo: bool = False):
     logger.debug(f"Dropped database: {database}")
 
 
-def create_extension(database: str, extension: str, echo: bool = False):
+def create_extension(
+    database: str, extension: str, echo: bool = False
+) -> None:
     """Create a database extension."""
     logger.debug(f"Creating extension: {extension}")
     engine = pg_engine(database=database, echo=echo)
@@ -1056,7 +1058,7 @@ def create_extension(database: str, extension: str, echo: bool = False):
     logger.debug(f"Created extension: {extension}")
 
 
-def drop_extension(database: str, extension: str, echo: bool = False):
+def drop_extension(database: str, extension: str, echo: bool = False) -> None:
     """Drop a database extension."""
     logger.debug(f"Dropping extension: {extension}")
     engine = pg_engine(database=database, echo=echo)
@@ -1066,7 +1068,7 @@ def drop_extension(database: str, extension: str, echo: bool = False):
 
 def compiled_query(
     query: str, label: Optional[str] = None, literal_binds: bool = False
-):
+) -> None:
     """Compile an SQLAlchemy query with an optional label."""
     query: str = str(
         query.compile(
