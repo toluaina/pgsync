@@ -103,6 +103,15 @@ def threaded(fn):
     return wrapper
 
 
+def get_auth(key):
+    try:
+        plugins: Plugins = Plugins("plugins", ["Auth"])
+        return plugins.auth(key)
+    except ModuleNotFoundError as e:
+        logger.warning(f"ModuleNotFoundError: {e}")
+        return None
+
+
 def get_elasticsearch_url(
     scheme: Optional[str] = None,
     user: Optional[str] = None,
@@ -113,14 +122,12 @@ def get_elasticsearch_url(
     """
     Return the URL to connect to Elasticsearch.
     """
-    plugins: Plugins = Plugins("plugins", ["Auth"])
-
     scheme: str = scheme or ELASTICSEARCH_SCHEME
     host: str = host or ELASTICSEARCH_HOST
     port: str = port or ELASTICSEARCH_PORT
     user: str = user or ELASTICSEARCH_USER
     password: str = (
-        plugins.auth("ELASTICSEARCH_PASSWORD")
+        get_auth("ELASTICSEARCH_PASSWORD")
         or password
         or ELASTICSEARCH_PASSWORD
     )
@@ -140,11 +147,9 @@ def get_postgres_url(
     """
     Return the URL to connect to Postgres.
     """
-    plugins: Plugins = Plugins("plugins", ["Auth"])
-
     user: str = user or PG_USER
     host: str = host or PG_HOST
-    password: str = plugins.auth("PG_PASSWORD") or password or PG_PASSWORD
+    password: str = get_auth("PG_PASSWORD") or password or PG_PASSWORD
     port: str = port or PG_PORT
     if not password:
         logger.debug("Connecting to Postgres without password.")
@@ -164,10 +169,8 @@ def get_redis_url(
     """
     Return the URL to connect to Redis.
     """
-    plugins: Plugins = Plugins("plugins", ["Auth"])
-
     host: str = host or REDIS_HOST
-    password: str = plugins.auth("REDIS_AUTH") or password or REDIS_AUTH
+    password: str = get_auth("REDIS_AUTH") or password or REDIS_AUTH
     port = port or REDIS_PORT
     db: str = db or REDIS_DB
     scheme: str = scheme or REDIS_SCHEME
