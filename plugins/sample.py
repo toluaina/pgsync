@@ -14,9 +14,9 @@ class Auth(plugin.Plugin):
     def auth(self, key: str) -> Optional[str]:
         """Sample auth."""
         if key == "PG_PASSWORD":
-            return "abcd"
+            return None
         if key == "ELASTICSEARCH_PASSWORD":
-            return "ijkl"
+            return None
         if key == "REDIS_AUTH":
             return None
 
