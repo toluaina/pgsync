@@ -162,10 +162,10 @@ class Sync(Base):
                     f'Make sure you have run the "bootstrap" command.'
                 )
 
-        # ensure the checkpoint filepath is valid
+        # ensure the checkpoint dirpath is valid
         if not os.path.exists(CHECKPOINT_PATH):
             raise RuntimeError(
-                f'Ensure the checkpoint path exists "{CHECKPOINT_PATH}" '
+                f'Ensure the checkpoint directory exists "{CHECKPOINT_PATH}" '
                 f"and is readable ."
             )
 
@@ -203,7 +203,7 @@ class Sync(Base):
                 # even though only one of them is the foreign_key.
                 # this is because we define both in the schema but
                 # do not specify which table is the foreign key.
-                columns: List = []
+                columns: list = []
                 if node.relationship.foreign_key.parent:
                     columns.extend(node.relationship.foreign_key.parent)
                 if node.relationship.foreign_key.child:
@@ -420,7 +420,7 @@ class Sync(Base):
             docs: List = []
             for payload in payloads:
                 payload_data: dict = self._payload_data(payload)
-                primary_values: List = [
+                primary_values: list = [
                     payload_data[key] for key in node.model.primary_keys
                 ]
                 primary_fields: dict = dict(
@@ -430,7 +430,7 @@ class Sync(Base):
                     {key: value for key, value in primary_fields.items()}
                 )
 
-                old_values: List = []
+                old_values: list = []
                 for key in root.model.primary_keys:
                     if key in payload.get("old").keys():
                         old_values.append(payload.get("old")[key])
@@ -461,12 +461,12 @@ class Sync(Base):
 
             # update the child tables
             for payload in payloads:
-                _filters: List = []
+                _filters: list = []
                 fields: dict = defaultdict(list)
 
                 payload_data: dict = self._payload_data(payload)
 
-                primary_values: List = [
+                primary_values: list = [
                     payload_data[key] for key in node.model.primary_keys
                 ]
                 primary_fields: dict = dict(
@@ -531,10 +531,10 @@ class Sync(Base):
         # when deleting a root node, just delete the doc in Elasticsearch
         if node.table == root.table:
 
-            docs: List = []
+            docs: list = []
             for payload in payloads:
                 payload_data: dict = self._payload_data(payload)
-                root_primary_values: List = [
+                root_primary_values: list = [
                     payload_data[key] for key in root.model.primary_keys
                 ]
                 doc: dict = {
@@ -557,7 +557,7 @@ class Sync(Base):
             # re-sync the child tables
             for payload in payloads:
                 payload_data: dict = self._payload_data(payload)
-                primary_values: List = [
+                primary_values: list = [
                     payload_data[key] for key in node.model.primary_keys
                 ]
                 primary_fields = dict(
@@ -586,7 +586,7 @@ class Sync(Base):
 
         if node.table == root.table:
 
-            docs: List = []
+            docs: list = []
             for doc_id in self.es._search(self.index, node.table):
                 doc: dict = {
                     "_id": doc_id,
@@ -601,7 +601,7 @@ class Sync(Base):
 
         else:
 
-            _filters: List = []
+            _filters: list = []
             for doc_id in self.es._search(self.index, node.table):
                 where: dict = {}
                 params = doc_id.split(PRIMARY_KEY_DELIMITER)
@@ -731,11 +731,11 @@ class Sync(Base):
         ]
         """
         if filters.get(node.table):
-            _filters: List = []
+            _filters: list = []
             keys: Set = set([])
             values: Set = set([])
             for _filter in filters.get(node.table):
-                where: List = []
+                where: list = []
                 for key, value in _filter.items():
                     where.append(getattr(node.model.c, key) == value)
                     keys.add(key)
@@ -745,7 +745,7 @@ class Sync(Base):
             if len(keys) == 1:
                 # If we have the same key then the node does not have a
                 # compound primary key
-                column: List = list(keys)[0]
+                column: list = list(keys)[0]
                 node._filters.append(
                     getattr(node.model.c, column).in_(
                         sa.select(
@@ -977,7 +977,7 @@ class Sync(Base):
 
         else:
 
-            _payloads: List = []
+            _payloads: list = []
             for i, payload in enumerate(payloads):
                 _payloads.append(payload)
                 j: int = i + 1
@@ -991,7 +991,7 @@ class Sync(Base):
                         _payloads = []
                 elif j == len(payloads):
                     self.sync(self._payloads(_payloads))
-                    _payloads: List = []
+                    _payloads: list = []
 
         txids: Set = set(map(lambda x: x["xmin"], payloads))
         # for truncate, tg_op txids is None so skip setting the checkpoint
