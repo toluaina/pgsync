@@ -9,6 +9,7 @@ import re
 import select
 import sys
 import time
+import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Generator, List, Optional, Set
@@ -746,21 +747,23 @@ class Sync(Base):
                 # If we have the same key then the node does not have a
                 # compound primary key
                 column: list = list(keys)[0]
+                _values = []
+                for value in values:
+                    if str(getattr(node.model.c, column).type) == "UUID":
+                        _values.append((uuid.UUID(value),))
+                    else:
+                        _values.append(
+                            (
+                                getattr(node.model.c, column).type.python_type(
+                                    value
+                                ),
+                            )
+                        )
+
                 node._filters.append(
                     getattr(node.model.c, column).in_(
                         sa.select(
-                            Values(sa.column(column))
-                            .data(
-                                [
-                                    (
-                                        getattr(
-                                            node.model.c, column
-                                        ).type.python_type(value),
-                                    )
-                                    for value in values
-                                ]
-                            )
-                            .alias("x")
+                            Values(sa.column(column)).data(_values).alias("x")
                         )
                     )
                 )
