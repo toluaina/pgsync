@@ -12,7 +12,7 @@ import time
 import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import Generator, List, Optional, Set
+from typing import AnyStr, Generator, List, Optional, Set
 
 import click
 import psycopg2
@@ -749,7 +749,10 @@ class Sync(Base):
                 column: list = list(keys)[0]
                 _values = []
                 for value in values:
-                    if str(getattr(node.model.c, column).type) == "UUID":
+                    if (
+                        str(getattr(node.model.c, column).type).lower()
+                        == "uuid"
+                    ):
                         _values.append((uuid.UUID(value),))
                     else:
                         _values.append(
@@ -821,8 +824,10 @@ class Sync(Base):
         if self.verbose:
             compiled_query(node._subquery, "Query")
 
+        count = self.fetchcount(node._subquery)
+
         with click.progressbar(
-            length=self.fetchcount(node._subquery),
+            length=count,
             show_pos=True,
             show_percent=True,
             show_eta=True,
@@ -946,7 +951,7 @@ class Sync(Base):
                 os._exit(-1)
 
             while conn.notifies:
-                notification = conn.notifies.pop(0)
+                notification: AnyStr = conn.notifies.pop(0)
                 payload = json.loads(notification.payload)
                 self.redis.push(payload)
                 logger.debug(f"on_notify: {payload}")
