@@ -251,9 +251,8 @@ class TestTransform(object):
                     },
                     "transform": {
                         "concat": {
-                            "columns": ["column1"],
+                            "columns": ["http", "://", "column1", "/", "path"],
                             "destination": "column3",
-                            "delimiter": "-",
                         }
                     },
                 },
@@ -309,8 +308,8 @@ class TestTransform(object):
                 {"column_1": 3, "column_2": "bb", "column_3": "3_bb"},
             ],
             "Child2": [
-                {"column1": 2, "column2": "cc", "column3": "2"},
-                {"column1": 3, "column2": "dd", "column3": "3"},
+                {"column1": 2, "column2": "cc", "column3": "http://2/path"},
+                {"column1": 3, "column2": "dd", "column3": "http://3/path"},
             ],
             "Child3": {"column_1": 4, "column_2": "ee", "column_9": "4@ee"},
             "code": "be",
