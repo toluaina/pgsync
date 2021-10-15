@@ -967,8 +967,6 @@ class Sync(Base):
         Deserialize the payload from Redis and sync to Elasticsearch.
         """
         logger.debug(f"on_publish len {len(payloads)}")
-        self.count["elastic"] += len(payloads)
-
         # Safe inserts are insert operations that can be performed in any order
         # Optimize the safe INSERTS
         # TODO repeat this for the other place too
@@ -1000,6 +998,8 @@ class Sync(Base):
                 elif j == len(payloads):
                     self.sync(self._payloads(_payloads))
                     _payloads: list = []
+
+        self.count["elastic"] += len(payloads)
 
         txids: Set = set(map(lambda x: x["xmin"], payloads))
         # for truncate, tg_op txids is None so skip setting the checkpoint
