@@ -51,9 +51,12 @@ class ElasticHelper(object):
         """
         url: str = get_elasticsearch_url()
         self.__es: Elasticsearch = get_elasticsearch_client(url)
-        self.version: List[int] = list(
-            map(int, self.__es.info()["version"]["number"].split("."))
-        )
+        try:
+            self.major_version = int(
+                self.__es.info()["version"]["number"].split(".")[0]
+            )
+        except (IndexError, KeyError, ValueError):
+            self.major_version = 0
 
     def teardown(self, index: str) -> None:
         """
@@ -242,7 +245,7 @@ class ElasticHelper(object):
             root._mapping["_routing"] = {"required": True}
 
         if root._mapping:
-            if self.version[0] < 7:
+            if self.major_version < 7:
                 root._mapping = {"_doc": root._mapping}
 
             return dict(mappings=root._mapping)

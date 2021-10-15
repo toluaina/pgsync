@@ -451,7 +451,7 @@ class Sync(Base):
                     }
                     if self.routing:
                         doc["_routing"] = old_values[self.routing]
-                    if self.es.version[0] < 7:
+                    if self.es.major_version < 7:
                         doc["_type"] = "_doc"
                     docs.append(doc)
 
@@ -545,7 +545,7 @@ class Sync(Base):
                 }
                 if self.routing:
                     doc["_routing"] = payload_data[self.routing]
-                if self.es.version[0] < 7:
+                if self.es.major_version < 7:
                     doc["_type"] = "_doc"
                 docs.append(doc)
             if docs:
@@ -594,7 +594,7 @@ class Sync(Base):
                     "_index": self.index,
                     "_op_type": "delete",
                 }
-                if self.es.version[0] < 7:
+                if self.es.major_version < 7:
                     doc["_type"] = "_doc"
                 docs.append(doc)
             if docs:
@@ -865,7 +865,7 @@ class Sync(Base):
                 if self.routing:
                     doc["_routing"] = row[self.routing]
 
-                if self.es.version[0] < 7:
+                if self.es.major_version < 7:
                     doc["_type"] = "_doc"
 
                 if self._plugins:
