@@ -7,3 +7,6 @@ coverage:
 codecov:
   archive: 
     uploads: false
+
+ignore:
+  - "pgsync/constants.py"
