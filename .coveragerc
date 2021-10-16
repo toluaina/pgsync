@@ -1,0 +1,2 @@
+[run]
+omit = pgsync/constants.py
