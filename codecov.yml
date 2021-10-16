@@ -9,4 +9,4 @@ codecov:
     uploads: false
 
 ignore:
-  - "pgsync/constants.py"
+  - "*/constants.py"
