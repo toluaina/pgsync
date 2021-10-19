@@ -76,7 +76,6 @@ class Plugins(object):
         """Apply all plugins to each doc."""
         for doc in docs:
             for plugin in self.plugins:
-                logger.debug(f"Plugin: {plugin.name}")
                 doc["_source"] = plugin.transform(
                     doc["_source"],
                     _id=doc["_id"],
@@ -88,7 +87,6 @@ class Plugins(object):
         """Get an auth value from a key."""
         for plugin in self.plugins:
             if hasattr(plugin, "auth"):
-                logger.debug(f"Plugin: {plugin.name}")
                 try:
                     return plugin.auth(key)
                 except Exception as e:
