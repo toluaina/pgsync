@@ -68,7 +68,7 @@ class Sync(Base):
         """Constructor."""
         self.index: str = document["index"]
         self.pipeline: str = document.get("pipeline")
-        self.plugins: List = document.get("plugins", [])
+        self.plugins: list = document.get("plugins", [])
         self.nodes: dict = document.get("nodes", {})
         self.setting: dict = document.get("setting")
         self.routing: str = document.get("routing")
@@ -270,16 +270,16 @@ class Sync(Base):
         TODO: We can also process all INSERTS together and rearrange
         them as done below
         """
-        rows: List = self.logical_slot_peek_changes(
+        rows: list = self.logical_slot_peek_changes(
             self.__name,
             txmin=txmin,
             txmax=txmax,
             upto_nchanges=None,
         )
 
-        rows: List = rows or []
-        payloads: List = []
-        _rows: List = []
+        rows: list = rows or []
+        payloads: list = []
+        _rows: list = []
 
         for row in rows:
             if re.search(r"^BEGIN", row.data) or re.search(
@@ -317,10 +317,10 @@ class Sync(Base):
                     or payload["table"] != payload2["table"]
                 ):
                     self.sync(self._payloads(payloads))
-                    payloads: List = []
+                    payloads: list = []
             elif j == len(_rows):
                 self.sync(self._payloads(payloads))
-                payloads: List = []
+                payloads: list = []
 
         if rows:
             self.logical_slot_get_changes(
@@ -418,7 +418,7 @@ class Sync(Base):
             #    primary key has changed
             #   2.1) This is crucial otherwise we can have the old
             #        and new document in Elasticsearch at the same time
-            docs: List = []
+            docs: list = []
             for payload in payloads:
                 payload_data: dict = self._payload_data(payload)
                 primary_values: list = [
@@ -958,7 +958,7 @@ class Sync(Base):
                 self.count["db"] += 1
             i = 0
 
-    def on_publish(self, payloads: dict) -> None:
+    def on_publish(self, payloads: list) -> None:
         """
         Redis publish event handler.
 

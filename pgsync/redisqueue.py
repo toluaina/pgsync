@@ -58,16 +58,15 @@ class RedisQueue(object):
             item = item[1]
         return json.loads(item)
 
-    def bulk_pop(self, chunk_size: Optional[int] = None) -> List:
+    def bulk_pop(self, chunk_size: Optional[int] = None) -> List[dict]:
         """Remove and return multiple items from the queue."""
         chunk_size: int = chunk_size or REDIS_CHUNK_SIZE
-        items: List = []
-        while self.__db.llen(self.key) != 0:
-            if len(items) > chunk_size:
-                break
-            item = self.__db.lpop(self.key)
-            items.append(json.loads(item))
-        return items
+        pipeline = self.__db.pipeline()
+        pipeline.lrange(self.key, 0, chunk_size - 1)
+        pipeline.ltrim(self.key, chunk_size, -1)
+        items: List[List[bytes], bool] = pipeline.execute()
+        logger.info(f"bulk_pop nsize: {len(items[0])}")
+        return list(map(lambda x: json.loads(x), items[0]))
 
     def bulk_push(self, items: List) -> None:
         """Push multiple items onto the queue."""
