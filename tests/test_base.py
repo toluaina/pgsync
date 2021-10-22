@@ -10,7 +10,11 @@ from pgsync.base import (
     drop_database,
     drop_extension,
 )
-from pgsync.exc import LogicalSlotParseError, TableNotFoundError
+from pgsync.exc import (
+    InvalidPermissionError,
+    LogicalSlotParseError,
+    TableNotFoundError,
+)
 
 
 @pytest.mark.usefixtures("table_creator")
@@ -24,35 +28,34 @@ class TestBase(object):
         assert int(value) > 0
         assert pg_base.pg_settings("xyz") is None
 
-    def test_has_permission(self, connection):
+    def test_has_permissions(self, connection):
         pg_base = Base(connection.engine.url.database)
         pg_base.verbose = False
-        value = pg_base.has_permission(
+        value = pg_base.has_permissions(
             connection.engine.url.username,
-            "usesuper",
+            ["usesuper"],
         )
         assert (
-            pg_base.has_permission(
+            pg_base.has_permissions(
                 connection.engine.url.username,
-                "usesuper",
+                ["usesuper"],
             )
             is True
         )
 
         assert (
-            pg_base.has_permission(
+            pg_base.has_permissions(
                 "spiderman",
-                "usesuper",
+                ["usesuper"],
             )
             is False
         )
 
-        with pytest.raises(RuntimeError) as excinfo:
-            value = pg_base.has_permission(
+        with pytest.raises(InvalidPermissionError) as excinfo:
+            pg_base.has_permissions(
                 connection.engine.url.username,
-                "sudo",
+                ["sudo"],
             )
-            assert "Invalid user permission sudo" in str(excinfo.value)
 
     def test_model(self, connection):
         pg_base = Base(connection.engine.url.database)

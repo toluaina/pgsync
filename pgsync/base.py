@@ -24,7 +24,12 @@ from .constants import (
     TRIGGER_FUNC,
     UPDATE,
 )
-from .exc import ForeignKeyError, LogicalSlotParseError, TableNotFoundError
+from .exc import (
+    ForeignKeyError,
+    InvalidPermissionError,
+    LogicalSlotParseError,
+    TableNotFoundError,
+)
 from .node import Node
 from .settings import PG_SSLMODE, PG_SSLROOTCERT, QUERY_CHUNK_SIZE
 from .trigger import CREATE_TRIGGER_TEMPLATE
@@ -79,30 +84,38 @@ class Base(object):
         except (TypeError, IndexError):
             return None
 
-    def has_permission(self, username: str, permission: str) -> bool:
+    def has_permissions(self, username: str, permissions: List[str]) -> bool:
         """Check if the given user is a superuser or replication user."""
-        if permission not in ("usecreatedb", "usesuper", "userepl"):
-            raise RuntimeError(f"Invalid user permission {permission}")
+        if not set(permissions).issubset(
+            set(("usecreatedb", "usesuper", "userepl"))
+        ):
+            raise InvalidPermissionError(
+                f"Invalid user permission {permissions}"
+            )
 
-        try:
-            return self.fetchone(
-                sa.select([sa.column(permission)])
-                .select_from(sa.text("pg_user"))
-                .where(
-                    sa.and_(
-                        *[
-                            sa.column("usename") == username,
-                            sa.column(permission) == True,  # noqa
-                        ]
+        with self.__engine.connect() as conn:
+            return (
+                conn.execute(
+                    sa.select([sa.column("usename")])
+                    .select_from(sa.text("pg_user"))
+                    .where(
+                        sa.and_(
+                            *[
+                                sa.column("usename") == username,
+                                sa.or_(
+                                    *[
+                                        (sa.column(permission) == True)
+                                        for permission in permissions
+                                    ]
+                                ),
+                            ]
+                        )
                     )
-                ),
-                label="has_permission",
-            )[0]
-        except (Exception, TypeError) as e:
-            logger.exception(f"{e}")
-            return False
-
-        return False
+                    .with_only_columns([sa.func.COUNT()])
+                    .order_by(None)
+                ).scalar()
+                > 0
+            )
 
     # Tables...
     def model(self, table: str, schema: str):

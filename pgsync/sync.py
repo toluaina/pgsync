@@ -135,15 +135,9 @@ class Sync(Base):
             if rds_logical_replication.lower() == "off":
                 raise RDSError("rds.logical_replication is not enabled")
         else:
-            if not (
-                self.has_permission(
-                    self.engine.url.username,
-                    "usesuper",
-                )
-                or self.has_permission(
-                    self.engine.url.username,
-                    "userepl",
-                )
+            if not self.has_permissions(
+                self.engine.url.username,
+                ["usesuper", "userepl"],
             ):
                 raise SuperUserError(
                     f'PG_USER "{self.engine.url.username}" needs to be '
