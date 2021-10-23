@@ -39,8 +39,9 @@ def do_insert(session: sessionmaker, nsize: int) -> None:
     help="Schema config",
     type=click.Path(exists=True),
 )
+@click.option("--daemon", "-d", is_flag=True, help="Run as a daemon")
 @click.option("--nsize", "-n", default=5000, help="Number of samples")
-def main(config, nsize):
+def main(config, nsize, daemon):
 
     show_settings()
 
@@ -52,7 +53,10 @@ def main(config, nsize):
     Session = sessionmaker(bind=engine, autoflush=False, autocommit=False)
     session = Session()
 
-    do_insert(session, nsize)
+    while True:
+        do_insert(session, nsize)
+        if not daemon:
+            break
 
 
 if __name__ == "__main__":
