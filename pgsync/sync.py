@@ -31,7 +31,13 @@ from .constants import (
     UPDATE,
 )
 from .elastichelper import ElasticHelper
-from .exc import PrimaryKeyNotFoundError, RDSError, SchemaError, SuperUserError
+from .exc import (
+    ForeignKeyError,
+    PrimaryKeyNotFoundError,
+    RDSError,
+    SchemaError,
+    SuperUserError,
+)
 from .node import (
     get_node,
     Node,
@@ -488,10 +494,18 @@ class Sync(Base):
                 # also handle foreign_keys
                 if node.parent:
                     fields = defaultdict(list)
-                    foreign_keys = self.query_builder._get_foreign_keys(
-                        node.parent,
-                        node,
-                    )
+
+                    try:
+                        foreign_keys = get_foreign_keys(
+                            node.parent,
+                            node,
+                        )
+                    except ForeignKeyError:
+                        foreign_keys = self.query_builder._get_foreign_keys(
+                            node.parent,
+                            node,
+                        )
+
                     foreign_values = [
                         payload.get("new", {}).get(k)
                         for k in foreign_keys[node.name]
