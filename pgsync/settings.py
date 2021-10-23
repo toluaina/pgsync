@@ -76,6 +76,13 @@ ELASTICSEARCH_INITIAL_BACKOFF = env.int(
 )
 # maximum number of seconds a retry will wait
 ELASTICSEARCH_MAX_BACKOFF = env.int("ELASTICSEARCH_MAX_BACKOFF", default=600)
+# if ``False`` then don't propagate exceptions from call to elasticsearch ``bulk``
+ELASTICSEARCH_RAISE_ON_EXCEPTION = env.bool(
+    "ELASTICSEARCH_RAISE_ON_EXCEPTION", default=True
+)
+ELASTICSEARCH_RAISE_ON_ERROR = env.bool(
+    "ELASTICSEARCH_RAISE_ON_ERROR", default=True
+)
 
 # Postgres:
 PG_HOST = env.str("PG_HOST", default="localhost")

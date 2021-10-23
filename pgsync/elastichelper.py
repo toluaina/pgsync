@@ -27,6 +27,8 @@ from .settings import (
     ELASTICSEARCH_MAX_CHUNK_BYTES,
     ELASTICSEARCH_MAX_RETRIES,
     ELASTICSEARCH_QUEUE_SIZE,
+    ELASTICSEARCH_RAISE_ON_ERROR,
+    ELASTICSEARCH_RAISE_ON_EXCEPTION,
     ELASTICSEARCH_SSL_SHOW_WARN,
     ELASTICSEARCH_STREAMING_BULK,
     ELASTICSEARCH_THREAD_COUNT,
@@ -83,6 +85,8 @@ class ElasticHelper(object):
         max_retries: Optional[int] = None,
         initial_backoff: Optional[int] = None,
         max_backoff: Optional[int] = None,
+        raise_on_exception: bool = True,
+        raise_on_error: bool = True,
     ):
         """Bulk index, update, delete docs to Elasticsearch."""
         chunk_size: int = chunk_size or ELASTICSEARCH_CHUNK_SIZE
@@ -94,6 +98,10 @@ class ElasticHelper(object):
         max_retries: int = max_retries or ELASTICSEARCH_MAX_RETRIES
         initial_backoff: int = initial_backoff or ELASTICSEARCH_INITIAL_BACKOFF
         max_backoff: int = max_backoff or ELASTICSEARCH_MAX_BACKOFF
+        raise_on_exception: bool = (
+            raise_on_exception or ELASTICSEARCH_RAISE_ON_EXCEPTION
+        )
+        raise_on_error: bool = raise_on_error or ELASTICSEARCH_RAISE_ON_ERROR
 
         if ELASTICSEARCH_STREAMING_BULK:
             for _ in helpers.streaming_bulk(
@@ -106,6 +114,8 @@ class ElasticHelper(object):
                 max_backoff=max_backoff,
                 initial_backoff=initial_backoff,
                 refresh=refresh,
+                raise_on_exception=raise_on_exception,
+                raise_on_error=raise_on_error,
             ):
                 pass
         else:
@@ -114,12 +124,13 @@ class ElasticHelper(object):
             for _ in helpers.parallel_bulk(
                 self.__es,
                 docs,
-                index=index,
                 thread_count=thread_count,
                 chunk_size=chunk_size,
                 max_chunk_bytes=max_chunk_bytes,
                 queue_size=queue_size,
                 refresh=refresh,
+                raise_on_exception=raise_on_exception,
+                raise_on_error=raise_on_error,
             ):
                 pass
 

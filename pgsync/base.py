@@ -142,7 +142,12 @@ class Base(object):
                 )
             model = metadata.tables[name]
             model.append_column(sa.Column("xmin", sa.BigInteger))
-            model.append_column(sa.Column("oid", sa.dialects.postgresql.OID))
+            # support SQLQlchemy/Postgres 14 which somehow now reflects
+            # the oid column
+            if not "oid" in [column.name for column in model.columns]:
+                model.append_column(
+                    sa.Column("oid", sa.dialects.postgresql.OID)
+                )
             model = model.alias()
             setattr(
                 model,
