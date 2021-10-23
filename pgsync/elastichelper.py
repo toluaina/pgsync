@@ -54,11 +54,11 @@ class ElasticHelper(object):
         url: str = get_elasticsearch_url()
         self.__es: Elasticsearch = get_elasticsearch_client(url)
         try:
-            self.major_version = int(
+            self.major_version: int = int(
                 self.__es.info()["version"]["number"].split(".")[0]
             )
         except (IndexError, KeyError, ValueError):
-            self.major_version = 0
+            self.major_version: int = 0
 
     def teardown(self, index: str) -> None:
         """
@@ -85,8 +85,8 @@ class ElasticHelper(object):
         max_retries: Optional[int] = None,
         initial_backoff: Optional[int] = None,
         max_backoff: Optional[int] = None,
-        raise_on_exception: bool = True,
-        raise_on_error: bool = True,
+        raise_on_exception: Optional[bool] = None,
+        raise_on_error: Optional[bool] = None,
     ):
         """Bulk index, update, delete docs to Elasticsearch."""
         chunk_size: int = chunk_size or ELASTICSEARCH_CHUNK_SIZE
