@@ -894,7 +894,7 @@ class Sync(Base):
             raise ValueError("Cannot assign a None value to checkpoint")
         with open(self._checkpoint_file, "w+") as fp:
             fp.write(f"{value}\n")
-        self._checkpoint = value
+        self._checkpoint: int = value
 
     @threaded
     def poll_redis(self) -> None:
