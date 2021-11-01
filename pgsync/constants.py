@@ -106,6 +106,11 @@ ELASTICSEARCH_TYPES = [
     "short",
     "text",
     "time",
+    "integer_range",
+    "float_range",
+    "long_range",
+    "double_range",
+    "date_range",
 ]
 
 # https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-params.html
