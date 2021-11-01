@@ -121,11 +121,17 @@ class TestConstants(object):
             "nested",
             "null",
             "object",
+            "search_as_you_type",
             "scaled_float",
             "shape",
             "short",
             "text",
             "time",
+            "integer_range",
+            "float_range",
+            "long_range",
+            "double_range",
+            "date_range",
         ]
 
     def test_elasticsearch_mapping_parameters(self):
