@@ -126,6 +126,11 @@ class TestConstants(object):
             "short",
             "text",
             "time",
+            "integer_range",
+            "float_range",
+            "long_range",
+            "double_range",
+            "date_range",
         ]
 
     def test_elasticsearch_mapping_parameters(self):
