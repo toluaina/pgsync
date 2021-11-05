@@ -4,11 +4,11 @@
 #
 #    pip-compile --output-file=requirements/prod.txt requirements/prod.in
 #
-black==21.9b0
+black==21.10b0
     # via -r requirements/base.in
-boto3==1.18.65
+boto3==1.19.12
     # via -r requirements/base.in
-botocore==1.21.65
+botocore==1.22.12
     # via
     #   boto3
     #   s3transfer
@@ -34,7 +34,7 @@ elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
 environs==9.3.4
     # via -r requirements/base.in
-faker==9.5.0
+faker==9.8.0
     # via -r requirements/base.in
 greenlet==1.1.2
     # via sqlalchemy
@@ -48,7 +48,7 @@ marshmallow==3.14.0
     # via environs
 mypy-extensions==0.4.3
     # via black
-newrelic==7.2.2.169
+newrelic==7.2.3.170
     # via -r requirements/prod.in
 pathspec==0.9.0
     # via black
@@ -65,7 +65,7 @@ python-dotenv==0.19.1
     # via environs
 redis==3.5.3
     # via -r requirements/base.in
-regex==2021.10.8
+regex==2021.11.2
     # via black
 requests==2.26.0
     # via requests-aws4auth
@@ -84,7 +84,7 @@ sqlparse==0.4.2
     # via -r requirements/base.in
 text-unidecode==1.3
     # via faker
-tomli==1.2.1
+tomli==1.2.2
     # via black
 typing-extensions==3.10.0.2
     # via black

@@ -832,7 +832,7 @@ class Sync(Base):
         if self.verbose:
             compiled_query(node._subquery, "Query")
 
-        count = self.fetchcount(node._subquery)
+        count: int = self.fetchcount(node._subquery)
 
         with click.progressbar(
             length=count,
@@ -944,9 +944,9 @@ class Sync(Base):
                 if i % 10 == 0:
                     sys.stdout.write(
                         f"Syncing {channel} "
-                        f"db: [{self.count['db']:,}] => "
-                        f"redis: [{self.count['redis']:,}] => "
-                        f"elastic: [{self.count['elastic']:,}]...\n"
+                        f"Db: [{self.count['db']:,}] => "
+                        f"Redis: [{self.count['redis']:,}] => "
+                        f"Elastic: [{self.count['elastic']:,}] ...\n"
                     )
                     sys.stdout.flush()
                 i += 1
