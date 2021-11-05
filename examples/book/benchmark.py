@@ -15,7 +15,7 @@ def do_insert(session: sessionmaker, nsize: int) -> None:
     faker: Faker = Faker()
     books: Set = set([])
     for _ in range(nsize):
-        book = Book(
+        book: Book = Book(
             isbn=faker.isbn13() + str(uuid.uuid4()),
             title=faker.sentence(),
             description=faker.text(),

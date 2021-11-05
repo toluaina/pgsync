@@ -96,12 +96,19 @@
                         "rename": {
                             "id": "publisher_id",
                             "name": "publisher_name"
-                        },
-                        "concat": {
-                            "columns": ["publisher_id", "publisher_name", "is_active", "foo"],
-                            "destination": "xyz",
-                            "delimiter": "_"
-                        },
+                        }, 
+                        "concat": [
+                            {
+                                "columns": ["publisher_id", "publisher_name", "is_active", "foo"],
+                                "destination": "xyz",
+                                "delimiter": "_"
+                            },
+                            {
+                                "columns": ["publisher_id", "publisher_name", "is_active", "bar"],
+                                "destination": "abc",
+                                "delimiter": "-"
+                            }
+                        ],
                         "move": {
                             "column": "id",
                             "destination": "$root.author.author_id"
