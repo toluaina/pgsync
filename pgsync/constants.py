@@ -74,13 +74,16 @@ ELASTICSEARCH_TYPES = [
     "byte",
     "constant_keyword",
     "date",
-    "date",
+    "date_range",
     "double",
+    "double_range",
     "float",
+    "float_range",
     "geo_point",
     "geo_shape",
     "half_float",
     "integer",
+    "integer_range",
     "interval_day",
     "interval_day_to_hour",
     "interval_day_to_minute",
@@ -97,20 +100,16 @@ ELASTICSEARCH_TYPES = [
     "ip",
     "keyword",
     "long",
+    "long_range",
     "nested",
     "null",
     "object",
-    "search_as_you_type",
     "scaled_float",
+    "search_as_you_type",
     "shape",
     "short",
     "text",
     "time",
-    "integer_range",
-    "float_range",
-    "long_range",
-    "double_range",
-    "date_range",
 ]
 
 # https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-params.html
@@ -129,10 +128,10 @@ ELASTICSEARCH_MAPPING_PARAMETERS = [
     "format",
     "ignore_above",
     "ignore_malformed",
+    "index",
     "index_options",
     "index_phrases",
     "index_prefixes",
-    "index",
     "meta",
     "normalizer",
     "norms",
@@ -144,6 +143,7 @@ ELASTICSEARCH_MAPPING_PARAMETERS = [
     "store",
     "term_vector",
 ]
+
 
 CONCAT_TRANSFORM = "concat"
 MAPPING_TRANSFORM = "mapping"
