@@ -336,7 +336,7 @@ class TestTransform(object):
                     "column1": 3,
                     "column2": "dd",
                     "column3": "http://3/path",
-                    "column4": "http://2/path",
+                    "column4": "http://3/path",
                 },
             ],
             "Child3": {"column_1": 4, "column_2": "ee", "column_9": "4@ee"},
