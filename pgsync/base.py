@@ -656,7 +656,7 @@ class Base(object):
                 self.drop_triggers(schema, [table])
                 queries.append(
                     sa.DDL(
-                        f"CREATE TRIGGER {table}_{name} "
+                        f'CREATE TRIGGER "{table}_{name}" '
                         f'AFTER {" OR ".join(tg_op)} ON "{schema}"."{table}" '
                         f"FOR EACH {for_each} EXECUTE PROCEDURE "
                         f"{TRIGGER_FUNC}()",
@@ -677,7 +677,7 @@ class Base(object):
             logger.debug(f"Dropping trigger on table: {schema}.{table}")
             for name in ("notify", "truncate"):
                 query = (
-                    f"DROP TRIGGER IF EXISTS {table}_{name} ON "
+                    f'DROP TRIGGER IF EXISTS "{table}_{name}" ON '
                     f'"{schema}"."{table}"'
                 )
                 self.execute(query)
