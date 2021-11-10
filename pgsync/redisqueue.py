@@ -65,7 +65,7 @@ class RedisQueue(object):
         pipeline.lrange(self.key, 0, chunk_size - 1)
         pipeline.ltrim(self.key, chunk_size, -1)
         items: List[List[bytes], bool] = pipeline.execute()
-        logger.info(f"bulk_pop nsize: {len(items[0])}")
+        logger.debug(f"bulk_pop nsize: {len(items[0])}")
         return list(map(lambda x: json.loads(x), items[0]))
 
     def bulk_push(self, items: List) -> None:

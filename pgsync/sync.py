@@ -376,6 +376,15 @@ class Sync(Base):
                 for payload in payloads:
                     payload_data: dict = self._payload_data(payload)
                     for i, key in enumerate(foreign_keys[node.name]):
+                        if key not in payload_data:
+                            sys.stdout.write(
+                                f"missing data...\n"
+                                f"payload_data: {payload_data}\n"
+                                f"payload: {payload}\n"
+                                f"table: {node.table}\n"
+                                f"{node}\n"
+                            )
+                            sys.stdout.flush()
                         value = payload_data[key]
                         filters[node.parent.table].append(
                             {foreign_keys[node.parent.name][i]: value}
@@ -751,35 +760,7 @@ class Sync(Base):
                     values.add(value)
                 _filters.append(sa.and_(*where))
 
-            if len(keys) == 1:
-                # If we have the same key then the node does not have a
-                # compound primary key
-                column: list = list(keys)[0]
-                _values = []
-                for value in values:
-                    if (
-                        str(getattr(node.model.c, column).type).lower()
-                        == "uuid"
-                    ):
-                        _values.append((uuid.UUID(value),))
-                    else:
-                        _values.append(
-                            (
-                                getattr(node.model.c, column).type.python_type(
-                                    value
-                                ),
-                            )
-                        )
-
-                node._filters.append(
-                    getattr(node.model.c, column).in_(
-                        sa.select(
-                            Values(sa.column(column)).data(_values).alias("x")
-                        )
-                    )
-                )
-            else:
-                node._filters.append(sa.or_(*_filters))
+            node._filters.append(sa.or_(*_filters))
 
     def _sync(
         self,
