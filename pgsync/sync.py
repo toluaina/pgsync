@@ -225,6 +225,8 @@ class Sync(Base):
         except OSError:
             pass
 
+        self.redis._delete()
+
         for schema in self.schemas:
             tables: Set = set([])
             root: Node = self.tree.build(self.nodes)
