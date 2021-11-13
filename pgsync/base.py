@@ -33,7 +33,7 @@ from .exc import (
 from .node import Node
 from .settings import PG_SSLMODE, PG_SSLROOTCERT, QUERY_CHUNK_SIZE
 from .trigger import CREATE_TRIGGER_TEMPLATE
-from .utils import get_postgres_url
+from .urls import get_postgres_url
 from .view import CreateIndex, CreateView, DropIndex, DropView
 
 try:

@@ -8,7 +8,8 @@ import click
 from elasticsearch import Elasticsearch, helpers
 
 from pgsync.settings import ELASTICSEARCH_TIMEOUT, ELASTICSEARCH_VERIFY_CERTS
-from pgsync.utils import get_config, get_elasticsearch_url, timeit
+from pgsync.urls import get_elasticsearch_url
+from pgsync.utils import get_config, timeit
 
 logger = logging.getLogger(__name__)
 

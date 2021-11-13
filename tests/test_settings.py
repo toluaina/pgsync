@@ -34,7 +34,7 @@ def test_postgres_url(mocker):
 def test_elasticsearch_url(mocker):
     """Test the elasticsearch url is configured."""
     mock_get_elasticsearch_url = mocker.patch(
-        "pgsync.utils.get_elasticsearch_url",
+        "pgsync.urls.get_elasticsearch_url",
         return_value="http://some-domain:33",
     )
     mocker.patch("logging.config.dictConfig")

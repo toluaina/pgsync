@@ -11,7 +11,7 @@ from sqlalchemy.schema import UniqueConstraint
 from pgsync.base import Base, create_database, drop_database
 from pgsync.constants import SCHEMA
 from pgsync.sync import Sync
-from pgsync.utils import get_postgres_url
+from pgsync.urls import get_postgres_url
 
 warnings.filterwarnings("error")
 

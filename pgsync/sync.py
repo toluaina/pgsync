@@ -100,7 +100,7 @@ class Sync(Base):
         self.query_builder: QueryBuilder = QueryBuilder(
             self, verbose=self.verbose
         )
-        self.count: dict = dict(db=0, redis=0, elastic=0)
+        self.count: dict = dict(xlog=0, db=0, redis=0, elastic=0)
 
     def validate(self, repl_slots: Optional[bool] = True) -> None:
         """Perform all validation right away."""
@@ -331,6 +331,7 @@ class Sync(Base):
                 txmax=txmax,
                 upto_nchanges=len(rows),
             )
+            self.count["xlog"] += len(rows)
 
     def _payload_data(self, payload: dict) -> dict:
         """Extract the payload data from the payload."""
@@ -927,8 +928,9 @@ class Sync(Base):
                 if i % 10 == 0:
                     sys.stdout.write(
                         f"Syncing {channel} "
+                        f"Xlog: [{self.count['xlog']:,}] => "
                         f"Db: [{self.count['db']:,}] => "
-                        f"Redis: [{self.count['redis']:,}] => "
+                        f"Redis: [total = {self.count['redis']:,} pending = {self.redis.qsize():,}] => "
                         f"Elastic: [{self.count['elastic']:,}] ...\n"
                     )
                     sys.stdout.flush()

@@ -36,7 +36,7 @@ from .settings import (
     ELASTICSEARCH_USE_SSL,
     ELASTICSEARCH_VERIFY_CERTS,
 )
-from .utils import get_elasticsearch_url
+from .urls import get_elasticsearch_url
 
 logger = logging.getLogger(__name__)
 

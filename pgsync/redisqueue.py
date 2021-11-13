@@ -7,7 +7,7 @@ from redis import Redis
 from redis.exceptions import ConnectionError
 
 from .settings import REDIS_CHUNK_SIZE, REDIS_SOCKET_TIMEOUT
-from .utils import get_redis_url
+from .urls import get_redis_url
 
 logger = logging.getLogger(__name__)
 

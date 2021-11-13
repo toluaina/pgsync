@@ -3,12 +3,8 @@ import pytest
 from mock import patch
 
 from pgsync.exc import SchemaError
-from pgsync.utils import (
-    get_config,
-    get_elasticsearch_url,
-    get_postgres_url,
-    get_redis_url,
-)
+from pgsync.urls import get_elasticsearch_url, get_postgres_url, get_redis_url
+from pgsync.utils import get_config
 
 
 @pytest.mark.usefixtures("table_creator")
