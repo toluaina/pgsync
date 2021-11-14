@@ -59,6 +59,7 @@ class ElasticHelper(object):
             )
         except (IndexError, KeyError, ValueError):
             self.major_version: int = 0
+        self.doc_count = 0
 
     def teardown(self, index: str) -> None:
         """
@@ -117,7 +118,7 @@ class ElasticHelper(object):
                 raise_on_exception=raise_on_exception,
                 raise_on_error=raise_on_error,
             ):
-                pass
+                self.doc_count += 1
         else:
             # parallel bulk consumes more memory and is also more likely
             # to result in 429 errors.
@@ -132,7 +133,7 @@ class ElasticHelper(object):
                 raise_on_exception=raise_on_exception,
                 raise_on_error=raise_on_error,
             ):
-                pass
+                self.doc_count += 1
 
     def refresh(self, indices: List[str]) -> None:
         """Refresh the Elasticsearch index."""

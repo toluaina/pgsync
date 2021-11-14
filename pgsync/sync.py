@@ -100,7 +100,7 @@ class Sync(Base):
         self.query_builder: QueryBuilder = QueryBuilder(
             self, verbose=self.verbose
         )
-        self.count: dict = dict(xlog=0, db=0, redis=0, elastic=0)
+        self.count: dict = dict(xlog=0, db=0, redis=0)
 
     def validate(self, repl_slots: Optional[bool] = True) -> None:
         """Perform all validation right away."""
@@ -931,7 +931,7 @@ class Sync(Base):
                         f"Xlog: [{self.count['xlog']:,}] => "
                         f"Db: [{self.count['db']:,}] => "
                         f"Redis: [total = {self.count['redis']:,} pending = {self.redis.qsize():,}] => "
-                        f"Elastic: [{self.count['elastic']:,}] ...\n"
+                        f"Elastic: [{self.es.doc_count:,}] ...\n"
                     )
                     sys.stdout.flush()
                 i += 1
@@ -991,8 +991,6 @@ class Sync(Base):
                 elif j == len(payloads):
                     self.sync(self._payloads(_payloads))
                     _payloads: list = []
-
-        self.count["elastic"] += len(payloads)
 
         txids: Set = set(map(lambda x: x["xmin"], payloads))
         # for truncate, tg_op txids is None so skip setting the checkpoint
