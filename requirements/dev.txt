@@ -6,13 +6,13 @@
 #
 attrs==21.2.0
     # via pytest
-backports.entry-points-selectable==1.1.0
+backports.entry-points-selectable==1.1.1
     # via virtualenv
 black==21.10b0
     # via -r requirements/base.in
-boto3==1.19.12
+boto3==1.20.5
     # via -r requirements/base.in
-botocore==1.22.12
+botocore==1.23.5
     # via
     #   boto3
     #   s3transfer
@@ -33,7 +33,7 @@ click==8.0.3
     #   -r requirements/base.in
     #   black
     #   pip-tools
-coverage[toml]==6.1.1
+coverage[toml]==6.1.2
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -47,7 +47,7 @@ elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
 environs==9.3.4
     # via -r requirements/base.in
-faker==9.8.0
+faker==9.8.1
     # via -r requirements/base.in
 filelock==3.3.2
     # via virtualenv
@@ -69,11 +69,11 @@ flake8-todo==0.7
     # via -r requirements/test.in
 greenlet==1.1.2
     # via sqlalchemy
-identify==2.3.3
+identify==2.3.5
     # via pre-commit
 idna==3.3
     # via requests
-isort==5.10.0
+isort==5.10.1
     # via flake8-isort
 jmespath==0.10.0
     # via
@@ -85,7 +85,7 @@ mccabe==0.6.1
     # via flake8
 mock==4.0.3
     # via -r requirements/test.in
-more-itertools==8.10.0
+more-itertools==8.11.0
     # via pytest
 mypy-extensions==0.4.3
     # via black
@@ -109,7 +109,7 @@ pluggy==0.13.1
     # via pytest
 pre-commit==2.15.0
     # via -r requirements/dev.in
-psycopg2-binary==2.9.1
+psycopg2-binary==2.9.2
     # via -r requirements/base.in
 py==1.11.0
     # via pytest
@@ -144,13 +144,13 @@ python-dateutil==2.8.2
     #   botocore
     #   elasticsearch-dsl
     #   faker
-python-dotenv==0.19.1
+python-dotenv==0.19.2
     # via environs
 pyyaml==6.0
     # via pre-commit
 redis==3.5.3
     # via -r requirements/base.in
-regex==2021.11.2
+regex==2021.11.10
     # via black
 requests==2.26.0
     # via requests-aws4auth
@@ -168,7 +168,7 @@ six==1.16.0
     #   virtualenv
 snowballstemmer==2.1.0
     # via pydocstyle
-sqlalchemy==1.4.26
+sqlalchemy==1.4.27
     # via -r requirements/base.in
 sqlparse==0.4.2
     # via -r requirements/base.in

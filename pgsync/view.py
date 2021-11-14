@@ -1,5 +1,5 @@
 """PGSync views."""
-from typing import AnyStr, List
+from typing import List
 
 from sqlalchemy.dialects.postgresql.base import PGDDLCompiler
 from sqlalchemy.ext import compiler

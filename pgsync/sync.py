@@ -9,7 +9,6 @@ import re
 import select
 import sys
 import time
-import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import AnyStr, Generator, List, Optional, Set
@@ -17,7 +16,6 @@ from typing import AnyStr, Generator, List, Optional, Set
 import click
 import psycopg2
 import sqlalchemy as sa
-from sqlalchemy.sql import Values
 
 from . import __version__
 from .base import Base, compiled_query, get_foreign_keys
@@ -930,7 +928,8 @@ class Sync(Base):
                         f"Syncing {channel} "
                         f"Xlog: [{self.count['xlog']:,}] => "
                         f"Db: [{self.count['db']:,}] => "
-                        f"Redis: [total = {self.count['redis']:,} pending = {self.redis.qsize():,}] => "
+                        f"Redis: [total = {self.count['redis']:,} "
+                        f"pending = {self.redis.qsize():,}] => "
                         f"Elastic: [{self.es.doc_count:,}] ...\n"
                     )
                     sys.stdout.flush()

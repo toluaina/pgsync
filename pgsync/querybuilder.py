@@ -13,9 +13,7 @@ class QueryBuilder(object):
     """Query builder."""
 
     def __init__(self, base: Base, verbose: bool = False):
-        """
-        Query builder constructor.
-        """
+        """Query builder constructor."""
         self.base: Base = base
         self.verbose: bool = verbose
         self.isouter: bool = True

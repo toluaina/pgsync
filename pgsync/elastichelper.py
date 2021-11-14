@@ -216,7 +216,6 @@ class ElasticHelper(object):
 
     def _build_mapping(self, root: Node, routing: str):
         """Get the Elasticsearch mapping from the schema transform."""
-
         for node in traverse_post_order(root):
 
             rename = node.transform.get("rename", {})
@@ -264,7 +263,6 @@ class ElasticHelper(object):
 
 
 def get_elasticsearch_client(url: str) -> Elasticsearch:
-
     if ELASTICSEARCH_AWS_HOSTED:
         credentials = boto3.Session().get_credentials()
         return Elasticsearch(

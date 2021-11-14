@@ -1,3 +1,5 @@
+"""PGSync urls."""
+
 import logging
 from typing import Optional
 from urllib.parse import quote_plus
@@ -39,9 +41,7 @@ def get_elasticsearch_url(
     password: Optional[str] = None,
     port: Optional[int] = None,
 ) -> str:
-    """
-    Return the URL to connect to Elasticsearch.
-    """
+    """Return the URL to connect to Elasticsearch."""
     scheme: str = scheme or ELASTICSEARCH_SCHEME
     host: str = host or ELASTICSEARCH_HOST
     port: str = port or ELASTICSEARCH_PORT
@@ -64,9 +64,7 @@ def get_postgres_url(
     password: Optional[str] = None,
     port: Optional[int] = None,
 ) -> str:
-    """
-    Return the URL to connect to Postgres.
-    """
+    """Return the URL to connect to Postgres."""
     user: str = user or PG_USER
     host: str = host or PG_HOST
     password: str = _get_auth("PG_PASSWORD") or password or PG_PASSWORD
@@ -86,9 +84,7 @@ def get_redis_url(
     port: Optional[int] = None,
     db: Optional[str] = None,
 ) -> str:
-    """
-    Return the URL to connect to Redis.
-    """
+    """Return the URL to connect to Redis."""
     host: str = host or REDIS_HOST
     password: str = _get_auth("REDIS_AUTH") or password or REDIS_AUTH
     port = port or REDIS_PORT

@@ -144,7 +144,7 @@ class Base(object):
             model.append_column(sa.Column("xmin", sa.BigInteger))
             # support SQLQlchemy/Postgres 14 which somehow now reflects
             # the oid column
-            if not "oid" in [column.name for column in model.columns]:
+            if "oid" not in [column.name for column in model.columns]:
                 model.append_column(
                     sa.Column("oid", sa.dialects.postgresql.OID)
                 )

@@ -6,9 +6,9 @@
 #
 black==21.10b0
     # via -r requirements/base.in
-boto3==1.19.12
+boto3==1.20.5
     # via -r requirements/base.in
-botocore==1.22.12
+botocore==1.23.5
     # via
     #   boto3
     #   s3transfer
@@ -34,7 +34,7 @@ elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
 environs==9.3.4
     # via -r requirements/base.in
-faker==9.8.0
+faker==9.8.1
     # via -r requirements/base.in
 greenlet==1.1.2
     # via sqlalchemy
@@ -48,24 +48,24 @@ marshmallow==3.14.0
     # via environs
 mypy-extensions==0.4.3
     # via black
-newrelic==7.2.3.170
+newrelic==7.2.4.171
     # via -r requirements/prod.in
 pathspec==0.9.0
     # via black
 platformdirs==2.4.0
     # via black
-psycopg2-binary==2.9.1
+psycopg2-binary==2.9.2
     # via -r requirements/base.in
 python-dateutil==2.8.2
     # via
     #   botocore
     #   elasticsearch-dsl
     #   faker
-python-dotenv==0.19.1
+python-dotenv==0.19.2
     # via environs
 redis==3.5.3
     # via -r requirements/base.in
-regex==2021.11.2
+regex==2021.11.10
     # via black
 requests==2.26.0
     # via requests-aws4auth
@@ -78,7 +78,7 @@ six==1.16.0
     #   elasticsearch-dsl
     #   python-dateutil
     #   requests-aws4auth
-sqlalchemy==1.4.26
+sqlalchemy==1.4.27
     # via -r requirements/base.in
 sqlparse==0.4.2
     # via -r requirements/base.in
