@@ -11,7 +11,7 @@ from pgsync.utils import get_config
 class TestUtils(object):
     """Utils tests."""
 
-    @patch("pgsync.utils.logger")
+    @patch("pgsync.urls.logger")
     def test_get_elasticsearch_url(self, mock_logger):
         assert get_elasticsearch_url() == "http://localhost:9200"
         mock_logger.debug.assert_called_once()
@@ -38,7 +38,7 @@ class TestUtils(object):
         url = get_postgres_url("mydb", port=9999)
         assert url.endswith("@localhost:9999/mydb")
 
-    @patch("pgsync.utils.logger")
+    @patch("pgsync.urls.logger")
     def test_get_redis_url(self, mock_logger):
         assert get_redis_url() == "redis://localhost:6379/0"
         mock_logger.debug.assert_called_with(
@@ -53,7 +53,7 @@ class TestUtils(object):
         )
         assert get_redis_url(host="skynet") == "redis://skynet:6379/0"
 
-    @patch("pgsync.utils.logger")
+    @patch("pgsync.urls.logger")
     def test_get_config(self, mock_logger):
         assert __file__ == get_config(config=__file__)
         with pytest.raises(SchemaError) as excinfo:
