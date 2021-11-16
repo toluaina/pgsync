@@ -10,6 +10,7 @@ import sqlalchemy as sa
 import sqlparse
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import array
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import Values
 
@@ -31,7 +32,7 @@ from .exc import (
     TableNotFoundError,
 )
 from .node import Node
-from .settings import PG_SSLMODE, PG_SSLROOTCERT, QUERY_CHUNK_SIZE
+from .settings import PG_DRIVER, PG_SSLMODE, PG_SSLROOTCERT, QUERY_CHUNK_SIZE
 from .trigger import CREATE_TRIGGER_TEMPLATE
 from .urls import get_postgres_url
 from .view import CreateIndex, CreateView, DropIndex, DropView
@@ -58,6 +59,9 @@ class Base(object):
             database: The database name
         """
         self.__engine = pg_engine(database, **kwargs)
+        self.__aio_engine = pg_engine(
+            database, driver="postgresql+asyncpg", **kwargs
+        )
         self.__schemas = None
         # models is a dict of f'{schema}.{table}'
         self.models: dict = {}
@@ -172,6 +176,11 @@ class Base(object):
     def engine(self):
         """Get the database engine."""
         return self.__engine
+
+    @property
+    def aio_engine(self):
+        """Get the database engine."""
+        return self.__aio_engine
 
     @property
     def schemas(self):
@@ -996,10 +1005,12 @@ def pg_engine(
     echo=False,
     sslmode=None,
     sslrootcert=None,
+    driver=None,
 ):
-    connect_args = {}
+    connect_args: dict = {}
     sslmode: str = sslmode or PG_SSLMODE
     sslrootcert: str = sslrootcert or PG_SSLROOTCERT
+    driver: str = driver or PG_DRIVER
 
     if sslmode:
         if sslmode not in (
@@ -1028,8 +1039,12 @@ def pg_engine(
         host=host,
         password=password,
         port=port,
+        driver=driver,
     )
-    return sa.create_engine(url, echo=echo, connect_args=connect_args)
+    func = sa.create_engine
+    if driver == "postgresql+asyncpg":
+        func = create_async_engine
+    return func(url, echo=echo, connect_args=connect_args)
 
 
 def pg_execute(engine, query, values=None, options=None) -> None:

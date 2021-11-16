@@ -11,6 +11,7 @@ from .settings import (
     ELASTICSEARCH_PORT,
     ELASTICSEARCH_SCHEME,
     ELASTICSEARCH_USER,
+    PG_DRIVER,
     PG_HOST,
     PG_PASSWORD,
     PG_PORT,
@@ -63,18 +64,18 @@ def get_postgres_url(
     host: Optional[str] = None,
     password: Optional[str] = None,
     port: Optional[int] = None,
+    driver=None,
 ) -> str:
     """Return the URL to connect to Postgres."""
     user: str = user or PG_USER
     host: str = host or PG_HOST
     password: str = _get_auth("PG_PASSWORD") or password or PG_PASSWORD
     port: str = port or PG_PORT
+    driver = driver or PG_DRIVER
     if not password:
         logger.debug("Connecting to Postgres without password.")
-        return f"postgresql://{user}@{host}:{port}/{database}"
-    return (
-        f"postgresql://{user}:{quote_plus(password)}@{host}:{port}/{database}"
-    )
+        return f"{driver}://{user}@{host}:{port}/{database}"
+    return f"{driver}://{user}:{quote_plus(password)}@{host}:{port}/{database}"
 
 
 def get_redis_url(

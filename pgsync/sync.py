@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Main module."""
+import asyncio
 import json
 import logging
 import os
@@ -53,7 +54,7 @@ from .settings import (
     REPLICATION_SLOT_CLEANUP_INTERVAL,
 )
 from .transform import get_private_keys, transform
-from .utils import get_config, show_settings, threaded, Timer
+from .utils import get_config, show_settings, Timer
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +100,7 @@ class Sync(Base):
             self, verbose=self.verbose
         )
         self.count: dict = dict(xlog=0, db=0, redis=0)
+        self._queue = asyncio.Queue()
 
     def validate(self, repl_slots: Optional[bool] = True) -> None:
         """Perform all validation right away."""
@@ -892,8 +894,7 @@ class Sync(Base):
             fp.write(f"{value}\n")
         self._checkpoint: int = value
 
-    @threaded
-    def poll_redis(self) -> None:
+    async def poll_redis(self) -> None:
         """Consumer which polls Redis continuously."""
         while True:
             payloads: dict = self.redis.bulk_pop()
@@ -901,56 +902,156 @@ class Sync(Base):
                 logger.debug(f"poll_redis: {payloads}")
                 self.count["redis"] += len(payloads)
                 self.on_publish(payloads)
-            time.sleep(REDIS_POLL_INTERVAL)
+            await asyncio.sleep(REDIS_POLL_INTERVAL)
 
-    @threaded
-    def poll_db(self) -> None:
-        """
-        Producer which polls Postgres continuously.
-
-        Receive a notification message from the channel we are listening on
-        """
+    def poll_db_handler(self):
         conn = self.engine.connect().connection
         conn.set_isolation_level(
             psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT
         )
-        cursor = conn.cursor()
-        channel: str = self.database
-        cursor.execute(f'LISTEN "{channel}"')
-        logger.debug(f'Listening for notifications on channel "{channel}"')
+        # channel: str = self.database
+        # cursor = conn.cursor()
+        # cursor.execute(f'LISTEN "{channel}"')
 
-        i: int = 0
-        while True:
-            # NB: consider reducing POLL_TIMEOUT to increase throughout
-            if select.select([conn], [], [], POLL_TIMEOUT) == ([], [], []):
-                if i % 10 == 0:
-                    sys.stdout.write(
-                        f"Syncing {channel} "
-                        f"Xlog: [{self.count['xlog']:,}] => "
-                        f"Db: [{self.count['db']:,}] => "
-                        f"Redis: [total = {self.count['redis']:,} "
-                        f"pending = {self.redis.qsize():,}] => "
-                        f"Elastic: [{self.es.doc_count:,}] ...\n"
-                    )
-                    sys.stdout.flush()
-                i += 1
-                continue
+        conn.poll()
+        i = 0
+        if conn.notifies:
+            print("in loop polling....", i)
+            i += 1
+            notification = conn.notifies.pop(0)
+            print(
+                f"Got notification {notification.pid} {notification.payload}"
+            )
 
-            try:
-                conn.poll()
-            except psycopg2.OperationalError as e:
-                logger.fatal(f"OperationalError: {e}")
-                os._exit(-1)
+            # notification: AnyStr = conn.notifies.pop(0)
+            # payload = json.loads(notification.payload)
+            # self.redis.push(payload)
+            # logger.debug(f"on_notify: {payload}")
+            # self.count["db"] += 1
 
-            while conn.notifies:
-                notification: AnyStr = conn.notifies.pop(0)
-                payload = json.loads(notification.payload)
-                self.redis.push(payload)
-                logger.debug(f"on_notify: {payload}")
-                self.count["db"] += 1
-            i = 0
+            # data = await self._queue.get()
+            # None is the quit signal
+            # if data is None:
+            #     continue
+            # else:
+            #     # In a real application we'd do something interesting here (like send to all subscribers),
+            #     # or listen to this queue while keeping a connection open
+            #     print("Notification received: ", data)
 
-    def on_publish(self, payloads: list) -> None:
+    # TODO renane callback
+    async def poll_db(self) -> None:
+        """
+        Producer which polls Postgres continuously.
+        NB: This ia not a coroutine as it already runs in an event loop
+
+        Receive a notification message from the channel we are listening on
+        """
+        # print('calling poll_db...')
+        conn = self.engine.connect().connection
+        conn.set_isolation_level(
+            psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT
+        )
+        conn.poll()
+        # i = 0
+        # print('POLL DB... ',  conn.notifies)
+        if conn.notifies:
+            print("in loop polling....")
+            # i += 1
+            notification = conn.notifies.pop(0)
+            print(
+                f"Got notification {notification.pid} {notification.payload}"
+            )
+
+        return
+        # conn = self.engine.connect().connection
+        # conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+        # channel: str = self.database
+        # cursor = conn.cursor()
+        # cursor.execute(f'LISTEN "{channel}"')
+        # loop = asyncio.get_event_loop()
+        # loop.add_reader(conn, self.poll_db_handler)
+
+        # loop.run_forever()
+        # loop.call_later(1, self.stop_queue)
+
+        print("polling....")
+        return
+
+        # conn = self.engine.connect().connection
+
+    # https://the-fonz.gitlab.io/posts/postgres-notify/
+    # https://docs.sqlalchemy.org/en/14/orm/extensions/asyncio.html
+    # https://docs.python.org/3/library/asyncio-task.html
+    # print('DIR ', dir(self.async_engine.connect().get_raw_connection()) )
+    # conn = await self.async_engine.connect().get_raw_connection()
+
+    # async with self.aio_engine.connect() as conn:
+    #     # print('CONN ', conn.cursor())
+    #     # print('DIR self.aio_engine ', dir(self.aio_engine))
+    #     # print('RAW CONN  ', conn.get_raw_connection())
+    #     # print('RAW DIR  ', dir(conn.get_raw_connection()))
+    #     # x = await conn.set_isolation_level(
+    #     #     # psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT
+    #     # )
+    #     # print('X ', x)
+    #     # print('X DIR ', dir(x))
+
+    #     result = await conn.execute(sa.text(f'LISTEN "{channel}"'))
+    #     # result = await conn.stream(sa.text(f'LISTEN "{channel}"'))
+
+    #     print('result ', result)
+    #     print('result DIR ', dir(result.cursor))
+
+    #     # print('result ', result)
+    #     # async with self.async_engine.connect().connection as conn:
+    #     # conn.set_isolation_level(
+    #     #     psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT
+    #     # )
+    #     # #
+    #     # cursor = conn.cursor()
+    #     cursor = result.cursor
+    #     print('cursor ', cursor)
+    #     print('dir cursor ', dir(cursor))
+
+    # # return
+    # # cursor = conn.cursor()
+    # # channel: str = self.database
+    # # await cursor.execute(f'LISTEN "{channel}"')
+    # # logger.debug(f'Listening for notifications on channel "{channel}"')
+
+    #     return
+    #     i: int = 0
+    #     while True:
+    #         # NB: consider reducing POLL_TIMEOUT to increase throughout
+    #         if select.select([conn], [], [], POLL_TIMEOUT) == ([], [], []):
+    #             if i % 10 == 0:
+    #                 sys.stdout.write(
+    #                     f"Syncing {channel} "
+    #                     f"Xlog: [{self.count['xlog']:,}] => "
+    #                     f"Db: [{self.count['db']:,}] => "
+    #                     f"Redis: [total = {self.count['redis']:,} "
+    #                     f"pending = {self.redis.qsize():,}] => "
+    #                     f"Elastic: [{self.es.doc_count:,}] ...\n"
+    #                 )
+    #                 sys.stdout.flush()
+    #             i += 1
+    #             continue
+
+    #         try:
+    #             conn.poll()
+    #         except psycopg2.OperationalError as e:
+    #             logger.fatal(f"OperationalError: {e}")
+    #             os._exit(-1)
+
+    #         while conn.notifies:
+    #             notification: AnyStr = conn.notifies.pop(0)
+    #             payload = json.loads(notification.payload)
+    #             self.redis.push(payload)
+    #             logger.debug(f"on_notify: {payload}")
+    #             self.count["db"] += 1
+    #         i = 0
+
+    async def on_publish(self, payloads: list) -> None:
         """
         Redis publish event handler.
 
@@ -1008,8 +1109,7 @@ class Sync(Base):
         self.logical_slot_changes(txmin=txmin, txmax=txmax)
         self._truncate: bool = True
 
-    @threaded
-    def truncate_slots(self) -> None:
+    async def truncate_slots(self) -> None:
         """Truncate the logical replication slot."""
         while True:
             if self._truncate and (
@@ -1020,9 +1120,9 @@ class Sync(Base):
                 logger.debug(f"Truncating replication slot: {self.__name}")
                 self.logical_slot_get_changes(self.__name, upto_nchanges=None)
                 self._last_truncate_timestamp = datetime.now()
-            time.sleep(0.1)
+            await asyncio.sleep(0.1)
 
-    def receive(self) -> None:
+    async def receive(self) -> None:
         """
         Receive events from db.
 
@@ -1032,19 +1132,19 @@ class Sync(Base):
         2. Pull everything so far and also replay replication logs.
         3. Consume all changes from Redis.
         """
-        # start a background worker producer thread to poll the db and populate
+        # start a background worker producer coroutine to poll the db and populate
         # the Redis cache
-        self.poll_db()
+        # self.poll_db()
 
         # sync up to current transaction_id
-        self.pull()
+        # await self.pull()
 
-        # start a background worker consumer thread to
+        # start a background worker consumer coroutine to
         # poll Redis and populate Elasticsearch
-        self.poll_redis()
+        await self.poll_redis()
 
-        # start a background worker thread to cleanup the replication slot
-        self.truncate_slots()
+        # start a background worker coroutine to cleanup the replication slot
+        await self.truncate_slots()
 
 
 @click.command()
@@ -1134,10 +1234,27 @@ def main(
 
     with Timer():
         for document in json.load(open(config)):
+            loop = asyncio.get_event_loop()
             sync = Sync(document, verbose=verbose, **kwargs)
             sync.pull()
+
+            conn = sync.engine.connect().connection
+            conn.set_isolation_level(
+                psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT
+            )
+            channel: str = sync.database
+            cursor = conn.cursor()
+            cursor.execute(f'LISTEN "{channel}";')
+
             if daemon:
-                sync.receive()
+                tasks = [
+                    loop.create_task(sync.receive()),
+                ]
+                print("run until...")
+                loop.add_reader(conn, sync.poll_db)
+
+                loop.run_until_complete(asyncio.wait(tasks))
+            loop.close()
 
 
 if __name__ == "__main__":
