@@ -944,10 +944,11 @@ class Sync(Base):
 
             while conn.notifies:
                 notification: AnyStr = conn.notifies.pop(0)
-                payload = json.loads(notification.payload)
-                self.redis.push(payload)
-                logger.debug(f"on_notify: {payload}")
-                self.count["db"] += 1
+                if notification.channel == channel:
+                    payload = json.loads(notification.payload)
+                    self.redis.push(payload)
+                    logger.debug(f"on_notify: {payload}")
+                    self.count["db"] += 1
             i = 0
 
     def on_publish(self, payloads: list) -> None:
