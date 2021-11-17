@@ -13,8 +13,9 @@ from datetime import datetime, timedelta
 from typing import AnyStr, Generator, List, Optional, Set
 
 import click
-import psycopg2
 import sqlalchemy as sa
+from psycopg2 import OperationalError
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 from . import __version__
 from .base import Base, compiled_query, get_foreign_keys
@@ -97,10 +98,6 @@ class Sync(Base):
             self, verbose=self.verbose
         )
         self.count: dict = dict(xlog=0, db=0, redis=0)
-        self.conn = self.engine.connect().connection
-        self.conn.set_isolation_level(
-            psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT
-        )
 
     def validate(self, repl_slots: Optional[bool] = True) -> None:
         """Perform all validation right away."""
@@ -915,7 +912,7 @@ class Sync(Base):
 
         try:
             self.conn.poll()
-        except psycopg2.OperationalError as e:
+        except OperationalError as e:
             logger.fatal(f"OperationalError: {e}")
             os._exit(-1)
 
@@ -1124,6 +1121,7 @@ def main(
             sync = Sync(document, verbose=verbose, **kwargs)
             sync.pull()
             if daemon:
+                sync.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
                 sync.receive()
 
 

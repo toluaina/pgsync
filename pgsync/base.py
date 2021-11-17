@@ -59,14 +59,12 @@ class Base(object):
             database: The database name
         """
         self.__engine = pg_engine(database, **kwargs)
-        self.__aio_engine = pg_engine(
-            database, driver="postgresql+asyncpg", **kwargs
-        )
         self.__schemas = None
         # models is a dict of f'{schema}.{table}'
         self.models: dict = {}
         self.__metadata: dict = {}
         self.verbose: bool = verbose
+        self._conn = None
 
     def connect(self) -> None:
         """Connect to database."""
@@ -178,9 +176,12 @@ class Base(object):
         return self.__engine
 
     @property
-    def aio_engine(self):
-        """Get the database engine."""
-        return self.__aio_engine
+    def conn(self):
+        return self._conn
+
+    def set_isolation_level(self, isolation_level):
+        self._conn = self.__engine.connect().connection
+        self._conn.set_isolation_level(isolation_level)
 
     @property
     def schemas(self):
