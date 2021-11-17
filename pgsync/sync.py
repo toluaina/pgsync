@@ -1126,17 +1126,6 @@ def main(
             if daemon:
                 sync.receive()
 
-            # loop.run_until_complete(asyncio.wait(tasks))
-            # loop.close()
-
-    # loop.run_until_complete(asyncio.wait(tasks))
-    # event_loop.run_forever()
-
-
-# https://the-fonz.gitlab.io/posts/postgres-notify/
-# https://docs.sqlalchemy.org/en/14/orm/extensions/asyncio.html
-# https://docs.python.org/3/library/asyncio-task.html
-
 
 if __name__ == "__main__":
     main()
