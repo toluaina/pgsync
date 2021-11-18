@@ -375,7 +375,7 @@ class TestNestedChildren(object):
     def test_sync(self, sync, nodes, data):
         """test regular sync produces the correct result."""
         sync.nodes = nodes
-        docs = [doc for doc in sync._sync()]
+        docs = [doc for doc in sync.sync()]
         assert len(docs) == 3
         docs = sorted(docs, key=lambda k: k["_id"])
         assert docs == [
@@ -650,7 +650,7 @@ class TestNestedChildren(object):
 
         # 1. sync first to add the initial document
         sync = Sync(document)
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
         sync.checkpoint = sync.txid_current
 
         session = sync.session
@@ -665,7 +665,7 @@ class TestNestedChildren(object):
 
         txmin = sync.checkpoint
         sync.nodes = nodes
-        docs = [doc for doc in sync._sync(txmin=txmin)]
+        docs = [doc for doc in sync.sync(txmin=txmin)]
         assert len(docs) == 2
         docs = sorted(docs, key=lambda k: k["_id"])
         assert docs == [
@@ -772,7 +772,7 @@ class TestNestedChildren(object):
         }
         # 1. sync first to add the initial document
         sync = Sync(document)
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
         sync.checkpoint = sync.txid_current
 
         session = sync.session
@@ -786,7 +786,7 @@ class TestNestedChildren(object):
 
         txmin = sync.checkpoint
         sync.nodes = nodes
-        docs = [doc for doc in sync._sync(txmin=txmin)]
+        docs = [doc for doc in sync.sync(txmin=txmin)]
 
         assert len(docs) == 1
         docs = sorted(docs, key=lambda k: k["_id"])
@@ -868,7 +868,7 @@ class TestNestedChildren(object):
         }
         # 1. sync first to add the initial document
         sync = Sync(document)
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
         sync.checkpoint = sync.txid_current
 
         session = sync.session
@@ -922,7 +922,7 @@ class TestNestedChildren(object):
 
         txmin = sync.checkpoint
         sync.nodes = nodes
-        docs = [doc for doc in sync._sync(txmin=txmin)]
+        docs = [doc for doc in sync.sync(txmin=txmin)]
         assert len(docs) == 0
 
         docs = search(sync.es, "testdb")
@@ -1097,7 +1097,7 @@ class TestNestedChildren(object):
         with subtransactions(session):
             session.add(book_author)
 
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -1300,7 +1300,7 @@ class TestNestedChildren(object):
 
         # 1. sync first to add the initial document
         sync = Sync(document)
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
 
         author = author_cls(
             id=5,
@@ -1328,7 +1328,7 @@ class TestNestedChildren(object):
                 .values(author_id=5)
             )
 
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -1507,7 +1507,7 @@ class TestNestedChildren(object):
 
         # 1. sync first to add the initial document
         sync = Sync(document)
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
 
         session = sync.session
 
@@ -1519,7 +1519,7 @@ class TestNestedChildren(object):
             )
             session.commit()
 
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -1683,7 +1683,7 @@ class TestNestedChildren(object):
 
         # 1. sync first to add the initial document
         sync = Sync(document)
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
         sync.checkpoint = sync.txid_current
         sync.es.refresh("testdb")
 
@@ -1697,7 +1697,7 @@ class TestNestedChildren(object):
 
         txmin = sync.checkpoint
         sync.nodes = nodes
-        docs = [doc for doc in sync._sync(txmin=txmin)]
+        docs = [doc for doc in sync.sync(txmin=txmin)]
         assert len(docs) == 0
 
         assert_resync_empty(sync, nodes)
@@ -1711,7 +1711,7 @@ class TestNestedChildren(object):
 
         # 1. sync first to add the initial document
         sync = Sync(document)
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
         sync.checkpoint = sync.txid_current
         sync.es.refresh("testdb")
 
@@ -1729,7 +1729,7 @@ class TestNestedChildren(object):
 
         txmin = sync.checkpoint
         sync.nodes = nodes
-        docs = [doc for doc in sync._sync(txmin=txmin)]
+        docs = [doc for doc in sync.sync(txmin=txmin)]
         assert len(docs) == 0
 
         assert_resync_empty(sync, nodes)
@@ -1743,7 +1743,7 @@ class TestNestedChildren(object):
 
         # 1. sync first to add the initial document
         sync = Sync(document)
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
         sync.checkpoint = sync.txid_current
         sync.checkpoint = sync.txid_current
         sync.es.refresh("testdb")
@@ -1762,7 +1762,7 @@ class TestNestedChildren(object):
 
         txmin = sync.checkpoint
         sync.nodes = nodes
-        docs = [doc for doc in sync._sync(txmin=txmin)]
+        docs = [doc for doc in sync.sync(txmin=txmin)]
         assert len(docs) == 0
 
         assert_resync_empty(sync, nodes)
@@ -1894,7 +1894,7 @@ class TestNestedChildren(object):
         }
         # sync first to add the initial document
         sync = Sync(document)
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
         sync.checkpoint = sync.txid_current
         session = sync.session
         sync.es.refresh("testdb")
@@ -1923,7 +1923,7 @@ class TestNestedChildren(object):
 
         txmin = sync.checkpoint
         sync.nodes = nodes
-        docs = [doc for doc in sync._sync(txmin=txmin)]
+        docs = [doc for doc in sync.sync(txmin=txmin)]
         assert docs == []
         docs = search(sync.es, "testdb")
         assert_resync_empty(sync, nodes)

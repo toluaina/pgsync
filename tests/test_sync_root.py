@@ -96,7 +96,7 @@ class TestRoot(object):
         txmin = sync.checkpoint
         txmax = sync.txid_current
         sync.nodes = nodes
-        docs = [doc for doc in sync._sync(txmin=txmin, txmax=txmax)]
+        docs = [doc for doc in sync.sync(txmin=txmin, txmax=txmax)]
         assert docs == [
             {
                 "_id": "abc",
@@ -146,7 +146,7 @@ class TestRoot(object):
             },
         }
         sync.nodes = nodes
-        docs = [doc for doc in sync._sync()]
+        docs = [doc for doc in sync.sync()]
         assert docs == [
             {
                 "_id": "abc",
@@ -188,7 +188,7 @@ class TestRoot(object):
             "columns": ["isbn", "title", "description", "xmin"],
         }
         sync.nodes = nodes
-        docs = [doc for doc in sync._sync()]
+        docs = [doc for doc in sync.sync()]
         assert sorted(docs[0]["_source"].keys()) == sorted(
             ["isbn", "title", "description", "xmin", "_meta"]
         )
@@ -198,7 +198,7 @@ class TestRoot(object):
         """Test the doc includes xmin column."""
         nodes = {"table": "book", "columns": ["isbn", "xmin"]}
         sync.nodes = nodes
-        docs = [doc for doc in sync._sync()]
+        docs = [doc for doc in sync.sync()]
         assert "xmin" in docs[0]["_source"]
         assert_resync_empty(sync, nodes)
 
@@ -206,7 +206,7 @@ class TestRoot(object):
         """Test we include all columns when no columns are specified."""
         nodes = {"table": "book", "columns": []}
         sync.nodes = nodes
-        docs = [doc for doc in sync._sync()]
+        docs = [doc for doc in sync.sync()]
         assert sorted(docs[0]["_source"].keys()) == sorted(
             [
                 "_meta",
@@ -220,7 +220,7 @@ class TestRoot(object):
 
         nodes = {"table": "book"}
         sync.nodes = nodes
-        docs = [doc for doc in sync._sync()]
+        docs = [doc for doc in sync.sync()]
         assert sorted(docs[0]["_source"].keys()) == sorted(
             [
                 "_meta",
@@ -238,7 +238,7 @@ class TestRoot(object):
         nodes = {"table": "book", "columns": ["foo"]}
         sync.nodes = nodes
         with pytest.raises(ColumnNotFoundError) as excinfo:
-            [doc for doc in sync._sync()]
+            [doc for doc in sync.sync()]
         assert 'Column "foo" not present on table "book"' in str(excinfo.value)
 
     def test_primary_key_is_doc_id(self, sync, data):
@@ -246,7 +246,7 @@ class TestRoot(object):
         # TODO also repeat this test for composite primary key
         nodes = {"table": "book", "columns": ["title"]}
         sync.nodes = nodes
-        docs = [doc for doc in sync._sync()]
+        docs = [doc for doc in sync.sync()]
         assert "abc" == docs[0]["_id"]
         assert "def" == docs[1]["_id"]
         assert "ghi" == docs[2]["_id"]
@@ -256,7 +256,7 @@ class TestRoot(object):
         """Test the private key is contained in the doc."""
         nodes = {"table": "book", "columns": ["isbn"]}
         sync.nodes = nodes
-        docs = [doc for doc in sync._sync()]
+        docs = [doc for doc in sync.sync()]
         assert "_meta" in docs[0]["_source"]
         assert_resync_empty(sync, nodes)
 
@@ -264,7 +264,7 @@ class TestRoot(object):
         """Ensure the doc only selected columns and builtins."""
         nodes = {"table": "book", "columns": ["isbn", "xmin"]}
         sync.nodes = nodes
-        docs = [doc for doc in sync._sync()]
+        docs = [doc for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
 
         assert sorted(sources["abc"].keys()) == sorted(
@@ -281,7 +281,7 @@ class TestRoot(object):
             ],
         }
         sync.nodes = nodes
-        docs = [doc for doc in sync._sync()]
+        docs = [doc for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
 
         assert sorted(sources["abc"].keys()) == sorted(
@@ -297,7 +297,7 @@ class TestRoot(object):
         nodes = {"table": "book", "columns": ["copyright", "publisher_id"]}
         sync.nodes = nodes
 
-        docs = [doc for doc in sync._sync()]
+        docs = [doc for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
 
         assert sorted(sources["abc"].keys()) == sorted(
@@ -316,7 +316,7 @@ class TestRoot(object):
             "columns": ["isbn", "description", "copyright"],
         }
         sync.nodes = nodes
-        docs = [doc for doc in sync._sync()]
+        docs = [doc for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
 
         assert sources == {
@@ -345,7 +345,7 @@ class TestRoot(object):
         """Private keys should be included even if null."""
         nodes = {"table": "book", "columns": ["description"]}
         sync.nodes = nodes
-        docs = [doc for doc in sync._sync()]
+        docs = [doc for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
 
         assert sources["abc"]["_meta"] == {}
@@ -358,14 +358,14 @@ class TestRoot(object):
         nodes = {"no_table_specified": "book", "columns": ["description"]}
         sync.nodes = nodes
         with pytest.raises(TableNotInNodeError):
-            [doc for doc in sync._sync()]
+            [doc for doc in sync.sync()]
 
     def test_node_valid_attributes(self, sync, data):
         """All node must have valid attributes."""
         nodes = {"table": "book", "unknown": "xyz", "columns": ["description"]}
         sync.nodes = nodes
         with pytest.raises(NodeAttributeError):
-            [doc for doc in sync._sync()]
+            [doc for doc in sync.sync()]
 
     def test_update_primary_key_non_concurrent(self, data, book_cls):
         """
@@ -380,7 +380,7 @@ class TestRoot(object):
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -399,7 +399,7 @@ class TestRoot(object):
                 .values(isbn="cba")
             )
 
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -421,7 +421,7 @@ class TestRoot(object):
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -481,7 +481,7 @@ class TestRoot(object):
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
         sync.es.refresh("testdb")
 
         session = sync.session
@@ -500,7 +500,7 @@ class TestRoot(object):
                 )
             )
 
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -520,7 +520,7 @@ class TestRoot(object):
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
         sync.es.refresh("testdb")
 
         session = sync.session
@@ -540,7 +540,7 @@ class TestRoot(object):
                 .values(title="Tiger Club")
             )
 
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
         sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -559,7 +559,7 @@ class TestRoot(object):
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
         sync.es.refresh("testdb")
 
         session = sync.session
@@ -615,7 +615,7 @@ class TestRoot(object):
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
-        sync.sync(sync._sync())
+        sync.es.bulk(sync.index, sync.sync())
         sync.es.refresh("testdb")
         session = sync.session
         docs = search(sync.es, "testdb")

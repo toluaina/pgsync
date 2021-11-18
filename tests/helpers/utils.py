@@ -35,5 +35,5 @@ def search(es, index, body=None, _id=None):
 def assert_resync_empty(sync, node, txmin=None):
     # re-sync and ensure we are not syncing more data
     txmin = txmin or sync.txid_current
-    docs = [doc for doc in sync._sync(node, txmin=txmin)]
+    docs = [doc for doc in sync.sync(node, txmin=txmin)]
     assert docs == []

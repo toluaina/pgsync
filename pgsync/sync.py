@@ -317,10 +317,10 @@ class Sync(Base):
                     payload["tg_op"] != payload2["tg_op"]
                     or payload["table"] != payload2["table"]
                 ):
-                    self.sync(self._payloads(payloads))
+                    self.es.bulk(self.index, self._payloads(payloads))
                     payloads: list = []
             elif j == len(_rows):
-                self.sync(self._payloads(payloads))
+                self.es.bulk(self.index, self._payloads(payloads))
                 payloads: list = []
 
         if rows:
@@ -736,7 +736,7 @@ class Sync(Base):
         # otherwise we would end up performing a full query
         # and sync the entire db!
         if any(filters.values()):
-            yield from self._sync(filters=filters, extra=extra)
+            yield from self.sync(filters=filters, extra=extra)
 
     def _build_filters(self, filters: List[dict], node: Node) -> None:
         """
@@ -764,7 +764,7 @@ class Sync(Base):
 
             node._filters.append(sa.or_(*_filters))
 
-    def _sync(
+    def sync(
         self,
         filters: Optional[dict] = None,
         txmin: Optional[int] = None,
@@ -867,16 +867,6 @@ class Sync(Base):
 
                 yield doc
 
-    def sync(self, docs: Generator) -> None:
-        """
-        Pull sync data from generator to Elasticsearch.
-        """
-        try:
-            self.es.bulk(self.index, docs)
-        except Exception as e:
-            logger.exception(f"Exception {e}")
-            raise
-
     @property
     def checkpoint(self) -> int:
         """Save the current txid as the checkpoint."""
@@ -918,21 +908,9 @@ class Sync(Base):
         cursor.execute(f'LISTEN "{channel}"')
         logger.debug(f'Listening for notifications on channel "{channel}"')
 
-        i: int = 0
         while True:
             # NB: consider reducing POLL_TIMEOUT to increase throughout
             if select.select([conn], [], [], POLL_TIMEOUT) == ([], [], []):
-                if i % 10 == 0:
-                    sys.stdout.write(
-                        f"Syncing {channel} "
-                        f"Xlog: [{self.count['xlog']:,}] => "
-                        f"Db: [{self.count['db']:,}] => "
-                        f"Redis: [total = {self.count['redis']:,} "
-                        f"pending = {self.redis.qsize():,}] => "
-                        f"Elastic: [{self.es.doc_count:,}] ...\n"
-                    )
-                    sys.stdout.flush()
-                i += 1
                 continue
 
             try:
@@ -948,7 +926,6 @@ class Sync(Base):
                     self.redis.push(payload)
                     logger.debug(f"on_notify: {payload}")
                     self.count["db"] += 1
-            i = 0
 
     def on_publish(self, payloads: list) -> None:
         """
@@ -971,7 +948,7 @@ class Sync(Base):
                 _payloads[payload["table"]].append(payload)
 
             for _payload in _payloads.values():
-                self.sync(self._payloads(_payload))
+                self.es.bulk(self.index, self._payloads(_payload))
 
         else:
 
@@ -985,10 +962,10 @@ class Sync(Base):
                         payload["tg_op"] != payload2["tg_op"]
                         or payload["table"] != payload2["table"]
                     ):
-                        self.sync(self._payloads(_payloads))
+                        self.es.bulk(self.index, self._payloads(_payloads))
                         _payloads = []
                 elif j == len(payloads):
-                    self.sync(self._payloads(_payloads))
+                    self.es.bulk(self.index, self._payloads(_payloads))
                     _payloads: list = []
 
         txids: Set = set(map(lambda x: x["xmin"], payloads))
@@ -1002,7 +979,7 @@ class Sync(Base):
         txmax: int = self.txid_current
         logger.debug(f"pull txmin: {txmin} txmax: {txmax}")
         # forward pass sync
-        self.sync(self._sync(txmin=txmin, txmax=txmax))
+        self.es.bulk(self.index, self.sync(txmin=txmin, txmax=txmax))
         self.checkpoint: int = txmax or self.txid_current
         # now sync up to txmax to capture everything we may have missed
         self.logical_slot_changes(txmin=txmin, txmax=txmax)
@@ -1021,6 +998,20 @@ class Sync(Base):
                 self.logical_slot_get_changes(self.__name, upto_nchanges=None)
                 self._last_truncate_timestamp = datetime.now()
             time.sleep(0.1)
+
+    @threaded
+    def status(self):
+        while True:
+            sys.stdout.write(
+                f"Syncing {self.database} "
+                f"Xlog: [{self.count['xlog']:,}] => "
+                f"Db: [{self.count['db']:,}] => "
+                f"Redis: [total = {self.count['redis']:,} "
+                f"pending = {self.redis.qsize():,}] => "
+                f"Elastic: [{self.es.doc_count:,}] ...\n"
+            )
+            sys.stdout.flush()
+            time.sleep(1)
 
     def receive(self) -> None:
         """
@@ -1045,6 +1036,9 @@ class Sync(Base):
 
         # start a background worker thread to cleanup the replication slot
         self.truncate_slots()
+
+        # start a background worker thread to show status
+        self.status()
 
 
 @click.command()

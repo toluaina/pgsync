@@ -78,7 +78,17 @@ class ElasticHelper(object):
             logger.exception(f"Exception {e}")
             raise
 
-    def bulk(
+    def bulk(self, index: str, docs: Generator) -> None:
+        """
+        Pull sync data from generator to Elasticsearch.
+        """
+        try:
+            self._bulk(index, docs)
+        except Exception as e:
+            logger.exception(f"Exception {e}")
+            raise
+
+    def _bulk(
         self,
         index: str,
         docs: Generator,
