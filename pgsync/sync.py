@@ -916,7 +916,7 @@ class Sync(Base):
             logger.fatal(f"OperationalError: {e}")
             os._exit(-1)
 
-        if self.conn.notifies:
+        while self.conn.notifies:
             notification: AnyStr = self.conn.notifies.pop(0)
             if notification.channel == channel:
                 payload = json.loads(notification.payload)
