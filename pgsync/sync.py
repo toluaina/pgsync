@@ -14,8 +14,9 @@ from datetime import datetime, timedelta
 from typing import AnyStr, Generator, List, Optional, Set
 
 import click
-import psycopg2
 import sqlalchemy as sa
+from psycopg2 import OperationalError
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 from . import __version__
 from .base import Base, compiled_query, get_foreign_keys
@@ -461,7 +462,7 @@ class Sync(Base):
                     }
                     if self.routing:
                         doc["_routing"] = old_values[self.routing]
-                    if self.es.major_version < 7:
+                    if self.es.major_version < 7 and not self.es.opensearch:
                         doc["_type"] = "_doc"
                     docs.append(doc)
 
@@ -563,7 +564,7 @@ class Sync(Base):
                 }
                 if self.routing:
                     doc["_routing"] = payload_data[self.routing]
-                if self.es.major_version < 7:
+                if self.es.major_version < 7 and not self.es.opensearch:
                     doc["_type"] = "_doc"
                 docs.append(doc)
             if docs:
@@ -612,7 +613,7 @@ class Sync(Base):
                     "_index": self.index,
                     "_op_type": "delete",
                 }
-                if self.es.major_version < 7:
+                if self.es.major_version < 7 and not self.es.opensearch:
                     doc["_type"] = "_doc"
                 docs.append(doc)
             if docs:
@@ -855,7 +856,7 @@ class Sync(Base):
                 if self.routing:
                     doc["_routing"] = row[self.routing]
 
-                if self.es.major_version < 7:
+                if self.es.major_version < 7 and not self.es.opensearch:
                     doc["_type"] = "_doc"
 
                 if self._plugins:
@@ -911,9 +912,7 @@ class Sync(Base):
         Receive a notification message from the channel we are listening on
         """
         conn = self.engine.connect().connection
-        conn.set_isolation_level(
-            psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT
-        )
+        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cursor = conn.cursor()
         channel: str = self.database
         cursor.execute(f'LISTEN "{channel}"')
@@ -938,7 +937,7 @@ class Sync(Base):
 
             try:
                 conn.poll()
-            except psycopg2.OperationalError as e:
+            except OperationalError as e:
                 logger.fatal(f"OperationalError: {e}")
                 os._exit(-1)
 
