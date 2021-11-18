@@ -1,7 +1,7 @@
 """Test helper methods."""
 
 
-def truncate_slots():
+def noop():
     pass
 
 

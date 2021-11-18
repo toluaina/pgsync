@@ -11,7 +11,7 @@ from pgsync.exc import (
 )
 from pgsync.sync import Sync
 
-from .helpers.utils import assert_resync_empty, search, truncate_slots
+from .helpers.utils import assert_resync_empty, noop, search
 
 
 @pytest.mark.usefixtures("table_creator")
@@ -456,10 +456,14 @@ class TestRoot(object):
                 with mock.patch("pgsync.sync.Sync.pull", side_effect=pull):
                     with mock.patch(
                         "pgsync.sync.Sync.truncate_slots",
-                        side_effect=truncate_slots,
+                        side_effect=noop,
                     ):
-                        sync.receive()
-                        sync.es.refresh("testdb")
+                        with mock.patch(
+                            "pgsync.sync.Sync.status",
+                            side_effect=noop,
+                        ):
+                            sync.receive()
+                            sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
 
@@ -594,10 +598,14 @@ class TestRoot(object):
                 with mock.patch("pgsync.sync.Sync.pull", side_effect=pull):
                     with mock.patch(
                         "pgsync.sync.Sync.truncate_slots",
-                        side_effect=truncate_slots,
+                        side_effect=noop,
                     ):
-                        sync.receive()
-                        sync.es.refresh("testdb")
+                        with mock.patch(
+                            "pgsync.sync.Sync.status",
+                            side_effect=noop,
+                        ):
+                            sync.receive()
+                            sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
 
@@ -648,10 +656,14 @@ class TestRoot(object):
                 with mock.patch("pgsync.sync.Sync.pull", side_effect=pull):
                     with mock.patch(
                         "pgsync.sync.Sync.truncate_slots",
-                        side_effect=truncate_slots,
+                        side_effect=noop,
                     ):
-                        sync.receive()
-                        sync.es.refresh("testdb")
+                        with mock.patch(
+                            "pgsync.sync.Sync.status",
+                            side_effect=noop,
+                        ):
+                            sync.receive()
+                            sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
 

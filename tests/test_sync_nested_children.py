@@ -7,7 +7,7 @@ import pytest
 from pgsync.base import subtransactions
 from pgsync.sync import Sync
 
-from .helpers.utils import assert_resync_empty, search, truncate_slots
+from .helpers.utils import assert_resync_empty, noop, search
 
 
 @pytest.mark.usefixtures("table_creator")
@@ -915,10 +915,14 @@ class TestNestedChildren(object):
                 with mock.patch("pgsync.sync.Sync.pull", side_effect=pull):
                     with mock.patch(
                         "pgsync.sync.Sync.truncate_slots",
-                        side_effect=truncate_slots,
+                        side_effect=noop,
                     ):
-                        sync.receive()
-                        sync.es.refresh("testdb")
+                        with mock.patch(
+                            "pgsync.sync.Sync.status",
+                            side_effect=noop,
+                        ):
+                            sync.receive()
+                            sync.es.refresh("testdb")
 
         txmin = sync.checkpoint
         sync.nodes = nodes
@@ -1916,10 +1920,14 @@ class TestNestedChildren(object):
                 with mock.patch("pgsync.sync.Sync.pull", side_effect=pull):
                     with mock.patch(
                         "pgsync.sync.Sync.truncate_slots",
-                        side_effect=truncate_slots,
+                        side_effect=noop,
                     ):
-                        sync.receive()
-                        sync.es.refresh("testdb")
+                        with mock.patch(
+                            "pgsync.sync.Sync.status",
+                            side_effect=noop,
+                        ):
+                            sync.receive()
+                            sync.es.refresh("testdb")
 
         txmin = sync.checkpoint
         sync.nodes = nodes

@@ -340,7 +340,7 @@ class Sync(Base):
                 payload_data = payload.get("old")
         return payload_data
 
-    def _insert(
+    def _insert_op(
         self, node: Node, root: Node, filters: dict, payloads: dict
     ) -> None:
 
@@ -378,15 +378,6 @@ class Sync(Base):
                 for payload in payloads:
                     payload_data: dict = self._payload_data(payload)
                     for i, key in enumerate(foreign_keys[node.name]):
-                        if key not in payload_data:
-                            sys.stdout.write(
-                                f"missing data...\n"
-                                f"payload_data: {payload_data}\n"
-                                f"payload: {payload}\n"
-                                f"table: {node.table}\n"
-                                f"{node}\n"
-                            )
-                            sys.stdout.flush()
                         value = payload_data[key]
                         filters[node.parent.table].append(
                             {foreign_keys[node.parent.name][i]: value}
@@ -412,7 +403,7 @@ class Sync(Base):
 
         return filters
 
-    def _update(
+    def _update_op(
         self,
         node: Node,
         root: Node,
@@ -544,7 +535,7 @@ class Sync(Base):
 
         return filters
 
-    def _delete(
+    def _delete_op(
         self, node: Node, root: Node, filters: dict, payloads: dict
     ) -> None:
 
@@ -602,7 +593,7 @@ class Sync(Base):
 
         return filters
 
-    def _truncate(self, node: Node, root: Node, filters: dict) -> dict:
+    def _truncate_op(self, node: Node, root: Node, filters: dict) -> dict:
 
         if node.table == root.table:
 
@@ -702,7 +693,7 @@ class Sync(Base):
 
         if tg_op == INSERT:
 
-            filters = self._insert(
+            filters = self._insert_op(
                 node,
                 root,
                 filters,
@@ -711,7 +702,7 @@ class Sync(Base):
 
         if tg_op == UPDATE:
 
-            filters = self._update(
+            filters = self._update_op(
                 node,
                 root,
                 filters,
@@ -721,7 +712,7 @@ class Sync(Base):
 
         if tg_op == DELETE:
 
-            filters = self._delete(
+            filters = self._delete_op(
                 node,
                 root,
                 filters,
@@ -730,7 +721,7 @@ class Sync(Base):
 
         if tg_op == TRUNCATE:
 
-            filters = self._truncate(node, root, filters)
+            filters = self._truncate_op(node, root, filters)
 
         # If there are no filters, then don't execute the sync query
         # otherwise we would end up performing a full query
