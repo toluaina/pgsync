@@ -9,9 +9,7 @@ from typing import List, Optional, Tuple
 import sqlalchemy as sa
 import sqlparse
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.dialects.postgresql import array
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.sql import Values
 
 from .constants import (
     BUILTIN_SCHEMAS,
@@ -34,7 +32,7 @@ from .node import Node
 from .settings import PG_SSLMODE, PG_SSLROOTCERT, QUERY_CHUNK_SIZE
 from .trigger import CREATE_TRIGGER_TEMPLATE
 from .urls import get_postgres_url
-from .view import CreateIndex, CreateView, DropIndex, DropView
+from .view import create_view, drop_view
 
 try:
     import citext  # noqa
@@ -515,122 +513,15 @@ class Base(object):
             .group_by(table_constraints.c.table_name)
         )
 
-    def create_view(self, schema, tables, user_defined_fkey_tables):
-        """
-        View describing primary_keys and foreign_keys for each table
-        with an index on table_name
-
-        This is only called once on bootstrap.
-        It is used within the trigger function to determine what payload
-        values to send to pg_notify.
-
-        Since views cannot be modified, we query the existing view for exiting
-        rows and union this to the next query.
-
-        So if 'specie' was the only row before, and the next query returns
-        'unit' and 'structure', we want to end up with the result below.
-
-        table_name | primary_keys | foreign_keys
-        -----------+--------------+--------------
-        specie     | {id}         | {id, user_id}
-        unit       | {id}         | {id, profile_id}
-        structure  | {id}         | {id}
-        """
-
-        views = sa.inspect(self.engine).get_view_names(schema)
-
-        rows = {}
-        if MATERIALIZED_VIEW in views:
-            for table_name, primary_keys, foreign_keys in self.fetchall(
-                sa.select(["*"]).select_from(
-                    sa.text(f"{schema}.{MATERIALIZED_VIEW}")
-                )
-            ):
-                rows.setdefault(
-                    table_name,
-                    {"primary_keys": set([]), "foreign_keys": set([])},
-                )
-                if primary_keys:
-                    rows[table_name]["primary_keys"] = set(primary_keys)
-                if foreign_keys:
-                    rows[table_name]["foreign_keys"] = set(foreign_keys)
-
-            self.__engine.execute(DropView(schema, MATERIALIZED_VIEW))
-
-        if schema != SCHEMA:
-            for table in set(tables):
-                tables.add(f"{schema}.{table}")
-
-        for table_name, columns in self.fetchall(
-            self._primary_keys(schema, tables)
-        ):
-            rows.setdefault(
-                table_name,
-                {"primary_keys": set([]), "foreign_keys": set([])},
-            )
-            if columns:
-                rows[table_name]["primary_keys"] |= set(columns)
-
-        for table_name, columns in self.fetchall(
-            self._foreign_keys(schema, tables)
-        ):
-            rows.setdefault(
-                table_name,
-                {"primary_keys": set([]), "foreign_keys": set([])},
-            )
-            if columns:
-                rows[table_name]["foreign_keys"] |= set(columns)
-
-        if user_defined_fkey_tables:
-            for table_name, columns in user_defined_fkey_tables.items():
-                rows.setdefault(
-                    table_name,
-                    {"primary_keys": set([]), "foreign_keys": set([])},
-                )
-                if columns:
-                    rows[table_name]["foreign_keys"] |= set(columns)
-
-        if not rows:
-            rows.setdefault(
-                None,
-                {"primary_keys": set([]), "foreign_keys": set([])},
-            )
-
-        statement = sa.select(
-            Values(
-                sa.column("table_name"),
-                sa.column("primary_keys"),
-                sa.column("foreign_keys"),
-            )
-            .data(
-                [
-                    (
-                        table_name,
-                        array(fields["primary_keys"])
-                        if fields.get("primary_keys")
-                        else None,
-                        array(fields.get("foreign_keys"))
-                        if fields.get("foreign_keys")
-                        else None,
-                    )
-                    for table_name, fields in rows.items()
-                ]
-            )
-            .alias("t")
+    def create_view(
+        self, schema: str, tables: list, user_defined_fkey_tables: dict
+    ):
+        create_view(
+            self.engine, schema, tables, user_defined_fkey_tables, self
         )
-
-        logger.debug(f"Creating view: {schema}.{MATERIALIZED_VIEW}")
-        self.__engine.execute(CreateView(schema, MATERIALIZED_VIEW, statement))
-        self.__engine.execute(DropIndex("_idx"))
-        self.__engine.execute(
-            CreateIndex("_idx", schema, MATERIALIZED_VIEW, ["table_name"])
-        )
-        logger.debug(f"Created view: {schema}.{MATERIALIZED_VIEW}")
 
     def drop_view(self, schema: str):
-        logger.debug(f"Dropping view: {schema}.{MATERIALIZED_VIEW}")
-        self.__engine.execute(DropView(schema, MATERIALIZED_VIEW))
-        logger.debug(f"Dropped view: {schema}.{MATERIALIZED_VIEW}")
+        drop_view(self.engine, schema)
 
     # Triggers...
     def create_triggers(
