@@ -78,12 +78,39 @@ class ElasticHelper(object):
             logger.exception(f"Exception {e}")
             raise
 
-    def bulk(self, index: str, docs: Generator) -> None:
+    def bulk(
+        self,
+        index: str,
+        docs: Generator,
+        chunk_size: Optional[int] = None,
+        max_chunk_bytes: Optional[int] = None,
+        queue_size: Optional[int] = None,
+        thread_count: Optional[int] = None,
+        refresh: bool = False,
+        max_retries: Optional[int] = None,
+        initial_backoff: Optional[int] = None,
+        max_backoff: Optional[int] = None,
+        raise_on_exception: Optional[bool] = None,
+        raise_on_error: Optional[bool] = None,
+    ) -> None:
         """
         Pull sync data from generator to Elasticsearch.
         """
         try:
-            self._bulk(index, docs)
+            self._bulk(
+                index,
+                docs,
+                chunk_size=chunk_size,
+                max_chunk_bytes=max_chunk_bytes,
+                queue_size=queue_size,
+                thread_count=thread_count,
+                refresh=refresh,
+                max_retries=max_retries,
+                initial_backoff=initial_backoff,
+                max_backoff=max_backoff,
+                raise_on_exception=raise_on_exception,
+                raise_on_error=raise_on_error,
+            )
         except Exception as e:
             logger.exception(f"Exception {e}")
             raise
