@@ -1028,7 +1028,7 @@ class Sync(Base):
                 f"Elastic: [{self.es.doc_count:,}] ...\n"
             )
             sys.stdout.flush()
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
 
 
 @click.command()

@@ -25,7 +25,9 @@ class Country(Base):
     __table_args__ = (UniqueConstraint("name", "continent_id"),)
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     name = sa.Column(sa.String, nullable=False)
-    continent_id = sa.Column(sa.Integer, sa.ForeignKey(Continent.id))
+    continent_id = sa.Column(
+        sa.Integer, sa.ForeignKey(Continent.id, ondelete="CASCADE")
+    )
     continent = sa.orm.relationship(
         Continent, backref=sa.orm.backref("continents")
     )
@@ -38,7 +40,7 @@ class City(Base):
     name = sa.Column(sa.String, nullable=False)
     country_id = sa.Column(
         sa.Integer,
-        sa.ForeignKey(Country.id),
+        sa.ForeignKey(Country.id, ondelete="CASCADE"),
     )
     country = sa.orm.relationship(
         Country,
@@ -60,7 +62,7 @@ class Author(Base):
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     name = sa.Column(sa.String, nullable=False)
     date_of_birth = sa.Column(sa.DateTime, nullable=True)
-    city_id = sa.Column(sa.Integer, sa.ForeignKey(City.id))
+    city_id = sa.Column(sa.Integer, sa.ForeignKey(City.id, ondelete="CASCADE"))
     city = sa.orm.relationship(
         City,
         backref=sa.orm.backref("city"),
@@ -98,7 +100,9 @@ class Book(Base):
     copyright = sa.Column(sa.String, nullable=True)
     tags = sa.Column(sa.dialects.postgresql.JSONB, nullable=True)
     doc = sa.Column(sa.dialects.postgresql.JSONB, nullable=True)
-    publisher_id = sa.Column(sa.Integer, sa.ForeignKey(Publisher.id))
+    publisher_id = sa.Column(
+        sa.Integer, sa.ForeignKey(Publisher.id, ondelete="CASCADE")
+    )
     publisher = sa.orm.relationship(
         Publisher,
         backref=sa.orm.backref("publishers"),
@@ -109,7 +113,9 @@ class Rating(Base):
     __tablename__ = "rating"
     __table_args__ = (UniqueConstraint("book_isbn"),)
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    book_isbn = sa.Column(sa.String, sa.ForeignKey(Book.isbn))
+    book_isbn = sa.Column(
+        sa.String, sa.ForeignKey(Book.isbn, ondelete="CASCADE")
+    )
     book = sa.orm.relationship(Book, backref=sa.orm.backref("ratings"))
     value = sa.Column(sa.Float, nullable=True)
 
@@ -118,12 +124,16 @@ class BookAuthor(Base):
     __tablename__ = "book_author"
     __table_args__ = (UniqueConstraint("book_isbn", "author_id"),)
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    book_isbn = sa.Column(sa.String, sa.ForeignKey(Book.isbn))
+    book_isbn = sa.Column(
+        sa.String, sa.ForeignKey(Book.isbn, ondelete="CASCADE")
+    )
     book = sa.orm.relationship(
         Book,
         backref=sa.orm.backref("book_author_books"),
     )
-    author_id = sa.Column(sa.Integer, sa.ForeignKey(Author.id))
+    author_id = sa.Column(
+        sa.Integer, sa.ForeignKey(Author.id, ondelete="CASCADE")
+    )
     author = sa.orm.relationship(
         Author,
         backref=sa.orm.backref("authors"),
@@ -134,12 +144,16 @@ class BookSubject(Base):
     __tablename__ = "book_subject"
     __table_args__ = (UniqueConstraint("book_isbn", "subject_id"),)
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    book_isbn = sa.Column(sa.String, sa.ForeignKey(Book.isbn))
+    book_isbn = sa.Column(
+        sa.String, sa.ForeignKey(Book.isbn, ondelete="CASCADE")
+    )
     book = sa.orm.relationship(
         Book,
         backref=sa.orm.backref("book_subject_books"),
     )
-    subject_id = sa.Column(sa.Integer, sa.ForeignKey(Subject.id))
+    subject_id = sa.Column(
+        sa.Integer, sa.ForeignKey(Subject.id, ondelete="CASCADE")
+    )
     subject = sa.orm.relationship(
         Subject,
         backref=sa.orm.backref("subjects"),
@@ -151,12 +165,16 @@ class BookLanguage(Base):
     __table_args__ = (UniqueConstraint("book_isbn", "language_id"),)
 
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    book_isbn = sa.Column(sa.String, sa.ForeignKey(Book.isbn))
+    book_isbn = sa.Column(
+        sa.String, sa.ForeignKey(Book.isbn, ondelete="CASCADE")
+    )
     book = sa.orm.relationship(
         Book,
         backref=sa.orm.backref("book_language_books"),
     )
-    language_id = sa.Column(sa.Integer, sa.ForeignKey(Language.id))
+    language_id = sa.Column(
+        sa.Integer, sa.ForeignKey(Language.id, ondelete="CASCADE")
+    )
     language = sa.orm.relationship(
         Language,
         backref=sa.orm.backref("languages"),
@@ -168,12 +186,16 @@ class BookShelf(Base):
     __table_args__ = (UniqueConstraint("book_isbn", "shelf_id"),)
 
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    book_isbn = sa.Column(sa.String, sa.ForeignKey(Book.isbn))
+    book_isbn = sa.Column(
+        sa.String, sa.ForeignKey(Book.isbn, ondelete="CASCADE")
+    )
     book = sa.orm.relationship(
         Book,
         backref=sa.orm.backref("book_bookshelf_books"),
     )
-    shelf_id = sa.Column(sa.Integer, sa.ForeignKey(Shelf.id))
+    shelf_id = sa.Column(
+        sa.Integer, sa.ForeignKey(Shelf.id, ondelete="CASCADE")
+    )
     shelf = sa.orm.relationship(Shelf, backref=sa.orm.backref("shelves"))
 
 
