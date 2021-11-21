@@ -132,7 +132,6 @@ class ElasticHelper(object):
                 refresh=refresh,
                 raise_on_exception=raise_on_exception,
                 raise_on_error=raise_on_error,
-                ignore_status=[404],
             ):
                 self.doc_count += 1
 

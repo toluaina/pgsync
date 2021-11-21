@@ -8,6 +8,7 @@ import os
 import pprint
 import re
 import sys
+import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import AnyStr, Generator, List, Optional, Set
@@ -427,7 +428,6 @@ class Sync(Base):
             #    primary key has changed
             #   2.1) This is crucial otherwise we can have the old
             #        and new document in Elasticsearch at the same time
-            docs: list = []
             for payload in payloads:
                 payload_data: dict = self._payload_data(payload)
                 primary_values: list = [
@@ -462,10 +462,18 @@ class Sync(Base):
                         doc["_routing"] = old_values[self.routing]
                     if self.es.major_version < 7:
                         doc["_type"] = "_doc"
-                    docs.append(doc)
 
-            if docs:
-                self.es.bulk(self.index, docs)
+                    try:
+                        self.es.bulk(
+                            self.index,
+                            [doc],
+                            raise_on_exception=False,
+                            raise_on_error=False,
+                        )
+                    except Exception as e:
+                        logger.warning(
+                            f"delete_op: An exception was raised: {e}"
+                        )
 
         else:
 
@@ -549,7 +557,6 @@ class Sync(Base):
         # when deleting a root node, just delete the doc in Elasticsearch
         if node.table == root.table:
 
-            docs: list = []
             for payload in payloads:
                 payload_data: dict = self._payload_data(payload)
                 root_primary_values: list = [
@@ -564,9 +571,16 @@ class Sync(Base):
                     doc["_routing"] = payload_data[self.routing]
                 if self.es.major_version < 7:
                     doc["_type"] = "_doc"
-                docs.append(doc)
-            if docs:
-                self.es.bulk(self.index, docs)
+                # we can get a 404 here if we are syncing too fast
+                try:
+                    self.es.bulk(
+                        self.index,
+                        [doc],
+                        raise_on_exception=False,
+                        raise_on_error=False,
+                    )
+                except Exception as e:
+                    logger.warning(f"delete_op: An exception was raised: {e}")
 
         else:
 
@@ -870,6 +884,7 @@ class Sync(Base):
         Pull sync data from generator to Elasticsearch.
         """
         try:
+            # self.es.refresh(self.index)
             self.es.bulk(self.index, docs)
         except Exception as e:
             logger.exception(f"Exception {e}")
