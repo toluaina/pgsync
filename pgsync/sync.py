@@ -76,6 +76,7 @@ class Sync(Base):
         self.plugins: list = document.get("plugins", [])
         self.nodes: dict = document.get("nodes", {})
         self.setting: dict = document.get("setting")
+        self.mapping: dict = document.get("mapping")
         self.routing: str = document.get("routing")
         super().__init__(
             document.get("database", self.index), verbose=verbose, **kwargs
@@ -181,6 +182,7 @@ class Sync(Base):
             self.index,
             root,
             setting=self.setting,
+            mapping=self.mapping,
             routing=self.routing,
         )
 

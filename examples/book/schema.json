@@ -2,6 +2,11 @@
     {
         "database": "book",
         "index": "book",
+        "mapping": {
+            "authors": {
+                "type": "nested"
+            }
+        },
         "setting": {
             "analysis": {
                 "analyzer": {

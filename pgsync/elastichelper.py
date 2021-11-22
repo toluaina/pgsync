@@ -225,6 +225,7 @@ class ElasticHelper(object):
         index: str,
         node: None,
         setting: Optional[dict] = None,
+        mapping: Optional[dict] = None,
         routing: Optional[str] = None,
     ) -> None:
         """Create Elasticsearch setting and mapping if required."""
@@ -235,10 +236,12 @@ class ElasticHelper(object):
             if setting:
                 body.update(**{"settings": {"index": setting}})
 
-            mapping: dict = self._build_mapping(node, routing)
             if mapping:
-                body.update(**mapping)
-
+                body.update(**{"mappings": {"properties": mapping}})
+            else:
+                mapping: dict = self._build_mapping(node, routing)
+                if mapping:
+                    body.update(**mapping)
             try:
                 response = self.__es.indices.create(
                     index=index,
