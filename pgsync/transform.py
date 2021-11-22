@@ -181,9 +181,9 @@ def get_private_keys(primary_keys):
                     for _v in v:
                         if _v not in target4[key][k]:
                             target4[key][k].append(_v)
-                    target4[key][k] = sorted(target4[key][k])
-
+                    target4[key][k] = target4[key][k]
                 else:
                     if v not in target4[key][k]:
                         target4[key][k].append(v)
+            target4[key][k] = sorted(target4[key][k])
     return target4
