@@ -83,6 +83,8 @@ ELASTICSEARCH_RAISE_ON_EXCEPTION = env.bool(
 ELASTICSEARCH_RAISE_ON_ERROR = env.bool(
     "ELASTICSEARCH_RAISE_ON_ERROR", default=True
 )
+ELASTICSEARCH_API_KEY_ID = env.str("ELASTICSEARCH_API_KEY_ID", default=None)
+ELASTICSEARCH_API_KEY = env.str("ELASTICSEARCH_API_KEY", default=None)
 
 # Postgres:
 PG_HOST = env.str("PG_HOST", default="localhost")

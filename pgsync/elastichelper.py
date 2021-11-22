@@ -16,6 +16,8 @@ from .constants import (
 )
 from .node import Node, traverse_post_order
 from .settings import (
+    ELASTICSEARCH_API_KEY,
+    ELASTICSEARCH_API_KEY_ID,
     ELASTICSEARCH_AWS_HOSTED,
     ELASTICSEARCH_AWS_REGION,
     ELASTICSEARCH_CA_CERTS,
@@ -255,12 +257,12 @@ class ElasticHelper(object):
                 f"created setting: {self.__es.indices.get_settings(index)}"
             )
 
-    def _build_mapping(self, root: Node, routing: str):
+    def _build_mapping(self, root: Node, routing: str) -> Optional[dict]:
         """Get the Elasticsearch mapping from the schema transform."""
         for node in traverse_post_order(root):
 
-            rename = node.transform.get("rename", {})
-            mapping = node.transform.get("mapping", {})
+            rename: dict = node.transform.get("rename", {})
+            mapping: dict = node.transform.get("mapping", {})
 
             for key, value in mapping.items():
                 column: str = rename.get(key, key)
@@ -329,4 +331,5 @@ def get_elasticsearch_client(url: str) -> Elasticsearch:
             ca_certs=ELASTICSEARCH_CA_CERTS,
             client_cert=ELASTICSEARCH_CLIENT_CERT,
             client_key=ELASTICSEARCH_CLIENT_KEY,
+            api_key=(ELASTICSEARCH_API_KEY_ID, ELASTICSEARCH_API_KEY),
         )

@@ -1,5 +1,6 @@
 """PGSync transform."""
 import logging
+from typing import Optional
 
 from six import string_types
 
@@ -8,21 +9,21 @@ from .constants import CONCAT_TRANSFORM, RENAME_TRANSFORM, REPLACE_TRANSFORM
 logger = logging.getLogger(__name__)
 
 
-def _get_transform(nodes, key):
-    transform_node = {}
+def _get_transform(nodes: dict, key: str) -> dict:
+    transform_node: dict = {}
     if "transform" in nodes.keys():
         if key in nodes["transform"]:
             transform_node = nodes["transform"][key]
     for child in nodes.get("children", {}):
-        txfm_node = _get_transform(child, key)
-        if txfm_node:
-            transform_node[child.get("label", child["table"])] = txfm_node
+        node: dict = _get_transform(child, key)
+        if node:
+            transform_node[child.get("label", child["table"])] = node
     return transform_node
 
 
 def _rename_fields(data, nodes, result=None):
     """Rename keys in a nested dictionary based on transform_node."""
-    result = result or {}
+    result: dict = result or {}
     if isinstance(data, dict):
         for key, value in data.items():
             if isinstance(value, dict):
@@ -50,18 +51,18 @@ def _rename_fields(data, nodes, result=None):
     return result
 
 
-def _concat_fields(data, nodes, result=None):
+def _concat_fields(data, nodes: dict, result: Optional[dict] = None) -> dict:
     """Concatenate fields."""
-    result = result or {}
+    result: dict = result or {}
     if isinstance(nodes, list):
         for node in nodes:
             _concat_fields(data, node, result=result)
 
     if isinstance(data, dict):
         if "columns" in nodes:
-            values = [data.get(key, key) for key in nodes["columns"]]
-            delimiter = nodes.get("delimiter", "")
-            destination = nodes["destination"]
+            values: list = [data.get(key, key) for key in nodes["columns"]]
+            delimiter: str = nodes.get("delimiter", "")
+            destination: str = nodes["destination"]
             data[destination] = f"{delimiter}".join(
                 map(str, filter(None, values))
             )
