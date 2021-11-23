@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """Main module."""
+import asyncio
 import json
 import logging
 import os
 import pprint
 import re
-import select
 import sys
-import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import AnyStr, Generator, List, Optional, Set
@@ -49,12 +48,11 @@ from .querybuilder import QueryBuilder
 from .redisqueue import RedisQueue
 from .settings import (
     CHECKPOINT_PATH,
-    POLL_TIMEOUT,
     REDIS_POLL_INTERVAL,
     REPLICATION_SLOT_CLEANUP_INTERVAL,
 )
 from .transform import get_private_keys, transform
-from .utils import get_config, show_settings, threaded, Timer
+from .utils import get_config, show_settings, Timer
 
 logger = logging.getLogger(__name__)
 
@@ -422,7 +420,6 @@ class Sync(Base):
             #    primary key has changed
             #   2.1) This is crucial otherwise we can have the old
             #        and new document in Elasticsearch at the same time
-            docs: list = []
             for payload in payloads:
                 payload_data: dict = self._payload_data(payload)
                 primary_values: list = [
@@ -457,10 +454,13 @@ class Sync(Base):
                         doc["_routing"] = old_values[self.routing]
                     if self.es.major_version < 7 and not self.es.opensearch:
                         doc["_type"] = "_doc"
-                    docs.append(doc)
 
-            if docs:
-                self.es.bulk(self.index, docs)
+                    self.es.bulk(
+                        self.index,
+                        [doc],
+                        raise_on_exception=False,
+                        raise_on_error=False,
+                    )
 
         else:
 
@@ -544,7 +544,6 @@ class Sync(Base):
         # when deleting a root node, just delete the doc in Elasticsearch
         if node.table == root.table:
 
-            docs: list = []
             for payload in payloads:
                 payload_data: dict = self._payload_data(payload)
                 root_primary_values: list = [
@@ -559,9 +558,13 @@ class Sync(Base):
                     doc["_routing"] = payload_data[self.routing]
                 if self.es.major_version < 7 and not self.es.opensearch:
                     doc["_type"] = "_doc"
-                docs.append(doc)
-            if docs:
-                self.es.bulk(self.index, docs)
+
+                self.es.bulk(
+                    self.index,
+                    [doc],
+                    raise_on_exception=False,
+                    raise_on_error=False,
+                )
 
         else:
 
@@ -599,7 +602,6 @@ class Sync(Base):
 
         if node.table == root.table:
 
-            docs: list = []
             for doc_id in self.es._search(self.index, node.table):
                 doc: dict = {
                     "_id": doc_id,
@@ -608,9 +610,13 @@ class Sync(Base):
                 }
                 if self.es.major_version < 7 and not self.es.opensearch:
                     doc["_type"] = "_doc"
-                docs.append(doc)
-            if docs:
-                self.es.bulk(self.index, docs)
+
+                self.es.bulk(
+                    self.index,
+                    [doc],
+                    raise_on_exception=False,
+                    raise_on_error=False,
+                )
 
         else:
 
@@ -876,51 +882,40 @@ class Sync(Base):
             fp.write(f"{value}\n")
         self._checkpoint: int = value
 
-    @threaded
-    def poll_redis(self) -> None:
+    async def poll_redis(self) -> None:
         """Consumer which polls Redis continuously."""
         while True:
             payloads: dict = self.redis.bulk_pop()
             if payloads:
                 logger.debug(f"poll_redis: {payloads}")
                 self.count["redis"] += len(payloads)
-                self.on_publish(payloads)
-            time.sleep(REDIS_POLL_INTERVAL)
+                await self.on_publish(payloads)
+            await asyncio.sleep(REDIS_POLL_INTERVAL)
 
-    @threaded
     def poll_db(self) -> None:
         """
-        Producer which polls Postgres continuously.
+        Producer which polls Postgres continuously when a notification is received.
+        NB: This is not a coroutine as it already runs in an event loop
 
         Receive a notification message from the channel we are listening on
         """
-        conn = self.engine.connect().connection
-        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-        cursor = conn.cursor()
         channel: str = self.database
-        cursor.execute(f'LISTEN "{channel}"')
-        logger.debug(f'Listening for notifications on channel "{channel}"')
 
-        while True:
-            # NB: consider reducing POLL_TIMEOUT to increase throughout
-            if select.select([conn], [], [], POLL_TIMEOUT) == ([], [], []):
-                continue
+        try:
+            self.conn.poll()
+        except OperationalError as e:
+            logger.fatal(f"OperationalError: {e}")
+            os._exit(-1)
 
-            try:
-                conn.poll()
-            except OperationalError as e:
-                logger.fatal(f"OperationalError: {e}")
-                os._exit(-1)
+        while self.conn.notifies:
+            notification: AnyStr = self.conn.notifies.pop(0)
+            if notification.channel == channel:
+                payload = json.loads(notification.payload)
+                self.redis.push(payload)
+                logger.debug(f"on_notify: {payload}")
+                self.count["db"] += 1
 
-            while conn.notifies:
-                notification: AnyStr = conn.notifies.pop(0)
-                if notification.channel == channel:
-                    payload = json.loads(notification.payload)
-                    self.redis.push(payload)
-                    logger.debug(f"on_notify: {payload}")
-                    self.count["db"] += 1
-
-    def on_publish(self, payloads: list) -> None:
+    async def on_publish(self, payloads: list) -> None:
         """
         Redis publish event handler.
 
@@ -978,8 +973,7 @@ class Sync(Base):
         self.logical_slot_changes(txmin=txmin, txmax=txmax)
         self._truncate: bool = True
 
-    @threaded
-    def truncate_slots(self) -> None:
+    async def truncate_slots(self) -> None:
         """Truncate the logical replication slot."""
         while True:
             if self._truncate and (
@@ -990,10 +984,9 @@ class Sync(Base):
                 logger.debug(f"Truncating replication slot: {self.__name}")
                 self.logical_slot_get_changes(self.__name, upto_nchanges=None)
                 self._last_truncate_timestamp = datetime.now()
-            time.sleep(0.1)
+            await asyncio.sleep(0.1)
 
-    @threaded
-    def status(self):
+    async def status(self):
         while True:
             sys.stdout.write(
                 f"Syncing {self.database} "
@@ -1004,7 +997,7 @@ class Sync(Base):
                 f"Elastic: [{self.es.doc_count:,}] ...\n"
             )
             sys.stdout.flush()
-            time.sleep(1)
+            await asyncio.sleep(0.5)
 
     def receive(self) -> None:
         """
@@ -1016,22 +1009,18 @@ class Sync(Base):
         2. Pull everything so far and also replay replication logs.
         3. Consume all changes from Redis.
         """
-        # start a background worker producer thread to poll the db and populate
-        # the Redis cache
-        self.poll_db()
-
-        # sync up to current transaction_id
-        self.pull()
-
-        # start a background worker consumer thread to
-        # poll Redis and populate Elasticsearch
-        self.poll_redis()
-
-        # start a background worker thread to cleanup the replication slot
-        self.truncate_slots()
-
-        # start a background worker thread to show status
-        self.status()
+        channel: str = self.database
+        cursor = self.conn.cursor()
+        cursor.execute(f'LISTEN "{channel}"')
+        loop = asyncio.get_event_loop()
+        loop.add_reader(self.conn, self.poll_db)
+        tasks = [
+            loop.create_task(self.poll_redis()),
+            loop.create_task(self.truncate_slots()),
+            loop.create_task(self.status()),
+        ]
+        loop.run_until_complete(asyncio.wait(tasks))
+        loop.close()
 
 
 @click.command()
@@ -1124,6 +1113,7 @@ def main(
             sync = Sync(document, verbose=verbose, **kwargs)
             sync.pull()
             if daemon:
+                sync.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
                 sync.receive()
 
 

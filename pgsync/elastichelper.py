@@ -113,9 +113,9 @@ class ElasticHelper(object):
                 raise_on_exception=raise_on_exception,
                 raise_on_error=raise_on_error,
             )
-        except Exception as e:
-            logger.exception(f"Exception {e}")
-            raise
+        except Exception:
+            if raise_on_exception:
+                raise
 
     def _bulk(
         self,

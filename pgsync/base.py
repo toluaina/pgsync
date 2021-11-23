@@ -61,6 +61,7 @@ class Base(object):
         self.models: dict = {}
         self.__metadata: dict = {}
         self.verbose: bool = verbose
+        self._conn = None
 
     def connect(self) -> None:
         """Connect to database."""
@@ -170,6 +171,14 @@ class Base(object):
     def engine(self):
         """Get the database engine."""
         return self.__engine
+
+    @property
+    def conn(self):
+        return self._conn
+
+    def set_isolation_level(self, isolation_level):
+        self._conn = self.__engine.connect().connection
+        self._conn.set_isolation_level(isolation_level)
 
     @property
     def schemas(self):
