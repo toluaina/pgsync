@@ -106,7 +106,7 @@ def create_view(
     schema: str,
     tables: list,
     user_defined_fkey_tables: dict,
-    base: "Base",
+    base: "Base",  # noqa F821
 ):
     """
     View describing primary_keys and foreign_keys for each table
