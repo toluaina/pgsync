@@ -8,11 +8,11 @@ attrs==21.2.0
     # via pytest
 backports.entry-points-selectable==1.1.1
     # via virtualenv
-black==21.10b0
+black==21.12b0
     # via -r requirements/base.in
-boto3==1.20.5
+boto3==1.20.20
     # via -r requirements/base.in
-botocore==1.23.5
+botocore==1.23.20
     # via
     #   boto3
     #   s3transfer
@@ -26,17 +26,19 @@ certifi==2021.10.8
     #   requests
 cfgv==3.3.1
     # via pre-commit
-charset-normalizer==2.0.7
+charset-normalizer==2.0.9
     # via requests
 click==8.0.3
     # via
     #   -r requirements/base.in
     #   black
     #   pip-tools
-coverage[toml]==6.1.2
+coverage[toml]==6.2
     # via
     #   -r requirements/dev.in
     #   pytest-cov
+deprecated==1.2.13
+    # via redis
 distlib==0.3.3
     # via virtualenv
 elasticsearch==7.13.4
@@ -45,11 +47,11 @@ elasticsearch==7.13.4
     #   elasticsearch-dsl
 elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
-environs==9.3.4
+environs==9.3.5
     # via -r requirements/base.in
-faker==9.8.1
+faker==9.9.0
     # via -r requirements/base.in
-filelock==3.3.2
+filelock==3.4.0
     # via virtualenv
 flake8==4.0.1
     # via
@@ -69,7 +71,7 @@ flake8-todo==0.7
     # via -r requirements/test.in
 greenlet==1.1.2
     # via sqlalchemy
-identify==2.3.5
+identify==2.4.0
     # via pre-commit
 idna==3.3
     # via requests
@@ -79,19 +81,19 @@ jmespath==0.10.0
     # via
     #   boto3
     #   botocore
-marshmallow==3.14.0
+marshmallow==3.14.1
     # via environs
 mccabe==0.6.1
     # via flake8
 mock==4.0.3
     # via -r requirements/test.in
-more-itertools==8.11.0
+more-itertools==8.12.0
     # via pytest
 mypy-extensions==0.4.3
     # via black
 nodeenv==1.6.0
     # via pre-commit
-packaging==21.2
+packaging==21.3
     # via
     #   pytest
     #   pytest-sugar
@@ -107,7 +109,7 @@ platformdirs==2.4.0
     #   virtualenv
 pluggy==0.13.1
     # via pytest
-pre-commit==2.15.0
+pre-commit==2.16.0
     # via -r requirements/dev.in
 psycopg2-binary==2.9.2
     # via -r requirements/base.in
@@ -123,7 +125,7 @@ pydocstyle==6.1.1
     # via flake8-docstrings
 pyflakes==2.4.0
     # via flake8
-pyparsing==2.4.7
+pyparsing==3.0.6
     # via packaging
 pytest==5.3.5
     # via
@@ -148,10 +150,8 @@ python-dotenv==0.19.2
     # via environs
 pyyaml==6.0
     # via pre-commit
-redis==3.5.3
+redis==4.0.2
     # via -r requirements/base.in
-regex==2021.11.10
-    # via black
 requests==2.26.0
     # via requests-aws4auth
 requests-aws4auth==1.1.1
@@ -166,7 +166,7 @@ six==1.16.0
     #   python-dateutil
     #   requests-aws4auth
     #   virtualenv
-snowballstemmer==2.1.0
+snowballstemmer==2.2.0
     # via pydocstyle
 sqlalchemy==1.4.27
     # via -r requirements/base.in
@@ -185,7 +185,7 @@ tomli==1.2.2
     #   black
     #   coverage
     #   pep517
-typing-extensions==3.10.0.2
+typing-extensions==4.0.1
     # via black
 urllib3==1.26.7
     # via
@@ -198,6 +198,8 @@ wcwidth==0.2.5
     # via pytest
 wheel==0.37.0
     # via pip-tools
+wrapt==1.13.3
+    # via deprecated
 
 # The following packages are considered to be unsafe in a requirements file:
 # pip

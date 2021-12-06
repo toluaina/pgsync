@@ -8,7 +8,6 @@ from typing import List, Optional, Tuple
 
 import sqlalchemy as sa
 import sqlparse
-from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import sessionmaker
 
 from .constants import (
@@ -982,7 +981,7 @@ def compiled_query(
     """Compile an SQLAlchemy query with an optional label."""
     query: str = str(
         query.compile(
-            dialect=postgresql.dialect(),
+            dialect=sa.dialects.postgresql.dialect(),
             compile_kwargs={"literal_binds": literal_binds},
         )
     )
