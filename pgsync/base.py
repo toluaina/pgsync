@@ -8,6 +8,7 @@ from typing import List, Optional, Tuple
 
 import sqlalchemy as sa
 import sqlparse
+from sqlalchemy.dialects import postgresql  # noqa
 from sqlalchemy.orm import sessionmaker
 
 from .constants import (
