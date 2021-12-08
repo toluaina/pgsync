@@ -122,10 +122,15 @@ $ curl -X GET http://[elasticsearch host]:9201/reservations/_search?pretty=true
     ```max_slot_wal_keep_size = 100GB```
 
 - Installation
-  - ```$ pip install pgsync``` 
+  - Install PGSync from pypi using pip
+    - ```$ pip install pgsync``` 
   - Create a [schema.json](https://github.com/toluaina/pgsync/blob/master/examples/airbnb/schema.json) for you document representation
-  - Bootstrap the database (one time only) **_```bootstrap --config schema.json```_**
-  - Run the program with **_```pgsync --config schema.json```_** or as a daemon **_```pgsync --config schema.json -d```_**
+  - Bootstrap the database (one time only)
+    - ```bootstrap --config schema.json```
+  - Run the program with 
+    - ```pgsync --config schema.json```
+  - Or as a daemon
+    - ```pgsync --config schema.json -d```
 
 
 #### Features
