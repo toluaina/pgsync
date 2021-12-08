@@ -115,7 +115,12 @@ $ curl -X GET http://[elasticsearch host]:9201/reservations/_search?pretty=true
     ```wal_level = logical```
 
     ```max_replication_slots = 1```
-  
+
+  - To prevent your server logs from growing too large e.g when running on cloud infrastructure where there is a cost implication.
+    You can optionally impose a ceiling on the replication slot size using [max_slot_wal_keep_size](https://www.postgresql.org/docs/13/runtime-config-replication.html)
+
+    ```max_slot_wal_keep_size = 100GB```
+
 - Installation
   - ```$ pip install pgsync``` 
   - Create a [schema.json](https://github.com/toluaina/pgsync/blob/master/examples/airbnb/schema.json) for you document representation
