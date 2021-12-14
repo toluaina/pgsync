@@ -26,7 +26,9 @@ def _rename_fields(data, nodes, result=None):
     result: dict = result or {}
     if isinstance(data, dict):
         for key, value in data.items():
-            if isinstance(value, dict):
+            if isinstance(nodes.get(key), str):
+                key = nodes[key]
+            elif isinstance(value, dict):
                 if key in nodes:
                     value = _rename_fields(value, nodes[key])
             elif (

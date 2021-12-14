@@ -109,6 +109,8 @@ class TestTransform(object):
                 "id",
                 "code",
                 "level",
+                "foo",
+                "bar",
             ],
             "children": [
                 {
@@ -143,6 +145,8 @@ class TestTransform(object):
                     "id": "my_id",
                     "code": "my_code",
                     "level": "levelup",
+                    "foo": "foos",
+                    "bar": "bars",
                 }
             },
         }
@@ -151,6 +155,8 @@ class TestTransform(object):
             "level": 1,
             "id": "007",
             "code": "be",
+            "foo": ["a", "b"],
+            "bar": {"a": 1, "b": 2},
             "Child1": [
                 {"column_1": 2, "column_2": "aa"},
                 {"column_1": 3, "column_2": "bb"},
@@ -173,6 +179,8 @@ class TestTransform(object):
             "levelup": 1,
             "my_code": "be",
             "my_id": "007",
+            "foos": ["a", "b"],
+            "bars": {"a": 1, "b": 2},
         }
 
     def test_rename_fields(self):
