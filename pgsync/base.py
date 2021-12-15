@@ -808,9 +808,9 @@ def subtransactions(session):
     return ControlledExecution(session)
 
 
-def _get_foreign_keys(model_a, model_b):
+def _get_foreign_keys(model_a, model_b) -> dict:
 
-    foreign_keys = defaultdict(list)
+    foreign_keys: dict = defaultdict(list)
 
     if model_a.foreign_keys:
 
