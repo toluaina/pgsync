@@ -63,3 +63,4 @@ class TestSync(object):
                     )
                     mock_get.assert_called_once()
                     mock_sync.assert_called_once()
+        sync.es.close()

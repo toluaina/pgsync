@@ -67,6 +67,10 @@ class ElasticHelper(object):
             self.major_version: int = 0
         self.doc_count: int = 0
 
+    def close(self) -> None:
+        """Close transport connection."""
+        self.__es.transport.close()
+
     def teardown(self, index: str) -> None:
         """
         Teardown the Elasticsearch index.

@@ -89,6 +89,7 @@ class TestRoot(object):
         sync.redis._delete()
         session.connection().engine.connect().close()
         session.connection().engine.dispose()
+        sync.es.close()
 
     def test_sync2(self, sync, data):
         """Test the sync with a root only node."""
@@ -411,6 +412,7 @@ class TestRoot(object):
             {"_meta": {}, "isbn": "ghi", "title": "The Rabbit Club"},
         ]
         assert_resync_empty(sync, document.get("node", {}))
+        sync.es.close()
 
     # TODO: Add another test like this and change
     # both primary key and non primary key column
@@ -477,6 +479,7 @@ class TestRoot(object):
             {"_meta": {}, "isbn": "ghi", "title": "The Rabbit Club"},
         ]
         assert_resync_empty(sync, document.get("node", {}))
+        sync.es.close()
 
     def test_insert_non_concurrent(self, data, book_cls):
         """Test sync insert and then sync in non-concurrent mode."""
@@ -516,6 +519,7 @@ class TestRoot(object):
             {"_meta": {}, "isbn": "xyz", "title": "Encyclopedia"},
         ]
         assert_resync_empty(sync, document.get("node", {}))
+        sync.es.close()
 
     def test_update_non_concurrent(self, data, book_cls):
         """Test sync update and then sync in non-concurrent mode."""
@@ -555,6 +559,7 @@ class TestRoot(object):
             {"_meta": {}, "isbn": "ghi", "title": "The Rabbit Club"},
         ]
         assert_resync_empty(sync, document.get("node", {}))
+        sync.es.close()
 
     def test_update_concurrent(self, data, book_cls):
         """Test sync update and then sync in concurrent mode."""
@@ -615,6 +620,7 @@ class TestRoot(object):
             {"_meta": {}, "isbn": "ghi", "title": "The Rabbit Club"},
         ]
         assert_resync_empty(sync, document.get("node", {}))
+        sync.es.close()
 
     def test_delete_concurrent(self, data, book_cls):
         """Test sync delete and then sync in concurrent mode."""
@@ -672,6 +678,7 @@ class TestRoot(object):
             {"_meta": {}, "isbn": "ghi", "title": "The Rabbit Club"},
         ]
         assert_resync_empty(sync, document.get("node", {}))
+        sync.es.close()
 
     def test_truncate(self, data, book_cls):
         """Test truncate."""

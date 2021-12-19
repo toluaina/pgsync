@@ -94,6 +94,7 @@ class TestParentSingleChildFkOnChild(object):
         sync.redis._delete()
         session.connection().engine.connect().close()
         session.connection().engine.dispose()
+        sync.es.close()
 
     def test_relationship_object_one_to_one(self, sync, data):
         nodes = {
@@ -468,6 +469,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
+        sync.es.close()
         with pytest.raises(RelationshipTypeError) as excinfo:
             Tree(sync).build(nodes)
         assert 'Relationship type "qwerty" is invalid' in str(excinfo.value)
@@ -485,6 +487,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
+        sync.es.close()
         with pytest.raises(RelationshipVariantError) as excinfo:
             Tree(sync).build(nodes)
         assert 'Relationship variant "abcdefg" is invalid' in str(
@@ -501,6 +504,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
+        sync.es.close()
         with pytest.raises(RelationshipAttributeError) as excinfo:
             Tree(sync).build(nodes)
         assert f"Relationship attribute {set(['foo'])} is invalid" in str(
@@ -660,6 +664,7 @@ class TestParentSingleChildFkOnChild(object):
             },
         ]
         assert_resync_empty(sync, document.get("node", {}))
+        sync.es.close()
 
     # TODO: Add another test like this and change
     # both primary key and non pkey column
@@ -779,6 +784,7 @@ class TestParentSingleChildFkOnChild(object):
             },
         ]
         assert_resync_empty(sync, document.get("node", {}))
+        sync.es.close()
 
     def test_insert_non_concurrent(self, data, book_cls, rating_cls):
         """Test sync insert and then sync in non-concurrent mode."""
@@ -878,6 +884,7 @@ class TestParentSingleChildFkOnChild(object):
             },
         ]
         assert_resync_empty(sync, document.get("node", {}))
+        sync.es.close()
 
     def test_update_non_primary_key_non_concurrent(
         self, data, book_cls, rating_cls
@@ -966,6 +973,7 @@ class TestParentSingleChildFkOnChild(object):
             },
         ]
         assert_resync_empty(sync, document.get("node", {}))
+        sync.es.close()
 
     def test_update_non_primary_key_concurrent(
         self, data, book_cls, rating_cls
@@ -1071,6 +1079,7 @@ class TestParentSingleChildFkOnChild(object):
             },
         ]
         assert_resync_empty(sync, document.get("node", {}))
+        sync.es.close()
 
     def test_delete_concurrent(self, data, book_cls, rating_cls):
         """Test sync delete and then sync in concurrent mode."""
@@ -1188,3 +1197,4 @@ class TestParentSingleChildFkOnChild(object):
             },
         ]
         assert_resync_empty(sync, document.get("node", {}))
+        sync.es.close()

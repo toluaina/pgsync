@@ -1,7 +1,6 @@
 -r base.in
 
-# Pin pytest to 5.4 - https://github.com/pytest-dev/pytest/issues/6931
-pytest<5.4 
+pytest
 pytest-cov
 pytest-runner
 pytest-mock

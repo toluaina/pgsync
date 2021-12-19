@@ -273,12 +273,14 @@ class TestNestedChildren(object):
 
         try:
             sync.es.teardown(index="testdb")
+            sync.es.close()
         except Exception:
             raise
 
         sync.redis._delete()
         session.connection().engine.connect().close()
         session.connection().engine.dispose()
+        sync.es.close()
 
     @pytest.fixture(scope="function")
     def nodes(self):
@@ -764,6 +766,7 @@ class TestNestedChildren(object):
             },
         ]
         assert_resync_empty(sync, nodes)
+        sync.es.close()
 
     def test_update_root(self, data, nodes, book_cls):
         document = {
@@ -851,6 +854,7 @@ class TestNestedChildren(object):
             }
         ]
         assert_resync_empty(sync, nodes)
+        sync.es.close()
 
     def test_delete_root(
         self,
@@ -1041,6 +1045,7 @@ class TestNestedChildren(object):
             },
         ]
         assert_resync_empty(sync, nodes)
+        sync.es.close()
 
     def test_insert_through_child_noop(self, sync, data):
         # insert a new through child with noop
@@ -1283,6 +1288,7 @@ class TestNestedChildren(object):
             },
         ]
         assert_resync_empty(sync, nodes)
+        sync.es.close()
 
     def test_update_through_child_op(
         self,
@@ -1296,7 +1302,6 @@ class TestNestedChildren(object):
         continent_cls,
     ):
         # update a new through child with op
-
         document = {
             "index": "testdb",
             "nodes": nodes,
@@ -1501,6 +1506,7 @@ class TestNestedChildren(object):
             },
         ]
         assert_resync_empty(sync, nodes)
+        sync.es.close()
 
     def test_delete_through_child_op(self, sync, data, nodes, book_author_cls):
         # delete a new through child with op
@@ -1660,6 +1666,7 @@ class TestNestedChildren(object):
             },
         ]
         assert_resync_empty(sync, nodes)
+        sync.es.close()
 
     def test_insert_nonthrough_child_noop(
         self,
@@ -1705,6 +1712,7 @@ class TestNestedChildren(object):
         assert len(docs) == 0
 
         assert_resync_empty(sync, nodes)
+        sync.es.close()
 
     def test_update_nonthrough_child_noop(self, data, nodes, shelf_cls):
         # update a new non-through child with noop
@@ -1737,6 +1745,7 @@ class TestNestedChildren(object):
         assert len(docs) == 0
 
         assert_resync_empty(sync, nodes)
+        sync.es.close()
 
     def test_delete_nonthrough_child_noop(self, data, nodes, shelf_cls):
         # delete a new non-through child with noop
@@ -1770,6 +1779,7 @@ class TestNestedChildren(object):
         assert len(docs) == 0
 
         assert_resync_empty(sync, nodes)
+        sync.es.close()
 
     def test_insert_nonthrough_child_op(self, sync, data):
         # insert a new non-through child with op
@@ -1935,6 +1945,7 @@ class TestNestedChildren(object):
         assert docs == []
         docs = search(sync.es, "testdb")
         assert_resync_empty(sync, nodes)
+        sync.es.close()
 
     def test_insert_deep_nested_fk_nonthrough_child_op(
         self,

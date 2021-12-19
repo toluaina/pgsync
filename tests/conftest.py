@@ -65,6 +65,7 @@ def sync():
     )
     _sync.engine.connect().close()
     _sync.engine.dispose()
+    _sync.session.close()
 
 
 def pytest_addoption(parser):

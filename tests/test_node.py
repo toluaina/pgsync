@@ -123,6 +123,7 @@ class TestNode(object):
                 assert node.table == "country"
             if i == 8:
                 assert node.table == "continent"
+        sync.es.close()
 
     def test_traverse_post_order(self, sync, nodes):
         tree = Tree(sync)
@@ -147,3 +148,4 @@ class TestNode(object):
                 assert node.table == "subject"
             if i == 8:
                 assert node.table == "book"
+        sync.es.close()
