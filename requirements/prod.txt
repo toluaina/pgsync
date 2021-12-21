@@ -6,9 +6,9 @@
 #
 black==21.12b0
     # via -r requirements/base.in
-boto3==1.20.24
+boto3==1.20.25
     # via -r requirements/base.in
-botocore==1.23.24
+botocore==1.23.25
     # via
     #   boto3
     #   s3transfer

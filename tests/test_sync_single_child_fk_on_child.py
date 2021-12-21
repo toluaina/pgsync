@@ -250,6 +250,7 @@ class TestParentSingleChildFkOnChild(object):
         }
         sync.nodes = nodes
         docs = [doc for doc in sync.sync()]
+        docs = sorted(docs, key=lambda k: k["_id"])
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
             "_meta": {"rating": {"id": [1]}},
