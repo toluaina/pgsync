@@ -4,13 +4,13 @@
 #
 #    pip-compile --output-file=requirements/test.txt requirements/test.in
 #
-attrs==21.2.0
+attrs==21.4.0
     # via pytest
 black==21.12b0
     # via -r requirements/base.in
-boto3==1.20.25
+boto3==1.20.26
     # via -r requirements/base.in
-botocore==1.23.25
+botocore==1.23.26
     # via
     #   boto3
     #   s3transfer
@@ -40,7 +40,7 @@ elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
 environs==9.3.5
     # via -r requirements/base.in
-faker==10.0.0
+faker==11.1.0
     # via -r requirements/base.in
 flake8==4.0.1
     # via
@@ -82,13 +82,14 @@ packaging==21.3
     # via
     #   pytest
     #   pytest-sugar
+    #   redis
 pathspec==0.9.0
     # via black
-platformdirs==2.4.0
+platformdirs==2.4.1
     # via black
 pluggy==1.0.0
     # via pytest
-psycopg2-binary==2.9.2
+psycopg2-binary==2.9.3
     # via -r requirements/base.in
 py==1.11.0
     # via pytest
@@ -125,9 +126,9 @@ python-dateutil==2.8.2
     #   faker
 python-dotenv==0.19.2
     # via environs
-redis==4.0.2
+redis==4.1.0
     # via -r requirements/base.in
-requests==2.26.0
+requests==2.27.0
     # via requests-aws4auth
 requests-aws4auth==1.1.1
     # via -r requirements/base.in
@@ -142,7 +143,7 @@ six==1.16.0
     #   requests-aws4auth
 snowballstemmer==2.2.0
     # via pydocstyle
-sqlalchemy==1.4.28
+sqlalchemy==1.4.29
     # via -r requirements/base.in
 sqlparse==0.4.2
     # via -r requirements/base.in

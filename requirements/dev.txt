@@ -4,15 +4,13 @@
 #
 #    pip-compile --output-file=requirements/dev.txt requirements/dev.in
 #
-attrs==21.2.0
+attrs==21.4.0
     # via pytest
-backports.entry-points-selectable==1.1.1
-    # via virtualenv
 black==21.12b0
     # via -r requirements/base.in
-boto3==1.20.25
+boto3==1.20.26
     # via -r requirements/base.in
-botocore==1.23.25
+botocore==1.23.26
     # via
     #   boto3
     #   s3transfer
@@ -49,9 +47,9 @@ elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
 environs==9.3.5
     # via -r requirements/base.in
-faker==10.0.0
+faker==11.1.0
     # via -r requirements/base.in
-filelock==3.4.0
+filelock==3.4.2
     # via virtualenv
 flake8==4.0.1
     # via
@@ -71,7 +69,7 @@ flake8-todo==0.7
     # via -r requirements/test.in
 greenlet==1.1.2
     # via sqlalchemy
-identify==2.4.0
+identify==2.4.1
     # via pre-commit
 idna==3.3
     # via requests
@@ -97,13 +95,14 @@ packaging==21.3
     # via
     #   pytest
     #   pytest-sugar
+    #   redis
 pathspec==0.9.0
     # via black
 pep517==0.12.0
     # via pip-tools
 pip-tools==6.4.0
     # via -r requirements/dev.in
-platformdirs==2.4.0
+platformdirs==2.4.1
     # via
     #   black
     #   virtualenv
@@ -111,7 +110,7 @@ pluggy==1.0.0
     # via pytest
 pre-commit==2.16.0
     # via -r requirements/dev.in
-psycopg2-binary==2.9.2
+psycopg2-binary==2.9.3
     # via -r requirements/base.in
 py==1.11.0
     # via pytest
@@ -150,9 +149,9 @@ python-dotenv==0.19.2
     # via environs
 pyyaml==6.0
     # via pre-commit
-redis==4.0.2
+redis==4.1.0
     # via -r requirements/base.in
-requests==2.26.0
+requests==2.27.0
     # via requests-aws4auth
 requests-aws4auth==1.1.1
     # via -r requirements/base.in
@@ -168,7 +167,7 @@ six==1.16.0
     #   virtualenv
 snowballstemmer==2.2.0
     # via pydocstyle
-sqlalchemy==1.4.28
+sqlalchemy==1.4.29
     # via -r requirements/base.in
 sqlparse==0.4.2
     # via -r requirements/base.in
@@ -194,9 +193,9 @@ urllib3==1.26.7
     #   botocore
     #   elasticsearch
     #   requests
-virtualenv==20.10.0
+virtualenv==20.13.0
     # via pre-commit
-wheel==0.37.0
+wheel==0.37.1
     # via pip-tools
 wrapt==1.13.3
     # via deprecated

@@ -392,6 +392,22 @@ class Base(object):
             pg_namespace = self.model("pg_namespace", "pg_catalog")
 
         alias = pg_class.alias("x")
+        inclause = []
+        for table in tables:
+            pairs = table.split(".")
+            if len(pairs) == 1:
+                inclause.append(
+                    self.__engine.dialect.identifier_preparer.quote(pairs[0])
+                )
+            elif len(pairs) == 2:
+                inclause.append(
+                    f"{pairs[0]}.{self.__engine.dialect.identifier_preparer.quote(pairs[-1])}"
+                )
+            else:
+                raise Exception(
+                    f"cannot determine schema and table from {table}"
+                )
+
         return (
             sa.select(
                 [
@@ -445,12 +461,7 @@ class Base(object):
                             sa.dialects.postgresql.REGCLASS,
                         ),
                         sa.Text,
-                    ).in_(
-                        map(
-                            self.__engine.dialect.identifier_preparer.quote,
-                            tables,
-                        )
-                    ),
+                    ).in_(inclause),
                     pg_attribute.c.attnum == sa.any_(pg_index.c.indkey),
                 ]
             )
