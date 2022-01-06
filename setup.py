@@ -24,7 +24,7 @@ DESCRIPTION = "Postgres to elasticsearch sync"
 URL = "https://github.com/toluaina/pgsync"
 AUTHOR = MAINTAINER = "Tolu Aina"
 AUTHOR_EMAIL = MAINTAINER_EMAIL = "toluaina@hotmail.com"
-PYTHON_REQUIRES = ">=3.6.0"
+PYTHON_REQUIRES = ">=3.7.0"
 VERSION = get_version()
 INSTALL_REQUIRES = []
 KEYWORDS = [
@@ -37,7 +37,6 @@ CLASSIFIERS = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Natural Language :: English",
-    "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",

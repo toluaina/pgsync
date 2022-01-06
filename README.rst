@@ -8,7 +8,7 @@ expose structured denormalized documents in `Elasticsearch <https://www.elastic.
 
 ### Requirements
 
-- `Python <https://www.python.org>`_ 3.6+
+- `Python <https://www.python.org>`_ 3.7+
 - `Postgres <https://www.postgresql.org>`_ 9.6+
 - `Redis <https://redis.io>`_
 - `Elasticsearch <https://www.elastic.co/products/elastic-stack>`_ 6.3.1+
