@@ -1,24 +1,25 @@
 # PostgreSQL to Elasticsearch sync
 
 
-`PGSync <https://pgsync.com>`_ is a middleware for syncing data from `Postgres <https://www.postgresql.org>`_ to `Elasticsearch <https://www.elastic.co/products/elastic-stack>`_.  
-It allows you to keep `Postgres <https://www.postgresql.org>`_ as your source of truth data source and
-expose structured denormalized documents in `Elasticsearch <https://www.elastic.co/products/elastic-stack>`_.
+- [PGSync](https://pgsync.com) is a middleware for syncing data from [Postgres](https://www.postgresql.org) to [Elasticsearch](https://www.elastic.co/products/elastic-stack).
+- It allows you to keep [Postgres](https://www.postgresql.org) as your source of truth data source and
+expose structured denormalized documents in [Elasticsearch](https://www.elastic.co/products/elastic-stack).
 
 
 ### Requirements
 
-- `Python <https://www.python.org>`_ 3.7+
-- `Postgres <https://www.postgresql.org>`_ 9.6+
-- `Redis <https://redis.io>`_
-- `Elasticsearch <https://www.elastic.co/products/elastic-stack>`_ 6.3.1+
+- [Python](https://www.python.org) 3.7+
+- [Postgres](https://www.postgresql.org) 9.6+
+- [Redis](https://redis.io) 3.1.0
+- [Elasticsearch](https://www.elastic.co/products/elastic-stack) 6.3.1+
+- [SQlAlchemy](https://www.sqlalchemy.org) 1.3.4+
 
 ### Postgres setup
   
-  Enable `logical decoding <https://www.postgresql.org/docs/current/logicaldecoding.html>`_ in your 
+  Enable [logical decoding](https://www.postgresql.org/docs/current/logicaldecoding.html) in your 
   Postgres setting.
 
-  - You would also need to set up two parameters in your Postgres config postgresql.conf
+  - You also need to set up two parameters in your Postgres config postgresql.conf
 
     ```wal_level = logical```
 
@@ -26,7 +27,7 @@ expose structured denormalized documents in `Elasticsearch <https://www.elastic.
 
 ### Installation
 
-You can install PGSync from `PyPI <https://pypi.org>`_:
+You can install PGSync from [PyPI](https://pypi.org):
 
     $ pip install pgsync
 
@@ -34,7 +35,7 @@ You can install PGSync from `PyPI <https://pypi.org>`_:
 
 Create a schema for the application named e.g **schema.json**
 
-`Example schema <https://github.com/toluaina/pgsync/blob/master/examples/airbnb/schema.json>`_
+[Example schema](https://github.com/toluaina/pgsync/blob/master/examples/airbnb/schema.json)
 
 Example spec
 
@@ -77,7 +78,7 @@ Example spec
 
 ### Environment variables 
 
-Setup required environment variables for the application
+Setup environment variables required for the application
 
     SCHEMA='/path/to/schema.json'
 
@@ -85,7 +86,7 @@ Setup required environment variables for the application
     ELASTICSEARCH_PORT=9200
 
     PG_HOST=localhost
-    PG_USER=i-am-root # this must be a postgres superuser
+    PG_USER=i-am-root # this must be a postgres superuser or replication user
     PG_PORT=5432
     PG_PASSWORD=*****
 
@@ -95,9 +96,10 @@ Setup required environment variables for the application
     REDIS_AUTH=*****
 
 
-## Running
+### Running
 
 Bootstrap the database (one time only)
-  $ bootstrap --config schema.json
+  - $ bootstrap --config schema.json
+
 Run pgsync as a daemon
-  $ pgsync --config schema.json --daemon
+  - $ pgsync --config schema.json --daemon
