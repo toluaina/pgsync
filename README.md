@@ -304,7 +304,7 @@ Contributions are very welcome! Check out the [Contribution](CONTRIBUTING.rst) G
 
 #### License
 
-This code is released under the [GNU Lesser General Public License](https://www.gnu.org/licenses/gpl-3.0.html), version 3.0 (LGPL-3.0).
+This code is released under the [GNU Lesser General Public License](https://www.gnu.org/licenses/gpl-3.0.html), version 3.0 (LGPL-3.0).  
 Please see [LICENSE](LICENSE) for more details.
 
 You should have received a copy of the GNU Lesser General Public License along with PGSync.  
