@@ -49,6 +49,7 @@ from .querybuilder import QueryBuilder
 from .redisqueue import RedisQueue
 from .settings import (
     CHECKPOINT_PATH,
+    LOG_INTERVAL,
     POLL_TIMEOUT,
     REDIS_POLL_INTERVAL,
     REPLICATION_SLOT_CLEANUP_INTERVAL,
@@ -1004,7 +1005,7 @@ class Sync(Base):
                 f"Elastic: [{self.es.doc_count:,}] ...\n"
             )
             sys.stdout.flush()
-            time.sleep(1)
+            time.sleep(LOG_INTERVAL)
 
     def receive(self) -> None:
         """
