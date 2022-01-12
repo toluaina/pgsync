@@ -18,6 +18,42 @@ class QueryBuilder(object):
         self.verbose: bool = verbose
         self.isouter: bool = True
 
+    def _json_build_object(
+        self, columns: list
+    ) -> sa.sql.elements.BinaryExpression:
+        """
+        Tries to get aroud the limitation of JSON_BUILD_OBJECT which
+        has a default limit of 100 args.
+        This results in the error: 'cannot pass more than 100 arguments
+        to a function'
+
+        with the 100 arguments limit this implies we can only select 50 columns
+        at a time.
+        """
+        i: int = 0
+        chunk_size: int = 100
+        expression: sa.sql.elements.BinaryExpression = None
+        while i < len(columns):
+            chunk = columns[i : i + chunk_size]
+            if i == 0:
+                expression = sa.cast(
+                    sa.func.JSON_BUILD_OBJECT(*chunk),
+                    sa.dialects.postgresql.JSONB,
+                )
+            else:
+                expression = expression.concat(
+                    sa.cast(
+                        sa.func.JSON_BUILD_OBJECT(*chunk),
+                        sa.dialects.postgresql.JSONB,
+                    )
+                )
+            i += chunk_size
+
+        if expression is None:
+            raise RuntimeError("invalid expression")
+
+        return expression
+
     def _get_foreign_keys(self, node_a: Node, node_b: Node) -> Dict:
         if (
             node_a.relationship.through_tables
@@ -134,7 +170,7 @@ class QueryBuilder(object):
                     )
                 ]
             ),
-            sa.func.JSON_BUILD_OBJECT(*node.columns),
+            self._json_build_object(node.columns),
             *node.primary_keys,
         ]
         node._subquery = sa.select(columns)
@@ -335,11 +371,11 @@ class QueryBuilder(object):
                     )
                 else:
                     columns.append(
-                        sa.func.JSON_BUILD_OBJECT(*node.columns).label("anon")
+                        self._json_build_object(node.columns).label("anon")
                     )
             elif node.relationship.type == ONE_TO_MANY:
                 columns.append(
-                    sa.func.JSON_BUILD_OBJECT(*node.columns).label("anon")
+                    self._json_build_object(node.columns).label("anon")
                 )
 
         columns.extend(
@@ -677,12 +713,10 @@ class QueryBuilder(object):
                 )
 
         if node.relationship.type == ONE_TO_ONE:
-            _keys = self._get_child_keys(
-                node, sa.func.JSON_BUILD_OBJECT(*params)
-            )
+            _keys = self._get_child_keys(node, self._json_build_object(params))
         elif node.relationship.type == ONE_TO_MANY:
             _keys = self._get_child_keys(
-                node, sa.func.JSON_AGG(sa.func.JSON_BUILD_OBJECT(*params))
+                node, sa.func.JSON_AGG(self._json_build_object(params))
             )
 
         columns: List = [_keys]
@@ -708,12 +742,12 @@ class QueryBuilder(object):
         elif node.relationship.variant == OBJECT:
             if node.relationship.type == ONE_TO_ONE:
                 columns.append(
-                    sa.func.JSON_BUILD_OBJECT(*node.columns).label(node.label)
+                    self._json_build_object(node.columns).label(node.label)
                 )
             elif node.relationship.type == ONE_TO_MANY:
                 columns.append(
                     sa.func.JSON_AGG(
-                        sa.func.JSON_BUILD_OBJECT(*node.columns)
+                        self._json_build_object(node.columns)
                     ).label(node.label)
                 )
 
