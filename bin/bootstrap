@@ -51,10 +51,12 @@ def main(teardown, config, user, password, host, port, verbose):
         )
     kwargs = {key: value for key, value in kwargs.items() if value is not None}
 
-    config = get_config(config)
+    config: str = get_config(config)
 
     for document in json.load(open(config)):
-        sync = Sync(document, verbose=verbose, repl_slots=False, **kwargs)
+        sync: Sync = Sync(
+            document, verbose=verbose, repl_slots=False, **kwargs
+        )
         if teardown:
             sync.teardown()
             continue

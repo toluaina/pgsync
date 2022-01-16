@@ -280,8 +280,8 @@ class Tree(object):
         return node
 
 
-# TODO: deprecate this method
-def node_from_table(base, table, schema):
+# TODO: deprecate this method and use get_node
+def node_from_table(base, table: str, schema: str) -> Node:
     return Node(
         model=base.model(table, schema=schema),
         table=table,
@@ -291,9 +291,9 @@ def node_from_table(base, table, schema):
     )
 
 
-def get_node(tree, table, node_dict):
+def get_node(tree, table: str, node_dict: dict) -> Node:
 
-    root = tree.build(node_dict)
+    root: Node = tree.build(node_dict)
     for node in traverse_post_order(root):
         if table == node.table:
             return node

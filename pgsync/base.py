@@ -56,10 +56,11 @@ class Base(object):
             database: The database name
         """
         self.__engine = pg_engine(database, **kwargs)
-        self.__schemas = None
+        self.__schemas: Optional[dict] = None
         # models is a dict of f'{schema}.{table}'
         self.models: dict = {}
         self.__metadata: dict = {}
+        self.__indices: dict = {}
         self.verbose: bool = verbose
 
     def connect(self) -> None:
@@ -172,7 +173,7 @@ class Base(object):
         return self.__engine
 
     @property
-    def schemas(self):
+    def schemas(self) -> list:
         """Get the database schema names."""
         if self.__schemas is None:
             self.__schemas = sa.inspect(self.engine).get_schema_names()
@@ -180,6 +181,12 @@ class Base(object):
                 if schema in self.__schemas:
                     self.__schemas.remove(schema)
         return self.__schemas
+
+    def indices(self, table: str) -> list:
+        """Get the database table indexes."""
+        if table not in self.__indices:
+            self.__indices[table] = sa.inspect(self.engine).get_indexes(table)
+        return self.__indices[table]
 
     def tables(self, schema: str) -> List:
         """:obj:`list` of :obj:`str`: Get all tables.

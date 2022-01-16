@@ -40,6 +40,7 @@ from .exc import (
 from .node import (
     get_node,
     Node,
+    node_from_table,
     traverse_breadth_first,
     traverse_post_order,
     Tree,
@@ -175,6 +176,61 @@ class Sync(Base):
         root.display()
         for node in traverse_breadth_first(root):
             pass
+
+    def analyze(self) -> None:
+        root: Node = self.tree.build(self.nodes)
+        for node in traverse_breadth_first(root):
+
+            if node.is_root:
+                continue
+
+            primary_keys = [
+                str(primary_key.name) for primary_key in node.primary_keys
+            ]
+
+            if node.relationship.through_tables:
+                through_table = node.relationship.through_tables[0]
+                through: Node = node_from_table(
+                    self,
+                    through_table,
+                    node.schema,
+                )
+                foreign_keys = get_foreign_keys(
+                    node.parent,
+                    through,
+                )
+            else:
+                foreign_keys = get_foreign_keys(
+                    node.parent,
+                    node,
+                )
+
+            for index in self.indices(node.table):
+                columns: list = foreign_keys.get(node.name, [])
+                if set(columns).issubset(index.get("column_names", [])) or set(
+                    columns
+                ).issubset(primary_keys):
+                    sys.stdout.write(
+                        f'Found index "{index.get("name")}" for table '
+                        f'"{node.table}" for columns: {columns}: OK \n'
+                    )
+                    break
+            else:
+                columns: list = foreign_keys.get(node.name, [])
+                sys.stdout.write(
+                    f'Missing index on table "{node.table}" for columns: '
+                    f"{columns}\n"
+                )
+                command: str = (
+                    f'CREATE INDEX idx_{node.table}_{"_".join(columns)} ON '
+                    f'{node.table} ({", ".join(columns)})'
+                )
+                sys.stdout.write(
+                    f'Create one with: "\033[4m{command}\033[0m"\n'
+                )
+                sys.stdout.write("-" * 80)
+                sys.stdout.write("\n")
+                sys.stdout.flush()
 
     def create_setting(self) -> None:
         """Create Elasticsearch setting and mapping if required."""
@@ -1080,6 +1136,13 @@ class Sync(Base):
     default=False,
     help="Show version info",
 )
+@click.option(
+    "--analyze",
+    "-a",
+    is_flag=True,
+    default=False,
+    help="Analyse database",
+)
 def main(
     config,
     daemon,
@@ -1091,6 +1154,7 @@ def main(
     user,
     verbose,
     version,
+    analyze,
 ):
     """
     main application syncer
@@ -1119,6 +1183,12 @@ def main(
     config: str = get_config(config)
 
     show_settings(config, **kwargs)
+
+    if analyze:
+        for document in json.load(open(config)):
+            sync = Sync(document, verbose=verbose, **kwargs)
+            sync.analyze()
+        return
 
     with Timer():
         for document in json.load(open(config)):

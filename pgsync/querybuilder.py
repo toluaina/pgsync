@@ -61,15 +61,15 @@ class QueryBuilder(object):
         ):
 
             if node_a.relationship.through_tables:
-                through_tables = node_a.relationship.through_tables[0]
+                through_table: str = node_a.relationship.through_tables[0]
 
             if node_b.relationship.through_tables:
-                through_tables = node_b.relationship.through_tables[0]
+                through_table: str = node_b.relationship.through_tables[0]
                 node_a, node_b = node_b, node_a
 
             through: Node = node_from_table(
                 self.base,
-                through_tables,
+                through_table,
                 node_a.schema,
             )
             foreign_keys: dict = get_foreign_keys(node_a, through)
