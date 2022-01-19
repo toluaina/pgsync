@@ -711,12 +711,13 @@ class Base(object):
         payload.update(match.groupdict())
         span = match.span()
         # trailing space is deliberate
-        suffix = f"{row[span[1]:]} "
+        suffix: str = f"{row[span[1]:]} "
+        tg_op: str = payload["tg_op"]
 
         if "old-key" and "new-tuple" in suffix:
             # this can only be an UPDATE operation
-            if payload["tg_op"] != UPDATE:
-                msg = f"Unknown {payload['tg_op']} operation for row: {row}"
+            if tg_op != UPDATE:
+                msg = f"Unknown {tg_op} operation for row: {row}"
                 raise LogicalSlotParseError(msg)
 
             i = suffix.index("old-key:")
@@ -733,9 +734,9 @@ class Base(object):
                     payload["new"][key] = value
         else:
             # this can be an INSERT, DELETE, UPDATE or TRUNCATE operation
-            if payload["tg_op"] not in TG_OP:
-                msg = f"Unknown {payload['tg_op']} operation for row: {row}"
-                raise LogicalSlotParseError(msg)
+            if tg_op not in TG_OP:
+                message = f"Unknown {tg_op} operation for row: {row}"
+                raise LogicalSlotParseError(message)
 
             for key, value in _parse_logical_slot(suffix):
                 payload["new"][key] = value
@@ -849,8 +850,7 @@ def _get_foreign_keys(model_a, model_b) -> dict:
     if not foreign_keys:
         raise ForeignKeyError(
             f"No foreign key relationship between "
-            f'"{model_a.original}" and '
-            f'"{model_b.original}"'
+            f'"{model_a.original}" and "{model_b.original}"'
         )
 
     return foreign_keys

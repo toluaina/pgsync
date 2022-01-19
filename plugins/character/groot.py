@@ -4,9 +4,9 @@ from pgsync import plugin
 class GrootPlugin(plugin.Plugin):
     """I am Groot plugin."""
 
-    name = "Groot"
+    name: str = "Groot"
 
-    def transform(self, doc, **kwargs):
+    def transform(self, doc: dict, **kwargs) -> dict:
         """Demonstrates how to modify a document."""
         doc_id = kwargs["_id"]
         doc_index = kwargs["_index"]

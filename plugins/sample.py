@@ -6,9 +6,9 @@ from pgsync import plugin
 class Auth(plugin.Plugin):
     """Example auth plugin."""
 
-    name = "Auth"
+    name: str = "Auth"
 
-    def transform(self, doc: list, **kwargs) -> dict:
+    def transform(self, doc: dict, **kwargs) -> dict:
         pass
 
     def auth(self, key: str) -> Optional[str]:
@@ -24,9 +24,9 @@ class Auth(plugin.Plugin):
 class VillainPlugin(plugin.Plugin):
     """Example Villain plugin."""
 
-    name = "Villain"
+    name: str = "Villain"
 
-    def transform(self, doc: list, **kwargs) -> dict:
+    def transform(self, doc: dict, **kwargs) -> dict:
         """Demonstrates how to modify a document."""
         doc_id = kwargs["_id"]
         doc_index = kwargs["_index"]
@@ -45,9 +45,9 @@ class VillainPlugin(plugin.Plugin):
 class HeroPlugin(plugin.Plugin):
     """Example Hero plugin."""
 
-    name = "Hero"
+    name: str = "Hero"
 
-    def transform(self, doc: list, **kwargs) -> dict:
+    def transform(self, doc: dict, **kwargs) -> dict:
         """Demonstrates how to modify a document."""
         doc_id = kwargs["_id"]
         doc_index = kwargs["_index"]
@@ -66,9 +66,9 @@ class HeroPlugin(plugin.Plugin):
 class GeometryPlugin(plugin.Plugin):
     """Example plugin demonstrating GeoPoint and GeoShape."""
 
-    name = "Geometry"
+    name: str = "Geometry"
 
-    def transform(self, doc: list, **kwargs) -> dict:
+    def transform(self, doc: dict, **kwargs) -> dict:
         """Demonstrates how to modify a document."""
         doc_index = kwargs["_index"]
 

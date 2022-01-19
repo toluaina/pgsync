@@ -1027,7 +1027,7 @@ class Sync(Base):
         """Pull data from db."""
         txmin: int = self.checkpoint
         txmax: int = self.txid_current
-        logger.debug(f"pull txmin: {txmin} txmax: {txmax}")
+        logger.debug(f"pull txmin: {txmin} - txmax: {txmax}")
         # forward pass sync
         self.es.bulk(self.index, self.sync(txmin=txmin, txmax=txmax))
         self.checkpoint: int = txmax or self.txid_current

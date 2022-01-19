@@ -45,7 +45,7 @@ class ForeignKey(object):
             set(RELATIONSHIP_FOREIGN_KEYS)
         ):
             raise RelationshipForeignKeyError(
-                "Relationship ForeignKey must contain a parent and child."
+                "ForeignKey Relationship must contain a parent and child."
             )
         self.parent = foreign_key.get("parent")
         self.child = foreign_key.get("child")

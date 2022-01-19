@@ -20,9 +20,9 @@ def teardown(
     drop_index: bool = True,
     delete_checkpoint: bool = True,
     config: Optional[str] = None,
-):
+) -> None:
     """Teardown helper."""
-    config = get_config(config)
+    config: str = get_config(config)
 
     with open(config, "r") as documents:
         for document in json.load(documents):
