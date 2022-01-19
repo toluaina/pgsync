@@ -151,14 +151,13 @@ def main(config, nsize, daemon, tg_op):
         DELETE: delete_op,
         TRUNCATE: truncate_op,
     }
-    # lets do only book for now
+    # lets do only the book model for now
     while True:
 
         if tg_op:
             func[tg_op](session, model, nsize)
-            continue
-
-        func[choice(TG_OP)](session, model, nsize)
+        else:
+            func[choice(TG_OP)](session, model, nsize)
 
         if not daemon:
             break
