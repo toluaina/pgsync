@@ -14,7 +14,7 @@ class Plugin(ABC):
     """Plugin base class."""
 
     @abstractmethod
-    def transform(self, doc: list, **kwargs) -> dict:
+    def transform(self, doc: dict, **kwargs) -> dict:
         """Must be implemented by all derived classes."""
         pass
 
