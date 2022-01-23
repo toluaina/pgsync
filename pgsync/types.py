@@ -1,3 +1,4 @@
+"""PGSync Types."""
 import sqlalchemy.types as types
 
 
