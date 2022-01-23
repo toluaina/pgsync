@@ -31,7 +31,6 @@ from .exc import (
 from .node import Node
 from .settings import PG_SSLMODE, PG_SSLROOTCERT, QUERY_CHUNK_SIZE
 from .trigger import CREATE_TRIGGER_TEMPLATE
-from .types import TupleIdentifierType
 from .urls import get_postgres_url
 from .view import create_view, drop_view
 
@@ -47,6 +46,25 @@ except ImportError:
 
 
 logger = logging.getLogger(__name__)
+
+
+class TupleIdentifierType(sa.types.UserDefinedType):
+    cache_ok: bool = True
+
+    def get_col_spec(self, **kw) -> str:
+        return "TID"
+
+    def bind_processor(self, dialect):
+        def process(value):
+            return value
+
+        return process
+
+    def result_processor(self, dialect, coltype):
+        def process(value):
+            return value
+
+        return process
 
 
 class Base(object):

@@ -19,7 +19,7 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from sqlalchemy.sql import Values
 
 from . import __version__
-from .base import Base, compiled_query, get_foreign_keys
+from .base import Base, compiled_query, get_foreign_keys, TupleIdentifierType
 from .constants import (
     DELETE,
     INSERT,
@@ -56,7 +56,6 @@ from .settings import (
     REPLICATION_SLOT_CLEANUP_INTERVAL,
 )
 from .transform import get_private_keys, transform
-from .types import TupleIdentifierType
 from .utils import get_config, show_settings, threaded, Timer
 
 logger = logging.getLogger(__name__)
