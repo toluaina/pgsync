@@ -25,6 +25,8 @@ REPLICATION_SLOT_CLEANUP_INTERVAL = env.float(
 CHECKPOINT_PATH = env.str("CHECKPOINT_PATH", default="./")
 # stdout log interval (in secs)
 LOG_INTERVAL = env.float("LOG_INTERVAL", default=0.5)
+# page block size
+BLOCK_SIZE = env.int("BLOCK_SIZE", default=2048 * 10)
 
 # Elasticsearch:
 ELASTICSEARCH_SCHEME = env.str("ELASTICSEARCH_SCHEME", default="http")

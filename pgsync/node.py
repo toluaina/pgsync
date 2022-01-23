@@ -125,8 +125,8 @@ class Node(object):
         ]
         if not self.column_names:
             self.column_names = [str(column) for column in self.table_columns]
-            self.column_names.remove("xmin")
-            self.column_names.remove("oid")
+            for name in ("ctid", "oid", "xmin"):
+                self.column_names.remove(name)
 
         if self.label is None:
             self.label = self.table

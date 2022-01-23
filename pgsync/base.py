@@ -31,6 +31,7 @@ from .exc import (
 from .node import Node
 from .settings import PG_SSLMODE, PG_SSLROOTCERT, QUERY_CHUNK_SIZE
 from .trigger import CREATE_TRIGGER_TEMPLATE
+from .types import TupleIdentifierType
 from .urls import get_postgres_url
 from .view import create_view, drop_view
 
@@ -141,6 +142,7 @@ class Base(object):
                 )
             model = metadata.tables[name]
             model.append_column(sa.Column("xmin", sa.BigInteger))
+            model.append_column(sa.Column("ctid"), TupleIdentifierType)
             # support SQLQlchemy/Postgres 14 which somehow now reflects
             # the oid column
             if "oid" not in [column.name for column in model.columns]:
@@ -390,7 +392,9 @@ class Base(object):
         )
 
     # Views...
-    def _primary_keys(self, schema: str, tables: List[str]):
+    def _primary_keys(
+        self, schema: str, tables: List[str]
+    ) -> sa.sql.selectable.Select:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=sa.exc.SAWarning)
             pg_class = self.model("pg_class", "pg_catalog")
@@ -475,7 +479,9 @@ class Base(object):
             .group_by(pg_index.c.indrelid)
         )
 
-    def _foreign_keys(self, schema: str, tables: List[str]):
+    def _foreign_keys(
+        self, schema: str, tables: List[str]
+    ) -> sa.sql.selectable.Select:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=sa.exc.SAWarning)
             table_constraints = self.model(
@@ -785,8 +791,12 @@ class Base(object):
             raise
         return rows
 
-    def fetchmany(self, statement, chunk_size=None):
-        chunk_size = chunk_size or QUERY_CHUNK_SIZE
+    def fetchmany(
+        self,
+        statement: sa.sql.selectable.Select,
+        chunk_size: Optional[int] = None,
+    ):
+        chunk_size: int = chunk_size or QUERY_CHUNK_SIZE
         with self.__engine.connect() as conn:
             result = conn.execution_options(stream_results=True).execute(
                 statement.select()

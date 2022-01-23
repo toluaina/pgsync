@@ -10,13 +10,13 @@ import select
 import sys
 import time
 from collections import defaultdict
-from datetime import datetime, timedelta
 from typing import AnyStr, Generator, List, Optional, Set
 
 import click
 import sqlalchemy as sa
 from psycopg2 import OperationalError
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from sqlalchemy.sql import Values
 
 from . import __version__
 from .base import Base, compiled_query, get_foreign_keys
@@ -56,6 +56,7 @@ from .settings import (
     REPLICATION_SLOT_CLEANUP_INTERVAL,
 )
 from .transform import get_private_keys, transform
+from .types import TupleIdentifierType
 from .utils import get_config, show_settings, threaded, Timer
 
 logger = logging.getLogger(__name__)
@@ -95,7 +96,6 @@ class Sync(Base):
         )
         self.redis: RedisQueue = RedisQueue(self.__name)
         self.tree: Tree = Tree(self)
-        self._last_truncate_timestamp: datetime = datetime.now()
         if validate:
             self.validate(repl_slots=repl_slots)
             self.create_setting()
@@ -277,7 +277,6 @@ class Sync(Base):
 
     def teardown(self, drop_view: bool = True) -> None:
         """Drop the database triggers and replication slot."""
-
         try:
             os.unlink(self._checkpoint_file)
         except OSError:
@@ -820,6 +819,7 @@ class Sync(Base):
         txmin: Optional[int] = None,
         txmax: Optional[int] = None,
         extra: Optional[dict] = None,
+        ctid: Optional[int] = None,
     ) -> Generator:
         if filters is None:
             filters: dict = {}
@@ -833,6 +833,41 @@ class Sync(Base):
             self._build_filters(filters, node)
 
             if node.is_root:
+
+                if ctid is not None:
+                    subquery = []
+                    for page, rows in ctid.items():
+                        subquery.append(
+                            sa.select(
+                                [
+                                    sa.cast(
+                                        sa.literal_column(f"'({page},'")
+                                        .concat(sa.column("s"))
+                                        .concat(")"),
+                                        TupleIdentifierType,
+                                    )
+                                ]
+                            ).select_from(
+                                Values(
+                                    sa.column("s"),
+                                )
+                                .data([(row,) for row in rows])
+                                .alias("s")
+                            )
+                        )
+                    if subquery:
+                        node._filters.append(
+                            sa.or_(
+                                *[
+                                    node.model.c.ctid
+                                    == sa.any_(
+                                        sa.func.ARRAY(q.scalar_subquery())
+                                    )
+                                    for q in subquery
+                                ]
+                            )
+                        )
+
                 if txmin:
                     node._filters.append(
                         sa.cast(
@@ -1039,15 +1074,10 @@ class Sync(Base):
     def truncate_slots(self) -> None:
         """Truncate the logical replication slot."""
         while True:
-            if self._truncate and (
-                datetime.now()
-                >= self._last_truncate_timestamp
-                + timedelta(seconds=REPLICATION_SLOT_CLEANUP_INTERVAL)
-            ):
+            if self._truncate:
                 logger.debug(f"Truncating replication slot: {self.__name}")
                 self.logical_slot_get_changes(self.__name, upto_nchanges=None)
-                self._last_truncate_timestamp = datetime.now()
-            time.sleep(0.1)
+            time.sleep(REPLICATION_SLOT_CLEANUP_INTERVAL)
 
     @threaded
     def status(self):
@@ -1156,9 +1186,7 @@ def main(
     version,
     analyze,
 ):
-    """
-    main application syncer
-    """
+    """Main application syncer."""
     if version:
         sys.stdout.write(f"Version: {__version__}\n")
         return
