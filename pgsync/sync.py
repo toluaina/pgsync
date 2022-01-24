@@ -52,6 +52,7 @@ from .settings import (
     CHECKPOINT_PATH,
     LOG_INTERVAL,
     POLL_TIMEOUT,
+    REDIS_WRITE_CHUNK_SIZE,
     REDIS_POLL_INTERVAL,
     REPLICATION_SLOT_CLEANUP_INTERVAL,
 )
@@ -991,10 +992,13 @@ class Sync(Base):
         channel: str = self.database
         cursor.execute(f'LISTEN "{channel}"')
         logger.debug(f'Listening for notifications on channel "{channel}"')
-
+        item_queue=[]
         while True:
             # NB: consider reducing POLL_TIMEOUT to increase throughout
             if select.select([conn], [], [], POLL_TIMEOUT) == ([], [], []):
+                # Catch any hanging items from the last poll
+                if len(item_queue)>0:
+                    self.redis.bulk_push(item_queue)
                 continue
 
             try:
@@ -1004,10 +1008,13 @@ class Sync(Base):
                 os._exit(-1)
 
             while conn.notifies:
+                if len(item_queue)>=REDIS_WRITE_CHUNK_SIZE:
+                    self.redis.bulk_push(item_queue)
+                    item_queue=[]
                 notification: AnyStr = conn.notifies.pop(0)
                 if notification.channel == channel:
                     payload = json.loads(notification.payload)
-                    self.redis.push(payload)
+                    item_queue.append(payload)
                     logger.debug(f"on_notify: {payload}")
                     self.count["db"] += 1
 

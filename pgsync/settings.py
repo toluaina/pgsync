@@ -106,6 +106,8 @@ REDIS_DB = env.int("REDIS_DB", default=0)
 REDIS_AUTH = env.str("REDIS_AUTH", default=None)
 # number of items to read from Redis at a time
 REDIS_CHUNK_SIZE = env.int("REDIS_CHUNK_SIZE", default=1000)
+# number of items to write to Redis at a time
+REDIS_WRITE_CHUNK_SIZE = env.int("REDIS_WRITE_CHUNK_SIZE", default=1000)
 # redis socket connection timeout
 REDIS_SOCKET_TIMEOUT = env.int("REDIS_SOCKET_TIMEOUT", default=5)
 # redis poll interval (in secs)
