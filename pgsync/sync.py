@@ -183,12 +183,12 @@ class Sync(Base):
             if node.is_root:
                 continue
 
-            primary_keys = [
+            primary_keys: list = [
                 str(primary_key.name) for primary_key in node.primary_keys
             ]
 
             if node.relationship.through_tables:
-                through_table = node.relationship.through_tables[0]
+                through_table: str = node.relationship.through_tables[0]
                 through: Node = node_from_table(
                     self,
                     through_table,

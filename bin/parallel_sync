@@ -90,7 +90,7 @@ class Worker(multiprocessing.Process):
         return
 
 
-def _query_tasks(doc: dict, block_size=None) -> list:
+def _query_tasks(doc: dict, block_size: Optional[int] = None) -> list:
     block_size: int = block_size or BLOCK_SIZE
     tasks: list = []
     pages: dict = {}
@@ -160,13 +160,17 @@ def _pull(ncpus: int, config: str, verbose: Optional[bool] = False) -> None:
     default=False,
     help="Turn on verbosity",
 )
-@click.option("--ncpus", "-n", help="Number of cpus.", type=int)
+@click.option(
+    "--ncpus",
+    "-n",
+    help="Number of cpus.",
+    type=int,
+    default=multiprocessing.cpu_count() * 2,
+)
 def main(config, ncpus, verbose):
 
     show_settings()
     config: str = get_config(config)
-    if not ncpus:
-        ncpus: int = multiprocessing.cpu_count() * 2
     _pull(ncpus, config, verbose=verbose)
 
 

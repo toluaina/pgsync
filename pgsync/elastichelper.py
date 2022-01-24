@@ -99,9 +99,7 @@ class ElasticHelper(object):
         raise_on_exception: Optional[bool] = None,
         raise_on_error: Optional[bool] = None,
     ) -> None:
-        """
-        Pull sync data from generator to Elasticsearch.
-        """
+        """Pull sync data from generator to Elasticsearch."""
         try:
             self._bulk(
                 index,
@@ -186,7 +184,7 @@ class ElasticHelper(object):
         """Refresh the Elasticsearch index."""
         self.__es.indices.refresh(index=indices)
 
-    def _search(self, index: str, table: str, fields: dict = None):
+    def _search(self, index: str, table: str, fields: Optional[dict] = None):
         """
         Search private area for matching docs in Elasticsearch.
 
@@ -247,10 +245,7 @@ class ElasticHelper(object):
                 if mapping:
                     body.update(**mapping)
             try:
-                response = self.__es.indices.create(
-                    index=index,
-                    body=body,
-                )
+                response = self.__es.indices.create(index=index, body=body)
             except Exception:
                 raise
 
