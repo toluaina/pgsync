@@ -142,7 +142,7 @@ class Node(object):
                 )
 
             if tokens:
-                tokenized = getattr(self.model.c, tokens[0])
+                tokenized = self.model.c[tokens[0]]
                 for token in tokens[1:]:
                     if token in JSONB_OPERATORS:
                         tokenized = tokenized.op(token)
@@ -163,7 +163,7 @@ class Node(object):
                         f'table "{self.table}"'
                     )
                 self.columns.append(column_name)
-                self.columns.append(getattr(self.model.c, column_name))
+                self.columns.append(self.model.c[column_name])
 
         self.relationship = Relationship(kwargs.get("relationship"))
         self._subquery = None
@@ -179,7 +179,7 @@ class Node(object):
     @property
     def primary_keys(self):
         return [
-            getattr(self.model.c, str(sa.text(primary_key)))
+            self.model.c[str(sa.text(primary_key))]
             for primary_key in self.model.primary_keys
         ]
 

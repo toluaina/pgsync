@@ -805,7 +805,7 @@ class Sync(Base):
             for _filter in filters.get(node.table):
                 where: list = []
                 for key, value in _filter.items():
-                    where.append(getattr(node.model.c, key) == value)
+                    where.append(node.model.c[key] == value)
                     keys.add(key)
                     values.add(value)
                 _filters.append(sa.and_(*where))
