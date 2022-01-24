@@ -992,13 +992,14 @@ class Sync(Base):
         channel: str = self.database
         cursor.execute(f'LISTEN "{channel}"')
         logger.debug(f'Listening for notifications on channel "{channel}"')
-        item_queue=[]
+        item_queue = []
         while True:
             # NB: consider reducing POLL_TIMEOUT to increase throughout
             if select.select([conn], [], [], POLL_TIMEOUT) == ([], [], []):
                 # Catch any hanging items from the last poll
                 if len(item_queue)>0:
                     self.redis.bulk_push(item_queue)
+                    item_queue = []
                 continue
 
             try:
