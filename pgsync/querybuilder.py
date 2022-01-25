@@ -582,7 +582,7 @@ class QueryBuilder(object):
                                     _column = node.model.c
                                 if hasattr(_column, column._orig_key):
                                     onclause.append(
-                                        _column[olumn._orig_key]
+                                        _column[column._orig_key]
                                         == column.value
                                     )
                     elif isinstance(
