@@ -111,6 +111,13 @@ class Base(object):
                 f"Invalid user permission {permissions}"
             )
 
+        # Azure usernames are of the form username@host on the SQLAlchemy
+        # engine - engine.url.username@host but stored in
+        # pg_user as just user.
+        # we need to extract the real username from: username@host.
+        host_part: str = self.engine.url.host.split(".")[0]
+        username: str = username.split(f"@{host_part}")[0]
+
         with self.__engine.connect() as conn:
             return (
                 conn.execute(
@@ -136,7 +143,7 @@ class Base(object):
             )
 
     # Tables...
-    def model(self, table: str, schema: str):
+    def model(self, table: str, schema: str) -> dict:
         """Get an SQLAlchemy model representation from a table.
 
         Args:
