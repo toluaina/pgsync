@@ -28,9 +28,9 @@ logger = logging.getLogger(__name__)
 
 def timeit(func):
     def timed(*args, **kwargs):
-        since = time()
+        since: float = time()
         retval = func(*args, **kwargs)
-        until = time()
+        until: float = time()
         sys.stdout.write(
             f"{func.__name__} ({args}, {kwargs}) {until-since} secs\n"
         )
@@ -41,18 +41,18 @@ def timeit(func):
 
 class Timer:
     def __init__(self, message: Optional[str] = None):
-        self._message = message or ""
+        self.message: str = message or ""
 
     def __enter__(self):
         self.start = time()
         return self
 
     def __exit__(self, *args):
-        self.end = time()
-        self.elapsed = self.end - self.start
+        end: float = time()
+        elapsed: float = end - self.start
         sys.stdout.write(
-            f"{self._message} {str(timedelta(seconds=self.elapsed))} "
-            f"({self.elapsed:2.2f} sec)\n"
+            f"{self.message} {(timedelta(seconds=elapsed))} "
+            f"({elapsed:2.2f} sec)\n"
         )
 
 
@@ -90,7 +90,7 @@ def show_settings(schema: str = None, **kwargs) -> None:
 def threaded(fn):
     """Decorator for threaded code execution."""
 
-    def wrapper(*args, **kwargs):
+    def wrapper(*args, **kwargs) -> Thread:
         thread: Thread = Thread(target=fn, args=args, kwargs=kwargs)
         thread.start()
         return thread

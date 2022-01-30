@@ -6,7 +6,7 @@ from typing import List, Optional
 from redis import Redis
 from redis.exceptions import ConnectionError
 
-from .settings import REDIS_CHUNK_SIZE, REDIS_SOCKET_TIMEOUT
+from .settings import REDIS_READ_CHUNK_SIZE, REDIS_SOCKET_TIMEOUT
 from .urls import get_redis_url
 
 logger = logging.getLogger(__name__)
@@ -32,13 +32,14 @@ class RedisQueue(object):
             logger.exception(f"Redis server is not running: {e}")
             raise
 
+    @property
     def qsize(self) -> int:
         """Return the approximate size of the queue."""
         return self.__db.llen(self.key)
 
     def empty(self) -> bool:
         """Return True if the queue is empty, False otherwise."""
-        return self.qsize() == 0
+        return self.qsize == 0
 
     def push(self, item) -> None:
         """Push item into the queue."""
@@ -60,7 +61,7 @@ class RedisQueue(object):
 
     def bulk_pop(self, chunk_size: Optional[int] = None) -> List[dict]:
         """Remove and return multiple items from the queue."""
-        chunk_size: int = chunk_size or REDIS_CHUNK_SIZE
+        chunk_size: int = chunk_size or REDIS_READ_CHUNK_SIZE
         pipeline = self.__db.pipeline()
         pipeline.lrange(self.key, 0, chunk_size - 1)
         pipeline.ltrim(self.key, chunk_size, -1)

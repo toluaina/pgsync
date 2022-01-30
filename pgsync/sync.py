@@ -52,8 +52,8 @@ from .settings import (
     CHECKPOINT_PATH,
     LOG_INTERVAL,
     POLL_TIMEOUT,
-    REDIS_WRITE_CHUNK_SIZE,
     REDIS_POLL_INTERVAL,
+    REDIS_WRITE_CHUNK_SIZE,
     REPLICATION_SLOT_CLEANUP_INTERVAL,
 )
 from .transform import get_private_keys, transform
@@ -992,14 +992,15 @@ class Sync(Base):
         channel: str = self.database
         cursor.execute(f'LISTEN "{channel}"')
         logger.debug(f'Listening for notifications on channel "{channel}"')
-        item_queue = []
+        items: list = []
+
         while True:
             # NB: consider reducing POLL_TIMEOUT to increase throughout
             if select.select([conn], [], [], POLL_TIMEOUT) == ([], [], []):
                 # Catch any hanging items from the last poll
-                if len(item_queue)>0:
-                    self.redis.bulk_push(item_queue)
-                    item_queue = []
+                if items:
+                    self.redis.bulk_push(items)
+                    items = []
                 continue
 
             try:
@@ -1009,13 +1010,13 @@ class Sync(Base):
                 os._exit(-1)
 
             while conn.notifies:
-                if len(item_queue)>=REDIS_WRITE_CHUNK_SIZE:
-                    self.redis.bulk_push(item_queue)
-                    item_queue=[]
+                if len(items) >= REDIS_WRITE_CHUNK_SIZE:
+                    self.redis.bulk_push(items)
+                    items = []
                 notification: AnyStr = conn.notifies.pop(0)
                 if notification.channel == channel:
                     payload = json.loads(notification.payload)
-                    item_queue.append(payload)
+                    items.append(payload)
                     logger.debug(f"on_notify: {payload}")
                     self.count["db"] += 1
 
@@ -1094,7 +1095,7 @@ class Sync(Base):
                 f"Xlog: [{self.count['xlog']:,}] => "
                 f"Db: [{self.count['db']:,}] => "
                 f"Redis: [total = {self.count['redis']:,} "
-                f"pending = {self.redis.qsize():,}] => "
+                f"pending = {self.redis.qsize:,}] => "
                 f"Elastic: [{self.es.doc_count:,}] ...\n"
             )
             sys.stdout.flush()
