@@ -29,7 +29,12 @@ from .exc import (
     TableNotFoundError,
 )
 from .node import Node
-from .settings import PG_SSLMODE, PG_SSLROOTCERT, QUERY_CHUNK_SIZE
+from .settings import (
+    PG_SSLMODE,
+    PG_SSLROOTCERT,
+    QUERY_CHUNK_SIZE,
+    QUERY_LITERAL_BINDS,
+)
 from .trigger import CREATE_TRIGGER_TEMPLATE
 from .urls import get_postgres_url
 from .view import create_view, drop_view
@@ -1033,6 +1038,11 @@ def compiled_query(
     query: str, label: Optional[str] = None, literal_binds: bool = False
 ) -> None:
     """Compile an SQLAlchemy query with an optional label."""
+
+    # overide env value of literal_binds
+    if QUERY_LITERAL_BINDS:
+        literal_binds = QUERY_LITERAL_BINDS
+
     query: str = str(
         query.compile(
             dialect=sa.dialects.postgresql.dialect(),
@@ -1042,7 +1052,9 @@ def compiled_query(
     query: str = sqlparse.format(query, reindent=True, keyword_case="upper")
     if label:
         logger.debug(f"\033[4m{label}:\033[0m\n{query}")
-        sys.stdout.write(f"\033[4m{label}:\033[0m\n{query}")
+        sys.stdout.write(f"\033[4m{label}:\033[0m\n{query}\n")
     else:
         logging.debug(f"{query}")
-        sys.stdout.write(f"{query}")
+        sys.stdout.write(f"{query}\n")
+    sys.stdout.write("-" * 79)
+    sys.stdout.write("\n")

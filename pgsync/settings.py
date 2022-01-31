@@ -27,6 +27,7 @@ CHECKPOINT_PATH = env.str("CHECKPOINT_PATH", default="./")
 LOG_INTERVAL = env.float("LOG_INTERVAL", default=0.5)
 # page block size
 BLOCK_SIZE = env.int("BLOCK_SIZE", default=2048 * 10)
+QUERY_LITERAL_BINDS = env.bool("QUERY_LITERAL_BINDS", default=None)
 
 # Elasticsearch:
 ELASTICSEARCH_SCHEME = env.str("ELASTICSEARCH_SCHEME", default="http")
