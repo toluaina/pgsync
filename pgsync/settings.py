@@ -98,7 +98,7 @@ PG_PORT = env.int("PG_PORT", default=5432)
 PG_PASSWORD = env.str("PG_PASSWORD", default=None)
 PG_SSLMODE = env.str("PG_SSLMODE", default=None)
 PG_SSLROOTCERT = env.str("PG_SSLROOTCERT", default=None)
-PG_TRANSACTIONAL_CONSISTENCY=env.str("PG_TRANSACTIONAL_CONSISTENCY", default=True)
+PG_TRANSACTIONAL_CONSISTENCY=env.bool("PG_TRANSACTIONAL_CONSISTENCY", default=True)
 
 # Redis:
 REDIS_SCHEME = env.str("REDIS_SCHEME", default="redis")
