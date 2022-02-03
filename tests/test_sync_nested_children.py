@@ -380,7 +380,7 @@ class TestNestedChildren(object):
         docs = [doc for doc in sync.sync()]
         assert len(docs) == 3
         docs = sorted(docs, key=lambda k: k["_id"])
-        assert docs == [
+        expected = [
             {
                 "_id": "abc",
                 "_index": "testdb",
@@ -401,19 +401,6 @@ class TestNestedChildren(object):
                         {
                             "city_label": {
                                 "country_label": {
-                                    "continent_label": {"name": "Europe"},
-                                    "id": 1,
-                                    "name": "United Kingdom",
-                                },
-                                "id": 1,
-                                "name": "Cardiff",
-                            },
-                            "id": 1,
-                            "name": "Roald Dahl",
-                        },
-                        {
-                            "city_label": {
-                                "country_label": {
                                     "continent_label": {"name": "America"},
                                     "id": 4,
                                     "name": "Mupworld",
@@ -423,6 +410,19 @@ class TestNestedChildren(object):
                             },
                             "id": 4,
                             "name": "Kermit D Frog",
+                        },
+                        {
+                            "city_label": {
+                                "country_label": {
+                                    "continent_label": {"name": "Europe"},
+                                    "id": 1,
+                                    "name": "United Kingdom",
+                                },
+                                "id": 1,
+                                "name": "Cardiff",
+                            },
+                            "id": 1,
+                            "name": "Roald Dahl",
                         },
                     ],
                     "book_languages": [
@@ -459,19 +459,6 @@ class TestNestedChildren(object):
                         {
                             "city_label": {
                                 "country_label": {
-                                    "continent_label": {"name": "Europe"},
-                                    "id": 1,
-                                    "name": "United Kingdom",
-                                },
-                                "id": 1,
-                                "name": "Cardiff",
-                            },
-                            "id": 1,
-                            "name": "Roald Dahl",
-                        },
-                        {
-                            "city_label": {
-                                "country_label": {
                                     "continent_label": {"name": "Asia"},
                                     "id": 2,
                                     "name": "Japan",
@@ -481,6 +468,19 @@ class TestNestedChildren(object):
                             },
                             "id": 2,
                             "name": "Haruki Murakami",
+                        },
+                        {
+                            "city_label": {
+                                "country_label": {
+                                    "continent_label": {"name": "Europe"},
+                                    "id": 1,
+                                    "name": "United Kingdom",
+                                },
+                                "id": 1,
+                                "name": "Cardiff",
+                            },
+                            "id": 1,
+                            "name": "Roald Dahl",
                         },
                     ],
                     "book_languages": [
@@ -516,19 +516,6 @@ class TestNestedChildren(object):
                         {
                             "city_label": {
                                 "country_label": {
-                                    "continent_label": {"name": "Asia"},
-                                    "id": 2,
-                                    "name": "Japan",
-                                },
-                                "id": 2,
-                                "name": "Kyoto",
-                            },
-                            "id": 2,
-                            "name": "Haruki Murakami",
-                        },
-                        {
-                            "city_label": {
-                                "country_label": {
                                     "continent_label": {"name": "Americas"},
                                     "id": 3,
                                     "name": "Cuba",
@@ -538,6 +525,19 @@ class TestNestedChildren(object):
                             },
                             "id": 3,
                             "name": "Alejo Carpentier",
+                        },
+                        {
+                            "city_label": {
+                                "country_label": {
+                                    "continent_label": {"name": "Asia"},
+                                    "id": 2,
+                                    "name": "Japan",
+                                },
+                                "id": 2,
+                                "name": "Kyoto",
+                            },
+                            "id": 2,
+                            "name": "Haruki Murakami",
                         },
                     ],
                     "book_languages": [
@@ -556,6 +556,30 @@ class TestNestedChildren(object):
                 },
             },
         ]
+
+        for i, doc in enumerate(docs):
+            assert doc["_id"] == expected[i]["_id"]
+            assert doc["_index"] == expected[i]["_index"]
+            for key in [
+                "_meta",
+                "authors",
+                "book_languages",
+                "description",
+                "isbn",
+                "languages",
+                "publisher_label",
+                "subjects",
+                "title",
+            ]:
+                if key == "authors":
+                    assert sorted(
+                        doc["_source"][key], key=lambda k: k["id"]
+                    ) == sorted(
+                        expected[i]["_source"][key], key=lambda k: k["id"]
+                    )
+                else:
+                    assert doc["_source"][key] == expected[i]["_source"][key]
+
         assert_resync_empty(sync, nodes)
 
     def test_insert_root(
@@ -814,19 +838,6 @@ class TestNestedChildren(object):
                         {
                             "city_label": {
                                 "country_label": {
-                                    "continent_label": {"name": "Europe"},
-                                    "id": 1,
-                                    "name": "United Kingdom",
-                                },
-                                "id": 1,
-                                "name": "Cardiff",
-                            },
-                            "id": 1,
-                            "name": "Roald Dahl",
-                        },
-                        {
-                            "city_label": {
-                                "country_label": {
                                     "continent_label": {"name": "America"},
                                     "id": 4,
                                     "name": "Mupworld",
@@ -836,6 +847,19 @@ class TestNestedChildren(object):
                             },
                             "id": 4,
                             "name": "Kermit D Frog",
+                        },
+                        {
+                            "city_label": {
+                                "country_label": {
+                                    "continent_label": {"name": "Europe"},
+                                    "id": 1,
+                                    "name": "United Kingdom",
+                                },
+                                "id": 1,
+                                "name": "Cardiff",
+                            },
+                            "id": 1,
+                            "name": "Roald Dahl",
                         },
                     ],
                     "book_languages": [
@@ -955,19 +979,6 @@ class TestNestedChildren(object):
                     {
                         "city_label": {
                             "country_label": {
-                                "continent_label": {"name": "Europe"},
-                                "id": 1,
-                                "name": "United Kingdom",
-                            },
-                            "id": 1,
-                            "name": "Cardiff",
-                        },
-                        "id": 1,
-                        "name": "Roald Dahl",
-                    },
-                    {
-                        "city_label": {
-                            "country_label": {
                                 "continent_label": {"name": "Asia"},
                                 "id": 2,
                                 "name": "Japan",
@@ -977,6 +988,19 @@ class TestNestedChildren(object):
                         },
                         "id": 2,
                         "name": "Haruki Murakami",
+                    },
+                    {
+                        "city_label": {
+                            "country_label": {
+                                "continent_label": {"name": "Europe"},
+                                "id": 1,
+                                "name": "United Kingdom",
+                            },
+                            "id": 1,
+                            "name": "Cardiff",
+                        },
+                        "id": 1,
+                        "name": "Roald Dahl",
                     },
                 ],
                 "book_languages": [
@@ -1008,19 +1032,6 @@ class TestNestedChildren(object):
                     {
                         "city_label": {
                             "country_label": {
-                                "continent_label": {"name": "Asia"},
-                                "id": 2,
-                                "name": "Japan",
-                            },
-                            "id": 2,
-                            "name": "Kyoto",
-                        },
-                        "id": 2,
-                        "name": "Haruki Murakami",
-                    },
-                    {
-                        "city_label": {
-                            "country_label": {
                                 "continent_label": {"name": "Americas"},
                                 "id": 3,
                                 "name": "Cuba",
@@ -1030,6 +1041,19 @@ class TestNestedChildren(object):
                         },
                         "id": 3,
                         "name": "Alejo Carpentier",
+                    },
+                    {
+                        "city_label": {
+                            "country_label": {
+                                "continent_label": {"name": "Asia"},
+                                "id": 2,
+                                "name": "Japan",
+                            },
+                            "id": 2,
+                            "name": "Kyoto",
+                        },
+                        "id": 2,
+                        "name": "Haruki Murakami",
                     },
                 ],
                 "book_languages": [
@@ -1113,7 +1137,8 @@ class TestNestedChildren(object):
 
         assert len(docs) == 3
         docs = sorted(docs, key=lambda k: k["isbn"])
-        assert docs == [
+
+        expected = [
             {
                 "_meta": {
                     "author": {"id": [1, 4, 5]},
@@ -1287,6 +1312,25 @@ class TestNestedChildren(object):
                 "title": "The Rabbit Club",
             },
         ]
+        for i, doc in enumerate(docs):
+            for key in [
+                "_meta",
+                "authors",
+                "book_languages",
+                "description",
+                "isbn",
+                "languages",
+                "publisher_label",
+                "subjects",
+                "title",
+            ]:
+                if key == "authors":
+                    assert sorted(doc[key], key=lambda k: k["id"]) == sorted(
+                        expected[i][key], key=lambda k: k["id"]
+                    )
+                else:
+                    assert doc[key] == expected[i][key]
+
         assert_resync_empty(sync, nodes)
         sync.es.close()
 
@@ -1344,7 +1388,7 @@ class TestNestedChildren(object):
 
         assert len(docs) == 3
         docs = sorted(docs, key=lambda k: k["isbn"])
-        assert docs == [
+        expected = [
             {
                 "_meta": {
                     "author": {"id": [4, 5]},
@@ -1505,6 +1549,25 @@ class TestNestedChildren(object):
                 "title": "The Rabbit Club",
             },
         ]
+        for i, doc in enumerate(docs):
+            for key in [
+                "_meta",
+                "authors",
+                "book_languages",
+                "description",
+                "isbn",
+                "languages",
+                "publisher_label",
+                "subjects",
+                "title",
+            ]:
+                if key == "authors":
+                    assert sorted(doc[key], key=lambda k: k["id"]) == sorted(
+                        expected[i][key], key=lambda k: k["id"]
+                    )
+                else:
+                    assert doc[key] == expected[i][key]
+
         assert_resync_empty(sync, nodes)
         sync.es.close()
 
@@ -1536,7 +1599,7 @@ class TestNestedChildren(object):
 
         assert len(docs) == 3
         docs = sorted(docs, key=lambda k: k["isbn"])
-        assert docs == [
+        expected = [
             {
                 "_meta": {
                     "book_language": {"id": [1, 4, 7, 9]},
@@ -1665,6 +1728,25 @@ class TestNestedChildren(object):
                 "title": "The Rabbit Club",
             },
         ]
+        for i, doc in enumerate(docs):
+            for key in [
+                "_meta",
+                "authors",
+                "book_languages",
+                "description",
+                "isbn",
+                "languages",
+                "publisher_label",
+                "subjects",
+                "title",
+            ]:
+                if key == "authors" and doc[key] is not None:
+                    assert sorted(doc[key], key=lambda k: k["id"]) == sorted(
+                        expected[i][key], key=lambda k: k["id"]
+                    )
+                else:
+                    assert doc[key] == expected[i][key]
+
         assert_resync_empty(sync, nodes)
         sync.es.close()
 

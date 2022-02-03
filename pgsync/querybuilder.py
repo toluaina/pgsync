@@ -182,6 +182,9 @@ class QueryBuilder(object):
             node._subquery = node._subquery.where(sa.and_(*node._filters))
         node._subquery = node._subquery.alias()
 
+        if not node.is_root:
+            node._subquery = node._subquery.lateral()
+
     def _children(self, node: Node):
 
         for child in node.children:
@@ -318,7 +321,7 @@ class QueryBuilder(object):
             schema=node.schema,
         )
 
-        params = []
+        params: list = []
         for foreign_key_column in foreign_key_columns:
             params.append(
                 sa.func.JSON_BUILD_OBJECT(
@@ -454,13 +457,27 @@ class QueryBuilder(object):
             )
 
         outer_subquery = sa.select(columns)
+
+        parent_foreign_key_columns = self._get_column_foreign_keys(
+            through.columns,
+            foreign_keys,
+            schema=node.schema,
+        )
+        where: list = []
+        for i in range(len(foreign_key_columns)):
+            where.append(
+                node.model.c[foreign_key_columns[i]]
+                == through.model.c[parent_foreign_key_columns[i]]
+            )
+        outer_subquery = outer_subquery.where(sa.and_(*where))
+
         if node._filters:
             outer_subquery = outer_subquery.where(sa.and_(*node._filters))
 
         if from_obj is not None:
             outer_subquery = outer_subquery.select_from(from_obj)
 
-        outer_subquery = outer_subquery.alias()
+        outer_subquery = outer_subquery.alias().lateral()
 
         if self.verbose:
             compiled_query(outer_subquery, "Outer subquery")
@@ -513,7 +530,7 @@ class QueryBuilder(object):
         if self.verbose:
             compiled_query(inner_subquery, "Inner subquery")
 
-        onclause = []
+        onclause: list = []
         for i in range(len(left_foreign_keys)):
             onclause.append(
                 outer_subquery.c[left_foreign_keys[i]]
@@ -533,18 +550,20 @@ class QueryBuilder(object):
             isouter=self.isouter,
         )
 
-        subquery = inner_subquery.select_from(from_obj)
+        node._subquery = inner_subquery.select_from(from_obj)
         if node._filters:
-            subquery = subquery.where(sa.and_(*node._filters))
+            node._subquery = node._subquery.where(sa.and_(*node._filters))
 
-        subquery = subquery.group_by(
+        node._subquery = node._subquery.group_by(
             *[through.model.c[column] for column in foreign_keys[through.name]]
         )
 
         if self.verbose:
-            compiled_query(subquery, "Combined subquery")
+            compiled_query(node._subquery, "Combined subquery")
 
-        node._subquery = subquery.alias()
+        node._subquery = node._subquery.alias()
+        if not node.is_root:
+            node._subquery = node._subquery.lateral()
 
     def _non_through(self, node: Node):  # noqa: C901
 
@@ -552,7 +571,7 @@ class QueryBuilder(object):
 
         for child in node.children:
 
-            onclause = []
+            onclause: list = []
 
             foreign_keys = self._get_foreign_keys(node, child)
 
@@ -619,7 +638,7 @@ class QueryBuilder(object):
             schema=node.schema,
         )
 
-        params = []
+        params: list = []
         if node.parent.is_root:
             for primary_key in node.primary_keys:
                 params.extend(
@@ -678,6 +697,20 @@ class QueryBuilder(object):
         if from_obj is not None:
             node._subquery = node._subquery.select_from(from_obj)
 
+        parent_foreign_key_columns = self._get_column_foreign_keys(
+            node.parent.model.columns,
+            foreign_keys,
+            table=node.parent.table,
+            schema=node.parent.schema,
+        )
+        where: list = []
+        for i in range(len(foreign_key_columns)):
+            where.append(
+                node.model.c[foreign_key_columns[i]]
+                == node.parent.model.c[parent_foreign_key_columns[i]]
+            )
+        node._subquery = node._subquery.where(sa.and_(*where))
+
         if node._filters:
             node._subquery = node._subquery.where(sa.and_(*node._filters))
 
@@ -685,8 +718,10 @@ class QueryBuilder(object):
             node._subquery = node._subquery.group_by(
                 *[node.model.c[key] for key in foreign_key_columns]
             )
-
         node._subquery = node._subquery.alias()
+
+        if not node.is_root:
+            node._subquery = node._subquery.lateral()
 
     def build_queries(self, node: Node):
         """Build node query."""
