@@ -1092,8 +1092,8 @@ class TestNestedChildren(object):
             },
         ]
         for i, doc in enumerate(docs):
-            assert doc["_id"] == expected[i]["_id"]
-            assert doc["_index"] == expected[i]["_index"]
+            # assert doc["_id"] == expected[i]["_id"]
+            # assert doc["_index"] == expected[i]["_index"]
             for key in [
                 "_meta",
                 "authors",
@@ -1106,13 +1106,11 @@ class TestNestedChildren(object):
                 "title",
             ]:
                 if key == "authors":
-                    assert sorted(
-                        doc["_source"][key], key=lambda k: k["id"]
-                    ) == sorted(
-                        expected[i]["_source"][key], key=lambda k: k["id"]
+                    assert sorted(doc[key], key=lambda k: k["id"]) == sorted(
+                        expected[i][key], key=lambda k: k["id"]
                     )
                 else:
-                    assert doc["_source"][key] == expected[i]["_source"][key]
+                    assert doc[key] == expected[i][key]
 
         assert_resync_empty(sync, nodes)
         sync.es.close()
