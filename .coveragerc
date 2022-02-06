@@ -1,2 +1,4 @@
 [run]
-omit = pgsync/constants.py
+omit = 
+    pgsync/constants.py
+    pgsync/__init__.py

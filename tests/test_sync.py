@@ -4,6 +4,9 @@ from collections import namedtuple
 import pytest
 from mock import patch
 
+from pgsync.exc import RDSError, SchemaError
+from pgsync.sync import Sync
+
 ROW = namedtuple("Row", ["data", "xid"])
 
 
@@ -64,3 +67,95 @@ class TestSync(object):
                     mock_get.assert_called_once()
                     mock_sync.assert_called_once()
         sync.es.close()
+
+    def test_sync_validate(self):
+        with pytest.raises(SchemaError) as excinfo:
+            sync = Sync(
+                document={
+                    "index": "testdb",
+                    "nodes": ["foo"],
+                },
+                verbose=False,
+                validate=True,
+                repl_slots=False,
+            )
+            assert (
+                "Incompatible schema. Please run v2 schema migration"
+                in str(excinfo.value)
+            )
+
+        sync = Sync(
+            document={
+                "index": "testdb",
+                "nodes": {"table": "book"},
+                "plugins": ["Hero"],
+            },
+            verbose=False,
+            validate=True,
+            repl_slots=False,
+        )
+
+        def _side_effect(*args, **kwargs):
+            if args[0] == 0:
+                return 0
+            elif args[0] == "max_replication_slots":
+                raise RuntimeError(
+                    "Ensure there is at least one replication slot defined "
+                    "by setting max_replication_slots=1"
+                )
+
+            elif args[0] == "wal_level":
+                raise RuntimeError(
+                    "Enable logical decoding by setting wal_level=logical"
+                )
+            elif args[0] == "rds_logical_replication":
+                raise RDSError("rds.logical_replication is not enabled")
+            else:
+                return args[0]
+
+        with pytest.raises(RuntimeError) as excinfo:
+            with patch(
+                "pgsync.base.Base.pg_settings",
+                side_effects=_side_effect("max_replication_slots"),
+            ):
+                sync = Sync(
+                    document={
+                        "index": "testdb",
+                        "nodes": {"table": "book"},
+                        "plugins": ["Hero"],
+                    },
+                )
+        assert (
+            "Ensure there is at least one replication slot defined "
+            "by setting max_replication_slots=1" in str(excinfo.value)
+        )
+
+        with pytest.raises(RuntimeError) as excinfo:
+            with patch(
+                "pgsync.base.Base.pg_settings",
+                side_effects=_side_effect("wal_level"),
+            ):
+                sync = Sync(
+                    document={
+                        "index": "testdb",
+                        "nodes": {"table": "book"},
+                        "plugins": ["Hero"],
+                    },
+                )
+        assert "Enable logical decoding by setting wal_level=logical" in str(
+            excinfo.value
+        )
+
+        with pytest.raises(RDSError) as excinfo:
+            with patch(
+                "pgsync.base.Base.pg_settings",
+                side_effects=_side_effect("rds_logical_replication"),
+            ):
+                sync = Sync(
+                    document={
+                        "index": "testdb",
+                        "nodes": {"table": "book"},
+                        "plugins": ["Hero"],
+                    },
+                )
+        assert "rds.logical_replication is not enabled" in str(excinfo.value)

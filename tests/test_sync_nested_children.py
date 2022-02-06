@@ -1092,8 +1092,6 @@ class TestNestedChildren(object):
             },
         ]
         for i, doc in enumerate(docs):
-            # assert doc["_id"] == expected[i]["_id"]
-            # assert doc["_index"] == expected[i]["_index"]
             for key in [
                 "_meta",
                 "authors",

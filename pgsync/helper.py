@@ -20,13 +20,14 @@ def teardown(
     drop_index: bool = True,
     delete_checkpoint: bool = True,
     config: Optional[str] = None,
+    validate: bool = False,
 ) -> None:
     """Teardown helper."""
     config: str = get_config(config)
 
     with open(config, "r") as documents:
         for document in json.load(documents):
-            sync: Sync = Sync(document, validate=False)
+            sync: Sync = Sync(document, validate=validate)
             if truncate_db:
                 try:
                     sync.truncate_schemas()

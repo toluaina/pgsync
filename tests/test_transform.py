@@ -6,6 +6,7 @@ from pgsync.transform import (
     _concat_fields,
     _get_transform,
     _rename_fields,
+    get_private_keys,
     transform,
 )
 
@@ -400,3 +401,14 @@ class TestTransform(object):
         # - withour delimiter
         # - with list order maintained
         # - without destination specified
+
+    def test_get_private_keys(self):
+        primary_keys = [
+            {"publisher": {"id": [4]}},
+            None,
+            None,
+            None,
+            None,
+            None,
+        ]
+        assert get_private_keys(primary_keys) == {"publisher": {"id": [4]}}
