@@ -68,7 +68,8 @@ class TestSync(object):
                     mock_sync.assert_called_once()
         sync.es.close()
 
-    def test_sync_validate(self):
+    @patch("pgsync.sync.ElasticHelper")
+    def test_sync_validate(self, mock_es):
         with pytest.raises(SchemaError) as excinfo:
             sync = Sync(
                 document={
@@ -79,10 +80,9 @@ class TestSync(object):
                 validate=True,
                 repl_slots=False,
             )
-            assert (
-                "Incompatible schema. Please run v2 schema migration"
-                in str(excinfo.value)
-            )
+        assert "Incompatible schema. Please run v2 schema migration" in str(
+            excinfo.value
+        )
 
         sync = Sync(
             document={
