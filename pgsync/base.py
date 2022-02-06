@@ -74,11 +74,7 @@ class TupleIdentifierType(sa.types.UserDefinedType):
 
 class Base(object):
     def __init__(self, database: str, verbose: bool = False, *args, **kwargs):
-        """Initialize the base class constructor.
-
-        Args:
-            database: The database name
-        """
+        """Initialize the base class constructor."""
         self.__engine = pg_engine(database, **kwargs)
         self.__schemas: Optional[dict] = None
         # models is a dict of f'{schema}.{table}'
