@@ -2,8 +2,8 @@
 import logging
 import os
 import sys
+import threading
 from datetime import timedelta
-from threading import Thread
 from time import time
 from typing import Optional
 
@@ -87,13 +87,33 @@ def show_settings(schema: str = None, **kwargs) -> None:
     logger.info("-" * 65)
 
 
-def threaded(fn):
+def threaded(func):
     """Decorator for threaded code execution."""
 
-    def wrapper(*args, **kwargs) -> Thread:
-        thread: Thread = Thread(target=fn, args=args, kwargs=kwargs)
+    def wrapper(*args, **kwargs) -> threading.Thread:
+        thread: threading.Thread = threading.Thread(
+            target=func, args=args, kwargs=kwargs
+        )
         thread.start()
         return thread
+
+    return wrapper
+
+
+def exit_handler(func):
+    """Decorator for threaded exception handling."""
+
+    def wrapper(*args, **kwargs):
+        try:
+            fn = func(*args, **kwargs)
+        except Exception as e:
+            name: str = threading.currentThread().getName()
+            sys.stdout.write(
+                f"Exception in {func.__name__}() for thread {name}: {e}\n"
+                f"Exiting...\n"
+            )
+            os._exit(-1)
+        return fn
 
     return wrapper
 

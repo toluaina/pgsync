@@ -8,6 +8,7 @@ import pprint
 import re
 import select
 import sys
+import threading
 import time
 from collections import defaultdict
 from typing import AnyStr, Generator, List, Optional, Set
@@ -57,7 +58,7 @@ from .settings import (
     REPLICATION_SLOT_CLEANUP_INTERVAL,
 )
 from .transform import get_private_keys, transform
-from .utils import get_config, show_settings, threaded, Timer
+from .utils import exit_handler, get_config, show_settings, threaded, Timer
 
 logger = logging.getLogger(__name__)
 
@@ -969,6 +970,7 @@ class Sync(Base):
         self._checkpoint: int = value
 
     @threaded
+    @exit_handler
     def poll_redis(self) -> None:
         """Consumer which polls Redis continuously."""
         while True:
@@ -980,6 +982,7 @@ class Sync(Base):
             time.sleep(REDIS_POLL_INTERVAL)
 
     @threaded
+    @exit_handler
     def poll_db(self) -> None:
         """
         Producer which polls Postgres continuously.
@@ -1079,6 +1082,7 @@ class Sync(Base):
         self._truncate: bool = True
 
     @threaded
+    @exit_handler
     def truncate_slots(self) -> None:
         """Truncate the logical replication slot."""
         while True:
@@ -1088,6 +1092,7 @@ class Sync(Base):
             time.sleep(REPLICATION_SLOT_CLEANUP_INTERVAL)
 
     @threaded
+    @exit_handler
     def status(self):
         while True:
             sys.stdout.write(
