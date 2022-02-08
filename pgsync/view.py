@@ -38,7 +38,7 @@ def compile_create_view(
         element.selectable,
         literal_binds=True,
     )
-    materialized: bool = "MATERIALIZED" if element.materialized else ""
+    materialized: str = "MATERIALIZED" if element.materialized else ""
     return (
         f'CREATE {materialized} VIEW "{element.schema}"."{element.name}" AS '
         f"{statement}"
@@ -63,8 +63,8 @@ class DropView(DDLElement):
 def compile_drop_view(
     element: CreateView, compiler: PGDDLCompiler, **kwargs
 ) -> str:
-    materialized: bool = "MATERIALIZED" if element.materialized else ""
-    cascade: bool = "CASCADE" if element.cascade else ""
+    cascade: str = "CASCADE" if element.cascade else ""
+    materialized: str = "MATERIALIZED" if element.materialized else ""
     return (
         f"DROP {materialized} VIEW IF EXISTS "
         f'"{element.schema}"."{element.name}" {cascade}'

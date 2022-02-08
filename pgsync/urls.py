@@ -29,8 +29,7 @@ def _get_auth(key: str) -> Optional[str]:
     try:
         plugins: Plugins = Plugins("plugins", ["Auth"])
         return plugins.auth(key)
-    except ModuleNotFoundError as e:
-        logger.warning(f"ModuleNotFoundError: {e}")
+    except ModuleNotFoundError:
         return None
 
 
@@ -87,7 +86,7 @@ def get_redis_url(
     """Return the URL to connect to Redis."""
     host: str = host or REDIS_HOST
     password: str = _get_auth("REDIS_AUTH") or password or REDIS_AUTH
-    port = port or REDIS_PORT
+    port: str = port or REDIS_PORT
     db: str = db or REDIS_DB
     scheme: str = scheme or REDIS_SCHEME
     if password:

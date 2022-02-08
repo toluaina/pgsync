@@ -41,24 +41,6 @@ class RedisQueue(object):
         """Return True if the queue is empty, False otherwise."""
         return self.qsize == 0
 
-    def push(self, item) -> None:
-        """Push item into the queue."""
-        self.__db.rpush(self.key, json.dumps(item))
-
-    def pop(self, block: bool = True, timeout: int = None) -> dict:
-        """Remove and return an item from the queue.
-
-        If optional args block is true and timeout is None (the default), block
-        if necessary until an item is available.
-        """
-        if block:
-            item = self.__db.blpop(self.key, timeout=timeout)
-        else:
-            item = self.__db.lpop(self.key)
-        if item:
-            item = item[1]
-        return json.loads(item)
-
     def bulk_pop(self, chunk_size: Optional[int] = None) -> List[dict]:
         """Remove and return multiple items from the queue."""
         chunk_size: int = chunk_size or REDIS_READ_CHUNK_SIZE
@@ -72,10 +54,6 @@ class RedisQueue(object):
     def bulk_push(self, items: List) -> None:
         """Push multiple items onto the queue."""
         self.__db.rpush(self.key, *map(json.dumps, items))
-
-    def pop_nowait(self):
-        """Equivalent to pop(False)."""
-        return self.pop(False)
 
     def _delete(self) -> None:
         logger.info(f"Deleting redis key: {self.key}")

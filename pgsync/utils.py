@@ -44,19 +44,18 @@ class Timer:
         self.message: str = message or ""
 
     def __enter__(self):
-        self.start = time()
+        self.start: float = time()
         return self
 
     def __exit__(self, *args):
-        end: float = time()
-        elapsed: float = end - self.start
+        elapsed: float = time() - self.start
         sys.stdout.write(
             f"{self.message} {(timedelta(seconds=elapsed))} "
             f"({elapsed:2.2f} sec)\n"
         )
 
 
-def show_settings(schema: str = None, **kwargs) -> None:
+def show_settings(schema: Optional[str] = None, **kwargs) -> None:
     """Show configuration."""
     logger.info("\033[4mSettings\033[0m:")
     logger.info(f'{"Schema":<10s}: {schema or SCHEMA}')

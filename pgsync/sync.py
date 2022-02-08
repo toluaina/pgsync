@@ -635,7 +635,7 @@ class Sync(Base):
                 )
                 fields = defaultdict(list)
 
-                _filters = []
+                _filters: list = []
                 for key, value in primary_fields.items():
                     fields[key].append(value)
 

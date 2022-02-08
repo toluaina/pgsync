@@ -977,7 +977,12 @@ def pg_engine(
     return sa.create_engine(url, echo=echo, connect_args=connect_args)
 
 
-def pg_execute(engine, query, values=None, options=None) -> None:
+def pg_execute(
+    engine,
+    query,
+    values: Optional[list] = None,
+    options: Optional[dict] = None,
+) -> None:
     options: dict = options or {"isolation_level": "AUTOCOMMIT"}
     conn = engine.connect()
     try:
