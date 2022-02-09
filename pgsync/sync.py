@@ -283,7 +283,7 @@ class Sync(Base):
         except OSError:
             pass
 
-        self.redis._delete()
+        self.redis.delete()
 
         for schema in self.schemas:
             tables: Set = set([])

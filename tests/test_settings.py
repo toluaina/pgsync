@@ -3,7 +3,7 @@ import importlib
 
 from pgsync import settings
 from pgsync.base import pg_engine
-from pgsync.redisqueue import redis_engine
+from pgsync.redisqueue import RedisQueue
 
 
 def test_redis_url(mocker):
@@ -14,7 +14,7 @@ def test_redis_url(mocker):
     )
     mocker.patch("redis.Redis.ping", return_value=True)
     mocker.patch("logging.config.dictConfig")
-    redis_engine()
+    RedisQueue("something")
     mock_get_redis_url.assert_called_once()
 
 

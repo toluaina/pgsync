@@ -42,7 +42,7 @@ def teardown(
             if drop_index:
                 sync.es.teardown(sync.index)
             if delete_redis:
-                sync.redis._delete()
+                sync.redis.delete()
             if delete_checkpoint:
                 try:
                     os.unlink(sync._checkpoint_file)

@@ -82,7 +82,7 @@ class TestParentSingleChildFkOnParent(object):
         except Exception:
             raise
 
-        sync.redis._delete()
+        sync.redis.delete()
         session.connection().engine.connect().close()
         session.connection().engine.dispose()
         sync.es.close()
