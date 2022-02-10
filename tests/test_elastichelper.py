@@ -6,8 +6,6 @@ from mock import ANY, MagicMock
 
 from pgsync.elastichelper import ElasticHelper, get_elasticsearch_client
 from pgsync.settings import (
-    ELASTICSEARCH_API_KEY,
-    ELASTICSEARCH_API_KEY_ID,
     ELASTICSEARCH_CA_CERTS,
     ELASTICSEARCH_CLIENT_CERT,
     ELASTICSEARCH_CLIENT_KEY,
@@ -52,7 +50,7 @@ class TestElasticsearchHelper(object):
                 ca_certs=ELASTICSEARCH_CA_CERTS,
                 client_cert=ELASTICSEARCH_CLIENT_CERT,
                 client_key=ELASTICSEARCH_CLIENT_KEY,
-                api_key=(ELASTICSEARCH_API_KEY_ID, ELASTICSEARCH_API_KEY),
+                api_key=None,
             )
 
         with mock.patch(

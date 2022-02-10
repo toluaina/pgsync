@@ -1,7 +1,7 @@
 """PGSync Elasticsearch helper."""
 import logging
 from collections import defaultdict
-from typing import Generator, List, Optional
+from typing import Generator, List, Optional, Tuple
 
 import boto3
 from elasticsearch import Elasticsearch, helpers, RequestsHttpConnection
@@ -324,6 +324,9 @@ def get_elasticsearch_client(url: str) -> Elasticsearch:
             connection_class=RequestsHttpConnection,
         )
     else:
+        api_key: Optional(Tuple[str, str]) = None
+        if ELASTICSEARCH_API_KEY_ID and ELASTICSEARCH_API_KEY:
+            api_key = (ELASTICSEARCH_API_KEY_ID, ELASTICSEARCH_API_KEY)
         return Elasticsearch(
             hosts=[url],
             timeout=ELASTICSEARCH_TIMEOUT,
@@ -333,5 +336,5 @@ def get_elasticsearch_client(url: str) -> Elasticsearch:
             ca_certs=ELASTICSEARCH_CA_CERTS,
             client_cert=ELASTICSEARCH_CLIENT_CERT,
             client_key=ELASTICSEARCH_CLIENT_KEY,
-            api_key=(ELASTICSEARCH_API_KEY_ID, ELASTICSEARCH_API_KEY),
+            api_key=api_key,
         )
