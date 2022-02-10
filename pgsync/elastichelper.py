@@ -333,5 +333,6 @@ def get_elasticsearch_client(url: str) -> Elasticsearch:
             ca_certs=ELASTICSEARCH_CA_CERTS,
             client_cert=ELASTICSEARCH_CLIENT_CERT,
             client_key=ELASTICSEARCH_CLIENT_KEY,
-            api_key=(ELASTICSEARCH_API_KEY_ID, ELASTICSEARCH_API_KEY),
+            api_key=(ELASTICSEARCH_API_KEY_ID, ELASTICSEARCH_API_KEY) if
+            ELASTICSEARCH_API_KEY_ID and ELASTICSEARCH_API_KEY else None,
         )
