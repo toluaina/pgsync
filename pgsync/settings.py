@@ -2,14 +2,14 @@
 import logging
 import logging.config
 from typing import Optional
+import os
 
 from environs import Env
 
 logger = logging.getLogger(__name__)
 
 env = Env()
-env.read_env()
-
+env.read_env(path=os.path.join(os.getcwd(), ".env"))
 # PGSync:
 # path to the application schema config
 SCHEMA = env.str("SCHEMA", default=None)
