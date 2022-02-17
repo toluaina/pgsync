@@ -81,6 +81,8 @@ class Plugins(object):
                     _id=doc["_id"],
                     _index=doc["_index"],
                 )
+                if not doc["_source"]:
+                    yield
             yield doc
 
     def auth(self, key: str) -> Optional[str]:

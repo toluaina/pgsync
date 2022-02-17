@@ -919,6 +919,7 @@ class Sync(Base):
                 bar.update(1)
 
                 row: dict = transform(row, self.nodes)
+
                 row[META] = get_private_keys(keys)
                 if extra:
                     if extra["table"] not in row[META]:
@@ -947,6 +948,8 @@ class Sync(Base):
 
                 if self._plugins:
                     doc = next(self._plugins.transform([doc]))
+                    if not doc:
+                        continue
 
                 if self.pipeline:
                     doc["pipeline"] = self.pipeline

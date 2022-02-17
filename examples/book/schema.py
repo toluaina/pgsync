@@ -107,6 +107,7 @@ class Book(Base):
         Publisher,
         backref=sa.orm.backref("publishers"),
     )
+    publish_date = sa.Column(sa.DateTime, nullable=True)
 
 
 class Rating(Base):

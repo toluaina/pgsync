@@ -132,6 +132,7 @@ class TestConstants(object):
                 "long_range",
                 "double_range",
                 "date_range",
+                "flattened",
             ]
         )
 

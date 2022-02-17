@@ -185,6 +185,7 @@ def main(config, nsize):
                     "x": [{"y": 0, "z": 5}, {"y": 1, "z": 6}],
                     "generation": {"name": "X"},
                 },
+                publish_date=datetime.datetime(1980, 1, 1),
             ),
             "002": Book(
                 isbn="002",
@@ -209,6 +210,7 @@ def main(config, nsize):
                     "x": [{"y": 2, "z": 3}, {"y": 7, "z": 2}],
                     "generation": {"name": "X"},
                 },
+                publish_date="infinity",
             ),
             "003": Book(
                 isbn="003",
@@ -227,6 +229,7 @@ def main(config, nsize):
                     "x": [{"y": 3, "z": 5}, {"y": 8, "z": 2}],
                     "generation": {"name": "X"},
                 },
+                publish_date="-infinity",
             ),
             "004": Book(
                 isbn="004",

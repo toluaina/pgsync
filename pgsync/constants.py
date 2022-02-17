@@ -77,6 +77,7 @@ ELASTICSEARCH_TYPES = [
     "date_range",
     "double",
     "double_range",
+    "flattened",
     "float",
     "float_range",
     "geo_point",
