@@ -3,5 +3,5 @@
 set -e
 set -x
 
-isort --check-only bin demo examples pgsync tests
-black --check bin demo examples pgsync tests
+isort --profile black --check-only bin demo examples pgsync tests plugins
+black --check bin demo examples pgsync tests plugins
