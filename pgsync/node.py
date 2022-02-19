@@ -237,7 +237,7 @@ def traverse_post_order(root: Node) -> Node:
 
 @dataclass
 class Tree:
-    base: "Base"
+    base: "base.Base"
 
     def __post_init__(self):
         self.nodes: Set = set()
