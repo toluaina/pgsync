@@ -31,94 +31,94 @@ def main(config):
     session = Session()
 
     # Bootstrap
-    categories = {
-        "Category 1": Category(
+    categories = [
+        Category(
             id=1,
             uid="c001",
             text="Colours",
         ),
-        "Category 2": Category(
+        Category(
             id=2,
             uid="c002",
             text="Weather",
         ),
-    }
+    ]
     with subtransactions(session):
-        session.add_all(categories.values())
+        session.add_all(categories)
 
-    questions = {
-        "Question 1": Question(
+    questions = [
+        Question(
             id=1,
             uid="q001",
             category_id=1,
             category_uid="c001",
             text="What is your favorite color?",
         ),
-        "Question 2": Question(
+        Question(
             id=2,
             uid="q002",
             category_id=2,
             category_uid="c002",
             text="Is it raining outside?",
         ),
-    }
+    ]
     with subtransactions(session):
-        session.add_all(questions.values())
+        session.add_all(questions)
 
-    answers = {
-        "Answer 1": Answer(id=1, uid="a001", text="Red"),
-        "Answer 2": Answer(id=2, uid="a002", text="Yes"),
-        "Answer 3": Answer(id=3, uid="a003", text="Green"),
-        "Answer 4": Answer(id=4, uid="a004", text="No"),
-    }
+    answers = [
+        Answer(id=1, uid="a001", text="Red"),
+        Answer(id=2, uid="a002", text="Yes"),
+        Answer(id=3, uid="a003", text="Green"),
+        Answer(id=4, uid="a004", text="No"),
+    ]
     with subtransactions(session):
-        session.add_all(answers.values())
+        session.add_all(answers)
 
-    possible_answers = {
-        "Possible Answer 1": PossibleAnswer(
+    possible_answers = [
+        PossibleAnswer(
             question_id=1,
             question_uid="q001",
             answer_id=1,
             answer_uid="a001",
         ),
-        "Possible Answer 2": PossibleAnswer(
+        PossibleAnswer(
             question_id=1,
             question_uid="q001",
             answer_id=3,
             answer_uid="a003",
         ),
-        "Possible Answer 3": PossibleAnswer(
+        PossibleAnswer(
             question_id=2,
             question_uid="q002",
             answer_id=2,
             answer_uid="a002",
         ),
-        "Possible Answer 4": PossibleAnswer(
+        PossibleAnswer(
             question_id=2,
             question_uid="q002",
             answer_id=4,
             answer_uid="a004",
         ),
-    }
+    ]
     with subtransactions(session):
-        session.add_all(possible_answers.values())
+        session.add_all(possible_answers)
 
-    real_answers = {
-        "Real Answer 1": RealAnswer(
+    real_answers = [
+        RealAnswer(
             question_id=1,
             question_uid="q001",
             answer_id=1,
             answer_uid="a001",
         ),
-        "Real Answer 4": RealAnswer(
+        RealAnswer(
             question_id=2,
             question_uid="q002",
             answer_id=4,
             answer_uid="a004",
         ),
-    }
+    ]
     with subtransactions(session):
-        session.add_all(real_answers.values())
+        session.add_all(real_answers)
 
 
 if __name__ == "__main__":

@@ -28,84 +28,80 @@ def main(config):
     session = Session()
 
     # Bootstrap
-    users = {
-        "Carla Ferreira Cardoso": User(
-            name="Carla Ferreira Cardoso", age=19, gender="female"
-        ),
-        "Uwe Fuerst": User(name="Uwe Fuerst", age=58, gender="male"),
-        "Otitodilinna Chigolum": User(
-            name="Otitodilinna Chigolum", age=36, gender="male"
-        ),
-    }
+    users = [
+        User(name="Carla Ferreira Cardoso", age=19, gender="female"),
+        User(name="Uwe Fuerst", age=58, gender="male"),
+        User(name="Otitodilinna Chigolum", age=36, gender="male"),
+    ]
     with subtransactions(session):
-        session.add_all(users.values())
+        session.add_all(users)
 
-    posts = {
-        "Post 1": Post(slug="post_1", title="This is the first post"),
-        "Post 2": Post(slug="post_2", title="This is the second post"),
-        "Post 3": Post(slug="post_3", title="This is the third post"),
-    }
+    posts = [
+        Post(slug="post_1", title="This is the first post"),
+        Post(slug="post_2", title="This is the second post"),
+        Post(slug="post_3", title="This is the third post"),
+    ]
     with subtransactions(session):
-        session.add_all(posts.values())
+        session.add_all(posts)
 
-    comments = {
-        "Comment 1": Comment(
+    comments = [
+        Comment(
             title="Comment 1",
             content="This is a sample comment for comment 1",
         ),
-        "Comment 2": Comment(
+        Comment(
             title="Comment 2",
             content="This is a sample comment for comment 2",
         ),
-        "Comment 3": Comment(
+        Comment(
             title="Comment 3",
             content="This is a sample comment for comment 3",
         ),
-        "Comment 4": Comment(
+        Comment(
             title="Comment 4",
             content="This is a sample comment for comment 4",
         ),
-        "Comment 5": Comment(
+        Comment(
             title="Comment 5",
             content="This is a sample comment for comment 5",
         ),
-        "Comment 6": Comment(
+        Comment(
             title="Comment 6",
             content="This is a sample comment for comment 6",
         ),
-    }
+    ]
     with subtransactions(session):
-        session.add_all(comments.values())
+        session.add_all(comments)
 
-    tags = {
-        "Economics": Tag(name="Economics"),
-        "Career": Tag(name="Career"),
-        "Political": Tag(name="Political"),
-        "Fitness": Tag(name="Fitness"),
-        "Entertainment": Tag(name="Entertainment"),
-        "Education": Tag(name="Education"),
-        "Technology": Tag(name="Technology"),
-        "Health": Tag(name="Health"),
-        "Fashion": Tag(name="Fashion"),
-        "Design": Tag(name="Design"),
-        "Photography": Tag(name="Photography"),
-        "Lifestyle": Tag(name="Lifestyle"),
-    }
+    tags = [
+        Tag(name="Economics"),
+        Tag(name="Career"),
+        Tag(name="Political"),
+        Tag(name="Fitness"),
+        Tag(name="Entertainment"),
+        Tag(name="Education"),
+        Tag(name="Technology"),
+        Tag(name="Health"),
+        Tag(name="Fashion"),
+        Tag(name="Design"),
+        Tag(name="Photography"),
+        Tag(name="Lifestyle"),
+    ]
     with subtransactions(session):
-        session.add_all(tags.values())
+        session.add_all(tags)
 
     user_posts = [
         UserPost(
-            user=users["Carla Ferreira Cardoso"],
-            post=posts["Post 1"],
+            user=users[0],
+            post=posts[0],
         ),
         UserPost(
-            user=users["Uwe Fuerst"],
-            post=posts["Post 2"],
+            user=users[1],
+            post=posts[1],
         ),
         UserPost(
-            user=users["Otitodilinna Chigolum"],
-            post=posts["Post 3"],
+            user=users[2],
+            post=posts[2],
         ),
     ]
     with subtransactions(session):
@@ -113,36 +109,36 @@ def main(config):
 
     user_tags = [
         UserTag(
-            user=users["Carla Ferreira Cardoso"],
-            tag=tags["Economics"],
+            user=users[0],
+            tag=tags[0],
         ),
         UserTag(
-            user=users["Carla Ferreira Cardoso"],
-            tag=tags["Career"],
+            user=users[0],
+            tag=tags[1],
         ),
         UserTag(
-            user=users["Carla Ferreira Cardoso"],
-            tag=tags["Political"],
+            user=users[0],
+            tag=tags[2],
         ),
         UserTag(
-            user=users["Carla Ferreira Cardoso"],
-            tag=tags["Lifestyle"],
+            user=users[0],
+            tag=tags[11],
         ),
         UserTag(
-            user=users["Carla Ferreira Cardoso"],
-            tag=tags["Health"],
+            user=users[0],
+            tag=tags[7],
         ),
         UserTag(
-            user=users["Uwe Fuerst"],
-            tag=tags["Education"],
+            user=users[1],
+            tag=tags[5],
         ),
         UserTag(
-            user=users["Uwe Fuerst"],
-            tag=tags["Lifestyle"],
+            user=users[1],
+            tag=tags[11],
         ),
         UserTag(
-            user=users["Otitodilinna Chigolum"],
-            tag=tags["Fashion"],
+            user=users[1],
+            tag=tags[8],
         ),
     ]
     with subtransactions(session):
@@ -150,28 +146,28 @@ def main(config):
 
     post_comments = [
         PostComment(
-            post=posts["Post 1"],
-            comment=comments["Comment 1"],
+            post=posts[0],
+            comment=comments[0],
         ),
         PostComment(
-            post=posts["Post 1"],
-            comment=comments["Comment 2"],
+            post=posts[0],
+            comment=comments[1],
         ),
         PostComment(
-            post=posts["Post 2"],
-            comment=comments["Comment 3"],
+            post=posts[1],
+            comment=comments[2],
         ),
         PostComment(
-            post=posts["Post 2"],
-            comment=comments["Comment 4"],
+            post=posts[1],
+            comment=comments[3],
         ),
         PostComment(
-            post=posts["Post 3"],
-            comment=comments["Comment 5"],
+            post=posts[2],
+            comment=comments[4],
         ),
         PostComment(
-            post=posts["Post 3"],
-            comment=comments["Comment 6"],
+            post=posts[2],
+            comment=comments[5],
         ),
     ]
     with subtransactions(session):

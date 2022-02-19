@@ -22,7 +22,7 @@ class Plugin(ABC):
 class Plugins(object):
     def __init__(self, package: str, names: Optional[list] = None):
         self.package: str = package
-        self.names: Optional[list] = names or []
+        self.names: list = names or []
         self.reload()
 
     def reload(self) -> None:

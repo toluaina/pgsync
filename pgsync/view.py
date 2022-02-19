@@ -9,7 +9,7 @@ from sqlalchemy.schema import DDLElement
 from sqlalchemy.sql import Values
 from sqlalchemy.sql.selectable import Select
 
-from .constants import MATERIALIZED_VIEW, SCHEMA
+from .constants import DEFAULT_SCHEMA, MATERIALIZED_VIEW
 
 logger = logging.getLogger(__name__)
 
@@ -148,7 +148,7 @@ def create_view(
 
         engine.execute(DropView(schema, MATERIALIZED_VIEW))
 
-    if schema != SCHEMA:
+    if schema != DEFAULT_SCHEMA:
         for table in set(tables):
             tables.add(f"{schema}.{table}")
 

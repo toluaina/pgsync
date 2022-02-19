@@ -196,12 +196,12 @@ class Sync(Base):
                     through_table,
                     node.schema,
                 )
-                foreign_keys = get_foreign_keys(
+                foreign_keys: dict = get_foreign_keys(
                     node.parent,
                     through,
                 )
             else:
-                foreign_keys = get_foreign_keys(
+                foreign_keys: dict = get_foreign_keys(
                     node.parent,
                     node,
                 )

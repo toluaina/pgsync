@@ -55,37 +55,6 @@ class Timer:
         )
 
 
-def show_settings(schema: Optional[str] = None, **kwargs) -> None:
-    """Show configuration."""
-    logger.info("\033[4mSettings\033[0m:")
-    logger.info(f'{"Schema":<10s}: {schema or SCHEMA}')
-    logger.info("-" * 65)
-    logger.info("\033[4mPostgres\033[0m:")
-    logger.info(
-        f'URL: postgresql://{kwargs.get("user", PG_USER)}:*****@'
-        f'{kwargs.get("host", PG_HOST)}:'
-        f'{kwargs.get("port", PG_PORT)}'
-    )
-    for key in kwargs:
-        if key == "password":
-            continue
-        logger.info(f"{key}: {kwargs[key]}")
-    logger.info("\033[4mElasticsearch\033[0m:")
-    if ELASTICSEARCH_USER:
-        logger.info(
-            f"URL: {ELASTICSEARCH_SCHEME}://{ELASTICSEARCH_USER}:*****@"
-            f"{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}"
-        )
-    else:
-        logger.info(
-            f"URL: {ELASTICSEARCH_SCHEME}://"
-            f"{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}"
-        )
-    logger.info("\033[4mRedis\033[0m:")
-    logger.info(f"URL: {REDIS_SCHEME}://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}")
-    logger.info("-" * 65)
-
-
 def threaded(func):
     """Decorator for threaded code execution."""
 
@@ -115,6 +84,37 @@ def exit_handler(func):
         return fn
 
     return wrapper
+
+
+def show_settings(schema: Optional[str] = None, **kwargs) -> None:
+    """Show settings."""
+    logger.info("\033[4mSettings\033[0m:")
+    logger.info(f'{"Schema":<10s}: {schema or SCHEMA}')
+    logger.info("-" * 65)
+    logger.info("\033[4mPostgres\033[0m:")
+    logger.info(
+        f'URL: postgresql://{kwargs.get("user", PG_USER)}:*****@'
+        f'{kwargs.get("host", PG_HOST)}:'
+        f'{kwargs.get("port", PG_PORT)}'
+    )
+    for key in kwargs:
+        if key == "password":
+            continue
+        logger.info(f"{key}: {kwargs[key]}")
+    logger.info("\033[4mElasticsearch\033[0m:")
+    if ELASTICSEARCH_USER:
+        logger.info(
+            f"URL: {ELASTICSEARCH_SCHEME}://{ELASTICSEARCH_USER}:*****@"
+            f"{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}"
+        )
+    else:
+        logger.info(
+            f"URL: {ELASTICSEARCH_SCHEME}://"
+            f"{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}"
+        )
+    logger.info("\033[4mRedis\033[0m:")
+    logger.info(f"URL: {REDIS_SCHEME}://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}")
+    logger.info("-" * 65)
 
 
 def get_config(config: Optional[str] = None) -> str:

@@ -161,7 +161,7 @@ TRANSFORM_TYPES = [
 ]
 
 # default postgres schema
-SCHEMA = "public"
+DEFAULT_SCHEMA = "public"
 
 BUILTIN_SCHEMAS = ["information_schema"]
 

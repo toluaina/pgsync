@@ -19,20 +19,20 @@ import click
 )
 def main(config):
     """Schema migration script."""
-    timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    basename = os.path.basename(config)
-    filepath = os.path.dirname(config)
-    backup = os.path.join(filepath, f"{basename}.{timestamp}")
+    timestamp: str = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    basename: str = os.path.basename(config)
+    filepath: str = os.path.dirname(config)
+    backup: str = os.path.join(filepath, f"{basename}.{timestamp}")
 
     print(f'Migrating "{config}" and saving backup to {backup}')
 
     shutil.copy(config, backup)
 
-    changed = False
+    changed: bool = False
 
-    documents = []
+    documents: list = []
     for document in json.load(open(config)):
-        new_doc = {}
+        new_doc: dict = {}
         for key, value in document.items():
             if key == "nodes" and isinstance(value, list):
                 new_doc["nodes"] = value[0]

@@ -1,29 +1,33 @@
 #!/bin/sh -e
 
-if [ -d 'build' ] ; then
-    rm -r build
-fi
-if [ -d 'dist' ] ; then
-    rm -r dist
-fi
-if [ -d 'wheels' ] ; then
-    rm -r wheels
-fi
-if [ -d '.pytest_cache' ] ; then
-    rm -r .pytest_cache
-fi
-if [ -d '__pycache__' ] ; then
-    rm -r __pycache__
-fi
+echo 'Cleanup.'
 
-rm -rf .coverage
-rm -rf .coverage.*
-rm -rf *.egg-info
-rm -rf .eggs
-rm -rf .mypy_cache
-find . -type f -name ".*_*" -exec rm -r "{}" \;
-find . -type d -name *.egg-info -exec rm -r "{}" \;
-find . -type d -name __pycache__ -exec rm -r "{}" \;
-find . -type f -name *.pyc -exec rm -r "{}" \;
-find . -type f -name *.so -exec rm -r "{}" \;
-find . -type f -name *.c -exec rm -r "{}" \;
+declare -a dirs=("build" "dist" "wheels" ".pytest_cache" "__pycache__")
+for i in "${dirs[@]}"
+do
+    if [ -d "$i" ] ; then
+        echo "Deleting: $i"
+        rm -r "$i"
+    fi
+done
+
+declare -a files=(".coverage" ".coverage.*" "*.egg-info" ".eggs" ".mypy_cache")
+for i in "${files[@]}"
+do
+    if [ -f "$i" ] ; then
+        echo "Deleting: $i"
+        rm -r "$i"
+    fi
+done
+
+declare -a dirs=("*.egg-info" "__pycache__")
+for i in "${dirs[@]}"
+do
+    find . -type d -name "$i" -exec rm -r "{}" \;
+done
+
+declare -a files=(".*_*" "*.pyc" "*.so" "*.c ")
+for i in "${files[@]}"
+do
+    find . -type f -name "$i"  -exec rm -r "{}" \;
+done

@@ -19,6 +19,7 @@ FIELDS = {
     "copyright": "word",
     "tags": "words",
     "doc": "json",
+    "publish_date": "date_time",
 }
 
 

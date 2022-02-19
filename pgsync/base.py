@@ -13,11 +13,11 @@ from sqlalchemy.orm import sessionmaker
 
 from .constants import (
     BUILTIN_SCHEMAS,
+    DEFAULT_SCHEMA,
     LOGICAL_SLOT_PREFIX,
     LOGICAL_SLOT_SUFFIX,
     MATERIALIZED_VIEW,
     PLUGIN,
-    SCHEMA,
     TG_OP,
     TRIGGER_FUNC,
     UPDATE,
@@ -229,14 +229,14 @@ class Base(object):
         return metadata.tables.keys()
 
     def _get_schema(self, schema: str, table: str) -> Tuple[str, str]:
-        pairs = table.split(".")
+        pairs: list = table.split(".")
         if len(pairs) == 2:
             return pairs[0], pairs[1]
         if len(pairs) == 1:
             return schema, pairs[0]
         raise ValueError(f"Invalid definition {table} for schema: {schema}")
 
-    def truncate_table(self, table: str, schema: str = SCHEMA) -> None:
+    def truncate_table(self, table: str, schema: str = DEFAULT_SCHEMA) -> None:
         """Truncate a table.
 
         Note:
@@ -255,7 +255,9 @@ class Base(object):
         query = f'TRUNCATE TABLE "{schema}"."{table}" CASCADE'
         self.execute(query)
 
-    def truncate_tables(self, tables: List[str], schema: str = SCHEMA) -> None:
+    def truncate_tables(
+        self, tables: List[str], schema: str = DEFAULT_SCHEMA
+    ) -> None:
         """Truncate all tables."""
         logger.debug(f"Truncating tables: {tables}")
         for table in tables:
@@ -341,7 +343,7 @@ class Base(object):
         upto_lsn: Optional[int] = None,
         upto_nchanges: Optional[int] = None,
     ):
-        filters: List = []
+        filters: list = []
         statement: str = sa.select(
             [sa.column("xid"), sa.column("data")]
         ).select_from(
@@ -429,7 +431,7 @@ class Base(object):
             pg_namespace = self.model("pg_namespace", "pg_catalog")
 
         alias = pg_class.alias("x")
-        inclause = []
+        inclause: list = []
         for table in tables:
             pairs = table.split(".")
             if len(pairs) == 1:
@@ -997,7 +999,7 @@ def pg_execute(
 
 def create_schema(engine, schema) -> None:
     """Create database schema."""
-    if schema != SCHEMA:
+    if schema != DEFAULT_SCHEMA:
         engine.execute(sa.schema.CreateSchema(schema))
 
 
