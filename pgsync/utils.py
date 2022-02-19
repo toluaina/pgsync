@@ -16,6 +16,7 @@ from .settings import (
     PG_HOST,
     PG_PORT,
     PG_USER,
+    REDIS_AUTH,
     REDIS_DB,
     REDIS_HOST,
     REDIS_PORT,
@@ -113,7 +114,14 @@ def show_settings(schema: Optional[str] = None, **kwargs) -> None:
             f"{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}"
         )
     logger.info("\033[4mRedis\033[0m:")
-    logger.info(f"URL: {REDIS_SCHEME}://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}")
+    if REDIS_AUTH:
+        logger.info(
+            f"URL: {REDIS_SCHEME}://:****@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+        )
+    else:
+        logger.info(
+            f"URL: {REDIS_SCHEME}://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+        )
     logger.info("-" * 65)
 
 
