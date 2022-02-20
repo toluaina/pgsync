@@ -4,7 +4,7 @@ import os
 import sys
 import warnings
 from collections import defaultdict
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import sqlalchemy as sa
 import sqlparse
