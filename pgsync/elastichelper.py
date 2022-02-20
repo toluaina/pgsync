@@ -55,12 +55,12 @@ class ElasticHelper(object):
         """
         url: str = get_elasticsearch_url()
         self.__es: Elasticsearch = get_elasticsearch_client(url)
-        self.opensearch: bool = False
+        self.is_opensearch: bool = False
         try:
             self.major_version: int = int(
                 self.__es.info()["version"]["number"].split(".")[0]
             )
-            self.opensearch = (
+            self.is_opensearch = (
                 self.__es.info()["tagline"] != "You Know, for Search"
             )
         except (IndexError, KeyError, ValueError):
@@ -301,7 +301,7 @@ class ElasticHelper(object):
             root._mapping["_routing"] = {"required": True}
 
         if root._mapping:
-            if self.major_version < 7 and not self.opensearch:
+            if self.major_version < 7 and not self.is_opensearch:
                 root._mapping = {"_doc": root._mapping}
 
             return dict(mappings=root._mapping)

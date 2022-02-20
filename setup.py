@@ -10,17 +10,17 @@ from setuptools import find_packages, setup
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
-def get_version():
-    filename = os.path.join(HERE, "pgsync", "__init__.py")
-    with open(filename) as f:
-        contents = f.read()
+def get_version() -> str:
+    filename: str = os.path.join(HERE, "pgsync", "__init__.py")
+    with open(filename) as fp:
+        contents = fp.read()
     pattern = r"^__version__ = \"(.*?)\"$"
     return re.search(pattern, contents, re.MULTILINE).group(1)
 
 
 # Package meta-data.
 NAME = "pgsync"
-DESCRIPTION = "Postgres to elasticsearch sync"
+DESCRIPTION = "Postgres to Elasticsearch sync"
 URL = "https://github.com/toluaina/pgsync"
 AUTHOR = MAINTAINER = "Tolu Aina"
 AUTHOR_EMAIL = MAINTAINER_EMAIL = "toluaina@hotmail.com"

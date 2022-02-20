@@ -31,13 +31,6 @@ from .exc import (
 )
 
 
-def _safe_get(obj, attr):
-    value = obj.get(attr)
-    if value is not None:
-        value = value.lower()
-    return value
-
-
 @dataclass
 class ForeignKey:
     foreign_key: Optional[dict] = None
@@ -88,13 +81,14 @@ class Relationship:
             raise RelationshipVariantError(
                 f'Relationship variant "{self.variant}" is invalid.'
             )
-        if self.through_tables and len(self.through_tables) > 1:
+        if len(self.through_tables) > 1:
             raise MultipleThroughTablesError(
                 f"Multiple through tables: {self.through_tables}"
             )
-        self.type = _safe_get(self.relationship, "type")
-        self.variant = _safe_get(self.relationship, "variant")
-        self.through_tables = self.relationship.get("through_tables", [])
+        if self.type:
+            self.type = self.type.lower()
+        if self.variant:
+            self.variant = self.variant.lower()
         self.foreign_key = ForeignKey(self.relationship.get("foreign_key"))
 
     def __str__(self):
@@ -248,6 +242,7 @@ class Tree:
 
         if table is None:
             raise TableNotInNodeError(f"Table not specified in node: {root}")
+
         if schema and schema not in self.base.schemas:
             raise InvalidSchemaError(f"Unknown schema name(s): {schema}")
 
@@ -280,6 +275,7 @@ class Tree:
                 attrs = set(child.keys()).difference(set(NODE_ATTRIBUTES))
                 raise NodeAttributeError(f"Unknown node attribute(s): {attrs}")
             node.add_child(self.build(child))
+
         return node
 
 

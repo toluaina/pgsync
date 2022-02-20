@@ -185,7 +185,7 @@ class QueryBuilder(object):
         if not node.is_root:
             node._subquery = node._subquery.lateral()
 
-    def _children(self, node: Node):
+    def _children(self, node: Node) -> None:
 
         for child in node.children:
 
@@ -299,7 +299,7 @@ class QueryBuilder(object):
                 isouter=self.isouter,
             )
 
-    def _through(self, node: Node):  # noqa: C901
+    def _through(self, node: Node) -> None:  # noqa: C901
 
         through = node_from_table(
             self.base,
@@ -565,7 +565,7 @@ class QueryBuilder(object):
         if not node.is_root:
             node._subquery = node._subquery.lateral()
 
-    def _non_through(self, node: Node):  # noqa: C901
+    def _non_through(self, node: Node) -> None:  # noqa: C901
 
         from_obj = None
 
@@ -723,7 +723,7 @@ class QueryBuilder(object):
         if not node.is_root:
             node._subquery = node._subquery.lateral()
 
-    def build_queries(self, node: Node):
+    def build_queries(self, node: Node) -> None:
         """Build node query."""
         self.from_obj = None
 
