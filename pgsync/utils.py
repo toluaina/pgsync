@@ -114,7 +114,7 @@ def show_settings(schema: Optional[str] = None, **kwargs) -> None:
             f"{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}"
         )
     logger.info("\033[4mRedis\033[0m:")
-    if REDIS_AUTH:
+    if not REDIS_AUTH:
         logger.info(
             f"URL: {REDIS_SCHEME}://:****@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
         )

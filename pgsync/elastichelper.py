@@ -14,7 +14,7 @@ from .constants import (
     ELASTICSEARCH_TYPES,
     META,
 )
-from .node import Node, traverse_post_order
+from .node import Node
 from .settings import (
     ELASTICSEARCH_API_KEY,
     ELASTICSEARCH_API_KEY_ID,
@@ -261,7 +261,7 @@ class ElasticHelper(object):
 
     def _build_mapping(self, root: Node, routing: str) -> Optional[dict]:
         """Get the Elasticsearch mapping from the schema transform."""
-        for node in traverse_post_order(root):
+        for node in root.traverse_post_order():
 
             rename: dict = node.transform.get("rename", {})
             mapping: dict = node.transform.get("mapping", {})

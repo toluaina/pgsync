@@ -1,7 +1,7 @@
 """Node tests."""
 import pytest
 
-from pgsync.node import traverse_breadth_first, traverse_post_order, Tree
+from pgsync.node import Tree
 
 
 @pytest.mark.usefixtures("table_creator")
@@ -104,7 +104,7 @@ class TestNode(object):
         tree = Tree(sync)
         root = tree.build(nodes)
         root.display()
-        for i, node in enumerate(traverse_breadth_first(root)):
+        for i, node in enumerate(root.traverse_breadth_first()):
             if i == 0:
                 assert node.table == "book"
             if i == 1:
@@ -129,7 +129,7 @@ class TestNode(object):
         tree = Tree(sync)
         root = tree.build(nodes)
         root.display()
-        for i, node in enumerate(traverse_post_order(root)):
+        for i, node in enumerate(root.traverse_post_order()):
             if i == 0:
                 assert node.table == "publisher"
             if i == 1:

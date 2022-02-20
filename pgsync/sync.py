@@ -8,7 +8,6 @@ import pprint
 import re
 import select
 import sys
-import threading
 import time
 from collections import defaultdict
 from typing import AnyStr, Generator, List, Optional, Set
@@ -38,14 +37,7 @@ from .exc import (
     SchemaError,
     SuperUserError,
 )
-from .node import (
-    get_node,
-    Node,
-    node_from_table,
-    traverse_breadth_first,
-    traverse_post_order,
-    Tree,
-)
+from .node import get_node, Node, node_from_table, Tree
 from .plugin import Plugins
 from .querybuilder import QueryBuilder
 from .redisqueue import RedisQueue
@@ -175,12 +167,12 @@ class Sync(Base):
 
         root: Node = self.tree.build(self.nodes)
         root.display()
-        for node in traverse_breadth_first(root):
+        for node in root.traverse_breadth_first():
             pass
 
     def analyze(self) -> None:
         root: Node = self.tree.build(self.nodes)
-        for node in traverse_breadth_first(root):
+        for node in root.traverse_breadth_first():
 
             if node.is_root:
                 continue
@@ -254,7 +246,7 @@ class Sync(Base):
             user_defined_fkey_tables: dict = {}
 
             root: Node = self.tree.build(self.nodes)
-            for node in traverse_breadth_first(root):
+            for node in root.traverse_breadth_first():
                 if node.schema != schema:
                     continue
                 tables |= set(node.relationship.through_tables)
@@ -288,7 +280,7 @@ class Sync(Base):
         for schema in self.schemas:
             tables: Set = set([])
             root: Node = self.tree.build(self.nodes)
-            for node in traverse_breadth_first(root):
+            for node in root.traverse_breadth_first():
                 tables |= set(node.relationship.through_tables)
                 tables |= set([node.table])
             self.drop_triggers(schema=schema, tables=tables)
@@ -829,7 +821,7 @@ class Sync(Base):
 
         self.query_builder.isouter: bool = True
 
-        for node in traverse_post_order(root):
+        for node in root.traverse_post_order():
 
             self._build_filters(filters, node)
 
@@ -1230,13 +1222,13 @@ def main(
 
     if analyze:
         for document in json.load(open(config)):
-            sync = Sync(document, verbose=verbose, **kwargs)
+            sync: Sync = Sync(document, verbose=verbose, **kwargs)
             sync.analyze()
         return
 
     with Timer():
         for document in json.load(open(config)):
-            sync = Sync(document, verbose=verbose, **kwargs)
+            sync: Sync = Sync(document, verbose=verbose, **kwargs)
             sync.pull()
             if daemon:
                 sync.receive()
