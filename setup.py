@@ -48,6 +48,7 @@ CLASSIFIERS = [
 SCRIPTS = [
     "bin/pgsync",
     "bin/bootstrap",
+    "bin/parallel_sync",
 ]
 SETUP_REQUIRES = ["pytest-runner"]
 TESTS_REQUIRE = ["pytest"]
