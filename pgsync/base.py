@@ -56,7 +56,7 @@ logger = logging.getLogger(__name__)
 class TupleIdentifierType(sa.types.UserDefinedType):
     cache_ok: bool = True
 
-    def get_col_spec(self, **kw) -> str:
+    def get_col_spec(self, **kwargs) -> str:
         return "TID"
 
     def bind_processor(self, dialect):
@@ -78,7 +78,7 @@ class Base(object):
         self.__engine = pg_engine(database, **kwargs)
         self.__schemas: Optional[dict] = None
         # models is a dict of f'{schema}.{table}'
-        self.models: dict = {}
+        self.models: Dict[str] = {}
         self.__metadata: dict = {}
         self.__indices: dict = {}
         self.verbose: bool = verbose

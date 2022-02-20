@@ -158,7 +158,7 @@ class QueryBuilder(object):
                 )
         return row.label("_keys")
 
-    def _root(self, node):
+    def _root(self, node) -> None:
         columns = [
             sa.func.JSON_BUILD_ARRAY(
                 *[

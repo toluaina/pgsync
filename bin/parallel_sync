@@ -90,7 +90,7 @@ class Worker(multiprocessing.Process):
         return
 
 
-def _query_tasks(doc: dict, block_size: Optional[int] = None) -> list:
+def fetch_tasks(doc: dict, block_size: Optional[int] = None) -> list:
     block_size: int = block_size or BLOCK_SIZE
     tasks: list = []
     pages: dict = {}
@@ -119,15 +119,15 @@ def _query_tasks(doc: dict, block_size: Optional[int] = None) -> list:
     return tasks
 
 
-def _pull(ncpus: int, config: str, verbose: Optional[bool] = False) -> None:
+def pull(ncpus: int, config: str, verbose: Optional[bool] = False) -> None:
     """Pull data from db using multiprocessing."""
     queue: multiprocessing.JoinableQueue = multiprocessing.JoinableQueue()
     with Timer():
         for doc in json.load(open(config)):
             logger.debug(f"ncpus   : {ncpus}")
-            tasks: list = _query_tasks(doc)
+            tasks: list = fetch_tasks(doc)
             logger.debug(f"tasks   : {len(tasks)}")
-            workers = [Worker(queue, doc) for _ in range(ncpus)]
+            workers: List[Worker] = [Worker(queue, doc) for _ in range(ncpus)]
             sync: Sync = Sync(doc, verbose=verbose)
             txmin: int = sync.checkpoint
             txmax: int = sync.txid_current
@@ -163,7 +163,7 @@ def _pull(ncpus: int, config: str, verbose: Optional[bool] = False) -> None:
 @click.option(
     "--ncpus",
     "-n",
-    help="Number of cpus.",
+    help="Number of cpus",
     type=int,
     default=multiprocessing.cpu_count() * 2,
 )
@@ -171,7 +171,7 @@ def main(config, ncpus, verbose):
 
     show_settings()
     config: str = get_config(config)
-    _pull(ncpus, config, verbose=verbose)
+    pull(ncpus, config, verbose=verbose)
 
 
 if __name__ == "__main__":

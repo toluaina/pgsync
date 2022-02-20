@@ -11,6 +11,7 @@ from requests_aws4auth import AWS4Auth
 
 from .constants import (
     ELASTICSEARCH_MAPPING_PARAMETERS,
+    ELASTICSEARCH_TAGLINE,
     ELASTICSEARCH_TYPES,
     META,
 )
@@ -61,7 +62,7 @@ class ElasticHelper(object):
                 self.__es.info()["version"]["number"].split(".")[0]
             )
             self.is_opensearch = (
-                self.__es.info()["tagline"] != "You Know, for Search"
+                self.__es.info()["tagline"] != ELASTICSEARCH_TAGLINE
             )
         except (IndexError, KeyError, ValueError):
             self.major_version: int = 0

@@ -119,13 +119,13 @@ class Sync(Base):
         except TypeError:
             raise RuntimeError(
                 "Ensure there is at least one replication slot defined "
-                "by setting max_replication_slots=1"
+                "by setting max_replication_slots = 1"
             )
 
         wal_level: Optional[str] = self.pg_settings("wal_level")
         if not wal_level or wal_level.lower() != "logical":
             raise RuntimeError(
-                "Enable logical decoding by setting wal_level=logical"
+                "Enable logical decoding by setting wal_level = logical"
             )
 
         rds_logical_replication: Optional[str] = self.pg_settings(
