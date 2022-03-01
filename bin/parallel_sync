@@ -20,7 +20,7 @@ tool to populate Elasticsearch with the majority of the records.
 We can then revert to the native sync process.
 
 This approach uses the Tuple identifier record of the table columns.
-Each table contains a hidden system column -  "ctid" of type "tid" that
+Each table contains a hidden system column - "ctid" of type "tid" that
 identifies the page record and row number in each block.
 
 We use this to paginate the sync process.
@@ -64,20 +64,15 @@ class Task:
     txmin: Optional[int] = None
     txmax: Optional[int] = None
 
-    def __call__(self, sync: Sync) -> None:
-        sync.es.bulk(
-            sync.index,
-            sync.sync(ctid=self.ctid, txmin=self.txmin, txmax=self.txmax),
-        )
-
 
 class Worker(multiprocessing.Process):
     def __init__(self, queue: multiprocessing.JoinableQueue, doc: dict):
         multiprocessing.Process.__init__(self)
         self.queue: multiprocessing.JoinableQueue = queue
-        self.sync: Sync = Sync(doc)
+        self.doc: dict = doc
 
     def run(self) -> None:
+        sync: Sync = Sync(self.doc)
         while True:
             task: Task = self.queue.get()
             if task is None:
@@ -85,7 +80,10 @@ class Worker(multiprocessing.Process):
                 sys.stdout.flush()
                 self.queue.task_done()
                 break
-            task(self.sync)
+            sync.es.bulk(
+                sync.index,
+                sync.sync(ctid=task.ctid, txmin=task.txmin, txmax=task.txmax),
+            )
             self.queue.task_done()
         return
 
