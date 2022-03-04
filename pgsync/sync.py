@@ -162,7 +162,13 @@ class Sync(Base):
         if not os.path.exists(CHECKPOINT_PATH):
             raise RuntimeError(
                 f'Ensure the checkpoint directory exists "{CHECKPOINT_PATH}" '
-                f"and is readable ."
+                f"and is readable."
+            )
+
+        if not os.access(CHECKPOINT_PATH, os.W_OK | os.R_OK):
+            raise RuntimeError(
+                f'Ensure the checkpoint directory "{CHECKPOINT_PATH}" is '
+                f"read/writable"
             )
 
         root: Node = self.tree.build(self.nodes)

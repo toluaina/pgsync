@@ -9,6 +9,7 @@ from typing import Optional
 
 from .exc import SchemaError
 from .settings import (
+    CHECKPOINT_PATH,
     ELASTICSEARCH_HOST,
     ELASTICSEARCH_PORT,
     ELASTICSEARCH_SCHEME,
@@ -92,6 +93,8 @@ def show_settings(schema: Optional[str] = None, **kwargs) -> None:
     logger.info("\033[4mSettings\033[0m:")
     logger.info(f'{"Schema":<10s}: {schema or SCHEMA}')
     logger.info("-" * 65)
+    logger.info("\033[4mCheckpoint\033[0m:")
+    logger.info(f"Path: {CHECKPOINT_PATH}")
     logger.info("\033[4mPostgres\033[0m:")
     logger.info(
         f'URL: postgresql://{kwargs.get("user", PG_USER)}:*****@'
