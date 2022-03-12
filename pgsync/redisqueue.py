@@ -28,7 +28,6 @@ class RedisQueue(object):
         except ConnectionError as e:
             logger.exception(f"Redis server is not running: {e}")
             raise
-        self._pipeline = self.__db.pipeline()
 
     @property
     def qsize(self) -> int:
@@ -38,9 +37,10 @@ class RedisQueue(object):
     def bulk_pop(self, chunk_size: Optional[int] = None) -> List[dict]:
         """Remove and return multiple items from the queue."""
         chunk_size: int = chunk_size or REDIS_READ_CHUNK_SIZE
-        self._pipeline.lrange(self.key, 0, chunk_size - 1)
-        self._pipeline.ltrim(self.key, chunk_size, -1)
-        items: List[List[bytes], bool] = self._pipeline.execute()
+        pipeline = self.__db.pipeline()
+        pipeline.lrange(self.key, 0, chunk_size - 1)
+        pipeline.ltrim(self.key, chunk_size, -1)
+        items: List[List[bytes], bool] = pipeline.execute()
         logger.debug(f"bulk_pop nsize: {len(items[0])}")
         return list(map(lambda value: json.loads(value), items[0]))
 

@@ -150,6 +150,10 @@ class ElasticHelper(object):
         )
         raise_on_error: bool = raise_on_error or ELASTICSEARCH_RAISE_ON_ERROR
 
+        # when using multiple threads for poll_db we need to account for other
+        # threads performing deletions
+        ignore_status: Tuple[int] = (400, 404)
+
         if ELASTICSEARCH_STREAMING_BULK:
             for _ in helpers.streaming_bulk(
                 self.__es,
@@ -178,6 +182,7 @@ class ElasticHelper(object):
                 refresh=refresh,
                 raise_on_exception=raise_on_exception,
                 raise_on_error=raise_on_error,
+                ignore_status=ignore_status,
             ):
                 self.doc_count += 1
 

@@ -44,6 +44,7 @@ from .redisqueue import RedisQueue
 from .settings import (
     CHECKPOINT_PATH,
     LOG_INTERVAL,
+    NTHREADS_POLLDB,
     POLL_TIMEOUT,
     REDIS_POLL_INTERVAL,
     REDIS_WRITE_CHUNK_SIZE,
@@ -1107,7 +1108,7 @@ class Sync(Base):
             sys.stdout.flush()
             time.sleep(LOG_INTERVAL)
 
-    def receive(self) -> None:
+    def receive(self, nthreads_polldb=None) -> None:
         """
         Receive events from db.
 
@@ -1119,7 +1120,9 @@ class Sync(Base):
         """
         # start a background worker producer thread to poll the db and populate
         # the Redis cache
-        self.poll_db()
+        nthreads_polldb = nthreads_polldb or NTHREADS_POLLDB
+        for _ in range(nthreads_polldb):
+            self.poll_db()
 
         # sync up to current transaction_id
         self.pull()
@@ -1187,6 +1190,13 @@ class Sync(Base):
     default=False,
     help="Analyse database",
 )
+@click.option(
+    "--nthreads_polldb",
+    "-n",
+    help="Number of threads to spawn for poll db",
+    type=int,
+    default=NTHREADS_POLLDB,
+)
 def main(
     config,
     daemon,
@@ -1199,6 +1209,7 @@ def main(
     verbose,
     version,
     analyze,
+    nthreads_polldb,
 ):
     """Main application syncer."""
     if version:
@@ -1237,7 +1248,7 @@ def main(
             sync: Sync = Sync(document, verbose=verbose, **kwargs)
             sync.pull()
             if daemon:
-                sync.receive()
+                sync.receive(nthreads_polldb)
 
 
 if __name__ == "__main__":

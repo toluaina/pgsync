@@ -23,7 +23,6 @@ class TestRedisQueue(object):
         mock_get_redis_url.assert_called_once()
         mock_ping.assert_called_once()
         mock_logger.exception.assert_not_called()
-        assert queue._pipeline is not None
 
     @patch("pgsync.redisqueue.logger")
     def test_redis_conn_fail(self, mock_logger, mocker):
