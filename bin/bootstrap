@@ -53,7 +53,7 @@ def main(teardown, config, user, password, host, port, verbose):
 
     config: str = get_config(config)
 
-    show_settings(config, **kwargs)
+    show_settings(config)
 
     for document in json.load(open(config)):
         sync: Sync = Sync(

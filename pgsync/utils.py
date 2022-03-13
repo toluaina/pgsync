@@ -6,24 +6,11 @@ import threading
 from datetime import timedelta
 from time import time
 from typing import Optional
+from urllib.parse import ParseResult, urlparse
 
 from .exc import SchemaError
-from .settings import (
-    CHECKPOINT_PATH,
-    ELASTICSEARCH_HOST,
-    ELASTICSEARCH_PORT,
-    ELASTICSEARCH_SCHEME,
-    ELASTICSEARCH_USER,
-    PG_HOST,
-    PG_PORT,
-    PG_USER,
-    REDIS_AUTH,
-    REDIS_DB,
-    REDIS_HOST,
-    REDIS_PORT,
-    REDIS_SCHEME,
-    SCHEMA,
-)
+from .settings import CHECKPOINT_PATH, SCHEMA
+from .urls import get_elasticsearch_url, get_postgres_url, get_redis_url
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +75,17 @@ def exit_handler(func):
     return wrapper
 
 
-def show_settings(schema: Optional[str] = None, **kwargs) -> None:
+def get_redacted_url(result: ParseResult) -> ParseResult:
+    if result.password:
+        username: str = result.username
+        hostname: str = result.hostname
+        result = result._replace(
+            netloc=f"{username}:{'*' * len(result.password)}@{hostname}"
+        )
+    return result
+
+
+def show_settings(schema: Optional[str] = None) -> None:
     """Show settings."""
     logger.info("\033[4mSettings\033[0m:")
     logger.info(f'{"Schema":<10s}: {schema or SCHEMA}')
@@ -96,42 +93,21 @@ def show_settings(schema: Optional[str] = None, **kwargs) -> None:
     logger.info("\033[4mCheckpoint\033[0m:")
     logger.info(f"Path: {CHECKPOINT_PATH}")
     logger.info("\033[4mPostgres\033[0m:")
-    logger.info(
-        f'URL: postgresql://{kwargs.get("user", PG_USER)}:*****@'
-        f'{kwargs.get("host", PG_HOST)}:'
-        f'{kwargs.get("port", PG_PORT)}'
+    result: ParseResult = get_redacted_url(
+        urlparse(get_postgres_url("postgres"))
     )
-    for key in kwargs:
-        if key == "password":
-            continue
-        logger.info(f"{key}: {kwargs[key]}")
+    logger.info(f"URL: {result.geturl()}")
+    result: ParseResult = get_redacted_url(urlparse(get_elasticsearch_url()))
     logger.info("\033[4mElasticsearch\033[0m:")
-    if ELASTICSEARCH_USER:
-        logger.info(
-            f"URL: {ELASTICSEARCH_SCHEME}://{ELASTICSEARCH_USER}:*****@"
-            f"{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}"
-        )
-    else:
-        logger.info(
-            f"URL: {ELASTICSEARCH_SCHEME}://"
-            f"{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}"
-        )
+    logger.info(f"URL: {result.geturl()}")
     logger.info("\033[4mRedis\033[0m:")
-    if REDIS_AUTH:
-        logger.info(
-            f"URL: {REDIS_SCHEME}://:****@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
-        )
-    else:
-        logger.info(
-            f"URL: {REDIS_SCHEME}://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
-        )
+    result: ParseResult = get_redacted_url(urlparse(get_redis_url()))
+    logger.info(f"URL: {result.geturl()}")
     logger.info("-" * 65)
 
 
 def get_config(config: Optional[str] = None) -> str:
-    """
-    Return the schema config for PGSync.
-    """
+    """Return the schema config for PGSync."""
     config: str = config or SCHEMA
     if not config:
         raise SchemaError(

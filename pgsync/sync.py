@@ -1235,7 +1235,7 @@ def main(
 
     config: str = get_config(config)
 
-    show_settings(config, **kwargs)
+    show_settings(config)
 
     if analyze:
         for document in json.load(open(config)):
