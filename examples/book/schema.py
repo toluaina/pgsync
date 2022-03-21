@@ -202,8 +202,8 @@ class BookShelf(Base):
 
 def setup(config=None):
     for document in json.load(open(config)):
-        database = document.get("database", document["index"])
-        schema = document.get("schema", DEFAULT_SCHEMA)
+        database: str = document.get("database", document["index"])
+        schema: str = document.get("schema", DEFAULT_SCHEMA)
         create_database(database)
         engine = pg_engine(database=database)
         create_schema(engine, schema)
@@ -223,7 +223,7 @@ def setup(config=None):
 )
 def main(config):
 
-    config = get_config(config)
+    config: str = get_config(config)
     teardown(config=config)
     setup(config)
 

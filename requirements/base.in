@@ -1,14 +1,15 @@
 # base libraries
+black
+boto3
+bumpversion
 click
 elasticsearch==7.13.4 # pin this to version 7.13.4 for compatibility with OpenSearch https://opensearch.org/docs/clients/index/
 elasticsearch-dsl>=6.0.0,<8.0.0
 environs
 faker
+importlib-metadata==4.2.0
 psycopg2-binary
 redis
+requests-aws4auth
 sqlalchemy
 sqlparse
-bumpversion
-boto3
-requests-aws4auth
-black

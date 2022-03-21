@@ -1,14 +1,17 @@
 -r base.in
 
+flake8_docstrings
+flake8-debugger
+flake8-print
+flake8-todo
+flake8-isort
+mock
 pytest
 pytest-cov
 pytest-runner
 pytest-mock
 pytest-sugar
 pytest-runner
-mock
-flake8_docstrings
-flake8-debugger
-flake8-print
-flake8-todo
-flake8-isort
+
+# pin to last know stable pytest
+pytest==6.2.5

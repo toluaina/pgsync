@@ -46,7 +46,7 @@ def main(config, nsize):
         engine = pg_engine(
             database=document.get("database", document["index"])
         )
-        schema = document.get("schema", DEFAULT_SCHEMA)
+        schema: str = document.get("schema", DEFAULT_SCHEMA)
         connection = engine.connect().execution_options(
             schema_translate_map={None: schema}
         )

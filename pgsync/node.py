@@ -62,7 +62,9 @@ class Relationship:
         self.relationship: dict = self.relationship or dict()
         self.type: str = self.relationship.get("type")
         self.variant: str = self.relationship.get("variant")
-        self.through_tables: List = self.relationship.get("through_tables", [])
+        self.through_tables: List[str] = self.relationship.get(
+            "through_tables", []
+        )
 
         if not set(self.relationship.keys()).issubset(
             set(RELATIONSHIP_ATTRIBUTES)
@@ -89,7 +91,9 @@ class Relationship:
             self.type = self.type.lower()
         if self.variant:
             self.variant = self.variant.lower()
-        self.foreign_key = ForeignKey(self.relationship.get("foreign_key"))
+        self.foreign_key: ForeignKey = ForeignKey(
+            self.relationship.get("foreign_key")
+        )
 
     def __str__(self):
         return (

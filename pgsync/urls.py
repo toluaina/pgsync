@@ -50,7 +50,7 @@ def get_elasticsearch_url(
         or password
         or ELASTICSEARCH_PASSWORD
     )
-    if user:
+    if user and password:
         return f"{scheme}://{user}:{quote_plus(password)}@{host}:{port}"
     logger.debug("Connecting to Elasticsearch without authentication.")
     return f"{scheme}://{host}:{port}"
