@@ -117,6 +117,7 @@ class TestConstants(object):
                 "interval_year_to_month",
                 "ip",
                 "keyword",
+                "knn_vector",
                 "long",
                 "nested",
                 "null",

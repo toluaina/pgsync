@@ -100,6 +100,7 @@ ELASTICSEARCH_TYPES = [
     "interval_year_to_month",
     "ip",
     "keyword",
+    "knn_vector",
     "long",
     "long_range",
     "nested",
