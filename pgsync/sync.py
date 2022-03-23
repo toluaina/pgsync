@@ -1085,9 +1085,9 @@ class Sync(Base):
         logger.debug(f"pull txmin: {txmin} - txmax: {txmax}")
         # forward pass sync
         self.es.bulk(self.index, self.sync(txmin=txmin, txmax=txmax))
-        self.checkpoint: int = txmax or self.txid_current
         # now sync up to txmax to capture everything we may have missed
         self.logical_slot_changes(txmin=txmin, txmax=txmax)
+        self.checkpoint: int = txmax or self.txid_current
         self._truncate: bool = True
 
     @threaded
