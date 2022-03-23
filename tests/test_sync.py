@@ -5,6 +5,7 @@ import pytest
 from mock import patch
 
 from pgsync.exc import RDSError, SchemaError
+from pgsync.settings import PG_LOGICAL_SLOT_UPTO_NCHANGES
 from pgsync.sync import Sync
 
 ROW = namedtuple("Row", ["data", "xid"])
@@ -16,53 +17,59 @@ class TestSync(object):
 
     def test_logical_slot_changes(self, sync):
         with patch("pgsync.sync.Sync.logical_slot_peek_changes") as mock_peek:
-            mock_peek.return_value = [
-                ROW("BEGIN: blah", 1234),
+            mock_peek.side_effect = [
+                [ROW("BEGIN: blah", 1234)],
+                [],
             ]
             with patch("pgsync.sync.Sync.sync") as mock_sync:
                 sync.logical_slot_changes()
-                mock_peek.assert_called_once_with(
+                mock_peek.assert_called_with(
                     "testdb_testdb",
                     txmin=None,
                     txmax=None,
-                    upto_nchanges=None,
+                    upto_nchanges=PG_LOGICAL_SLOT_UPTO_NCHANGES,
                 )
                 mock_sync.assert_not_called()
 
         with patch("pgsync.sync.Sync.logical_slot_peek_changes") as mock_peek:
-            mock_peek.return_value = [
-                ROW("COMMIT: blah", 1234),
+            mock_peek.side_effect = [
+                [ROW("COMMIT: blah", 1234)],
+                [],
             ]
             with patch("pgsync.sync.Sync.sync") as mock_sync:
                 sync.logical_slot_changes()
-                mock_peek.assert_called_once_with(
+                mock_peek.assert_called_with(
                     "testdb_testdb",
                     txmin=None,
                     txmax=None,
-                    upto_nchanges=None,
+                    upto_nchanges=PG_LOGICAL_SLOT_UPTO_NCHANGES,
                 )
                 mock_sync.assert_not_called()
 
         with patch("pgsync.sync.Sync.logical_slot_peek_changes") as mock_peek:
-            mock_peek.return_value = [
-                ROW(
-                    "table public.book: INSERT: id[integer]:10 isbn[character "
-                    "varying]:'888' title[character varying]:'My book title' "
-                    "description[character varying]:null copyright[character "
-                    "varying]:null tags[jsonb]:null publisher_id[integer]:null",
-                    1234,
-                ),
+            mock_peek.side_effect = [
+                [
+                    ROW(
+                        "table public.book: INSERT: id[integer]:10 isbn[character "
+                        "varying]:'888' title[character varying]:'My book title' "
+                        "description[character varying]:null copyright[character "
+                        "varying]:null tags[jsonb]:null publisher_id[integer]:null",
+                        1234,
+                    ),
+                ],
+                [],
             ]
+
             with patch(
                 "pgsync.sync.Sync.logical_slot_get_changes"
             ) as mock_get:
                 with patch("pgsync.sync.Sync.sync") as mock_sync:
                     sync.logical_slot_changes()
-                    mock_peek.assert_called_once_with(
+                    mock_peek.assert_called_with(
                         "testdb_testdb",
                         txmin=None,
                         txmax=None,
-                        upto_nchanges=None,
+                        upto_nchanges=PG_LOGICAL_SLOT_UPTO_NCHANGES,
                     )
                     mock_get.assert_called_once()
                     mock_sync.assert_called_once()

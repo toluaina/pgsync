@@ -342,7 +342,7 @@ class Base(object):
         txmax: Optional[int] = None,
         upto_lsn: Optional[int] = None,
         upto_nchanges: Optional[int] = None,
-    ):
+    ) -> List[sa.engine.row.LegacyRow]:
         filters: list = []
         statement: str = sa.select(
             [sa.column("xid"), sa.column("data")]
@@ -380,7 +380,7 @@ class Base(object):
         txmax: Optional[int] = None,
         upto_lsn: Optional[int] = None,
         upto_nchanges: Optional[int] = None,
-    ):
+    ) -> List[sa.engine.row.LegacyRow]:
         """Get/Consume changes from a logical replication slot.
 
         To get one change and data in existing replication slot:
@@ -405,7 +405,7 @@ class Base(object):
         txmax: Optional[int] = None,
         upto_lsn: Optional[int] = None,
         upto_nchanges: Optional[int] = None,
-    ):
+    ) -> List[sa.engine.row.LegacyRow]:
         """Peek a logical replication slot without consuming changes.
 
         SELECT * FROM PG_LOGICAL_SLOT_PEEK_CHANGES('testdb', NULL, 1)

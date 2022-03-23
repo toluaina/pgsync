@@ -45,6 +45,7 @@ from .settings import (
     CHECKPOINT_PATH,
     LOG_INTERVAL,
     NTHREADS_POLLDB,
+    PG_LOGICAL_SLOT_UPTO_NCHANGES,
     POLL_TIMEOUT,
     REDIS_POLL_INTERVAL,
     REDIS_WRITE_CHUNK_SIZE,
@@ -329,64 +330,70 @@ class Sync(Base):
         TODO: We can also process all INSERTS together and rearrange
         them as done below
         """
-        rows: list = self.logical_slot_peek_changes(
+        # minimize the tmp file disk usage when calling
+        # PG_LOGICAL_SLOT_PEEK_CHANGES and PG_LOGICAL_SLOT_GET_CHANGES
+        # by limiting to a smaller batch size.
+        upto_nchanges: int = PG_LOGICAL_SLOT_UPTO_NCHANGES
+        changes: list = self.logical_slot_peek_changes(
             self.__name,
             txmin=txmin,
             txmax=txmax,
-            upto_nchanges=None,
+            upto_nchanges=upto_nchanges,
         )
 
-        rows: list = rows or []
-        payloads: list = []
-        _rows: list = []
+        while changes:
+            rows: list = []
+            for row in changes:
+                if re.search(r"^BEGIN", row.data) or re.search(
+                    r"^COMMIT", row.data
+                ):
+                    continue
+                rows.append(row)
 
-        for row in rows:
-            if re.search(r"^BEGIN", row.data) or re.search(
-                r"^COMMIT", row.data
-            ):
-                continue
-            _rows.append(row)
-
-        for i, row in enumerate(_rows):
-
-            logger.debug(f"txid: {row.xid}")
-            logger.debug(f"data: {row.data}")
-            # TODO: optimize this so we are not parsing the same row twice
-            try:
-                payload = self.parse_logical_slot(row.data)
-            except Exception as e:
-                logger.exception(
-                    f"Error parsing row: {e}\nRow data: {row.data}"
-                )
-                raise
-            payloads.append(payload)
-
-            j: int = i + 1
-            if j < len(_rows):
+            payloads: list = []
+            for i, row in enumerate(rows):
+                logger.debug(f"txid: {row.xid}")
+                logger.debug(f"data: {row.data}")
+                # TODO: optimize this so we are not parsing the same row twice
                 try:
-                    payload2 = self.parse_logical_slot(_rows[j].data)
+                    payload = self.parse_logical_slot(row.data)
                 except Exception as e:
                     logger.exception(
-                        f"Error parsing row: {e}\nRow data: {_rows[j].data}"
+                        f"Error parsing row: {e}\nRow data: {row.data}"
                     )
                     raise
+                payloads.append(payload)
 
-                if (
-                    payload["tg_op"] != payload2["tg_op"]
-                    or payload["table"] != payload2["table"]
-                ):
+                j: int = i + 1
+                if j < len(rows):
+                    try:
+                        payload2 = self.parse_logical_slot(rows[j].data)
+                    except Exception as e:
+                        logger.exception(
+                            f"Error parsing row: {e}\nRow data: {rows[j].data}"
+                        )
+                        raise
+
+                    if (
+                        payload["tg_op"] != payload2["tg_op"]
+                        or payload["table"] != payload2["table"]
+                    ):
+                        self.es.bulk(self.index, self._payloads(payloads))
+                        payloads: list = []
+                elif j == len(rows):
                     self.es.bulk(self.index, self._payloads(payloads))
                     payloads: list = []
-            elif j == len(_rows):
-                self.es.bulk(self.index, self._payloads(payloads))
-                payloads: list = []
-
-        if rows:
             self.logical_slot_get_changes(
                 self.__name,
                 txmin=txmin,
                 txmax=txmax,
-                upto_nchanges=len(rows),
+                upto_nchanges=upto_nchanges,
+            )
+            changes: list = self.logical_slot_peek_changes(
+                self.__name,
+                txmin=txmin,
+                txmax=txmax,
+                upto_nchanges=upto_nchanges,
             )
             self.count["xlog"] += len(rows)
 

@@ -31,6 +31,11 @@ BLOCK_SIZE = env.int("BLOCK_SIZE", default=2048 * 10)
 QUERY_LITERAL_BINDS = env.bool("QUERY_LITERAL_BINDS", default=None)
 # number of threads to spawn for poll db
 NTHREADS_POLLDB = env.int("NTHREADS_POLLDB", default=1)
+# number of upto_nchanges for PG_LOGICAL_SLOT_PEEK_CHANGES and
+# PG_LOGICAL_SLOT_GET_CHANGES for minimizing tmp file disk usage
+PG_LOGICAL_SLOT_UPTO_NCHANGES = env.int(
+    "PG_LOGICAL_SLOT_UPTO_NCHANGES", default=5000
+)
 
 # Elasticsearch:
 ELASTICSEARCH_SCHEME = env.str("ELASTICSEARCH_SCHEME", default="http")
