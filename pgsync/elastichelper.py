@@ -101,6 +101,20 @@ class ElasticHelper(object):
         raise_on_error: Optional[bool] = None,
     ) -> None:
         """Pull sync data from generator to Elasticsearch."""
+        chunk_size: int = chunk_size or ELASTICSEARCH_CHUNK_SIZE
+        max_chunk_bytes: int = max_chunk_bytes or ELASTICSEARCH_MAX_CHUNK_BYTES
+        thread_count: int = thread_count or ELASTICSEARCH_THREAD_COUNT
+        queue_size: int = queue_size or ELASTICSEARCH_QUEUE_SIZE
+        # max_retries, initial_backoff & max_backoff are only applicable when
+        # streaming bulk is in use
+        max_retries: int = max_retries or ELASTICSEARCH_MAX_RETRIES
+        initial_backoff: int = initial_backoff or ELASTICSEARCH_INITIAL_BACKOFF
+        max_backoff: int = max_backoff or ELASTICSEARCH_MAX_BACKOFF
+        raise_on_exception: bool = (
+            raise_on_exception or ELASTICSEARCH_RAISE_ON_EXCEPTION
+        )
+        raise_on_error: bool = raise_on_error or ELASTICSEARCH_RAISE_ON_ERROR
+
         try:
             self._bulk(
                 index,
@@ -118,37 +132,25 @@ class ElasticHelper(object):
             )
         except Exception as e:
             logger.exception(f"Exception {e}")
-            raise
+            if raise_on_exception or raise_on_error:
+                raise
 
     def _bulk(
         self,
         index: str,
         docs: Generator,
-        chunk_size: Optional[int] = None,
-        max_chunk_bytes: Optional[int] = None,
-        queue_size: Optional[int] = None,
-        thread_count: Optional[int] = None,
-        refresh: bool = False,
-        max_retries: Optional[int] = None,
-        initial_backoff: Optional[int] = None,
-        max_backoff: Optional[int] = None,
-        raise_on_exception: Optional[bool] = None,
-        raise_on_error: Optional[bool] = None,
+        chunk_size: int,
+        max_chunk_bytes: int,
+        queue_size: int,
+        thread_count: int,
+        refresh: bool,
+        max_retries: int,
+        initial_backoff: int,
+        max_backoff: int,
+        raise_on_exception: bool,
+        raise_on_error: bool,
     ):
         """Bulk index, update, delete docs to Elasticsearch."""
-        chunk_size: int = chunk_size or ELASTICSEARCH_CHUNK_SIZE
-        max_chunk_bytes: int = max_chunk_bytes or ELASTICSEARCH_MAX_CHUNK_BYTES
-        thread_count: int = thread_count or ELASTICSEARCH_THREAD_COUNT
-        queue_size: int = queue_size or ELASTICSEARCH_QUEUE_SIZE
-        # max_retries, initial_backoff & max_backoff are only applicable when
-        # streaming bulk is in use
-        max_retries: int = max_retries or ELASTICSEARCH_MAX_RETRIES
-        initial_backoff: int = initial_backoff or ELASTICSEARCH_INITIAL_BACKOFF
-        max_backoff: int = max_backoff or ELASTICSEARCH_MAX_BACKOFF
-        raise_on_exception: bool = (
-            raise_on_exception or ELASTICSEARCH_RAISE_ON_EXCEPTION
-        )
-        raise_on_error: bool = raise_on_error or ELASTICSEARCH_RAISE_ON_ERROR
 
         # when using multiple threads for poll_db we need to account for other
         # threads performing deletions
