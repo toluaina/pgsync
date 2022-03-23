@@ -952,15 +952,17 @@ class Sync(Base):
                 if self.es.major_version < 7 and not self.es.is_opensearch:
                     doc["_type"] = "_doc"
 
-                if self._plugins:
-                    doc = next(self._plugins.transform([doc]))
-                    if not doc:
-                        continue
-
                 if self.pipeline:
                     doc["pipeline"] = self.pipeline
 
-                yield doc
+                if self._plugins:
+                    doc = self._plugins.transform(doc)
+                    if not doc:
+                        continue
+                    yield from self._plugins.flatten(doc)
+
+                else:
+                    yield doc
 
     @property
     def checkpoint(self) -> int:

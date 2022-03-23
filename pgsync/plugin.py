@@ -1,22 +1,26 @@
 """PGSync plugin."""
 import logging
 import os
-from abc import ABC, abstractmethod
 from importlib import import_module
 from inspect import getmembers, isclass
 from pkgutil import iter_modules
-from typing import Optional
+from typing import Any, Dict, Iterable, Optional
 
 logger = logging.getLogger(__name__)
 
+DocumentType = Dict[str, Any]
 
-class Plugin(ABC):
+
+class Plugin:
     """Plugin base class."""
 
-    @abstractmethod
-    def transform(self, doc: dict, **kwargs) -> dict:
-        """Must be implemented by all derived classes."""
-        pass
+    def transform(self, doc: DocumentType, **kwargs) -> DocumentType:
+        """Returns a document derived from the given doc."""
+        return doc
+
+    def flatten(self, doc: DocumentType, **kwargs) -> Iterable[DocumentType]:
+        """Takes a single document and maps it to one or more documents."""
+        return [doc]
 
 
 class Plugins(object):
@@ -72,18 +76,33 @@ class Plugins(object):
             ]:
                 self.walk(f"{package}.{pkg}")
 
-    def transform(self, docs: list) -> dict:
+    def transform(self, doc: DocumentType) -> DocumentType:
         """Apply all plugins to each doc."""
-        for doc in docs:
-            for plugin in self.plugins:
-                doc["_source"] = plugin.transform(
-                    doc["_source"],
-                    _id=doc["_id"],
-                    _index=doc["_index"],
-                )
-                if not doc["_source"]:
-                    yield
-            yield doc
+        for plugin in self.plugins:
+            transformed = plugin.transform(
+                doc['_source'],
+                _id=doc["_id"],
+                _index=doc["_index"],
+            )
+            if transformed:
+                doc['_source'] = transformed
+
+        return doc if doc['_source'] else None
+
+    def flatten(self, doc: DocumentType) -> Iterable[DocumentType]:
+        """Flattens out doc into one or more documents."""
+        generated_document_ids = set()
+        generated_docs = []
+        for plugin in self.plugins:
+            flattened = plugin.flatten(doc)
+            if not flattened:
+                continue
+            for generated_doc in flattened:
+                if '_id' in generated_doc and generated_doc['_id'] not in generated_document_ids:
+                    generated_document_ids.add(generated_doc['_id'])
+                    generated_docs.append(generated_doc)
+
+        return generated_docs
 
     def auth(self, key: str) -> Optional[str]:
         """Get an auth value from a key."""
