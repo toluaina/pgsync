@@ -1,4 +1,5 @@
 """Generic fixtures for PGSync tests."""
+import logging
 import os
 import warnings
 
@@ -14,6 +15,8 @@ from pgsync.sync import Sync
 from pgsync.urls import get_postgres_url
 
 warnings.filterwarnings("error")
+
+logging.getLogger("faker").setLevel(logging.ERROR)
 
 
 @pytest.fixture(scope="session")

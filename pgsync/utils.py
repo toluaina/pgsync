@@ -14,6 +14,9 @@ from .urls import get_elasticsearch_url, get_postgres_url, get_redis_url
 
 logger = logging.getLogger(__name__)
 
+HIGHLIGHT_START = "\033[4m"
+HIGHLIGHT_END = "\033[0m:"
+
 
 def timeit(func):
     def timed(*args, **kwargs):
@@ -87,20 +90,20 @@ def get_redacted_url(result: ParseResult) -> ParseResult:
 
 def show_settings(schema: Optional[str] = None) -> None:
     """Show settings."""
-    logger.info("\033[4mSettings\033[0m:")
+    logger.info(f"{HIGHLIGHT_START}Settings{HIGHLIGHT_END}")
     logger.info(f'{"Schema":<10s}: {schema or SCHEMA}')
     logger.info("-" * 65)
-    logger.info("\033[4mCheckpoint\033[0m:")
+    logger.info(f"{HIGHLIGHT_START}Checkpoint{HIGHLIGHT_END}")
     logger.info(f"Path: {CHECKPOINT_PATH}")
-    logger.info("\033[4mPostgres\033[0m:")
+    logger.info(f"{HIGHLIGHT_START}Postgres{HIGHLIGHT_END}")
     result: ParseResult = get_redacted_url(
         urlparse(get_postgres_url("postgres"))
     )
     logger.info(f"URL: {result.geturl()}")
     result: ParseResult = get_redacted_url(urlparse(get_elasticsearch_url()))
-    logger.info("\033[4mElasticsearch\033[0m:")
+    logger.info(f"{HIGHLIGHT_START}Elasticsearch{HIGHLIGHT_END}")
     logger.info(f"URL: {result.geturl()}")
-    logger.info("\033[4mRedis\033[0m:")
+    logger.info(f"{HIGHLIGHT_START}Redis{HIGHLIGHT_END}")
     result: ParseResult = get_redacted_url(urlparse(get_redis_url()))
     logger.info(f"URL: {result.geturl()}")
     logger.info("-" * 65)

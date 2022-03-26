@@ -138,10 +138,9 @@ def pull(ncpus: int, config: str, verbose: Optional[bool] = False) -> None:
             for _ in range(ncpus):
                 queue.put(None)
             queue.join()
-
-            sync.checkpoint: int = txmax or sync.txid_current
             # now sync up to txmax to capture everything we may have missed
             sync.logical_slot_changes(txmin=txmin, txmax=txmax)
+            sync.checkpoint: int = txmax or sync.txid_current
 
 
 @click.command()
