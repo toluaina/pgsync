@@ -247,7 +247,10 @@ class ElasticHelper(object):
                 body.update(**{"settings": {"index": setting}})
 
             if mapping:
-                body.update(**{"mappings": {"properties": mapping}})
+                if "dynamic_templates" in mapping:
+                    body.update(**{"mappings": mapping})
+                else:
+                    body.update(**{"mappings": {"properties": mapping}})
             else:
                 mapping: dict = self._build_mapping(node, routing)
                 if mapping:
