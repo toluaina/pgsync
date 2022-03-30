@@ -44,8 +44,8 @@ from .redisqueue import RedisQueue
 from .settings import (
     CHECKPOINT_PATH,
     LOG_INTERVAL,
+    LOGICAL_SLOT_CHUNK_SIZE,
     NTHREADS_POLLDB,
-    PG_LOGICAL_SLOT_UPTO_NCHANGES,
     POLL_TIMEOUT,
     REDIS_POLL_INTERVAL,
     REDIS_WRITE_CHUNK_SIZE,
@@ -333,15 +333,27 @@ class Sync(Base):
         # minimize the tmp file disk usage when calling
         # PG_LOGICAL_SLOT_PEEK_CHANGES and PG_LOGICAL_SLOT_GET_CHANGES
         # by limiting to a smaller batch size.
-        upto_nchanges: int = PG_LOGICAL_SLOT_UPTO_NCHANGES
-        changes: list = self.logical_slot_peek_changes(
+        offset: int = 0
+        total: int = 0
+        limit: int = LOGICAL_SLOT_CHUNK_SIZE
+        count: int = self.logical_slot_count_changes(
             self.__name,
             txmin=txmin,
             txmax=txmax,
-            upto_nchanges=upto_nchanges,
+            upto_nchanges=None,
         )
+        while True:
+            changes: int = self.logical_slot_peek_changes(
+                self.__name,
+                txmin=txmin,
+                txmax=txmax,
+                upto_nchanges=None,
+                limit=limit,
+                offset=offset,
+            )
+            if not changes or total > count:
+                break
 
-        while changes:
             rows: list = []
             for row in changes:
                 if re.search(r"^BEGIN", row.data) or re.search(
@@ -387,14 +399,12 @@ class Sync(Base):
                 self.__name,
                 txmin=txmin,
                 txmax=txmax,
-                upto_nchanges=upto_nchanges,
+                upto_nchanges=None,
+                limit=limit,
+                offset=offset,
             )
-            changes: list = self.logical_slot_peek_changes(
-                self.__name,
-                txmin=txmin,
-                txmax=txmax,
-                upto_nchanges=upto_nchanges,
-            )
+            offset += limit
+            total += len(changes)
             self.count["xlog"] += len(rows)
 
     def _payload_data(self, payload: dict) -> dict:

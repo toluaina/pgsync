@@ -342,9 +342,11 @@ class Base(object):
         txmax: Optional[int] = None,
         upto_lsn: Optional[int] = None,
         upto_nchanges: Optional[int] = None,
-    ) -> List[sa.engine.row.LegacyRow]:
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+    ) -> sa.sql.selectable.Select:
         filters: list = []
-        statement: str = sa.select(
+        statement: sa.sql.selectable.Select = sa.select(
             [sa.column("xid"), sa.column("data")]
         ).select_from(
             func(
@@ -353,7 +355,7 @@ class Base(object):
                 upto_nchanges,
             )
         )
-        if txmin:
+        if txmin is not None:
             filters.append(
                 sa.cast(
                     sa.cast(sa.column("xid"), sa.Text),
@@ -361,7 +363,7 @@ class Base(object):
                 )
                 >= txmin
             )
-        if txmax:
+        if txmax is not None:
             filters.append(
                 sa.cast(
                     sa.cast(sa.column("xid"), sa.Text),
@@ -371,7 +373,11 @@ class Base(object):
             )
         if filters:
             statement = statement.where(sa.and_(*filters))
-        return self.fetchall(statement)
+        if limit is not None:
+            statement = statement.limit(limit)
+        if offset is not None:
+            statement = statement.offset(offset)
+        return statement
 
     def logical_slot_get_changes(
         self,
@@ -380,6 +386,8 @@ class Base(object):
         txmax: Optional[int] = None,
         upto_lsn: Optional[int] = None,
         upto_nchanges: Optional[int] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
     ) -> List[sa.engine.row.LegacyRow]:
         """Get/Consume changes from a logical replication slot.
 
@@ -389,14 +397,17 @@ class Base(object):
         To get ALL changes and data in existing replication slot:
         SELECT * FROM PG_LOGICAL_SLOT_GET_CHANGES('testdb', NULL, NULL)
         """
-        return self._logical_slot_changes(
+        statement: sa.sql.selectable.Select = self._logical_slot_changes(
             slot_name,
             sa.func.PG_LOGICAL_SLOT_GET_CHANGES,
             txmin=txmin,
             txmax=txmax,
             upto_lsn=upto_lsn,
             upto_nchanges=upto_nchanges,
+            limit=limit,
+            offset=offset,
         )
+        return self.fetchall(statement)
 
     def logical_slot_peek_changes(
         self,
@@ -405,12 +416,34 @@ class Base(object):
         txmax: Optional[int] = None,
         upto_lsn: Optional[int] = None,
         upto_nchanges: Optional[int] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
     ) -> List[sa.engine.row.LegacyRow]:
         """Peek a logical replication slot without consuming changes.
 
         SELECT * FROM PG_LOGICAL_SLOT_PEEK_CHANGES('testdb', NULL, 1)
         """
-        return self._logical_slot_changes(
+        statement: sa.sql.selectable.Select = self._logical_slot_changes(
+            slot_name,
+            sa.func.PG_LOGICAL_SLOT_PEEK_CHANGES,
+            txmin=txmin,
+            txmax=txmax,
+            upto_lsn=upto_lsn,
+            upto_nchanges=upto_nchanges,
+            limit=limit,
+            offset=offset,
+        )
+        return self.fetchall(statement)
+
+    def logical_slot_count_changes(
+        self,
+        slot_name: str,
+        txmin: Optional[int] = None,
+        txmax: Optional[int] = None,
+        upto_lsn: Optional[int] = None,
+        upto_nchanges: Optional[int] = None,
+    ) -> int:
+        statement: sa.sql.selectable.Select = self._logical_slot_changes(
             slot_name,
             sa.func.PG_LOGICAL_SLOT_PEEK_CHANGES,
             txmin=txmin,
@@ -418,6 +451,10 @@ class Base(object):
             upto_lsn=upto_lsn,
             upto_nchanges=upto_nchanges,
         )
+        with self.__engine.connect() as conn:
+            return conn.execute(
+                statement.with_only_columns([sa.func.COUNT()])
+            ).scalar()
 
     # Views...
     def _primary_keys(
