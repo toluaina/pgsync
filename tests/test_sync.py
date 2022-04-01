@@ -5,7 +5,7 @@ import pytest
 from mock import patch
 
 from pgsync.exc import RDSError, SchemaError
-from pgsync.settings import PG_LOGICAL_SLOT_UPTO_NCHANGES
+from pgsync.settings import LOGICAL_SLOT_CHUNK_SIZE
 from pgsync.sync import Sync
 
 ROW = namedtuple("Row", ["data", "xid"])
@@ -23,11 +23,13 @@ class TestSync(object):
             ]
             with patch("pgsync.sync.Sync.sync") as mock_sync:
                 sync.logical_slot_changes()
-                mock_peek.assert_called_with(
+                mock_peek.assert_any_call(
                     "testdb_testdb",
                     txmin=None,
                     txmax=None,
-                    upto_nchanges=PG_LOGICAL_SLOT_UPTO_NCHANGES,
+                    upto_nchanges=None,
+                    limit=LOGICAL_SLOT_CHUNK_SIZE,
+                    offset=0,
                 )
                 mock_sync.assert_not_called()
 
@@ -38,11 +40,13 @@ class TestSync(object):
             ]
             with patch("pgsync.sync.Sync.sync") as mock_sync:
                 sync.logical_slot_changes()
-                mock_peek.assert_called_with(
+                mock_peek.assert_any_call(
                     "testdb_testdb",
                     txmin=None,
                     txmax=None,
-                    upto_nchanges=PG_LOGICAL_SLOT_UPTO_NCHANGES,
+                    upto_nchanges=None,
+                    limit=LOGICAL_SLOT_CHUNK_SIZE,
+                    offset=0,
                 )
                 mock_sync.assert_not_called()
 
@@ -65,11 +69,13 @@ class TestSync(object):
             ) as mock_get:
                 with patch("pgsync.sync.Sync.sync") as mock_sync:
                     sync.logical_slot_changes()
-                    mock_peek.assert_called_with(
+                    mock_peek.assert_any_call(
                         "testdb_testdb",
                         txmin=None,
                         txmax=None,
-                        upto_nchanges=PG_LOGICAL_SLOT_UPTO_NCHANGES,
+                        upto_nchanges=None,
+                        limit=LOGICAL_SLOT_CHUNK_SIZE,
+                        offset=0,
                     )
                     mock_get.assert_called_once()
                     mock_sync.assert_called_once()
