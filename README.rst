@@ -69,7 +69,7 @@ Example spec
                         ...
                     },
                     {
-                        ... any other additional children
+                        ... additional children
                     }
                 ]
             }

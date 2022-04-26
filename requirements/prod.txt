@@ -4,11 +4,13 @@
 #
 #    pip-compile --output-file=requirements/prod.txt requirements/prod.in
 #
-black==22.1.0
+async-timeout==4.0.2
+    # via redis
+black==22.3.0
     # via -r requirements/base.in
-boto3==1.21.23
+boto3==1.22.1
     # via -r requirements/base.in
-botocore==1.24.23
+botocore==1.25.1
     # via
     #   boto3
     #   s3transfer
@@ -22,7 +24,7 @@ certifi==2021.10.8
     #   requests
 charset-normalizer==2.0.12
     # via requests
-click==8.0.4
+click==8.1.2
     # via
     #   -r requirements/base.in
     #   black
@@ -36,7 +38,7 @@ elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
 environs==9.5.0
     # via -r requirements/base.in
-faker==13.3.2
+faker==13.4.0
     # via -r requirements/base.in
 greenlet==1.1.2
     # via sqlalchemy
@@ -52,7 +54,7 @@ marshmallow==3.15.0
     # via environs
 mypy-extensions==0.4.3
     # via black
-newrelic==7.6.0.173
+newrelic==7.10.0.175
     # via -r requirements/prod.in
 packaging==21.3
     # via
@@ -60,24 +62,24 @@ packaging==21.3
     #   redis
 pathspec==0.9.0
     # via black
-platformdirs==2.5.1
+platformdirs==2.5.2
     # via black
 psycopg2-binary==2.9.3
     # via -r requirements/base.in
-pyparsing==3.0.7
+pyparsing==3.0.8
     # via packaging
 python-dateutil==2.8.2
     # via
     #   botocore
     #   elasticsearch-dsl
     #   faker
-python-dotenv==0.19.2
+python-dotenv==0.20.0
     # via environs
-redis==4.1.4
+redis==4.2.2
     # via -r requirements/base.in
 requests==2.27.1
     # via requests-aws4auth
-requests-aws4auth==1.1.1
+requests-aws4auth==1.1.2
     # via -r requirements/base.in
 s3transfer==0.5.2
     # via boto3
@@ -86,13 +88,13 @@ six==1.16.0
     #   elasticsearch-dsl
     #   python-dateutil
     #   requests-aws4auth
-sqlalchemy==1.4.32
+sqlalchemy==1.4.35
     # via -r requirements/base.in
 sqlparse==0.4.2
     # via -r requirements/base.in
 tomli==2.0.1
     # via black
-typing-extensions==4.1.1
+typing-extensions==4.2.0
     # via black
 urllib3==1.26.9
     # via
@@ -101,5 +103,5 @@ urllib3==1.26.9
     #   requests
 wrapt==1.14.0
     # via deprecated
-zipp==3.7.0
+zipp==3.8.0
     # via importlib-metadata

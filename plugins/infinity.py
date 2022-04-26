@@ -9,7 +9,7 @@ class InfinityPlugin(plugin.Plugin):
 
     def transform(self, doc: dict, **kwargs) -> dict:
         """Demonstrates infinity transform."""
-        doc_index = kwargs["_index"]
+        doc_index: str = kwargs["_index"]
         if doc_index == "book":
             if doc.get("publish_date"):
                 if doc["publish_date"].lower() == "infinity":
