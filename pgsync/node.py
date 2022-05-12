@@ -29,6 +29,7 @@ from .exc import (
     RelationshipVariantError,
     TableNotInNodeError,
 )
+from .view import is_materialized_view
 
 
 @dataclass
@@ -107,12 +108,14 @@ class Node(object):
     model: sa.sql.selectable.Alias
     table: str
     schema: str
+    materialized: bool = False
     primary_key: Optional[list] = None
     label: Optional[str] = None
     transform: Optional[dict] = None
     columns: Optional[list] = None
     relationship: Optional[dict] = None
     parent: Optional[Node] = None
+    base_tables: Optional[list] = None
 
     def __post_init__(self):
         self.columns = self.columns or []
@@ -190,15 +193,11 @@ class Node(object):
 
     @property
     def name(self) -> str:
-        """
-        returns a fully qualified node name
-        """
+        """Returns a fully qualified node name."""
         return f"{self.schema}.{self.table}"
 
     def add_child(self, node: Node) -> None:
-        """
-        all nodes except the root node must have a relationship defined
-        """
+        """All nodes except the root node must have a relationship defined."""
         node.parent: Node = self
         if not node.is_root and (
             not node.relationship.type or not node.relationship.variant
@@ -263,6 +262,8 @@ class Tree:
             transform=root.get("transform", {}),
             columns=root.get("columns", []),
             relationship=root.get("relationship", {}),
+            base_tables=root.get("base_tables", []),
+            materialized=is_materialized_view(self.base.engine, schema, table),
         )
 
         self.nodes.add(node.table)

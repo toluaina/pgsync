@@ -1,0 +1,38 @@
+[
+    {
+        "database": "book_view",
+        "index": "book_view",
+        "nodes": {
+            "table": "book_view",
+            "base_tables": ["book"],
+            "columns": [
+                "id",
+                "isbn",
+                "title",
+                "description"
+            ],
+            "primary_key": ["id"],
+            "children": [
+                {
+                    "table": "publisher_view",
+                    "base_tables": ["publisher"],
+                    "columns": [
+                        "name",
+                        "id",
+                        "is_active"
+                    ],
+                    "primary_key": ["id"],
+                    "label": "publisher_label",
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_one",
+                        "foreign_key": {
+                            "child": ["id"],
+                            "parent": ["publisher_id"]
+                        }
+                    }
+                }
+            ]
+        }
+    }
+]

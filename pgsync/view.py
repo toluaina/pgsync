@@ -1,5 +1,7 @@
 """PGSync views."""
 import logging
+import warnings
+from typing import Callable, List
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import array
@@ -32,7 +34,6 @@ class CreateView(DDLElement):
 def compile_create_view(
     element: CreateView, compiler: PGDDLCompiler, **kwargs
 ) -> str:
-
     statement: str = compiler.sql_compiler.process(
         element.selectable,
         literal_binds=True,
@@ -70,6 +71,29 @@ def compile_drop_view(
     )
 
 
+class RefreshView(DDLElement):
+    def __init__(
+        self,
+        schema: str,
+        name: str,
+        concurrently: bool = False,
+    ):
+        self.schema: str = schema
+        self.name: str = name
+        self.concurrently: bool = concurrently
+
+
+@compiler.compiles(RefreshView)
+def compile_refresh_view(
+    element: RefreshView, compiler: PGDDLCompiler, **kwargs
+) -> str:
+    concurrently: str = "CONCURRENTLY" if element.concurrently else ""
+    return (
+        f"REFRESH MATERIALIZED VIEW {concurrently} "
+        f'"{element.schema}"."{element.name}"'
+    )
+
+
 class CreateIndex(DDLElement):
     def __init__(self, name: str, schema: str, view: str, columns: list):
         self.schema: str = schema
@@ -100,12 +124,156 @@ def compile_drop_index(
     return f"DROP INDEX IF EXISTS {element.name}"
 
 
+def _primary_keys(
+    engine, model: Callable, schema: str, tables: List[str]
+) -> sa.sql.selectable.Select:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=sa.exc.SAWarning)
+        pg_class = model("pg_class", "pg_catalog")
+        pg_index = model("pg_index", "pg_catalog")
+        pg_attribute = model("pg_attribute", "pg_catalog")
+        pg_namespace = model("pg_namespace", "pg_catalog")
+
+    alias = pg_class.alias("x")
+    inclause: list = []
+    for table in tables:
+        pairs = table.split(".")
+        if len(pairs) == 1:
+            inclause.append(engine.dialect.identifier_preparer.quote(pairs[0]))
+        elif len(pairs) == 2:
+            inclause.append(
+                f"{pairs[0]}.{engine.dialect.identifier_preparer.quote(pairs[-1])}"
+            )
+        else:
+            raise Exception(f"cannot determine schema and table from {table}")
+
+    return (
+        sa.select(
+            [
+                sa.func.REPLACE(
+                    sa.func.REVERSE(
+                        sa.func.SPLIT_PART(
+                            sa.func.REVERSE(
+                                sa.cast(
+                                    sa.cast(
+                                        pg_index.c.indrelid,
+                                        sa.dialects.postgresql.REGCLASS,
+                                    ),
+                                    sa.Text,
+                                )
+                            ),
+                            ".",
+                            1,
+                        )
+                    ),
+                    '"',
+                    "",
+                ).label("table_name"),
+                sa.func.ARRAY_AGG(pg_attribute.c.attname).label(
+                    "primary_keys"
+                ),
+            ]
+        )
+        .join(
+            pg_attribute,
+            pg_attribute.c.attrelid == pg_index.c.indrelid,
+        )
+        .join(
+            pg_class,
+            pg_class.c.oid == pg_index.c.indexrelid,
+        )
+        .join(
+            alias,
+            alias.c.oid == pg_index.c.indrelid,
+        )
+        .join(
+            pg_namespace,
+            pg_namespace.c.oid == pg_class.c.relnamespace,
+        )
+        .where(
+            *[
+                pg_namespace.c.nspname.notin_(["pg_catalog", "pg_toast"]),
+                pg_index.c.indisprimary,
+                sa.cast(
+                    sa.cast(
+                        pg_index.c.indrelid,
+                        sa.dialects.postgresql.REGCLASS,
+                    ),
+                    sa.Text,
+                ).in_(inclause),
+                pg_attribute.c.attnum == sa.any_(pg_index.c.indkey),
+            ]
+        )
+        .group_by(pg_index.c.indrelid)
+    )
+
+
+def _foreign_keys(
+    model, schema: str, tables: List[str]
+) -> sa.sql.selectable.Select:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=sa.exc.SAWarning)
+        table_constraints = model(
+            "table_constraints",
+            "information_schema",
+        )
+        key_column_usage = model(
+            "key_column_usage",
+            "information_schema",
+        )
+        constraint_column_usage = model(
+            "constraint_column_usage",
+            "information_schema",
+        )
+
+    return (
+        sa.select(
+            [
+                table_constraints.c.table_name,
+                sa.func.ARRAY_AGG(
+                    sa.cast(
+                        key_column_usage.c.column_name,
+                        sa.TEXT,
+                    )
+                ).label("foreign_keys"),
+            ]
+        )
+        .join(
+            key_column_usage,
+            sa.and_(
+                key_column_usage.c.constraint_name
+                == table_constraints.c.constraint_name,
+                key_column_usage.c.table_schema
+                == table_constraints.c.table_schema,
+                key_column_usage.c.table_schema == schema,
+            ),
+        )
+        .join(
+            constraint_column_usage,
+            sa.and_(
+                constraint_column_usage.c.constraint_name
+                == table_constraints.c.constraint_name,
+                constraint_column_usage.c.table_schema
+                == table_constraints.c.table_schema,
+            ),
+        )
+        .where(
+            *[
+                table_constraints.c.table_name.in_(tables),
+                table_constraints.c.constraint_type == "FOREIGN KEY",
+            ]
+        )
+        .group_by(table_constraints.c.table_name)
+    )
+
+
 def create_view(
     engine,
+    model: Callable,
+    fetchall: Callable,
     schema: str,
     tables: list,
     user_defined_fkey_tables: dict,
-    base: "Base",  # noqa F821
 ) -> None:
     """
     View describing primary_keys and foreign_keys for each table
@@ -132,7 +300,7 @@ def create_view(
 
     rows: dict = {}
     if MATERIALIZED_VIEW in views:
-        for table_name, primary_keys, foreign_keys in base.fetchall(
+        for table_name, primary_keys, foreign_keys in fetchall(
             sa.select(["*"]).select_from(
                 sa.text(f"{schema}.{MATERIALIZED_VIEW}")
             )
@@ -152,8 +320,8 @@ def create_view(
         for table in set(tables):
             tables.add(f"{schema}.{table}")
 
-    for table_name, columns in base.fetchall(
-        base._primary_keys(schema, tables)
+    for table_name, columns in fetchall(
+        _primary_keys(engine, model, schema, tables)
     ):
         rows.setdefault(
             table_name,
@@ -162,9 +330,7 @@ def create_view(
         if columns:
             rows[table_name]["primary_keys"] |= set(columns)
 
-    for table_name, columns in base.fetchall(
-        base._foreign_keys(schema, tables)
-    ):
+    for table_name, columns in fetchall(_foreign_keys(model, schema, tables)):
         rows.setdefault(
             table_name,
             {"primary_keys": set([]), "foreign_keys": set([])},
@@ -218,7 +384,26 @@ def create_view(
     logger.debug(f"Created view: {schema}.{MATERIALIZED_VIEW}")
 
 
-def drop_view(engine, schema: str) -> None:
-    logger.debug(f"Dropping view: {schema}.{MATERIALIZED_VIEW}")
-    engine.execute(DropView(schema, MATERIALIZED_VIEW))
-    logger.debug(f"Dropped view: {schema}.{MATERIALIZED_VIEW}")
+def is_materialized_view(
+    engine,
+    schema: str,
+    table: str,
+) -> bool:
+    with engine.connect() as conn:
+        return (
+            conn.execute(
+                sa.select([sa.column("matviewname")])
+                .select_from(sa.text("pg_matviews"))
+                .where(
+                    sa.and_(
+                        *[
+                            sa.column("matviewname") == table,
+                            sa.column("schemaname") == schema,
+                        ]
+                    )
+                )
+                .with_only_columns([sa.func.COUNT()])
+                .order_by(None)
+            ).scalar()
+            > 0
+        )

@@ -21,6 +21,7 @@ RELATIONSHIP_VARIANTS = [
 
 # Node attributes
 NODE_ATTRIBUTES = [
+    "base_tables",
     "children",
     "columns",
     "label",

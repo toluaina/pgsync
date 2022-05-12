@@ -91,6 +91,7 @@ class Sync(Base):
         )
         self.redis: RedisQueue = RedisQueue(self.__name)
         self.tree: Tree = Tree(self)
+        self.__root: Node = None
         if validate:
             self.validate(repl_slots=repl_slots)
             self.create_setting()
@@ -98,6 +99,12 @@ class Sync(Base):
             self, verbose=self.verbose
         )
         self.count: dict = dict(xlog=0, db=0, redis=0)
+
+    @property
+    def root(self) -> str:
+        if self.__root is None:
+            self.__root = self.tree.build(self.nodes)
+        return self.__root
 
     def validate(self, repl_slots: Optional[bool] = True) -> None:
         """Perform all validation right away."""
@@ -173,14 +180,12 @@ class Sync(Base):
                 f"read/writable"
             )
 
-        root: Node = self.tree.build(self.nodes)
-        root.display()
-        for node in root.traverse_breadth_first():
+        self.root.display()
+        for node in self.root.traverse_breadth_first():
             pass
 
     def analyze(self) -> None:
-        root: Node = self.tree.build(self.nodes)
-        for node in root.traverse_breadth_first():
+        for node in self.root.traverse_breadth_first():
 
             if node.is_root:
                 continue
@@ -235,10 +240,9 @@ class Sync(Base):
 
     def create_setting(self) -> None:
         """Create Elasticsearch setting and mapping if required."""
-        root: Node = self.tree.build(self.nodes)
         self.es._create_setting(
             self.index,
-            root,
+            self.root,
             setting=self.setting,
             mapping=self.mapping,
             routing=self.routing,
@@ -253,12 +257,14 @@ class Sync(Base):
             # tables with user defined foreign keys
             user_defined_fkey_tables: dict = {}
 
-            root: Node = self.tree.build(self.nodes)
-            for node in root.traverse_breadth_first():
+            for node in self.root.traverse_breadth_first():
                 if node.schema != schema:
                     continue
                 tables |= set(node.relationship.through_tables)
                 tables |= set([node.table])
+                # we also need to bootstrap the base tables
+                tables |= set(node.base_tables)
+
                 # we want to get both the parent and the child keys here
                 # even though only one of them is the foreign_key.
                 # this is because we define both in the schema but
@@ -287,20 +293,22 @@ class Sync(Base):
 
         for schema in self.schemas:
             tables: Set = set([])
-            root: Node = self.tree.build(self.nodes)
-            for node in root.traverse_breadth_first():
+            for node in self.root.traverse_breadth_first():
                 tables |= set(node.relationship.through_tables)
                 tables |= set([node.table])
+                # we also need to teardown the base tables
+                tables |= set(node.base_tables)
+
             self.drop_triggers(schema=schema, tables=tables)
             if drop_view:
                 self.drop_view(schema=schema)
         self.drop_replication_slot(self.__name)
 
-    def get_doc_id(self, primary_keys: List[str]) -> str:
+    def get_doc_id(self, primary_keys: List[str], table: str) -> str:
         """Get the Elasticsearch document id from the primary keys."""
         if not primary_keys:
             raise PrimaryKeyNotFoundError(
-                "No primary key found on target table"
+                f"No primary key found on table: {table}"
             )
         return f"{PRIMARY_KEY_DELIMITER}".join(map(str, primary_keys))
 
@@ -522,7 +530,7 @@ class Sync(Base):
                     and old_values != new_values
                 ):
                     doc: dict = {
-                        "_id": self.get_doc_id(old_values),
+                        "_id": self.get_doc_id(old_values, root.table),
                         "_index": self.index,
                         "_op_type": "delete",
                     }
@@ -624,7 +632,7 @@ class Sync(Base):
                     payload_data[key] for key in root.model.primary_keys
                 ]
                 doc: dict = {
-                    "_id": self.get_doc_id(root_primary_values),
+                    "_id": self.get_doc_id(root_primary_values, root.table),
                     "_index": self.index,
                     "_op_type": "delete",
                 }
@@ -951,7 +959,7 @@ class Sync(Base):
                     print("-" * 10)
 
                 doc: dict = {
-                    "_id": self.get_doc_id(primary_keys),
+                    "_id": self.get_doc_id(primary_keys, node.table),
                     "_index": self.index,
                     "_source": row,
                 }
@@ -997,7 +1005,9 @@ class Sync(Base):
             if payloads:
                 logger.debug(f"poll_redis: {payloads}")
                 self.count["redis"] += len(payloads)
+                self.refresh_views()
                 self.on_publish(payloads)
+
             time.sleep(REDIS_POLL_INTERVAL)
 
     @threaded
@@ -1042,6 +1052,12 @@ class Sync(Base):
                     logger.debug(f"on_notify: {payload}")
                     self.count["db"] += 1
 
+    def refresh_views(self):
+        for node in self.root.traverse_breadth_first():
+            if node.table in self.views(node.schema):
+                if node.materialized:
+                    self.refresh_view(node.table, node.schema)
+
     def on_publish(self, payloads: list) -> None:
         """
         Redis publish event handler.
@@ -1050,6 +1066,13 @@ class Sync(Base):
         It is called when an event is received from Redis.
         Deserialize the payload from Redis and sync to Elasticsearch.
         """
+        # this is used for the views.
+        # we substitute the views for the base table here
+        for i, payload in enumerate(payloads):
+            for node in self.root.traverse_breadth_first():
+                if payload["table"] in node.base_tables:
+                    payloads[i]["table"] = node.table
+
         logger.debug(f"on_publish len {len(payloads)}")
         # Safe inserts are insert operations that can be performed in any order
         # Optimize the safe INSERTS

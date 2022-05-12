@@ -1,7 +1,7 @@
 [
     {
-        "database": "index",
-        "index": "index",
+        "database": "fakedb",
+        "index": "fake_index",
         "nodes": {
             "table": "book",
             "columns": [

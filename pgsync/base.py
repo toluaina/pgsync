@@ -2,7 +2,6 @@
 import logging
 import os
 import sys
-import warnings
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
@@ -37,7 +36,7 @@ from .settings import (
 )
 from .trigger import CREATE_TRIGGER_TEMPLATE
 from .urls import get_postgres_url
-from .view import create_view, drop_view
+from .view import create_view, DropView, RefreshView
 
 try:
     import citext  # noqa
@@ -81,6 +80,7 @@ class Base(object):
         self.models: Dict[str] = {}
         self.__metadata: dict = {}
         self.__indices: dict = {}
+        self.__views: dict = {}
         self.verbose: bool = verbose
 
     def connect(self) -> None:
@@ -209,6 +209,14 @@ class Base(object):
                 if schema in self.__schemas:
                     self.__schemas.remove(schema)
         return self.__schemas
+
+    def views(self, schema: str) -> list:
+        """Get all materialized and non-materialized views."""
+        if schema not in self.__views:
+            self.__views[schema] = sa.inspect(self.engine).get_view_names(
+                schema
+            )
+        return self.__views[schema]
 
     def indices(self, table: str) -> list:
         """Get the database table indexes."""
@@ -457,160 +465,29 @@ class Base(object):
             ).scalar()
 
     # Views...
-    def _primary_keys(
-        self, schema: str, tables: List[str]
-    ) -> sa.sql.selectable.Select:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=sa.exc.SAWarning)
-            pg_class = self.model("pg_class", "pg_catalog")
-            pg_index = self.model("pg_index", "pg_catalog")
-            pg_attribute = self.model("pg_attribute", "pg_catalog")
-            pg_namespace = self.model("pg_namespace", "pg_catalog")
-
-        alias = pg_class.alias("x")
-        inclause: list = []
-        for table in tables:
-            pairs = table.split(".")
-            if len(pairs) == 1:
-                inclause.append(
-                    self.__engine.dialect.identifier_preparer.quote(pairs[0])
-                )
-            elif len(pairs) == 2:
-                inclause.append(
-                    f"{pairs[0]}.{self.__engine.dialect.identifier_preparer.quote(pairs[-1])}"
-                )
-            else:
-                raise Exception(
-                    f"cannot determine schema and table from {table}"
-                )
-
-        return (
-            sa.select(
-                [
-                    sa.func.REPLACE(
-                        sa.func.REVERSE(
-                            sa.func.SPLIT_PART(
-                                sa.func.REVERSE(
-                                    sa.cast(
-                                        sa.cast(
-                                            pg_index.c.indrelid,
-                                            sa.dialects.postgresql.REGCLASS,
-                                        ),
-                                        sa.Text,
-                                    )
-                                ),
-                                ".",
-                                1,
-                            )
-                        ),
-                        '"',
-                        "",
-                    ).label("table_name"),
-                    sa.func.ARRAY_AGG(pg_attribute.c.attname).label(
-                        "primary_keys"
-                    ),
-                ]
-            )
-            .join(
-                pg_attribute,
-                pg_attribute.c.attrelid == pg_index.c.indrelid,
-            )
-            .join(
-                pg_class,
-                pg_class.c.oid == pg_index.c.indexrelid,
-            )
-            .join(
-                alias,
-                alias.c.oid == pg_index.c.indrelid,
-            )
-            .join(
-                pg_namespace,
-                pg_namespace.c.oid == pg_class.c.relnamespace,
-            )
-            .where(
-                *[
-                    pg_namespace.c.nspname.notin_(["pg_catalog", "pg_toast"]),
-                    pg_index.c.indisprimary,
-                    sa.cast(
-                        sa.cast(
-                            pg_index.c.indrelid,
-                            sa.dialects.postgresql.REGCLASS,
-                        ),
-                        sa.Text,
-                    ).in_(inclause),
-                    pg_attribute.c.attnum == sa.any_(pg_index.c.indkey),
-                ]
-            )
-            .group_by(pg_index.c.indrelid)
-        )
-
-    def _foreign_keys(
-        self, schema: str, tables: List[str]
-    ) -> sa.sql.selectable.Select:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=sa.exc.SAWarning)
-            table_constraints = self.model(
-                "table_constraints",
-                "information_schema",
-            )
-            key_column_usage = self.model(
-                "key_column_usage",
-                "information_schema",
-            )
-            constraint_column_usage = self.model(
-                "constraint_column_usage",
-                "information_schema",
-            )
-
-        return (
-            sa.select(
-                [
-                    table_constraints.c.table_name,
-                    sa.func.ARRAY_AGG(
-                        sa.cast(
-                            key_column_usage.c.column_name,
-                            sa.TEXT,
-                        )
-                    ).label("foreign_keys"),
-                ]
-            )
-            .join(
-                key_column_usage,
-                sa.and_(
-                    key_column_usage.c.constraint_name
-                    == table_constraints.c.constraint_name,
-                    key_column_usage.c.table_schema
-                    == table_constraints.c.table_schema,
-                    key_column_usage.c.table_schema == schema,
-                ),
-            )
-            .join(
-                constraint_column_usage,
-                sa.and_(
-                    constraint_column_usage.c.constraint_name
-                    == table_constraints.c.constraint_name,
-                    constraint_column_usage.c.table_schema
-                    == table_constraints.c.table_schema,
-                ),
-            )
-            .where(
-                *[
-                    table_constraints.c.table_name.in_(tables),
-                    table_constraints.c.constraint_type == "FOREIGN KEY",
-                ]
-            )
-            .group_by(table_constraints.c.table_name)
-        )
-
     def create_view(
         self, schema: str, tables: list, user_defined_fkey_tables: dict
-    ):
+    ) -> None:
         create_view(
-            self.engine, schema, tables, user_defined_fkey_tables, self
+            self.engine,
+            self.model,
+            self.fetchall,
+            schema,
+            tables,
+            user_defined_fkey_tables,
         )
 
-    def drop_view(self, schema: str):
-        drop_view(self.engine, schema)
+    def drop_view(self, schema: str) -> None:
+        """Drop a view."""
+        logger.debug(f"Dropping view: {schema}.{MATERIALIZED_VIEW}")
+        self.engine.execute(DropView(schema, MATERIALIZED_VIEW))
+        logger.debug(f"Dropped view: {schema}.{MATERIALIZED_VIEW}")
+
+    def refresh_view(self, name: str, schema: str) -> None:
+        """Refresh a materialized view."""
+        logger.debug(f"Refreshing view: {schema}.{MATERIALIZED_VIEW}")
+        self.engine.execute(RefreshView(schema, name, concurrently=False))
+        logger.debug(f"Refreshed view: {schema}.{MATERIALIZED_VIEW}")
 
     # Triggers...
     def create_triggers(
@@ -622,14 +499,16 @@ class Base(object):
                 MATERIALIZED_VIEW, f"{schema}.{MATERIALIZED_VIEW}"
             )
         )
-        views = sa.inspect(self.engine).get_view_names(schema)
-        queries = []
+        queries: list = []
         for table in self.tables(schema):
             schema, table = self._get_schema(schema, table)
-            if (tables and table not in tables) or (table in views):
+            if (tables and table not in tables) or (
+                table in self.views(schema)
+            ):
                 continue
             logger.debug(f"Creating trigger on table: {schema}.{table}")
-            for name, for_each, tg_op in [
+
+            for name, level, tg_op in [
                 ("notify", "ROW", ["INSERT", "UPDATE", "DELETE"]),
                 ("truncate", "STATEMENT", ["TRUNCATE"]),
             ]:
@@ -638,7 +517,7 @@ class Base(object):
                     sa.DDL(
                         f'CREATE TRIGGER "{table}_{name}" '
                         f'AFTER {" OR ".join(tg_op)} ON "{schema}"."{table}" '
-                        f"FOR EACH {for_each} EXECUTE PROCEDURE "
+                        f"FOR EACH {level} EXECUTE PROCEDURE "
                         f"{TRIGGER_FUNC}()",
                     )
                 )
@@ -687,7 +566,7 @@ class Base(object):
                 self.execute(query)
 
     @property
-    def txid_current(self):
+    def txid_current(self) -> int:
         """
         Get last committed transaction id from the database.
 
@@ -773,7 +652,9 @@ class Base(object):
                 data = f"{data[match.span()[1]:]} "
                 yield key, value
 
-        payload = dict(schema=None, tg_op=None, table=None, old={}, new={})
+        payload: dict = dict(
+            schema=None, tg_op=None, table=None, old={}, new={}
+        )
 
         match = LOGICAL_SLOT_PREFIX.search(row)
         if not match:
@@ -815,7 +696,6 @@ class Base(object):
         return payload
 
     # Querying...
-
     def execute(self, statement, values=None, options=None):
         """Execute a query statement."""
         conn = self.__engine.connect()
