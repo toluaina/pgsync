@@ -102,7 +102,7 @@ $$ LANGUAGE plpgsql;
             query = (
                 f"SELECT ARRAY_AGG(attname) "
                 f"FROM pg_index "
-                f"JOIN pg_attribute ON attrelid = indrelid AND attnum = ANY(indkey) "
+                f"JOIN pg_attribute ON attrelid = indrelid AND attnum = ANY(indkey) "  # noqa E501
                 f"WHERE indrelid = '{table_name}'::regclass AND indisprimary"
             )
             rows = pg_base.fetchall(query)[0]
@@ -123,9 +123,9 @@ $$ LANGUAGE plpgsql;
         pg_base = Base(connection.engine.url.database)
         for table_name, foreign_keys in tables.items():
             query = (
-                f"SELECT ARRAY_AGG(column_name::TEXT) FROM information_schema.key_column_usage "
+                f"SELECT ARRAY_AGG(column_name::TEXT) FROM information_schema.key_column_usage "  # noqa E501
                 f"WHERE constraint_catalog=current_catalog AND "
-                f"table_name='{table_name}' AND position_in_unique_constraint NOTNULL "
+                f"table_name='{table_name}' AND position_in_unique_constraint NOTNULL "  # noqa E501
             )
             rows = pg_base.fetchall(query)[0]
             assert rows[0] == foreign_keys

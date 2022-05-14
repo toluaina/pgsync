@@ -76,17 +76,17 @@ ELASTICSEARCH_AWS_HOSTED = env.bool("ELASTICSEARCH_AWS_HOSTED", default=False)
 ELASTICSEARCH_STREAMING_BULK = env.bool(
     "ELASTICSEARCH_STREAMING_BULK", default=False
 )
-# maximum number of times a document will be retried when ``429`` is received,
-# set to 0 (default) for no retries on ``429``
+# maximum number of times a document will be retried when 429 is received,
+# set to 0 (default) for no retries on 429
 ELASTICSEARCH_MAX_RETRIES = env.int("ELASTICSEARCH_MAX_RETRIES", default=0)
 # number of seconds we should wait before the first retry.
-# Any subsequent retries will be powers of ``initial_backoff * 2**retry_number``
+# Any subsequent retries will be powers of initial_backoff * 2**retry_number
 ELASTICSEARCH_INITIAL_BACKOFF = env.int(
     "ELASTICSEARCH_INITIAL_BACKOFF", default=2
 )
 # maximum number of seconds a retry will wait
 ELASTICSEARCH_MAX_BACKOFF = env.int("ELASTICSEARCH_MAX_BACKOFF", default=600)
-# if ``False`` then don't propagate exceptions from call to elasticsearch ``bulk``
+# if ``False`` then don't propagate exceptions from call to elasticsearch bulk
 ELASTICSEARCH_RAISE_ON_EXCEPTION = env.bool(
     "ELASTICSEARCH_RAISE_ON_EXCEPTION", default=True
 )
@@ -122,15 +122,13 @@ REDIS_POLL_INTERVAL = env.float("REDIS_POLL_INTERVAL", default=0.01)
 
 # Logging:
 def _get_logging_config(silent_loggers: Optional[str] = None):
-    """
-    Return the python logging configuration based on environment variables.
-    """
+    """Return the logging configuration based on environment variables."""
     config: dict = {
         "version": 1,
         "disable_existing_loggers": False,
         "formatters": {
             "simple": {
-                "format": "%(asctime)s.%(msecs)03d:%(levelname)s:%(name)s: %(message)s",
+                "format": "%(asctime)s.%(msecs)03d:%(levelname)s:%(name)s: %(message)s",  # noqa E501
                 "datefmt": "%Y-%m-%d %H:%M:%S",
             },
         },

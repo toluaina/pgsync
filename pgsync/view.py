@@ -136,13 +136,14 @@ def _primary_keys(
 
     alias = pg_class.alias("x")
     inclause: list = []
+    identifier_preparer = engine.dialect.identifier_preparer
     for table in tables:
         pairs = table.split(".")
         if len(pairs) == 1:
-            inclause.append(engine.dialect.identifier_preparer.quote(pairs[0]))
+            inclause.append(identifier_preparer.quote(pairs[0]))
         elif len(pairs) == 2:
             inclause.append(
-                f"{pairs[0]}.{engine.dialect.identifier_preparer.quote(pairs[-1])}"
+                f"{pairs[0]}.{identifier_preparer.quote(pairs[-1])}"
             )
         else:
             raise Exception(f"cannot determine schema and table from {table}")
@@ -384,20 +385,23 @@ def create_view(
     logger.debug(f"Created view: {schema}.{MATERIALIZED_VIEW}")
 
 
-def is_materialized_view(
+def is_view(
     engine,
     schema: str,
     table: str,
+    materialized: bool = True,
 ) -> bool:
+    column: str = "matviewname" if materialized else "viewname"
+    pg_table: str = "pg_matviews" if materialized else "pg_views"
     with engine.connect() as conn:
         return (
             conn.execute(
-                sa.select([sa.column("matviewname")])
-                .select_from(sa.text("pg_matviews"))
+                sa.select([sa.column(column)])
+                .select_from(sa.text(pg_table))
                 .where(
                     sa.and_(
                         *[
-                            sa.column("matviewname") == table,
+                            sa.column(column) == table,
                             sa.column("schemaname") == schema,
                         ]
                     )

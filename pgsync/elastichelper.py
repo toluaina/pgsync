@@ -151,7 +151,6 @@ class ElasticHelper(object):
         raise_on_error: bool,
     ):
         """Bulk index, update, delete docs to Elasticsearch."""
-
         # when using multiple threads for poll_db we need to account for other
         # threads performing deletions
         ignore_status: Tuple[int] = (400, 404)

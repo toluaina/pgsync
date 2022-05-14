@@ -33,7 +33,7 @@ class Plugins(object):
         self.walk(self.package)
 
     def walk(self, package: str) -> None:
-        """Recursively walk the supplied package and fetch all plugins"""
+        """Recursively walk the supplied package and fetch all plugins."""
         plugins = import_module(package)
         for _, name, ispkg in iter_modules(
             plugins.__path__,

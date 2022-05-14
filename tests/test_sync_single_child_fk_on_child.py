@@ -326,7 +326,7 @@ class TestParentSingleChildFkOnChild(object):
         assert_resync_empty(sync, nodes)
 
     def test_null_label(self, sync, data):
-        """null label should revert back to the table name"""
+        """Null label should revert back to the table name."""
         nodes = {
             "table": "book",
             "columns": ["isbn", "title", "description"],
@@ -570,9 +570,7 @@ class TestParentSingleChildFkOnChild(object):
     def test_update_primary_key_non_concurrent(
         self, data, book_cls, rating_cls, engine
     ):
-        """
-        Test sync updates primary_key and then sync in non-concurrent mode.
-        """
+        """Test sync updates primary_key then sync in non-concurrent mode."""
         document = {
             "index": "testdb",
             "nodes": {

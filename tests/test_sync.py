@@ -54,10 +54,10 @@ class TestSync(object):
             mock_peek.side_effect = [
                 [
                     ROW(
-                        "table public.book: INSERT: id[integer]:10 isbn[character "
-                        "varying]:'888' title[character varying]:'My book title' "
-                        "description[character varying]:null copyright[character "
-                        "varying]:null tags[jsonb]:null publisher_id[integer]:null",
+                        "table public.book: INSERT: id[integer]:10 isbn[character "  # noqa E501
+                        "varying]:'888' title[character varying]:'My book title' "  # noqa E501
+                        "description[character varying]:null copyright[character "  # noqa E501
+                        "varying]:null tags[jsonb]:null publisher_id[integer]:null",  # noqa E501
                         1234,
                     ),
                 ],
@@ -84,7 +84,7 @@ class TestSync(object):
     @patch("pgsync.sync.ElasticHelper")
     def test_sync_validate(self, mock_es):
         with pytest.raises(SchemaError) as excinfo:
-            sync = Sync(
+            Sync(
                 document={
                     "index": "testdb",
                     "nodes": ["foo"],
@@ -97,7 +97,7 @@ class TestSync(object):
             excinfo.value
         )
 
-        sync = Sync(
+        Sync(
             document={
                 "index": "testdb",
                 "nodes": {"table": "book"},
@@ -131,7 +131,7 @@ class TestSync(object):
                 "pgsync.base.Base.pg_settings",
                 side_effects=_side_effect("max_replication_slots"),
             ):
-                sync = Sync(
+                Sync(
                     document={
                         "index": "testdb",
                         "nodes": {"table": "book"},
@@ -148,7 +148,7 @@ class TestSync(object):
                 "pgsync.base.Base.pg_settings",
                 side_effects=_side_effect("wal_level"),
             ):
-                sync = Sync(
+                Sync(
                     document={
                         "index": "testdb",
                         "nodes": {"table": "book"},
@@ -164,7 +164,7 @@ class TestSync(object):
                 "pgsync.base.Base.pg_settings",
                 side_effects=_side_effect("rds_logical_replication"),
             ):
-                sync = Sync(
+                Sync(
                     document={
                         "index": "testdb",
                         "nodes": {"table": "book"},

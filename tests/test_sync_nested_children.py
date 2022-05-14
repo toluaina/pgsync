@@ -375,7 +375,7 @@ class TestNestedChildren(object):
         }
 
     def test_sync(self, sync, nodes, data):
-        """test regular sync produces the correct result."""
+        """Test regular sync produces the correct result."""
         sync.nodes = nodes
         docs = [doc for doc in sync.sync()]
         assert len(docs) == 3
@@ -1136,7 +1136,7 @@ class TestNestedChildren(object):
         continent_cls,
         book_author_cls,
     ):
-        """insert a new through child with op."""
+        """Insert a new through child with op."""
         book_author = book_author_cls(
             id=7,
             book_isbn="abc",
@@ -1800,7 +1800,7 @@ class TestNestedChildren(object):
         country_cls,
         continent_cls,
     ):
-        """insert a new non-through child with noop."""
+        """Insert a new non-through child with noop."""
         city = city_cls(
             id=5,
             name="Moscow",
@@ -2019,7 +2019,7 @@ class TestNestedChildren(object):
         country_cls,
         continent_cls,
     ):
-        """insert a new deep nested non-through child with noop."""
+        """Insert a new deep nested non-through child with noop."""
         country = country_cls(
             id=5,
             name="Marioworld",
@@ -2079,7 +2079,7 @@ class TestNestedChildren(object):
         country_cls,
         continent_cls,
     ):
-        """insert a new deep nested non-through fk child with op."""
+        """Insert a new deep nested non-through fk child with op."""
         nodes["children"].append(
             {
                 "table": "book_rating",

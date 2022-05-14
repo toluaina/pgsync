@@ -34,8 +34,8 @@ class TestRedisQueue(object):
         mock_ping = mocker.patch(
             "redis.Redis.ping", side_effect=ConnectionError("pong")
         )
-        with pytest.raises(ConnectionError) as excinfo:
-            queue = RedisQueue("something", namespace="foo")
+        with pytest.raises(ConnectionError):
+            RedisQueue("something", namespace="foo")
         mock_get_redis_url.assert_called_once()
         mock_ping.assert_called_once()
         mock_logger.exception.assert_called_once_with(

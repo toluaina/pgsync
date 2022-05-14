@@ -29,7 +29,7 @@ from .exc import (
     RelationshipVariantError,
     TableNotInNodeError,
 )
-from .view import is_materialized_view
+from .view import is_view
 
 
 @dataclass
@@ -37,7 +37,7 @@ class ForeignKey:
     foreign_key: Optional[dict] = None
 
     def __post_init__(self):
-        """ForeignKey constructor."""
+        """Foreignkey constructor."""
         self.foreign_key: str = self.foreign_key or dict()
         self.parent: str = self.foreign_key.get("parent")
         self.child: str = self.foreign_key.get("child")
@@ -263,7 +263,9 @@ class Tree:
             columns=root.get("columns", []),
             relationship=root.get("relationship", {}),
             base_tables=root.get("base_tables", []),
-            materialized=is_materialized_view(self.base.engine, schema, table),
+            materialized=is_view(
+                self.base.engine, schema, table, materialized=True
+            ),
         )
 
         self.nodes.add(node.table)

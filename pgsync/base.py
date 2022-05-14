@@ -130,7 +130,10 @@ class Base(object):
                                 sa.column("usename") == username,
                                 sa.or_(
                                     *[
-                                        (sa.column(permission) == True)
+                                        (
+                                            sa.column(permission)
+                                            == True  # noqa E712
+                                        )
                                         for permission in permissions
                                     ]
                                 ),

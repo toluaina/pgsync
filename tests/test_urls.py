@@ -3,7 +3,6 @@ import pytest
 from mock import MagicMock, patch
 
 from pgsync.exc import SchemaError
-from pgsync.plugin import Plugins
 from pgsync.urls import (
     _get_auth,
     get_elasticsearch_url,
@@ -75,8 +74,8 @@ class TestUrls(object):
     def test_get_auth(self, mock_logger):
         assert __file__ == get_config(config=__file__)
         with patch("pgsync.urls.Plugins", return_value=MagicMock()):
-            auth = _get_auth("something")
+            _get_auth("something")
             mock_logger.assert_not_called()
 
         with patch("pgsync.urls.Plugins", side_effect=ModuleNotFoundError):
-            auth = _get_auth("something")
+            _get_auth("something")

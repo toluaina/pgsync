@@ -31,10 +31,6 @@ class TestBase(object):
     def test_has_permissions(self, connection):
         pg_base = Base(connection.engine.url.database)
         pg_base.verbose = False
-        value = pg_base.has_permissions(
-            connection.engine.url.username,
-            ["usesuper"],
-        )
         assert (
             pg_base.has_permissions(
                 connection.engine.url.username,
@@ -51,7 +47,7 @@ class TestBase(object):
             is False
         )
 
-        with pytest.raises(InvalidPermissionError) as excinfo:
+        with pytest.raises(InvalidPermissionError):
             pg_base.has_permissions(
                 connection.engine.url.username,
                 ["sudo"],
@@ -232,7 +228,7 @@ class TestBase(object):
 
         row = """
         table public."B1_XYZ": INSERT: "ID"[integer]:5 "CREATED_TIMESTAMP"[bigint]:222 "ADDRESS"[character varying]:'from3' "SOME_FIELD_KEY"[character varying]:'key3' "SOME_OTHER_FIELD_KEY"[character varying]:'issue3' "CHANNEL_ID"[integer]:3 "CHANNEL_NAME"[character varying]:'channel3' "ITEM_ID"[integer]:3 "MESSAGE"[character varying]:'message3' "RETRY"[integer]:4 "STATUS"[character varying]:'status' "SUBJECT"[character varying]:'sub3' "TIMESTAMP"[bigint]:33
-        """
+        """  # noqa E501
         values = pg_base.parse_logical_slot(row)
         assert values == {
             "new": {

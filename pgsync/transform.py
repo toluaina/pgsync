@@ -4,7 +4,11 @@ from typing import Optional
 
 from six import string_types
 
-from .constants import CONCAT_TRANSFORM, RENAME_TRANSFORM, REPLACE_TRANSFORM
+from .constants import (  # noqa F401
+    CONCAT_TRANSFORM,
+    RENAME_TRANSFORM,
+    REPLACE_TRANSFORM,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -128,10 +132,7 @@ def transform(data, nodes):
 
 
 def get_private_keys(primary_keys):
-    """
-    Get private keys entry from a nested dict.
-    re-write someday!
-    """
+    """Get private keys entry from a nested dict."""
 
     def squash_list(values, _values=None):
         if not _values:
