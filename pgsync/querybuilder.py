@@ -621,8 +621,7 @@ class QueryBuilder(object):
                                             == column.value
                                         )
 
-            isouter = len(child.parent.children) > 1
-
+            isouter = not (len(child._filters) > 0)
             from_obj = from_obj.join(
                 child._subquery,
                 onclause=sa.and_(*onclause),

@@ -298,7 +298,6 @@ class Sync(Base):
                 tables |= set([node.table])
                 # we also need to teardown the base tables
                 tables |= set(node.base_tables)
-
             self.drop_triggers(schema=schema, tables=tables)
             if drop_view:
                 self.drop_view(schema=schema)
@@ -954,7 +953,7 @@ class Sync(Base):
 
                 if self.verbose:
                     print(f"{(i+1)})")
-                    print(f"Pkeys: {primary_keys}")
+                    print(f"pkeys: {primary_keys}")
                     pprint.pprint(row)
                     print("-" * 10)
 
@@ -1135,7 +1134,7 @@ class Sync(Base):
 
     @threaded
     @exit_handler
-    def status(self):
+    def status(self) -> None:
         while True:
             sys.stdout.write(
                 f"Syncing {self.database} "

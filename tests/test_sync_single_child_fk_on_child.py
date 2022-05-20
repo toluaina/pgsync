@@ -455,6 +455,8 @@ class TestParentSingleChildFkOnChild(object):
             "description": "Rabbits on the run",
             "isbn": "ghi",
             "publisher_id": None,
+            "seller_id": None,
+            "buyer_id": None,
             "rating": {"book_isbn": "ghi", "id": 3, "value": 3.3},
             "title": "The Rabbit Club",
         }

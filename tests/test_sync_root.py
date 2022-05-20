@@ -216,6 +216,8 @@ class TestRoot(object):
                 "isbn",
                 "publisher_id",
                 "title",
+                "buyer_id",
+                "seller_id",
             ]
         )
 
@@ -230,6 +232,8 @@ class TestRoot(object):
                 "isbn",
                 "publisher_id",
                 "title",
+                "buyer_id",
+                "seller_id",
             ]
         )
         assert_resync_empty(sync, nodes)

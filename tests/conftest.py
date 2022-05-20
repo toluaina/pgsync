@@ -193,7 +193,54 @@ def language_cls(base):
 
 
 @pytest.fixture(scope="session")
-def book_cls(base, publisher_cls):
+def contact_cls(base):
+    class Contact(base):
+        __tablename__ = "contact"
+        __table_args__ = (UniqueConstraint("name"),)
+        id = sa.Column(sa.Integer, primary_key=True)
+        name = sa.Column(sa.String, nullable=False)
+
+    return Contact
+
+
+@pytest.fixture(scope="session")
+def contact_item_cls(base, contact_cls):
+    class ContactItem(base):
+        __tablename__ = "contact_item"
+        __table_args__ = (
+            UniqueConstraint("name"),
+            UniqueConstraint("contact_id"),
+        )
+        id = sa.Column(sa.Integer, primary_key=True)
+        name = sa.Column(sa.String, nullable=False)
+        contact_id = sa.Column(sa.Integer, sa.ForeignKey(contact_cls.id))
+        contact = sa.orm.relationship(
+            contact_cls, backref=sa.orm.backref("contacts")
+        )
+
+    return ContactItem
+
+
+@pytest.fixture(scope="session")
+def user_cls(base, contact_cls):
+    class User(base):
+        __tablename__ = "user"
+        __table_args__ = (
+            UniqueConstraint("name"),
+            UniqueConstraint("contact_id"),
+        )
+        id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+        name = sa.Column(sa.String, nullable=False)
+        contact_id = sa.Column(sa.Integer, sa.ForeignKey(contact_cls.id))
+        contact = sa.orm.relationship(
+            contact_cls, backref=sa.orm.backref("user_contacts")
+        )
+
+    return User
+
+
+@pytest.fixture(scope="session")
+def book_cls(base, publisher_cls, user_cls):
     class Book(base):
         __tablename__ = "book"
         __table_args__ = (UniqueConstraint("isbn"),)
@@ -204,6 +251,16 @@ def book_cls(base, publisher_cls):
         publisher_id = sa.Column(sa.Integer, sa.ForeignKey(publisher_cls.id))
         publisher = sa.orm.relationship(
             publisher_cls, backref=sa.orm.backref("publishers")
+        )
+        buyer_id = sa.Column(sa.Integer, sa.ForeignKey(user_cls.id))
+        buyer = sa.orm.relationship(
+            user_cls, backref=sa.orm.backref("buyers"), foreign_keys=[buyer_id]
+        )
+        seller_id = sa.Column(sa.Integer, sa.ForeignKey(user_cls.id))
+        seller = sa.orm.relationship(
+            user_cls,
+            backref=sa.orm.backref("sellers"),
+            foreign_keys=[seller_id],
         )
 
     return Book
@@ -312,6 +369,9 @@ def model_mapping(
     book_language_cls,
     book_shelf_cls,
     rating_cls,
+    user_cls,
+    contact_cls,
+    contact_item_cls,
 ):
     return {
         "cities": city_cls,
@@ -328,6 +388,9 @@ def model_mapping(
         "book_languages": book_language_cls,
         "book_shelves": book_shelf_cls,
         "ratings": rating_cls,
+        "users": user_cls,
+        "contacts": contact_cls,
+        "contact_items": contact_item_cls,
     }
 
 

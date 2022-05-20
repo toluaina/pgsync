@@ -459,6 +459,8 @@ class TestParentSingleChildFkOnParent(object):
             "isbn": "ghi",
             "publisher": {"id": 3, "name": "Hop Bunny publishing"},
             "publisher_id": 3,
+            "seller_id": None,
+            "buyer_id": None,
             "title": "The Rabbit Club",
         }
         assert_resync_empty(sync, nodes)

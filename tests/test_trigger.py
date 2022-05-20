@@ -110,7 +110,7 @@ $$ LANGUAGE plpgsql;
 
     def test_trigger_foreign_key_function(self, connection):
         tables = {
-            "book": ["publisher_id"],
+            "book": ["publisher_id", "buyer_id", "seller_id"],
             "publisher": None,
             "book_language": ["book_isbn", "language_id"],
             "author": ["city_id"],

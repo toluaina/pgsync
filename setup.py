@@ -87,7 +87,7 @@ setup(
     zip_safe=False,
     project_urls={
         "Bug Reports": "https://github.com/toluaina/pgsync/issues",
-        "Funding": "https://patreon.com/toluaina",
+        "Funding": "https://github.com/sponsors/toluaina",
         "Source": URL,
         "Web": "https://pgsync.com",
         "Documentation": "https://pgsync.com",

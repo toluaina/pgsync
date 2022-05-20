@@ -89,6 +89,9 @@ class TestBase(object):
             "public.author",
             "public.book_author",
             "public.rating",
+            "public.contact",
+            "public.contact_item",
+            "public.user",
         ]
         assert sorted(pg_base.tables("public")) == sorted(tables)
 

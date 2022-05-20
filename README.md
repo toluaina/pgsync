@@ -144,6 +144,7 @@ Key features of PGSync are:
 - Fault-tolerant: does not lose data, even if processes crash or a network interruption occurs, etc. The process can be recovered from the last checkpoint.
 - Returns the data directly as Postgres JSON from the database for speed.
 - Supports composite primary and foreign keys.
+- Supports Views and Materialized views.
 - Supports an arbitrary depth of nested entities i.e Tables having long chain of relationship dependencies.
 - Supports Postgres JSON data fields. This means: we can extract JSON fields in a database table as a separate field in the resulting document.
 - Customizable document structure.
