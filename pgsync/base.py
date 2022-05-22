@@ -82,6 +82,7 @@ class Base(object):
         self.__indices: dict = {}
         self.__views: dict = {}
         self.verbose: bool = verbose
+        self._conn = None
 
     def connect(self) -> None:
         """Connect to database."""
@@ -187,6 +188,10 @@ class Base(object):
             self.models[f"{model.original}"] = model
 
         return self.models[name]
+
+    @property
+    def conn(self):
+        return self._conn
 
     @property
     def database(self) -> str:

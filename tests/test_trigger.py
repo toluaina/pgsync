@@ -128,4 +128,7 @@ $$ LANGUAGE plpgsql;
                 f"table_name='{table_name}' AND position_in_unique_constraint NOTNULL "  # noqa E501
             )
             rows = pg_base.fetchall(query)[0]
-            assert rows[0] == foreign_keys
+            if rows[0]:
+                assert sorted(rows[0]) == sorted(foreign_keys)
+            else:
+                assert rows[0] == foreign_keys

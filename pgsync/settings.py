@@ -33,6 +33,7 @@ QUERY_LITERAL_BINDS = env.bool("QUERY_LITERAL_BINDS", default=None)
 NTHREADS_POLLDB = env.int("NTHREADS_POLLDB", default=1)
 # batch size for LOGICAL_SLOT_CHANGES for minimizing tmp file disk usage
 LOGICAL_SLOT_CHUNK_SIZE = env.int("LOGICAL_SLOT_CHUNK_SIZE", default=5000)
+USE_ASYNC = env.bool("USE_ASYNC", default=False)
 
 # Elasticsearch:
 ELASTICSEARCH_SCHEME = env.str("ELASTICSEARCH_SCHEME", default="http")

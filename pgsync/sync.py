@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Sync module."""
+import asyncio
 import json
 import logging
 import os
@@ -50,6 +51,7 @@ from .settings import (
     REDIS_POLL_INTERVAL,
     REDIS_WRITE_CHUNK_SIZE,
     REPLICATION_SLOT_CLEANUP_INTERVAL,
+    USE_ASYNC,
 )
 from .transform import get_private_keys, transform
 from .utils import exit_handler, get_config, show_settings, threaded, Timer
@@ -641,7 +643,16 @@ class Sync(Base):
                     doc["_type"] = "_doc"
                 docs.append(doc)
             if docs:
-                self.es.bulk(self.index, docs)
+                raise_on_exception: Optional[bool] = (
+                    False if USE_ASYNC else None
+                )
+                raise_on_error: Optional[bool] = False if USE_ASYNC else None
+                self.es.bulk(
+                    self.index,
+                    docs,
+                    raise_on_exception=raise_on_exception,
+                    raise_on_error=raise_on_error,
+                )
 
         else:
 
@@ -1006,8 +1017,19 @@ class Sync(Base):
                 self.count["redis"] += len(payloads)
                 self.refresh_views()
                 self.on_publish(payloads)
-
             time.sleep(REDIS_POLL_INTERVAL)
+
+    @exit_handler
+    async def async_poll_redis(self) -> None:
+        """Consumer which polls Redis continuously."""
+        while True:
+            payloads: dict = self.redis.bulk_pop()
+            if payloads:
+                logger.debug(f"poll_redis: {payloads}")
+                self.count["redis"] += len(payloads)
+                await self.async_refresh_views()
+                await self.async_on_publish(payloads)
+            await asyncio.sleep(REDIS_POLL_INTERVAL)
 
     @threaded
     @exit_handler
@@ -1020,9 +1042,10 @@ class Sync(Base):
         conn = self.engine.connect().connection
         conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cursor = conn.cursor()
-        channel: str = self.database
-        cursor.execute(f'LISTEN "{channel}"')
-        logger.debug(f'Listening for notifications on channel "{channel}"')
+        cursor.execute(f'LISTEN "{self.database}"')
+        logger.debug(
+            f'Listening for notifications on channel "{self.database}"'
+        )
         items: list = []
 
         while True:
@@ -1045,19 +1068,52 @@ class Sync(Base):
                     self.redis.bulk_push(items)
                     items = []
                 notification: AnyStr = conn.notifies.pop(0)
-                if notification.channel == channel:
+                if notification.channel == self.database:
                     payload = json.loads(notification.payload)
                     items.append(payload)
                     logger.debug(f"on_notify: {payload}")
                     self.count["db"] += 1
 
+    @exit_handler
+    def _poll_db(self) -> None:
+        """
+        Producer which polls Postgres continuously.
+
+        Receive a notification message from the channel we are listening on
+        """
+        try:
+            self.conn.poll()
+        except OperationalError as e:
+            logger.fatal(f"OperationalError: {e}")
+            os._exit(-1)
+
+        while self.conn.notifies:
+            notification: AnyStr = self.conn.notifies.pop(0)
+            if notification.channel == self.database:
+                payload = json.loads(notification.payload)
+                self.redis.bulk_push([payload])
+                logger.debug(f"on_notify: {payload}")
+                self.count["db"] += 1
+
     def refresh_views(self):
+        self._refresh_views()
+
+    async def async_refresh_views(self):
+        self._refresh_views()
+
+    def _refresh_views(self):
         for node in self.root.traverse_breadth_first():
             if node.table in self.views(node.schema):
                 if node.materialized:
                     self.refresh_view(node.table, node.schema)
 
     def on_publish(self, payloads: list) -> None:
+        self._on_publish(payloads)
+
+    async def async_on_publish(self, payloads: list) -> None:
+        self._on_publish(payloads)
+
+    def _on_publish(self, payloads: list) -> None:
         """
         Redis publish event handler.
 
@@ -1127,27 +1183,45 @@ class Sync(Base):
     def truncate_slots(self) -> None:
         """Truncate the logical replication slot."""
         while True:
-            if self._truncate:
-                logger.debug(f"Truncating replication slot: {self.__name}")
-                self.logical_slot_get_changes(self.__name, upto_nchanges=None)
+            self._truncate_slots()
             time.sleep(REPLICATION_SLOT_CLEANUP_INTERVAL)
+
+    @exit_handler
+    async def async_truncate_slots(self) -> None:
+        while True:
+            self._truncate_slots()
+            await asyncio.sleep(REPLICATION_SLOT_CLEANUP_INTERVAL)
+
+    def _truncate_slots(self) -> None:
+        if self._truncate:
+            logger.debug(f"Truncating replication slot: {self.__name}")
+            self.logical_slot_get_changes(self.__name, upto_nchanges=None)
 
     @threaded
     @exit_handler
     def status(self) -> None:
         while True:
-            sys.stdout.write(
-                f"Syncing {self.database} "
-                f"Xlog: [{self.count['xlog']:,}] => "
-                f"Db: [{self.count['db']:,}] => "
-                f"Redis: [total = {self.count['redis']:,} "
-                f"pending = {self.redis.qsize:,}] => "
-                f"Elastic: [{self.es.doc_count:,}] ...\n"
-            )
-            sys.stdout.flush()
+            self._status(label="Sync")
             time.sleep(LOG_INTERVAL)
 
-    def receive(self, nthreads_polldb=None) -> None:
+    @exit_handler
+    async def async_status(self) -> None:
+        while True:
+            self._status(label="Async")
+            await asyncio.sleep(LOG_INTERVAL)
+
+    def _status(self, label: str) -> None:
+        sys.stdout.write(
+            f"{label} {self.database} "
+            f"Xlog: [{self.count['xlog']:,}] => "
+            f"Db: [{self.count['db']:,}] => "
+            f"Redis: [total = {self.count['redis']:,} "
+            f"pending = {self.redis.qsize:,}] => "
+            f"Elastic: [{self.es.doc_count:,}] ...\n"
+        )
+        sys.stdout.flush()
+
+    def receive(self, nthreads_polldb: Optional[int] = None) -> None:
         """
         Receive events from db.
 
@@ -1157,24 +1231,37 @@ class Sync(Base):
         2. Pull everything so far and also replay replication logs.
         3. Consume all changes from Redis.
         """
-        # start a background worker producer thread to poll the db and populate
-        # the Redis cache
-        nthreads_polldb = nthreads_polldb or NTHREADS_POLLDB
-        for _ in range(nthreads_polldb):
-            self.poll_db()
+        if USE_ASYNC:
 
-        # sync up to current transaction_id
-        self.pull()
+            self._conn = self.engine.connect().connection
+            self._conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+            cursor = self.conn.cursor()
+            cursor.execute(f'LISTEN "{self.database}"')
+            loop = asyncio.get_event_loop()
+            loop.add_reader(self.conn, self._poll_db)
+            tasks: list = [
+                loop.create_task(self.async_poll_redis()),
+                loop.create_task(self.async_truncate_slots()),
+                loop.create_task(self.async_status()),
+            ]
+            loop.run_until_complete(asyncio.wait(tasks))
+            loop.close()
 
-        # start a background worker consumer thread to
-        # poll Redis and populate Elasticsearch
-        self.poll_redis()
-
-        # start a background worker thread to cleanup the replication slot
-        self.truncate_slots()
-
-        # start a background worker thread to show status
-        self.status()
+        else:
+            # start a background worker producer thread to poll the db and
+            # populate the Redis cache
+            nthreads_polldb = nthreads_polldb or NTHREADS_POLLDB
+            for _ in range(nthreads_polldb):
+                self.poll_db()
+            # sync up to current transaction_id
+            self.pull()
+            # start a background worker consumer thread to
+            # poll Redis and populate Elasticsearch
+            self.poll_redis()
+            # start a background worker thread to cleanup the replication slot
+            self.truncate_slots()
+            # start a background worker thread to show status
+            self.status()
 
 
 @click.command()

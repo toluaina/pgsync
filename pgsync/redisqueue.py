@@ -20,7 +20,7 @@ class RedisQueue(object):
         url: str = get_redis_url(**kwargs)
         self.key: str = f"{namespace}:{name}"
         try:
-            self.__db = Redis.from_url(
+            self.__db: Redis = Redis.from_url(
                 url,
                 socket_timeout=REDIS_SOCKET_TIMEOUT,
             )
