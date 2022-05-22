@@ -9,6 +9,7 @@ from pgsync.exc import (
     NodeAttributeError,
     TableNotInNodeError,
 )
+from pgsync.settings import NTHREADS_POLLDB
 from pgsync.sync import Sync
 
 from .helpers.utils import assert_resync_empty, noop, search
@@ -468,7 +469,7 @@ class TestRoot(object):
                             "pgsync.sync.Sync.status",
                             side_effect=noop,
                         ):
-                            sync.receive()
+                            sync.receive(NTHREADS_POLLDB)
                             sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -613,7 +614,7 @@ class TestRoot(object):
                             "pgsync.sync.Sync.status",
                             side_effect=noop,
                         ):
-                            sync.receive()
+                            sync.receive(NTHREADS_POLLDB)
                             sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")
@@ -672,7 +673,7 @@ class TestRoot(object):
                             "pgsync.sync.Sync.status",
                             side_effect=noop,
                         ):
-                            sync.receive()
+                            sync.receive(NTHREADS_POLLDB)
                             sync.es.refresh("testdb")
 
         docs = search(sync.es, "testdb")

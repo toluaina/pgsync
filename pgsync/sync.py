@@ -1221,7 +1221,7 @@ class Sync(Base):
         )
         sys.stdout.flush()
 
-    def receive(self, nthreads_polldb: Optional[int] = None) -> None:
+    def receive(self, nthreads_polldb: int) -> None:
         """
         Receive events from db.
 
@@ -1250,7 +1250,6 @@ class Sync(Base):
         else:
             # start a background worker producer thread to poll the db and
             # populate the Redis cache
-            nthreads_polldb = nthreads_polldb or NTHREADS_POLLDB
             for _ in range(nthreads_polldb):
                 self.poll_db()
             # sync up to current transaction_id
