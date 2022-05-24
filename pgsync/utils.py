@@ -60,7 +60,7 @@ def threaded(func):
     return wrapper
 
 
-def exit_handler(func):
+def exception(func):
     """Decorator for threaded exception handling."""
 
     def wrapper(*args, **kwargs):

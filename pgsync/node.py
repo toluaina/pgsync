@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from typing import List, Optional, Set
 
 import sqlalchemy as sa
-from six import string_types
 
 from .constants import (
     DEFAULT_SCHEMA,
@@ -29,7 +28,6 @@ from .exc import (
     RelationshipVariantError,
     TableNotInNodeError,
 )
-from .view import is_view
 
 
 @dataclass
@@ -126,9 +124,7 @@ class Node(object):
 
         # columns to fetch
         self.column_names: List[str] = [
-            column
-            for column in self.columns
-            if isinstance(column, string_types)
+            column for column in self.columns if isinstance(column, str)
         ]
         if not self.column_names:
             self.column_names = [str(column) for column in self.table_columns]
@@ -263,9 +259,7 @@ class Tree:
             columns=root.get("columns", []),
             relationship=root.get("relationship", {}),
             base_tables=root.get("base_tables", []),
-            materialized=is_view(
-                self.base.engine, schema, table, materialized=True
-            ),
+            materialized=(table in self.base._materialized_views(schema)),
         )
 
         self.nodes.add(node.table)

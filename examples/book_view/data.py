@@ -8,6 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from pgsync.base import Base, pg_engine, subtransactions
 from pgsync.constants import DEFAULT_SCHEMA
 from pgsync.helper import teardown
+from pgsync.sync import Sync
 from pgsync.utils import get_config
 
 
@@ -106,7 +107,9 @@ def main(config):
         with subtransactions(session):
             session.add_all(books.values())
 
-        Base(database).refresh_views()
+        sync: Sync = Sync(document)
+
+        sync.refresh_views()
 
 
 if __name__ == "__main__":

@@ -36,7 +36,7 @@ from .settings import (
 )
 from .trigger import CREATE_TRIGGER_TEMPLATE
 from .urls import get_postgres_url
-from .view import create_view, DropView, RefreshView
+from .view import create_view, DropView, is_view, RefreshView
 
 try:
     import citext  # noqa
@@ -81,6 +81,7 @@ class Base(object):
         self.__metadata: dict = {}
         self.__indices: dict = {}
         self.__views: dict = {}
+        self.__materialized_views: dict = {}
         self.verbose: bool = verbose
         self._conn = None
 
@@ -220,11 +221,25 @@ class Base(object):
 
     def views(self, schema: str) -> list:
         """Get all materialized and non-materialized views."""
+        return self._views(schema) + self._materialized_views(schema)
+
+    def _views(self, schema: str) -> list:
+        """Get all non-materialized views."""
         if schema not in self.__views:
-            self.__views[schema] = sa.inspect(self.engine).get_view_names(
-                schema
-            )
+            self.__views[schema] = []
+            for table in sa.inspect(self.engine).get_view_names(schema):
+                if is_view(self.engine, schema, table, materialized=False):
+                    self.__views[schema].append(table)
         return self.__views[schema]
+
+    def _materialized_views(self, schema: str) -> list:
+        """Get all materialized views."""
+        if schema not in self.__materialized_views:
+            self.__materialized_views[schema] = []
+            for table in sa.inspect(self.engine).get_view_names(schema):
+                if is_view(self.engine, schema, table, materialized=True):
+                    self.__materialized_views[schema].append(table)
+        return self.__materialized_views[schema]
 
     def indices(self, table: str) -> list:
         """Get the database table indexes."""
@@ -491,11 +506,15 @@ class Base(object):
         self.engine.execute(DropView(schema, MATERIALIZED_VIEW))
         logger.debug(f"Dropped view: {schema}.{MATERIALIZED_VIEW}")
 
-    def refresh_view(self, name: str, schema: str) -> None:
+    def refresh_view(
+        self, name: str, schema: str, concurrently: bool = False
+    ) -> None:
         """Refresh a materialized view."""
-        logger.debug(f"Refreshing view: {schema}.{MATERIALIZED_VIEW}")
-        self.engine.execute(RefreshView(schema, name, concurrently=False))
-        logger.debug(f"Refreshed view: {schema}.{MATERIALIZED_VIEW}")
+        logger.debug(f"Refreshing view: {schema}.{name}")
+        self.engine.execute(
+            RefreshView(schema, name, concurrently=concurrently)
+        )
+        logger.debug(f"Refreshed view: {schema}.{name}")
 
     # Triggers...
     def create_triggers(

@@ -54,7 +54,7 @@ from .settings import (
     USE_ASYNC,
 )
 from .transform import get_private_keys, transform
-from .utils import exit_handler, get_config, show_settings, threaded, Timer
+from .utils import exception, get_config, show_settings, threaded, Timer
 
 logger = logging.getLogger(__name__)
 
@@ -65,9 +65,9 @@ class Sync(Base):
     def __init__(
         self,
         document: dict,
-        verbose: Optional[bool] = False,
-        validate: Optional[bool] = True,
-        repl_slots: Optional[bool] = True,
+        verbose: bool = False,
+        validate: bool = True,
+        repl_slots: bool = True,
         **kwargs,
     ):
         """Constructor."""
@@ -108,7 +108,7 @@ class Sync(Base):
             self.__root = self.tree.build(self.nodes)
         return self.__root
 
-    def validate(self, repl_slots: Optional[bool] = True) -> None:
+    def validate(self, repl_slots: bool = True) -> None:
         """Perform all validation right away."""
 
         # ensure v2 compatible schema
@@ -1007,7 +1007,7 @@ class Sync(Base):
         self._checkpoint: int = value
 
     @threaded
-    @exit_handler
+    @exception
     def poll_redis(self) -> None:
         """Consumer which polls Redis continuously."""
         while True:
@@ -1019,7 +1019,7 @@ class Sync(Base):
                 self.on_publish(payloads)
             time.sleep(REDIS_POLL_INTERVAL)
 
-    @exit_handler
+    @exception
     async def async_poll_redis(self) -> None:
         """Consumer which polls Redis continuously."""
         while True:
@@ -1032,7 +1032,7 @@ class Sync(Base):
             await asyncio.sleep(REDIS_POLL_INTERVAL)
 
     @threaded
-    @exit_handler
+    @exception
     def poll_db(self) -> None:
         """
         Producer which polls Postgres continuously.
@@ -1074,7 +1074,7 @@ class Sync(Base):
                     logger.debug(f"on_notify: {payload}")
                     self.count["db"] += 1
 
-    @exit_handler
+    @exception
     def _poll_db(self) -> None:
         """
         Producer which polls Postgres continuously.
@@ -1179,14 +1179,14 @@ class Sync(Base):
         self._truncate: bool = True
 
     @threaded
-    @exit_handler
+    @exception
     def truncate_slots(self) -> None:
         """Truncate the logical replication slot."""
         while True:
             self._truncate_slots()
             time.sleep(REPLICATION_SLOT_CLEANUP_INTERVAL)
 
-    @exit_handler
+    @exception
     async def async_truncate_slots(self) -> None:
         while True:
             self._truncate_slots()
@@ -1198,13 +1198,13 @@ class Sync(Base):
             self.logical_slot_get_changes(self.__name, upto_nchanges=None)
 
     @threaded
-    @exit_handler
+    @exception
     def status(self) -> None:
         while True:
             self._status(label="Sync")
             time.sleep(LOG_INTERVAL)
 
-    @exit_handler
+    @exception
     async def async_status(self) -> None:
         while True:
             self._status(label="Async")
@@ -1362,16 +1362,16 @@ def main(
 
     show_settings(config)
 
-    if analyze:
-        for document in json.load(open(config)):
-            sync: Sync = Sync(document, verbose=verbose, **kwargs)
-            sync.analyze()
-        return
-
     with Timer():
         for document in json.load(open(config)):
             sync: Sync = Sync(document, verbose=verbose, **kwargs)
+
+            if analyze:
+                sync.analyze()
+                continue
+
             sync.pull()
+
             if daemon:
                 sync.receive(nthreads_polldb)
 

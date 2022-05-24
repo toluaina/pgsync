@@ -2,8 +2,6 @@
 import logging
 from typing import Optional
 
-from six import string_types
-
 from .constants import (  # noqa F401
     CONCAT_TRANSFORM,
     RENAME_TRANSFORM,
@@ -50,7 +48,7 @@ def _rename_fields(data, nodes, result=None):
             elif key in nodes.keys():
                 if isinstance(value, list):
                     value = [_rename_fields(v, nodes[key]) for v in value]
-                elif isinstance(value, (string_types, int, float)):
+                elif isinstance(value, (str, int, float)):
                     if nodes[key]:
                         key = str(nodes[key])
             result[key] = value
