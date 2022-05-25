@@ -154,7 +154,13 @@ class Node(object):
                         token = int(token)
                     tokenized = tokenized(token)
                 self.columns.append(
-                    "_".join([x for x in tokens if x not in JSONB_OPERATORS])
+                    "_".join(
+                        [
+                            x.replace("{", "").replace("}", "")
+                            for x in tokens
+                            if x not in JSONB_OPERATORS
+                        ]
+                    )
                 )
                 self.columns.append(tokenized)
                 # compiled_query(self.columns[-1], 'JSONB Query')
