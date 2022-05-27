@@ -42,7 +42,7 @@ ELASTICSEARCH_PORT = env.int("ELASTICSEARCH_PORT", default=9200)
 ELASTICSEARCH_USER = env.str("ELASTICSEARCH_USER", default=None)
 ELASTICSEARCH_PASSWORD = env.str("ELASTICSEARCH_PASSWORD", default=None)
 # increase this if you are getting read request timeouts
-ELASTICSEARCH_TIMEOUT = env.int("ELASTICSEARCH_TIMEOUT", default=10)
+ELASTICSEARCH_TIMEOUT = env.float("ELASTICSEARCH_TIMEOUT", default=10)
 # Elasticsearch index chunk size (how many documents to index at a time)
 ELASTICSEARCH_CHUNK_SIZE = env.int("ELASTICSEARCH_CHUNK_SIZE", default=2000)
 # the maximum size of the request in bytes (default: 100MB)
@@ -82,11 +82,11 @@ ELASTICSEARCH_STREAMING_BULK = env.bool(
 ELASTICSEARCH_MAX_RETRIES = env.int("ELASTICSEARCH_MAX_RETRIES", default=0)
 # number of seconds we should wait before the first retry.
 # Any subsequent retries will be powers of initial_backoff * 2**retry_number
-ELASTICSEARCH_INITIAL_BACKOFF = env.int(
+ELASTICSEARCH_INITIAL_BACKOFF = env.float(
     "ELASTICSEARCH_INITIAL_BACKOFF", default=2
 )
 # maximum number of seconds a retry will wait
-ELASTICSEARCH_MAX_BACKOFF = env.int("ELASTICSEARCH_MAX_BACKOFF", default=600)
+ELASTICSEARCH_MAX_BACKOFF = env.float("ELASTICSEARCH_MAX_BACKOFF", default=600)
 # if ``False`` then don't propagate exceptions from call to elasticsearch bulk
 ELASTICSEARCH_RAISE_ON_EXCEPTION = env.bool(
     "ELASTICSEARCH_RAISE_ON_EXCEPTION", default=True
@@ -96,6 +96,21 @@ ELASTICSEARCH_RAISE_ON_ERROR = env.bool(
 )
 ELASTICSEARCH_API_KEY_ID = env.str("ELASTICSEARCH_API_KEY_ID", default=None)
 ELASTICSEARCH_API_KEY = env.str("ELASTICSEARCH_API_KEY", default=None)
+ELASTICSEARCH_HTTP_COMPRESS = env.bool(
+    "ELASTICSEARCH_HTTP_COMPRESS", default=True
+)
+ELASTICSEARCH_SSL_ASSERT_HOSTNAME = env.str(
+    "ELASTICSEARCH_SSL_ASSERT_HOSTNAME", default=None
+)
+ELASTICSEARCH_CLOUD_ID = env.str("ELASTICSEARCH_CLOUD_ID", default=None)
+ELASTICSEARCH_BASIC_AUTH = env.str("ELASTICSEARCH_BASIC_AUTH", default=None)
+ELASTICSEARCH_BEARER_AUTH = env.str("ELASTICSEARCH_BEARER_AUTH", default=None)
+ELASTICSEARCH_OPAQUE_ID = env.str("ELASTICSEARCH_OPAQUE_ID", default=None)
+ELASTICSEARCH_SSL_CONTEXT = env.str("ELASTICSEARCH_SSL_CONTEXT", default=None)
+ELASTICSEARCH_SSL_VERSION = env.int("ELASTICSEARCH_SSL_VERSION", default=None)
+ELASTICSEARCH_SSL_ASSERT_FINGERPRINT = env.str(
+    "ELASTICSEARCH_SSL_ASSERT_FINGERPRINT", default=None
+)
 
 # Postgres:
 PG_HOST = env.str("PG_HOST", default="localhost")

@@ -1,7 +1,7 @@
 """PGSync Elasticsearch helper."""
 import logging
 from collections import defaultdict
-from typing import Generator, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import boto3
 from elasticsearch import Elasticsearch, helpers, RequestsHttpConnection
@@ -21,18 +21,27 @@ from .settings import (
     ELASTICSEARCH_API_KEY_ID,
     ELASTICSEARCH_AWS_HOSTED,
     ELASTICSEARCH_AWS_REGION,
+    ELASTICSEARCH_BASIC_AUTH,
+    ELASTICSEARCH_BEARER_AUTH,
     ELASTICSEARCH_CA_CERTS,
     ELASTICSEARCH_CHUNK_SIZE,
     ELASTICSEARCH_CLIENT_CERT,
     ELASTICSEARCH_CLIENT_KEY,
+    ELASTICSEARCH_CLOUD_ID,
+    ELASTICSEARCH_HTTP_COMPRESS,
     ELASTICSEARCH_INITIAL_BACKOFF,
     ELASTICSEARCH_MAX_BACKOFF,
     ELASTICSEARCH_MAX_CHUNK_BYTES,
     ELASTICSEARCH_MAX_RETRIES,
+    ELASTICSEARCH_OPAQUE_ID,
     ELASTICSEARCH_QUEUE_SIZE,
     ELASTICSEARCH_RAISE_ON_ERROR,
     ELASTICSEARCH_RAISE_ON_EXCEPTION,
+    ELASTICSEARCH_SSL_ASSERT_FINGERPRINT,
+    ELASTICSEARCH_SSL_ASSERT_HOSTNAME,
+    ELASTICSEARCH_SSL_CONTEXT,
     ELASTICSEARCH_SSL_SHOW_WARN,
+    ELASTICSEARCH_SSL_VERSION,
     ELASTICSEARCH_STREAMING_BULK,
     ELASTICSEARCH_THREAD_COUNT,
     ELASTICSEARCH_TIMEOUT,
@@ -55,14 +64,14 @@ class ElasticHelper(object):
         host = 'localhost', port = 9200
         """
         url: str = get_elasticsearch_url()
-        self.__es: Elasticsearch = get_elasticsearch_client(url)
+        self.__client: Elasticsearch = get_elasticsearch_client(url)
         self.is_opensearch: bool = False
         try:
             self.major_version: int = int(
-                self.__es.info()["version"]["number"].split(".")[0]
+                self.__client.info()["version"]["number"].split(".")[0]
             )
             self.is_opensearch = (
-                self.__es.info()["tagline"] != ELASTICSEARCH_TAGLINE
+                self.__client.info()["tagline"] != ELASTICSEARCH_TAGLINE
             )
         except (IndexError, KeyError, ValueError):
             self.major_version: int = 0
@@ -70,7 +79,7 @@ class ElasticHelper(object):
 
     def close(self) -> None:
         """Close transport connection."""
-        self.__es.transport.close()
+        self.__client.transport.close()
 
     def teardown(self, index: str) -> None:
         """
@@ -80,7 +89,7 @@ class ElasticHelper(object):
         """
         try:
             logger.debug(f"Deleting index {index}")
-            self.__es.indices.delete(index=index, ignore=[400, 404])
+            self.__client.indices.delete(index=index, ignore=[400, 404])
         except Exception as e:
             logger.exception(f"Exception {e}")
             raise
@@ -88,15 +97,15 @@ class ElasticHelper(object):
     def bulk(
         self,
         index: str,
-        docs: Generator,
+        actions: Iterable[Union[bytes, str, Dict[str, Any]]],
         chunk_size: Optional[int] = None,
         max_chunk_bytes: Optional[int] = None,
         queue_size: Optional[int] = None,
         thread_count: Optional[int] = None,
         refresh: bool = False,
         max_retries: Optional[int] = None,
-        initial_backoff: Optional[int] = None,
-        max_backoff: Optional[int] = None,
+        initial_backoff: Optional[float] = None,
+        max_backoff: Optional[float] = None,
         raise_on_exception: Optional[bool] = None,
         raise_on_error: Optional[bool] = None,
     ) -> None:
@@ -108,8 +117,10 @@ class ElasticHelper(object):
         # max_retries, initial_backoff & max_backoff are only applicable when
         # streaming bulk is in use
         max_retries: int = max_retries or ELASTICSEARCH_MAX_RETRIES
-        initial_backoff: int = initial_backoff or ELASTICSEARCH_INITIAL_BACKOFF
-        max_backoff: int = max_backoff or ELASTICSEARCH_MAX_BACKOFF
+        initial_backoff: float = (
+            initial_backoff or ELASTICSEARCH_INITIAL_BACKOFF
+        )
+        max_backoff: float = max_backoff or ELASTICSEARCH_MAX_BACKOFF
         raise_on_exception: bool = (
             raise_on_exception or ELASTICSEARCH_RAISE_ON_EXCEPTION
         )
@@ -118,7 +129,7 @@ class ElasticHelper(object):
         try:
             self._bulk(
                 index,
-                docs,
+                actions,
                 chunk_size=chunk_size,
                 max_chunk_bytes=max_chunk_bytes,
                 queue_size=queue_size,
@@ -138,15 +149,15 @@ class ElasticHelper(object):
     def _bulk(
         self,
         index: str,
-        docs: Generator,
+        actions: Iterable[Union[bytes, str, Dict[str, Any]]],
         chunk_size: int,
         max_chunk_bytes: int,
         queue_size: int,
         thread_count: int,
         refresh: bool,
         max_retries: int,
-        initial_backoff: int,
-        max_backoff: int,
+        initial_backoff: float,
+        max_backoff: float,
         raise_on_exception: bool,
         raise_on_error: bool,
     ):
@@ -157,8 +168,8 @@ class ElasticHelper(object):
 
         if ELASTICSEARCH_STREAMING_BULK:
             for _ in helpers.streaming_bulk(
-                self.__es,
-                docs,
+                self.__client,
+                actions,
                 index=index,
                 chunk_size=chunk_size,
                 max_chunk_bytes=max_chunk_bytes,
@@ -174,8 +185,8 @@ class ElasticHelper(object):
             # parallel bulk consumes more memory and is also more likely
             # to result in 429 errors.
             for _ in helpers.parallel_bulk(
-                self.__es,
-                docs,
+                self.__client,
+                actions,
                 thread_count=thread_count,
                 chunk_size=chunk_size,
                 max_chunk_bytes=max_chunk_bytes,
@@ -189,7 +200,7 @@ class ElasticHelper(object):
 
     def refresh(self, indices: List[str]) -> None:
         """Refresh the Elasticsearch index."""
-        self.__es.indices.refresh(index=indices)
+        self.__client.indices.refresh(index=indices)
 
     def _search(self, index: str, table: str, fields: Optional[dict] = None):
         """
@@ -203,7 +214,7 @@ class ElasticHelper(object):
         }
         """
         fields: dict = fields or {}
-        search: Search = Search(using=self.__es, index=index)
+        search: Search = Search(using=self.__client, index=index)
         # explicitly exclude all fields since we only need the doc _id
         search = search.source(excludes=["*"])
         for key, values in fields.items():
@@ -227,7 +238,7 @@ class ElasticHelper(object):
 
         NB: doc_type has been removed since Elasticsearch 7.x onwards
         """
-        return self.__es.search(index=index, body=body)
+        return self.__client.search(index=index, body=body)
 
     def _create_setting(
         self,
@@ -240,7 +251,7 @@ class ElasticHelper(object):
         """Create Elasticsearch setting and mapping if required."""
         body: dict = defaultdict(lambda: defaultdict(dict))
 
-        if not self.__es.indices.exists(index):
+        if not self.__client.indices.exists(index):
 
             if setting:
                 body.update(**{"settings": {"index": setting}})
@@ -255,7 +266,7 @@ class ElasticHelper(object):
                 if mapping:
                     body.update(**mapping)
             try:
-                response = self.__es.indices.create(index=index, body=body)
+                response = self.__client.indices.create(index=index, body=body)
             except Exception:
                 raise
 
@@ -263,10 +274,10 @@ class ElasticHelper(object):
             logger.debug(f"create index response {response}")
             # check the result of the mapping on the index
             logger.debug(
-                f"created mapping: {self.__es.indices.get_mapping(index)}"
+                f"created mapping: {self.__client.indices.get_mapping(index)}"
             )
             logger.debug(
-                f"created setting: {self.__es.indices.get_settings(index)}"
+                f"created setting: {self.__client.indices.get_settings(index)}"
             )
 
     def _build_mapping(self, root: Node, routing: str) -> Optional[dict]:
@@ -334,17 +345,49 @@ def get_elasticsearch_client(url: str) -> Elasticsearch:
             connection_class=RequestsHttpConnection,
         )
     else:
-        api_key: Optional(Tuple[str, str]) = None
+        hosts: List[str] = [url]
+        # API
+        cloud_id: Optional[str] = ELASTICSEARCH_CLOUD_ID
+        api_key: Optional[Union[str, Tuple[str, str]]] = None
         if ELASTICSEARCH_API_KEY_ID and ELASTICSEARCH_API_KEY:
             api_key = (ELASTICSEARCH_API_KEY_ID, ELASTICSEARCH_API_KEY)
+        basic_auth: Optional[str] = ELASTICSEARCH_BASIC_AUTH
+        bearer_auth: Optional[str] = ELASTICSEARCH_BEARER_AUTH
+        opaque_id: Optional[str] = ELASTICSEARCH_OPAQUE_ID
+        # Node
+        http_compress: bool = ELASTICSEARCH_HTTP_COMPRESS
+        verify_certs: bool = ELASTICSEARCH_VERIFY_CERTS
+        ca_certs: Optional[str] = ELASTICSEARCH_CA_CERTS
+        client_cert: Optional[str] = ELASTICSEARCH_CLIENT_CERT
+        client_key: Optional[str] = ELASTICSEARCH_CLIENT_KEY
+        ssl_assert_hostname: Optional[str] = ELASTICSEARCH_SSL_ASSERT_HOSTNAME
+        ssl_assert_fingerprint: Optional[
+            str
+        ] = ELASTICSEARCH_SSL_ASSERT_FINGERPRINT
+        ssl_version: Optional[int] = ELASTICSEARCH_SSL_VERSION
+        ssl_context: Optional[Any] = ELASTICSEARCH_SSL_CONTEXT
+        ssl_show_warn: bool = ELASTICSEARCH_SSL_SHOW_WARN
+        # Transport
+        use_ssl: bool = ELASTICSEARCH_USE_SSL
+        timeout: float = ELASTICSEARCH_TIMEOUT
+
         return Elasticsearch(
-            hosts=[url],
-            timeout=ELASTICSEARCH_TIMEOUT,
-            verify_certs=ELASTICSEARCH_VERIFY_CERTS,
-            use_ssl=ELASTICSEARCH_USE_SSL,
-            ssl_show_warn=ELASTICSEARCH_SSL_SHOW_WARN,
-            ca_certs=ELASTICSEARCH_CA_CERTS,
-            client_cert=ELASTICSEARCH_CLIENT_CERT,
-            client_key=ELASTICSEARCH_CLIENT_KEY,
+            hosts=hosts,
+            cloud_id=cloud_id,
             api_key=api_key,
+            basic_auth=basic_auth,
+            bearer_auth=bearer_auth,
+            opaque_id=opaque_id,
+            http_compress=http_compress,
+            verify_certs=verify_certs,
+            ca_certs=ca_certs,
+            client_cert=client_cert,
+            client_key=client_key,
+            ssl_assert_hostname=ssl_assert_hostname,
+            ssl_assert_fingerprint=ssl_assert_fingerprint,
+            ssl_version=ssl_version,
+            ssl_context=ssl_context,
+            ssl_show_warn=ssl_show_warn,
+            use_ssl=use_ssl,
+            timeout=timeout,
         )

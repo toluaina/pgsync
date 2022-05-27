@@ -63,12 +63,12 @@ class TestUrls(object):
         assert __file__ == get_config(config=__file__)
         with pytest.raises(SchemaError) as excinfo:
             get_config()
-            assert "Schema config not set" in str(excinfo.value)
+        assert "Schema config not set" in str(excinfo.value)
         with pytest.raises(IOError) as excinfo:
             get_config("/tmp/nonexistent")
-            assert 'Schema config "/tmp/nonexistent" not found' in str(
-                excinfo.value
-            )
+        assert 'Schema config "/tmp/nonexistent" not found' in str(
+            excinfo.value
+        )
 
     @patch("pgsync.urls.logger")
     def test_get_auth(self, mock_logger):

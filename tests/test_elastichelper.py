@@ -6,10 +6,19 @@ from mock import ANY, MagicMock
 
 from pgsync.elastichelper import ElasticHelper, get_elasticsearch_client
 from pgsync.settings import (
+    ELASTICSEARCH_BASIC_AUTH,
+    ELASTICSEARCH_BEARER_AUTH,
     ELASTICSEARCH_CA_CERTS,
     ELASTICSEARCH_CLIENT_CERT,
     ELASTICSEARCH_CLIENT_KEY,
+    ELASTICSEARCH_CLOUD_ID,
+    ELASTICSEARCH_HTTP_COMPRESS,
+    ELASTICSEARCH_OPAQUE_ID,
+    ELASTICSEARCH_SSL_ASSERT_FINGERPRINT,
+    ELASTICSEARCH_SSL_ASSERT_HOSTNAME,
+    ELASTICSEARCH_SSL_CONTEXT,
     ELASTICSEARCH_SSL_SHOW_WARN,
+    ELASTICSEARCH_SSL_VERSION,
     ELASTICSEARCH_TIMEOUT,
     ELASTICSEARCH_USE_SSL,
     ELASTICSEARCH_VERIFY_CERTS,
@@ -43,14 +52,23 @@ class TestElasticsearchHelper(object):
             get_elasticsearch_client(url)
             mocker_elasticsearch.assert_called_once_with(
                 hosts=[url],
-                timeout=ELASTICSEARCH_TIMEOUT,
+                cloud_id=ELASTICSEARCH_CLOUD_ID,
+                api_key=None,
+                basic_auth=ELASTICSEARCH_BASIC_AUTH,
+                bearer_auth=ELASTICSEARCH_BEARER_AUTH,
+                opaque_id=ELASTICSEARCH_OPAQUE_ID,
+                http_compress=ELASTICSEARCH_HTTP_COMPRESS,
                 verify_certs=ELASTICSEARCH_VERIFY_CERTS,
-                use_ssl=ELASTICSEARCH_USE_SSL,
-                ssl_show_warn=ELASTICSEARCH_SSL_SHOW_WARN,
                 ca_certs=ELASTICSEARCH_CA_CERTS,
                 client_cert=ELASTICSEARCH_CLIENT_CERT,
                 client_key=ELASTICSEARCH_CLIENT_KEY,
-                api_key=None,
+                ssl_assert_hostname=ELASTICSEARCH_SSL_ASSERT_HOSTNAME,
+                ssl_assert_fingerprint=ELASTICSEARCH_SSL_ASSERT_FINGERPRINT,
+                ssl_version=ELASTICSEARCH_SSL_VERSION,
+                ssl_context=ELASTICSEARCH_SSL_CONTEXT,
+                ssl_show_warn=ELASTICSEARCH_SSL_SHOW_WARN,
+                use_ssl=ELASTICSEARCH_USE_SSL,
+                timeout=ELASTICSEARCH_TIMEOUT,
             )
 
         with mock.patch(
