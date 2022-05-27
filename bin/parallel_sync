@@ -114,6 +114,8 @@ def fetch_tasks(doc: dict, block_size: Optional[int] = None) -> list:
                 tasks.append(pages)
                 pages = {}
             i += 1
+        # add any outstanding page items in case i < block_size
+        tasks.append(pages)
     return tasks
 
 
