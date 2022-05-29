@@ -518,7 +518,10 @@ class Base(object):
 
     # Triggers...
     def create_triggers(
-        self, schema: str, tables: Optional[List[str]] = None
+        self,
+        schema: str,
+        tables: Optional[List[str]] = None,
+        join_queries: bool = False,
     ) -> None:
         """Create a database triggers."""
         self.execute(
@@ -526,7 +529,7 @@ class Base(object):
                 MATERIALIZED_VIEW, f"{schema}.{MATERIALIZED_VIEW}"
             )
         )
-        queries: list = []
+        queries: List[str] = []
         for table in self.tables(schema):
             schema, table = self._get_schema(schema, table)
             if (tables and table not in tables) or (
@@ -534,39 +537,46 @@ class Base(object):
             ):
                 continue
             logger.debug(f"Creating trigger on table: {schema}.{table}")
-
             for name, level, tg_op in [
                 ("notify", "ROW", ["INSERT", "UPDATE", "DELETE"]),
                 ("truncate", "STATEMENT", ["TRUNCATE"]),
             ]:
                 self.drop_triggers(schema, [table])
                 queries.append(
-                    sa.DDL(
-                        f'CREATE TRIGGER "{table}_{name}" '
-                        f'AFTER {" OR ".join(tg_op)} ON "{schema}"."{table}" '
-                        f"FOR EACH {level} EXECUTE PROCEDURE "
-                        f"{TRIGGER_FUNC}()",
-                    )
+                    f'CREATE TRIGGER "{table}_{name}" '
+                    f'AFTER {" OR ".join(tg_op)} ON "{schema}"."{table}" '
+                    f"FOR EACH {level} EXECUTE PROCEDURE "
+                    f"{TRIGGER_FUNC}()",
                 )
-
-        for query in queries:
-            self.execute(query)
+        if join_queries:
+            self.execute("; ".join(queries))
+        else:
+            for query in queries:
+                self.execute(sa.DDL(query))
 
     def drop_triggers(
-        self, schema: str, tables: Optional[List[str]] = None
+        self,
+        schema: str,
+        tables: Optional[List[str]] = None,
+        join_queries: bool = False,
     ) -> None:
         """Drop all pgsync defined triggers in database."""
+        queries: List[str] = []
         for table in self.tables(schema):
             schema, table = self._get_schema(schema, table)
             if tables and table not in tables:
                 continue
             logger.debug(f"Dropping trigger on table: {schema}.{table}")
             for name in ("notify", "truncate"):
-                query = (
+                queries.append(
                     f'DROP TRIGGER IF EXISTS "{table}_{name}" ON '
                     f'"{schema}"."{table}"'
                 )
-                self.execute(query)
+        if join_queries:
+            self.execute("; ".join(queries))
+        else:
+            for query in queries:
+                self.execute(sa.DDL(query))
 
     def disable_triggers(self, schema: str) -> None:
         """Disable all pgsync defined triggers in database."""

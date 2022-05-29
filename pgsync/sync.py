@@ -44,6 +44,7 @@ from .querybuilder import QueryBuilder
 from .redisqueue import RedisQueue
 from .settings import (
     CHECKPOINT_PATH,
+    JOIN_QUERIES,
     LOG_INTERVAL,
     LOGICAL_SLOT_CHUNK_SIZE,
     NTHREADS_POLLDB,
@@ -252,6 +253,9 @@ class Sync(Base):
 
     def setup(self) -> None:
         """Create the database triggers and replication slot."""
+
+        join_queries: bool = JOIN_QUERIES
+
         self.teardown(drop_view=False)
 
         for schema in self.schemas:
@@ -281,11 +285,16 @@ class Sync(Base):
                     user_defined_fkey_tables[node.table] |= set(columns)
             if tables:
                 self.create_view(schema, tables, user_defined_fkey_tables)
-                self.create_triggers(schema, tables=tables)
+                self.create_triggers(
+                    schema, tables=tables, join_queries=join_queries
+                )
         self.create_replication_slot(self.__name)
 
     def teardown(self, drop_view: bool = True) -> None:
         """Drop the database triggers and replication slot."""
+
+        join_queries: bool = JOIN_QUERIES
+
         try:
             os.unlink(self._checkpoint_file)
         except OSError:
@@ -300,7 +309,9 @@ class Sync(Base):
                 tables |= set([node.table])
                 # we also need to teardown the base tables
                 tables |= set(node.base_tables)
-            self.drop_triggers(schema=schema, tables=tables)
+            self.drop_triggers(
+                schema=schema, tables=tables, join_queries=join_queries
+            )
             if drop_view:
                 self.drop_view(schema=schema)
         self.drop_replication_slot(self.__name)

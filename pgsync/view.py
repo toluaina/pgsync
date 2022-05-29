@@ -124,109 +124,20 @@ def compile_drop_index(
     return f"DROP INDEX IF EXISTS {element.name}"
 
 
-def _primary_keys(
-    engine, model: Callable, schema: str, tables: List[str]
+def _get_constraints(
+    model: Callable,
+    schema: str,
+    tables: List[str],
+    label: str,
+    constraint_type: str,
 ) -> sa.sql.selectable.Select:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=sa.exc.SAWarning)
-        pg_class = model("pg_class", "pg_catalog")
-        pg_index = model("pg_index", "pg_catalog")
-        pg_attribute = model("pg_attribute", "pg_catalog")
-        pg_namespace = model("pg_namespace", "pg_catalog")
-
-    alias = pg_class.alias("x")
-    inclause: list = []
-    identifier_preparer = engine.dialect.identifier_preparer
-    for table in tables:
-        pairs = table.split(".")
-        if len(pairs) == 1:
-            inclause.append(identifier_preparer.quote(pairs[0]))
-        elif len(pairs) == 2:
-            inclause.append(
-                f"{pairs[0]}.{identifier_preparer.quote(pairs[-1])}"
-            )
-        else:
-            raise Exception(f"cannot determine schema and table from {table}")
-
-    return (
-        sa.select(
-            [
-                sa.func.REPLACE(
-                    sa.func.REVERSE(
-                        sa.func.SPLIT_PART(
-                            sa.func.REVERSE(
-                                sa.cast(
-                                    sa.cast(
-                                        pg_index.c.indrelid,
-                                        sa.dialects.postgresql.REGCLASS,
-                                    ),
-                                    sa.Text,
-                                )
-                            ),
-                            ".",
-                            1,
-                        )
-                    ),
-                    '"',
-                    "",
-                ).label("table_name"),
-                sa.func.ARRAY_AGG(pg_attribute.c.attname).label(
-                    "primary_keys"
-                ),
-            ]
-        )
-        .join(
-            pg_attribute,
-            pg_attribute.c.attrelid == pg_index.c.indrelid,
-        )
-        .join(
-            pg_class,
-            pg_class.c.oid == pg_index.c.indexrelid,
-        )
-        .join(
-            alias,
-            alias.c.oid == pg_index.c.indrelid,
-        )
-        .join(
-            pg_namespace,
-            pg_namespace.c.oid == pg_class.c.relnamespace,
-        )
-        .where(
-            *[
-                pg_namespace.c.nspname.notin_(["pg_catalog", "pg_toast"]),
-                pg_index.c.indisprimary,
-                sa.cast(
-                    sa.cast(
-                        pg_index.c.indrelid,
-                        sa.dialects.postgresql.REGCLASS,
-                    ),
-                    sa.Text,
-                ).in_(inclause),
-                pg_attribute.c.attnum == sa.any_(pg_index.c.indkey),
-            ]
-        )
-        .group_by(pg_index.c.indrelid)
-    )
-
-
-def _foreign_keys(
-    model, schema: str, tables: List[str]
-) -> sa.sql.selectable.Select:
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=sa.exc.SAWarning)
-        table_constraints = model(
-            "table_constraints",
-            "information_schema",
-        )
-        key_column_usage = model(
-            "key_column_usage",
-            "information_schema",
-        )
+        table_constraints = model("table_constraints", "information_schema")
+        key_column_usage = model("key_column_usage", "information_schema")
         constraint_column_usage = model(
-            "constraint_column_usage",
-            "information_schema",
+            "constraint_column_usage", "information_schema"
         )
-
     return (
         sa.select(
             [
@@ -236,7 +147,7 @@ def _foreign_keys(
                         key_column_usage.c.column_name,
                         sa.TEXT,
                     )
-                ).label("foreign_keys"),
+                ).label(label),
             ]
         )
         .join(
@@ -261,10 +172,34 @@ def _foreign_keys(
         .where(
             *[
                 table_constraints.c.table_name.in_(tables),
-                table_constraints.c.constraint_type == "FOREIGN KEY",
+                table_constraints.c.constraint_type == constraint_type,
             ]
         )
         .group_by(table_constraints.c.table_name)
+    )
+
+
+def _primary_keys(
+    model: Callable, schema: str, tables: List[str]
+) -> sa.sql.selectable.Select:
+    return _get_constraints(
+        model,
+        schema,
+        tables,
+        label="primary_keys",
+        constraint_type="PRIMARY KEY",
+    )
+
+
+def _foreign_keys(
+    model: Callable, schema: str, tables: List[str]
+) -> sa.sql.selectable.Select:
+    return _get_constraints(
+        model,
+        schema,
+        tables,
+        label="foreign_keys",
+        constraint_type="FOREIGN KEY",
     )
 
 
@@ -321,9 +256,7 @@ def create_view(
         for table in set(tables):
             tables.add(f"{schema}.{table}")
 
-    for table_name, columns in fetchall(
-        _primary_keys(engine, model, schema, tables)
-    ):
+    for table_name, columns in fetchall(_primary_keys(model, schema, tables)):
         rows.setdefault(
             table_name,
             {"primary_keys": set([]), "foreign_keys": set([])},
