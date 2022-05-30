@@ -498,6 +498,7 @@ class Base(object):
             schema,
             tables,
             user_defined_fkey_tables,
+            self._materialized_views(schema),
         )
 
     def drop_view(self, schema: str) -> None:

@@ -8,9 +8,9 @@ async-timeout==4.0.2
     # via redis
 black==22.3.0
     # via -r requirements/base.in
-boto3==1.23.9
+boto3==1.23.10
     # via -r requirements/base.in
-botocore==1.26.9
+botocore==1.26.10
     # via
     #   boto3
     #   s3transfer
@@ -50,7 +50,7 @@ jmespath==1.0.0
     # via
     #   boto3
     #   botocore
-marshmallow==3.15.0
+marshmallow==3.16.0
     # via environs
 mypy-extensions==0.4.3
     # via black

@@ -1106,13 +1106,13 @@ class Sync(Base):
                 logger.debug(f"on_notify: {payload}")
                 self.count["db"] += 1
 
-    def refresh_views(self):
+    def refresh_views(self) -> None:
         self._refresh_views()
 
-    async def async_refresh_views(self):
+    async def async_refresh_views(self) -> None:
         self._refresh_views()
 
-    def _refresh_views(self):
+    def _refresh_views(self) -> None:
         for node in self.root.traverse_breadth_first():
             if node.table in self.views(node.schema):
                 if node.materialized:

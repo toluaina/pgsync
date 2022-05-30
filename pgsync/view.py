@@ -210,6 +210,7 @@ def create_view(
     schema: str,
     tables: list,
     user_defined_fkey_tables: dict,
+    views: List[str],
 ) -> None:
     """
     View describing primary_keys and foreign_keys for each table
@@ -231,8 +232,6 @@ def create_view(
     unit       | {id}         | {id, profile_id}
     structure  | {id}         | {id}
     """
-
-    views: list = sa.inspect(engine).get_view_names(schema)
 
     rows: dict = {}
     if MATERIALIZED_VIEW in views:
