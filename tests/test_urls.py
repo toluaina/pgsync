@@ -38,7 +38,7 @@ class TestUrls(object):
         assert url.endswith("@localhost:5432/mydb")
         assert (
             get_postgres_url("mydb", user="kermit", password="12345")
-            == "postgresql://kermit:12345@localhost:5432/mydb"
+            == "postgresql+psycopg2://kermit:12345@localhost:5432/mydb"
         )
         url = get_postgres_url("mydb", port=9999)
         assert url.endswith("@localhost:9999/mydb")

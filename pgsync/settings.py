@@ -22,6 +22,7 @@ LOGICAL_SLOT_CHUNK_SIZE = env.int("LOGICAL_SLOT_CHUNK_SIZE", default=5000)
 LOG_INTERVAL = env.float("LOG_INTERVAL", default=0.5)
 # number of threads to spawn for poll db
 NTHREADS_POLLDB = env.int("NTHREADS_POLLDB", default=1)
+PG_DRIVER = env.str("PG_DRIVER", default="psycopg2")
 # poll db interval (consider reducing this duration to increase throughput)
 POLL_TIMEOUT = env.float("POLL_TIMEOUT", default=0.1)
 QUERY_LITERAL_BINDS = env.bool("QUERY_LITERAL_BINDS", default=None)
