@@ -8,9 +8,9 @@ async-timeout==4.0.2
     # via redis
 black==22.3.0
     # via -r requirements/base.in
-boto3==1.23.10
+boto3==1.24.2
     # via -r requirements/base.in
-botocore==1.26.10
+botocore==1.27.2
     # via
     #   boto3
     #   s3transfer
@@ -75,20 +75,20 @@ python-dateutil==2.8.2
     #   faker
 python-dotenv==0.20.0
     # via environs
-redis==4.3.1
+redis==4.3.3
     # via -r requirements/base.in
 requests==2.27.1
     # via requests-aws4auth
 requests-aws4auth==1.1.2
     # via -r requirements/base.in
-s3transfer==0.5.2
+s3transfer==0.6.0
     # via boto3
 six==1.16.0
     # via
     #   elasticsearch-dsl
     #   python-dateutil
     #   requests-aws4auth
-sqlalchemy==1.4.36
+sqlalchemy==1.4.37
     # via -r requirements/base.in
 sqlparse==0.4.2
     # via -r requirements/base.in

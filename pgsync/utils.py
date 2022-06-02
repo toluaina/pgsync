@@ -23,9 +23,7 @@ def timeit(func):
         since: float = time()
         retval = func(*args, **kwargs)
         until: float = time()
-        sys.stdout.write(
-            f"{func.__name__} ({args}, {kwargs}) {until-since} secs\n"
-        )
+        sys.stdout.write(f"{func.__name__}: {until-since} secs\n")
         return retval
 
     return timed

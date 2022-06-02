@@ -10,9 +10,9 @@ attrs==21.4.0
     # via pytest
 black==22.3.0
     # via -r requirements/base.in
-boto3==1.23.10
+boto3==1.24.2
     # via -r requirements/base.in
-botocore==1.26.10
+botocore==1.27.2
     # via
     #   boto3
     #   s3transfer
@@ -33,7 +33,7 @@ click==8.1.3
     #   -r requirements/base.in
     #   black
     #   pip-tools
-coverage[toml]==6.4
+coverage[toml]==6.4.1
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -51,7 +51,7 @@ environs==9.5.0
     # via -r requirements/base.in
 faker==13.12.0
     # via -r requirements/base.in
-filelock==3.7.0
+filelock==3.7.1
     # via virtualenv
 flake8==4.0.1
     # via
@@ -154,13 +154,13 @@ python-dotenv==0.20.0
     # via environs
 pyyaml==6.0
     # via pre-commit
-redis==4.3.1
+redis==4.3.3
     # via -r requirements/base.in
 requests==2.27.1
     # via requests-aws4auth
 requests-aws4auth==1.1.2
     # via -r requirements/base.in
-s3transfer==0.5.2
+s3transfer==0.6.0
     # via boto3
 six==1.16.0
     # via
@@ -170,7 +170,7 @@ six==1.16.0
     #   virtualenv
 snowballstemmer==2.2.0
     # via pydocstyle
-sqlalchemy==1.4.36
+sqlalchemy==1.4.37
     # via -r requirements/base.in
 sqlparse==0.4.2
     # via -r requirements/base.in

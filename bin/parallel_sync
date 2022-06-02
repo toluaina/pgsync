@@ -38,12 +38,16 @@ The workers then query for each chunk of work filtering by the page number
 and row numbers assigned.
 """
 
+import asyncio
 import json
-import logging
 import multiprocessing
+import os
 import sys
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import Optional
+from queue import Queue
+from threading import Thread
+from typing import Generator, Optional, Union
 
 import click
 import sqlalchemy as sa
@@ -51,98 +55,234 @@ import sqlalchemy as sa
 from pgsync.node import Node
 from pgsync.settings import BLOCK_SIZE
 from pgsync.sync import Sync
-from pgsync.utils import get_config, show_settings, Timer
+from pgsync.utils import get_config, show_settings, timeit
 
-logger = logging.getLogger(__name__)
+
+def logical_slot_changes(
+    doc: dict, verbose: bool = False, validate: bool = False
+):
+    # now sync up to txmax to capture everything we may have missed
+    sync: Sync = Sync(doc, verbose=verbose, validate=validate)
+    txmin: int = sync.checkpoint
+    txmax: int = sync.txid_current
+    sync.logical_slot_changes(txmin=txmin, txmax=txmax)
+    sync.checkpoint: int = txmax or sync.txid_current
 
 
 @dataclass
 class Task:
-    """Class for holding a task object."""
+    doc: dict
+    verbose: bool = False
+    validate: bool = False
 
-    ctid: int
-    txmin: Optional[int] = None
-    txmax: Optional[int] = None
-
-
-class Worker(multiprocessing.Process):
-    def __init__(self, queue: multiprocessing.JoinableQueue, doc: dict):
-        multiprocessing.Process.__init__(self)
-        self.queue: multiprocessing.JoinableQueue = queue
-        self.doc: dict = doc
-
-    def run(self) -> None:
-        sync: Sync = Sync(self.doc)
-        while True:
-            task: Task = self.queue.get()
-            if task is None:
-                sys.stdout.write(f"{self.name}: Exiting...\n")
-                sys.stdout.flush()
-                self.queue.task_done()
-                break
-            sync.es.bulk(
-                sync.index,
-                sync.sync(ctid=task.ctid, txmin=task.txmin, txmax=task.txmax),
-            )
-            self.queue.task_done()
-        return
+    def process(self, task: dict) -> None:
+        sync: Sync = Sync(
+            self.doc, verbose=self.verbose, validate=self.validate
+        )
+        txmin: int = sync.checkpoint
+        txmax: int = sync.txid_current
+        sync.es.bulk(
+            sync.index,
+            sync.sync(ctid=task, txmin=txmin, txmax=txmax),
+        )
+        sys.stdout.write(f"Process pid: {os.getpid()} complete.\n")
+        sys.stdout.flush()
 
 
-def fetch_tasks(doc: dict, block_size: Optional[int] = None) -> list:
+@timeit
+def fetch_tasks(doc: dict, block_size: Optional[int] = None) -> Generator:
     block_size: int = block_size or BLOCK_SIZE
-    tasks: list = []
     pages: dict = {}
     sync: Sync = Sync(doc)
     root: Node = sync.tree.build(sync.nodes)
-    with Timer("Query tasks..."):
-        statement: sa.sql.selectable.Select = sa.select(
-            [
-                sa.literal_column("1").label("x"),
-                sa.literal_column("1").label("y"),
-                sa.column("ctid"),
-            ]
-        ).select_from(root.model)
-
-        i: int = 1
-        for _, _, ctid in sync.fetchmany(statement):
-            value: list = ctid[0].split(",")
-            page: int = int(value[0].replace("(", ""))
-            row: int = int(value[1].replace(")", ""))
-            pages.setdefault(page, [])
-            pages[page].append(row)
-            if i % block_size == 0:
-                tasks.append(pages)
-                pages = {}
-            i += 1
-        # add any outstanding page items in case i < block_size
-        tasks.append(pages)
-    return tasks
+    statement: sa.sql.selectable.Select = sa.select(
+        [
+            sa.literal_column("1").label("x"),
+            sa.literal_column("1").label("y"),
+            sa.column("ctid"),
+        ]
+    ).select_from(root.model)
+    i: int = 1
+    for _, _, ctid in sync.fetchmany(statement):
+        value: list = ctid[0].split(",")
+        page: int = int(value[0].replace("(", ""))
+        row: int = int(value[1].replace(")", ""))
+        pages.setdefault(page, [])
+        pages[page].append(row)
+        if i % block_size == 0:
+            yield pages
+            pages = {}
+        i += 1
+    yield pages
 
 
-def pull(ncpus: int, config: str, verbose: Optional[bool] = False) -> None:
-    """Pull data from db using multiprocessing."""
-    queue: multiprocessing.JoinableQueue = multiprocessing.JoinableQueue()
-    with Timer():
-        for doc in json.load(open(config)):
-            logger.debug(f"ncpus   : {ncpus}")
-            tasks: list = fetch_tasks(doc)
-            logger.debug(f"tasks   : {len(tasks)}")
-            workers: List[Worker] = [Worker(queue, doc) for _ in range(ncpus)]
-            sync: Sync = Sync(doc, verbose=verbose)
-            txmin: int = sync.checkpoint
-            txmax: int = sync.txid_current
-            logger.debug(f"pull txmin: {txmin} - txmax: {txmax}")
+@timeit
+def synchronous(
+    tasks: Generator, doc: dict, verbose: bool = False, validate: bool = False
+) -> None:
+    sys.stdout.write("Synchronous\n")
+    sync: Sync = Sync(doc, verbose=verbose, validate=validate)
+    txmin: int = sync.checkpoint
+    txmax: int = sync.txid_current
+    index: str = sync.index
+    for task in tasks:
+        sync.es.bulk(
+            index,
+            sync.sync(ctid=task, txmin=txmin, txmax=txmax),
+        )
+    logical_slot_changes(doc, verbose=verbose, validate=validate)
 
-            for worker in workers:
-                worker.start()
-            for ctid in tasks:
-                queue.put(Task(ctid, txmin, txmax))
-            for _ in range(ncpus):
-                queue.put(None)
-            queue.join()
-            # now sync up to txmax to capture everything we may have missed
-            sync.logical_slot_changes(txmin=txmin, txmax=txmax)
-            sync.checkpoint: int = txmax or sync.txid_current
+
+@timeit
+def multithreaded(
+    tasks: Generator,
+    doc: dict,
+    nprocs: Optional[int] = None,
+    verbose: bool = False,
+    validate: bool = False,
+) -> None:
+    sys.stdout.write("Multithreaded\n")
+
+    def worker(sync: Sync, queue: Queue) -> None:
+        txmin: int = sync.checkpoint
+        txmax: int = sync.txid_current
+        while True:
+            task: dict = queue.get()
+            sync.es.bulk(
+                sync.index,
+                sync.sync(ctid=task, txmin=txmin, txmax=txmax),
+            )
+            queue.task_done()
+
+    nprocs: int = nprocs or 1
+    queue: Queue = Queue()
+    sync: Sync = Sync(doc, verbose=verbose, validate=validate)
+    for _ in range(nprocs):
+        thread: Thread = Thread(
+            target=worker,
+            args=(
+                sync,
+                queue,
+            ),
+        )
+        thread.daemon = True
+        thread.start()
+    for task in tasks:
+        queue.put(task)
+
+    queue.join()  # block until all tasks are done
+
+    logical_slot_changes(doc, verbose=verbose, validate=validate)
+
+
+@timeit
+def multiprocess(
+    tasks: Generator,
+    doc: dict,
+    nprocs: Optional[int] = None,
+    verbose: bool = False,
+    validate: bool = False,
+) -> None:
+    sys.stdout.write("Multiprocess\n")
+    task: Task = Task(doc, verbose=verbose, validate=validate)
+    with ProcessPoolExecutor(max_workers=nprocs) as executor:
+        try:
+            list(executor.map(task.process, tasks))
+        except Exception as e:
+            sys.stdout.write(f"Exception: {e}\n")
+
+    logical_slot_changes(doc, verbose=verbose, validate=validate)
+
+
+@timeit
+def multithreaded_async(
+    tasks: Generator,
+    doc: dict,
+    nprocs: Optional[int] = None,
+    verbose: bool = False,
+    validate: bool = False,
+) -> None:
+    sys.stdout.write("Multi-threaded async\n")
+    executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=nprocs)
+    event_loop = asyncio.get_event_loop()
+    try:
+        event_loop.run_until_complete(
+            run_tasks(executor, tasks, doc, verbose=verbose, validate=validate)
+        )
+    finally:
+        event_loop.close()
+
+    logical_slot_changes(doc, verbose=verbose, validate=validate)
+
+
+@timeit
+def multiprocess_async(
+    tasks: Generator,
+    doc: dict,
+    nprocs: Optional[int] = None,
+    verbose: bool = False,
+    validate: bool = False,
+) -> None:
+    sys.stdout.write("Multi-process async\n")
+    executor: ProcessPoolExecutor = ProcessPoolExecutor(max_workers=nprocs)
+    event_loop = asyncio.get_event_loop()
+    try:
+        event_loop.run_until_complete(
+            run_tasks(executor, tasks, doc, verbose=verbose, validate=validate)
+        )
+    finally:
+        event_loop.close()
+
+    logical_slot_changes(doc, verbose=verbose, validate=validate)
+
+
+async def run_tasks(
+    executor: Union[ThreadPoolExecutor, ProcessPoolExecutor],
+    tasks: Generator,
+    doc: dict,
+    verbose: bool = False,
+    validate: bool = False,
+) -> None:
+    event_loop = asyncio.get_event_loop()
+    if isinstance(executor, ThreadPoolExecutor):
+        # threads can share a common Sync object
+        sync: Sync = Sync(doc, verbose=verbose, validate=validate)
+        tasks = [
+            event_loop.run_in_executor(
+                executor, run_task, task, sync, None, verbose, validate
+            )
+            for task in tasks
+        ]
+    else:
+        tasks = [
+            event_loop.run_in_executor(
+                executor, run_task, task, None, doc, verbose, validate
+            )
+            for task in tasks
+        ]
+    completed, pending = await asyncio.wait(tasks)
+    results = [task.result() for task in completed]
+    print("results: {!r}".format(results))
+    print("exiting")
+
+
+def run_task(
+    task: dict,
+    sync: Optional[Sync] = None,
+    doc: Optional[dict] = None,
+    verbose: bool = False,
+    validate: bool = False,
+) -> int:
+    if sync is None:
+        sync: Sync = Sync(doc, verbose=verbose, validate=validate)
+    txmin: int = sync.checkpoint
+    txmax: int = sync.txid_current
+    sync.es.bulk(
+        sync.index,
+        sync.sync(ctid=task, txmin=txmin, txmax=txmax),
+    )
+    print("done")
+    return 2
 
 
 @click.command()
@@ -160,17 +300,51 @@ def pull(ncpus: int, config: str, verbose: Optional[bool] = False) -> None:
     help="Turn on verbosity",
 )
 @click.option(
-    "--ncpus",
+    "--nprocs",
     "-n",
-    help="Number of cpus",
+    help="Number of threads/process",
     type=int,
     default=multiprocessing.cpu_count() * 2,
 )
-def main(config, ncpus, verbose):
+@click.option(
+    "--mode",
+    "-m",
+    help="Sync mode",
+    type=click.Choice(
+        [
+            "synchronous",
+            "multithreaded",
+            "multiprocess",
+            "multithreaded_async",
+            "multiprocess_async",
+        ],
+        case_sensitive=False,
+    ),
+    default="synchronous",
+)
+def main(config, nprocs, mode, verbose):
+    """
+    TODO:
+    - tracek progress across ncpus
+    - save ctid
+    - handle KeyboardInterrupt
+    """
 
     show_settings()
     config: str = get_config(config)
-    pull(ncpus, config, verbose=verbose)
+
+    for doc in json.load(open(config)):
+        tasks: Generator = fetch_tasks(doc)
+        if mode == "synchronous":
+            synchronous(tasks, doc, verbose=verbose)
+        elif mode == "multithreaded":
+            multithreaded(tasks, doc, nprocs=nprocs, verbose=verbose)
+        elif mode == "multiprocess":
+            multiprocess(tasks, doc, nprocs=nprocs, verbose=verbose)
+        elif mode == "multithreaded_async":
+            multithreaded_async(tasks, doc, nprocs=nprocs, verbose=verbose)
+        elif mode == "multiprocess_async":
+            multiprocess_async(tasks, doc, nprocs=nprocs, verbose=verbose)
 
 
 if __name__ == "__main__":

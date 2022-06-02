@@ -1243,20 +1243,19 @@ class Sync(Base):
         3. Consume all changes from Redis.
         """
         if USE_ASYNC:
-
             self._conn = self.engine.connect().connection
             self._conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cursor = self.conn.cursor()
             cursor.execute(f'LISTEN "{self.database}"')
-            loop = asyncio.get_event_loop()
-            loop.add_reader(self.conn, self._poll_db)
+            event_loop = asyncio.get_event_loop()
+            event_loop.add_reader(self.conn, self._poll_db)
             tasks: list = [
-                loop.create_task(self.async_poll_redis()),
-                loop.create_task(self.async_truncate_slots()),
-                loop.create_task(self.async_status()),
+                event_loop.create_task(self.async_poll_redis()),
+                event_loop.create_task(self.async_truncate_slots()),
+                event_loop.create_task(self.async_status()),
             ]
-            loop.run_until_complete(asyncio.wait(tasks))
-            loop.close()
+            event_loop.run_until_complete(asyncio.wait(tasks))
+            event_loop.close()
 
         else:
             # start a background worker producer thread to poll the db and
