@@ -60,7 +60,7 @@ from pgsync.utils import get_config, show_settings, timeit
 
 def logical_slot_changes(
     doc: dict, verbose: bool = False, validate: bool = False
-):
+) -> None:
     # now sync up to txmax to capture everything we may have missed
     sync: Sync = Sync(doc, verbose=verbose, validate=validate)
     txmin: int = sync.checkpoint

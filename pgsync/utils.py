@@ -5,7 +5,7 @@ import sys
 import threading
 from datetime import timedelta
 from time import time
-from typing import Optional
+from typing import Callable, Optional
 from urllib.parse import ParseResult, urlparse
 
 from .exc import SchemaError
@@ -18,7 +18,7 @@ HIGHLIGHT_START = "\033[4m"
 HIGHLIGHT_END = "\033[0m:"
 
 
-def timeit(func):
+def timeit(func: Callable):
     def timed(*args, **kwargs):
         since: float = time()
         retval = func(*args, **kwargs)
@@ -45,7 +45,7 @@ class Timer:
         )
 
 
-def threaded(func):
+def threaded(func: Callable):
     """Decorator for threaded code execution."""
 
     def wrapper(*args, **kwargs) -> threading.Thread:
@@ -58,10 +58,10 @@ def threaded(func):
     return wrapper
 
 
-def exception(func):
+def exception(func: Callable):
     """Decorator for threaded exception handling."""
 
-    def wrapper(*args, **kwargs):
+    def wrapper(*args, **kwargs) -> Callable:
         try:
             fn = func(*args, **kwargs)
         except Exception as e:

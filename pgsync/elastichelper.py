@@ -243,7 +243,7 @@ class ElasticHelper(object):
     def _create_setting(
         self,
         index: str,
-        node: None,
+        node: Node,
         setting: Optional[dict] = None,
         mapping: Optional[dict] = None,
         routing: Optional[str] = None,
