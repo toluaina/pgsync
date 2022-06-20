@@ -74,14 +74,14 @@ class TupleIdentifierType(sa.types.UserDefinedType):
 class Base(object):
     def __init__(self, database: str, verbose: bool = False, *args, **kwargs):
         """Initialize the base class constructor."""
-        self.__engine = pg_engine(database, **kwargs)
+        self.__engine: sa.engine.base.Engine = pg_engine(database, **kwargs)
         self.__schemas: Optional[dict] = None
         # models is a dict of f'{schema}.{table}'
         self.models: Dict[str] = {}
-        self.__metadata: dict = {}
-        self.__indices: dict = {}
-        self.__views: dict = {}
-        self.__materialized_views: dict = {}
+        self.__metadata: Dict[str] = {}
+        self.__indices: Dict[str] = {}
+        self.__views: Dict[str] = {}
+        self.__materialized_views: Dict[str] = {}
         self.verbose: bool = verbose
         self._conn = None
 
@@ -205,7 +205,7 @@ class Base(object):
         return Session()
 
     @property
-    def engine(self):
+    def engine(self) -> sa.engine.base.Engine:
         """Get the database engine."""
         return self.__engine
 
@@ -935,7 +935,7 @@ def pg_engine(
 
 
 def pg_execute(
-    engine,
+    engine: sa.engine.base.Engine,
     query,
     values: Optional[list] = None,
     options: Optional[dict] = None,
@@ -952,7 +952,7 @@ def pg_execute(
         raise
 
 
-def create_schema(engine, schema) -> None:
+def create_schema(engine: sa.engine.base.Engine, schema: str) -> None:
     """Create database schema."""
     if schema != DEFAULT_SCHEMA:
         engine.execute(sa.schema.CreateSchema(schema))
@@ -961,7 +961,7 @@ def create_schema(engine, schema) -> None:
 def create_database(database: str, echo: bool = False) -> None:
     """Create a database."""
     logger.debug(f"Creating database: {database}")
-    engine = pg_engine(database="postgres", echo=echo)
+    engine: sa.engine.base.Engine = pg_engine(database="postgres", echo=echo)
     pg_execute(engine, f'CREATE DATABASE "{database}"')
     logger.debug(f"Created database: {database}")
 
@@ -969,7 +969,7 @@ def create_database(database: str, echo: bool = False) -> None:
 def drop_database(database: str, echo: bool = False) -> None:
     """Drop a database."""
     logger.debug(f"Dropping database: {database}")
-    engine = pg_engine(database="postgres", echo=echo)
+    engine: sa.engine.base.Engine = pg_engine(database="postgres", echo=echo)
     pg_execute(engine, f'DROP DATABASE IF EXISTS "{database}"')
     logger.debug(f"Dropped database: {database}")
 
@@ -979,7 +979,7 @@ def create_extension(
 ) -> None:
     """Create a database extension."""
     logger.debug(f"Creating extension: {extension}")
-    engine = pg_engine(database=database, echo=echo)
+    engine: sa.engine.base.Engine = pg_engine(database=database, echo=echo)
     pg_execute(engine, f'CREATE EXTENSION IF NOT EXISTS "{extension}"')
     logger.debug(f"Created extension: {extension}")
 
@@ -987,7 +987,7 @@ def create_extension(
 def drop_extension(database: str, extension: str, echo: bool = False) -> None:
     """Drop a database extension."""
     logger.debug(f"Dropping extension: {extension}")
-    engine = pg_engine(database=database, echo=echo)
+    engine: sa.engine.base.Engine = pg_engine(database=database, echo=echo)
     pg_execute(engine, f'DROP EXTENSION IF EXISTS "{extension}"')
     logger.debug(f"Dropped extension: {extension}")
 

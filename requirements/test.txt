@@ -10,9 +10,9 @@ attrs==21.4.0
     # via pytest
 black==22.3.0
     # via -r requirements/base.in
-boto3==1.24.2
+boto3==1.24.12
     # via -r requirements/base.in
-botocore==1.27.2
+botocore==1.27.12
     # via
     #   boto3
     #   s3transfer
@@ -20,7 +20,7 @@ bump2version==1.0.1
     # via bumpversion
 bumpversion==0.6.0
     # via -r requirements/base.in
-certifi==2022.5.18.1
+certifi==2022.6.15
     # via
     #   elasticsearch
     #   requests
@@ -42,7 +42,7 @@ elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
 environs==9.5.0
     # via -r requirements/base.in
-faker==13.12.0
+faker==13.13.0
     # via -r requirements/base.in
 flake8==4.0.1
     # via
@@ -70,7 +70,7 @@ iniconfig==1.1.1
     # via pytest
 isort==5.10.1
     # via flake8-isort
-jmespath==1.0.0
+jmespath==1.0.1
     # via
     #   boto3
     #   botocore
@@ -133,7 +133,7 @@ python-dotenv==0.20.0
     # via environs
 redis==4.3.3
     # via -r requirements/base.in
-requests==2.27.1
+requests==2.28.0
     # via requests-aws4auth
 requests-aws4auth==1.1.2
     # via -r requirements/base.in

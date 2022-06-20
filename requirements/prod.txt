@@ -8,9 +8,9 @@ async-timeout==4.0.2
     # via redis
 black==22.3.0
     # via -r requirements/base.in
-boto3==1.24.2
+boto3==1.24.12
     # via -r requirements/base.in
-botocore==1.27.2
+botocore==1.27.12
     # via
     #   boto3
     #   s3transfer
@@ -18,7 +18,7 @@ bump2version==1.0.1
     # via bumpversion
 bumpversion==0.6.0
     # via -r requirements/base.in
-certifi==2022.5.18.1
+certifi==2022.6.15
     # via
     #   elasticsearch
     #   requests
@@ -38,7 +38,7 @@ elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
 environs==9.5.0
     # via -r requirements/base.in
-faker==13.12.0
+faker==13.13.0
     # via -r requirements/base.in
 greenlet==1.1.2
     # via sqlalchemy
@@ -46,7 +46,7 @@ idna==3.3
     # via requests
 importlib-metadata==4.2.0
     # via -r requirements/base.in
-jmespath==1.0.0
+jmespath==1.0.1
     # via
     #   boto3
     #   botocore
@@ -54,7 +54,7 @@ marshmallow==3.16.0
     # via environs
 mypy-extensions==0.4.3
     # via black
-newrelic==7.10.0.175
+newrelic==7.12.0.176
     # via -r requirements/prod.in
 packaging==21.3
     # via
@@ -77,7 +77,7 @@ python-dotenv==0.20.0
     # via environs
 redis==4.3.3
     # via -r requirements/base.in
-requests==2.27.1
+requests==2.28.0
     # via requests-aws4auth
 requests-aws4auth==1.1.2
     # via -r requirements/base.in

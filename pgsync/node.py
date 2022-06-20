@@ -211,7 +211,7 @@ class Node(object):
 
     def display(self, prefix: str = "", leaf: bool = True) -> None:
         print(
-            prefix, " - " if leaf else "|- ", self.table, sep=""
+            prefix, " - " if leaf else "|- ", self.label, sep=""
         )  # noqa T001
         prefix += "   " if leaf else "|  "
         for i, child in enumerate(self.children):

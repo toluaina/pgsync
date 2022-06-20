@@ -204,7 +204,7 @@ def _foreign_keys(
 
 
 def create_view(
-    engine,
+    engine: sa.engine.base.Engine,
     model: Callable,
     fetchall: Callable,
     schema: str,
@@ -318,7 +318,7 @@ def create_view(
 
 
 def is_view(
-    engine,
+    engine: sa.engine.base.Engine,
     schema: str,
     table: str,
     materialized: bool = True,
