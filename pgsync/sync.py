@@ -185,7 +185,13 @@ class Sync(Base):
 
         self.root.display()
         for node in self.root.traverse_breadth_first():
-            pass
+            # ensure all base tables have at least one primary_key
+            for table in node.base_tables:
+                model: sa.sql.selectable.Alias = self.model(table, node.schema)
+                if not model.primary_keys:
+                    raise PrimaryKeyNotFoundError(
+                        f"No primary key(s) for base table: {table}"
+                    )
 
     def analyze(self) -> None:
         for node in self.root.traverse_breadth_first():

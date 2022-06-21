@@ -149,7 +149,7 @@ class Base(object):
             )
 
     # Tables...
-    def model(self, table: str, schema: str) -> dict:
+    def model(self, table: str, schema: str) -> sa.sql.selectable.Alias:
         """Get an SQLAlchemy model representation from a table.
 
         Args:
