@@ -29,7 +29,7 @@ BEGIN
 
         SELECT primary_keys
         INTO _primary_keys
-        FROM _view
+        FROM public._view
         WHERE table_name = TG_TABLE_NAME;
 
         old_row = ROW_TO_JSON(OLD);
@@ -44,7 +44,7 @@ BEGIN
 
             SELECT primary_keys, foreign_keys
             INTO _primary_keys, _foreign_keys
-            FROM _view
+            FROM public._view
             WHERE table_name = TG_TABLE_NAME;
 
             new_row = ROW_TO_JSON(NEW);
