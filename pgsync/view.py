@@ -130,7 +130,7 @@ def _get_constraints(
     tables: List[str],
     label: str,
     constraint_type: str,
-) -> sa.sql.selectable.Select:
+) -> sa.sql.Select:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=sa.exc.SAWarning)
         table_constraints = model("table_constraints", "information_schema")
@@ -181,7 +181,7 @@ def _get_constraints(
 
 def _primary_keys(
     model: Callable, schema: str, tables: List[str]
-) -> sa.sql.selectable.Select:
+) -> sa.sql.Select:
     return _get_constraints(
         model,
         schema,
@@ -193,7 +193,7 @@ def _primary_keys(
 
 def _foreign_keys(
     model: Callable, schema: str, tables: List[str]
-) -> sa.sql.selectable.Select:
+) -> sa.sql.Select:
     return _get_constraints(
         model,
         schema,
@@ -204,7 +204,7 @@ def _foreign_keys(
 
 
 def create_view(
-    engine: sa.engine.base.Engine,
+    engine: sa.engine.Engine,
     model: Callable,
     fetchall: Callable,
     schema: str,
@@ -308,17 +308,17 @@ def create_view(
         )
         .alias("t")
     )
-    logger.debug(f"Creating view: {schema}.{MATERIALIZED_VIEW}")
-    engine.execute(CreateView(schema, MATERIALIZED_VIEW, statement))
+    logger.debug(f"Creating view: {DEFAULT_SCHEMA}.{MATERIALIZED_VIEW}")
+    engine.execute(CreateView(DEFAULT_SCHEMA, MATERIALIZED_VIEW, statement))
     engine.execute(DropIndex("_idx"))
     engine.execute(
-        CreateIndex("_idx", schema, MATERIALIZED_VIEW, ["table_name"])
+        CreateIndex("_idx", DEFAULT_SCHEMA, MATERIALIZED_VIEW, ["table_name"])
     )
-    logger.debug(f"Created view: {schema}.{MATERIALIZED_VIEW}")
+    logger.debug(f"Created view: {DEFAULT_SCHEMA}.{MATERIALIZED_VIEW}")
 
 
 def is_view(
-    engine: sa.engine.base.Engine,
+    engine: sa.engine.Engine,
     schema: str,
     table: str,
     materialized: bool = True,

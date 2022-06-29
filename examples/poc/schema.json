@@ -1,0 +1,11 @@
+[
+  {
+    "database": "testdb",
+    "index": "test",
+    "nodes": {
+      "table": "user",
+      "schema": "user_profile",
+      "columns": []
+    }
+  }
+]

@@ -103,7 +103,7 @@ class Relationship:
 @dataclass
 class Node(object):
 
-    model: sa.sql.selectable.Alias
+    model: sa.sql.Alias
     table: str
     schema: str
     materialized: bool = False

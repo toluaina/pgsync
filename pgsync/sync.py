@@ -22,6 +22,7 @@ from sqlalchemy.sql import Values
 from . import __version__
 from .base import Base, compiled_query, get_foreign_keys, TupleIdentifierType
 from .constants import (
+    DEFAULT_SCHEMA,
     DELETE,
     INSERT,
     META,
@@ -187,7 +188,7 @@ class Sync(Base):
         for node in self.root.traverse_breadth_first():
             # ensure all base tables have at least one primary_key
             for table in node.base_tables:
-                model: sa.sql.selectable.Alias = self.model(table, node.schema)
+                model: sa.sql.Alias = self.model(table, node.schema)
                 if not model.primary_keys:
                     raise PrimaryKeyNotFoundError(
                         f"No primary key(s) for base table: {table}"
@@ -264,6 +265,8 @@ class Sync(Base):
 
         self.teardown(drop_view=False)
 
+        self.create_function()
+
         for schema in self.schemas:
             tables: Set = set([])
             # tables with user defined foreign keys
@@ -318,8 +321,11 @@ class Sync(Base):
             self.drop_triggers(
                 schema=schema, tables=tables, join_queries=join_queries
             )
+            # constrain views to the public schema only
             if drop_view:
-                self.drop_view(schema=schema)
+                self.drop_view(schema=DEFAULT_SCHEMA)
+
+        self.drop_function()
         self.drop_replication_slot(self.__name)
 
     def get_doc_id(self, primary_keys: List[str], table: str) -> str:

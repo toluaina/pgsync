@@ -8,14 +8,16 @@ async-timeout==4.0.2
     # via redis
 attrs==21.4.0
     # via pytest
-black==22.3.0
+black==22.6.0
     # via -r requirements/base.in
-boto3==1.24.12
+boto3==1.24.20
     # via -r requirements/base.in
-botocore==1.27.12
+botocore==1.27.20
     # via
     #   boto3
     #   s3transfer
+build==0.8.0
+    # via pip-tools
 bump2version==1.0.1
     # via bumpversion
 bumpversion==0.6.0
@@ -26,7 +28,7 @@ certifi==2022.6.15
     #   requests
 cfgv==3.3.1
     # via pre-commit
-charset-normalizer==2.0.12
+charset-normalizer==2.1.0
     # via requests
 click==8.1.3
     # via
@@ -49,7 +51,7 @@ elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
 environs==9.5.0
     # via -r requirements/base.in
-faker==13.13.0
+faker==13.14.0
     # via -r requirements/base.in
 filelock==3.7.1
     # via virtualenv
@@ -85,7 +87,7 @@ jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-marshmallow==3.16.0
+marshmallow==3.17.0
     # via environs
 mccabe==0.6.1
     # via flake8
@@ -93,10 +95,11 @@ mock==4.0.3
     # via -r requirements/test.in
 mypy-extensions==0.4.3
     # via black
-nodeenv==1.6.0
+nodeenv==1.7.0
     # via pre-commit
 packaging==21.3
     # via
+    #   build
     #   marshmallow
     #   pytest
     #   pytest-sugar
@@ -104,8 +107,8 @@ packaging==21.3
 pathspec==0.9.0
     # via black
 pep517==0.12.0
-    # via pip-tools
-pip-tools==6.6.2
+    # via build
+pip-tools==6.7.0
     # via -r requirements/dev.in
 platformdirs==2.5.2
     # via
@@ -139,7 +142,7 @@ pytest==6.2.5
     #   pytest-sugar
 pytest-cov==3.0.0
     # via -r requirements/test.in
-pytest-mock==3.7.0
+pytest-mock==3.8.1
     # via -r requirements/test.in
 pytest-runner==6.0.0
     # via -r requirements/test.in
@@ -154,9 +157,9 @@ python-dotenv==0.20.0
     # via environs
 pyyaml==6.0
     # via pre-commit
-redis==4.3.3
+redis==4.3.4
     # via -r requirements/base.in
-requests==2.28.0
+requests==2.28.1
     # via requests-aws4auth
 requests-aws4auth==1.1.2
     # via -r requirements/base.in
@@ -170,7 +173,7 @@ six==1.16.0
     #   virtualenv
 snowballstemmer==2.2.0
     # via pydocstyle
-sqlalchemy==1.4.37
+sqlalchemy==1.4.39
     # via -r requirements/base.in
 sqlparse==0.4.2
     # via -r requirements/base.in
@@ -185,8 +188,8 @@ toml==0.10.2
 tomli==2.0.1
     # via
     #   black
+    #   build
     #   coverage
-    #   pep517
 typing-extensions==4.2.0
     # via black
 urllib3==1.26.9
@@ -194,7 +197,7 @@ urllib3==1.26.9
     #   botocore
     #   elasticsearch
     #   requests
-virtualenv==20.14.1
+virtualenv==20.15.1
     # via pre-commit
 wheel==0.37.1
     # via pip-tools

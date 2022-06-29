@@ -74,7 +74,7 @@ class TupleIdentifierType(sa.types.UserDefinedType):
 class Base(object):
     def __init__(self, database: str, verbose: bool = False, *args, **kwargs):
         """Initialize the base class constructor."""
-        self.__engine: sa.engine.base.Engine = pg_engine(database, **kwargs)
+        self.__engine: sa.engine.Engine = pg_engine(database, **kwargs)
         self.__schemas: Optional[dict] = None
         # models is a dict of f'{schema}.{table}'
         self.models: Dict[str] = {}
@@ -149,7 +149,7 @@ class Base(object):
             )
 
     # Tables...
-    def model(self, table: str, schema: str) -> sa.sql.selectable.Alias:
+    def model(self, table: str, schema: str) -> sa.sql.Alias:
         """Get an SQLAlchemy model representation from a table.
 
         Args:
@@ -205,7 +205,7 @@ class Base(object):
         return Session()
 
     @property
-    def engine(self) -> sa.engine.base.Engine:
+    def engine(self) -> sa.engine.Engine:
         """Get the database engine."""
         return self.__engine
 
@@ -375,9 +375,9 @@ class Base(object):
         upto_nchanges: Optional[int] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> sa.sql.selectable.Select:
+    ) -> sa.sql.Select:
         filters: list = []
-        statement: sa.sql.selectable.Select = sa.select(
+        statement: sa.sql.Select = sa.select(
             [sa.column("xid"), sa.column("data")]
         ).select_from(
             func(
@@ -428,7 +428,7 @@ class Base(object):
         To get ALL changes and data in existing replication slot:
         SELECT * FROM PG_LOGICAL_SLOT_GET_CHANGES('testdb', NULL, NULL)
         """
-        statement: sa.sql.selectable.Select = self._logical_slot_changes(
+        statement: sa.sql.Select = self._logical_slot_changes(
             slot_name,
             sa.func.PG_LOGICAL_SLOT_GET_CHANGES,
             txmin=txmin,
@@ -454,7 +454,7 @@ class Base(object):
 
         SELECT * FROM PG_LOGICAL_SLOT_PEEK_CHANGES('testdb', NULL, 1)
         """
-        statement: sa.sql.selectable.Select = self._logical_slot_changes(
+        statement: sa.sql.Select = self._logical_slot_changes(
             slot_name,
             sa.func.PG_LOGICAL_SLOT_PEEK_CHANGES,
             txmin=txmin,
@@ -474,7 +474,7 @@ class Base(object):
         upto_lsn: Optional[int] = None,
         upto_nchanges: Optional[int] = None,
     ) -> int:
-        statement: sa.sql.selectable.Select = self._logical_slot_changes(
+        statement: sa.sql.Select = self._logical_slot_changes(
             slot_name,
             sa.func.PG_LOGICAL_SLOT_PEEK_CHANGES,
             txmin=txmin,
@@ -525,11 +525,6 @@ class Base(object):
         join_queries: bool = False,
     ) -> None:
         """Create a database triggers."""
-        self.execute(
-            CREATE_TRIGGER_TEMPLATE.replace(
-                MATERIALIZED_VIEW, f"{schema}.{MATERIALIZED_VIEW}"
-            )
-        )
         queries: List[str] = []
         for table in self.tables(schema):
             schema, table = self._get_schema(schema, table)
@@ -550,7 +545,8 @@ class Base(object):
                     f"{TRIGGER_FUNC}()",
                 )
         if join_queries:
-            self.execute("; ".join(queries))
+            if queries:
+                self.execute("; ".join(queries))
         else:
             for query in queries:
                 self.execute(sa.DDL(query))
@@ -574,10 +570,17 @@ class Base(object):
                     f'"{schema}"."{table}"'
                 )
         if join_queries:
-            self.execute("; ".join(queries))
+            if queries:
+                self.execute("; ".join(queries))
         else:
             for query in queries:
                 self.execute(sa.DDL(query))
+
+    def create_function(self) -> None:
+        self.execute(CREATE_TRIGGER_TEMPLATE)
+
+    def drop_function(self) -> None:
+        self.execute(f"DROP FUNCTION IF EXISTS {TRIGGER_FUNC}()")
 
     def disable_triggers(self, schema: str) -> None:
         """Disable all pgsync defined triggers in database."""
@@ -669,7 +672,7 @@ class Base(object):
                 raise
         return value
 
-    def parse_logical_slot(self, row):
+    def parse_logical_slot(self, row: str):
         def _parse_logical_slot(data):
 
             while True:
@@ -734,7 +737,7 @@ class Base(object):
         return payload
 
     # Querying...
-    def execute(self, statement, values=None, options=None):
+    def execute(self, statement: sa.sql.Select, values=None, options=None):
         """Execute a query statement."""
         conn = self.__engine.connect()
         try:
@@ -746,7 +749,9 @@ class Base(object):
             logger.exception(f"Exception {e}")
             raise
 
-    def fetchone(self, statement, label=None, literal_binds=False):
+    def fetchone(
+        self, statement: sa.sql.Select, label=None, literal_binds=False
+    ):
         """Fetch one row query."""
         if self.verbose:
             compiled_query(statement, label=label, literal_binds=literal_binds)
@@ -760,7 +765,12 @@ class Base(object):
             raise
         return row
 
-    def fetchall(self, statement, label=None, literal_binds=False):
+    def fetchall(
+        self,
+        statement: sa.sql.Select,
+        label: Optional[str] = None,
+        literal_binds: bool = False,
+    ):
         """Fetch all rows from a query statement."""
         if self.verbose:
             compiled_query(statement, label=label, literal_binds=literal_binds)
@@ -776,7 +786,7 @@ class Base(object):
 
     def fetchmany(
         self,
-        statement: sa.sql.selectable.Select,
+        statement: sa.sql.Select,
         chunk_size: Optional[int] = None,
     ):
         chunk_size: int = chunk_size or QUERY_CHUNK_SIZE
@@ -788,7 +798,7 @@ class Base(object):
                 for keys, row, *primary_keys in partition:
                     yield keys, row, primary_keys
 
-    def fetchcount(self, statement):
+    def fetchcount(self, statement: sa.sql.Subquery) -> int:
         with self.__engine.connect() as conn:
             return conn.execute(
                 statement.original.with_only_columns(
@@ -890,15 +900,15 @@ def get_foreign_keys(node_a: Node, node_b: Node) -> dict:
 
 
 def pg_engine(
-    database,
-    user=None,
-    host=None,
-    password=None,
-    port=None,
-    echo=False,
-    sslmode=None,
-    sslrootcert=None,
-):
+    database: str,
+    user: Optional[str] = None,
+    host: Optional[str] = None,
+    password: Optional[str] = None,
+    port: Optional[str] = None,
+    echo: bool = False,
+    sslmode: Optional[str] = None,
+    sslrootcert: Optional[str] = None,
+) -> sa.engine.Engine:
     connect_args = {}
     sslmode: str = sslmode or PG_SSLMODE
     sslrootcert: str = sslrootcert or PG_SSLROOTCERT
@@ -935,8 +945,8 @@ def pg_engine(
 
 
 def pg_execute(
-    engine: sa.engine.base.Engine,
-    query,
+    engine: sa.engine.Engine,
+    query: str,
     values: Optional[list] = None,
     options: Optional[dict] = None,
 ) -> None:
@@ -952,7 +962,7 @@ def pg_execute(
         raise
 
 
-def create_schema(engine: sa.engine.base.Engine, schema: str) -> None:
+def create_schema(engine: sa.engine.Engine, schema: str) -> None:
     """Create database schema."""
     if schema != DEFAULT_SCHEMA:
         engine.execute(sa.schema.CreateSchema(schema))
@@ -961,7 +971,7 @@ def create_schema(engine: sa.engine.base.Engine, schema: str) -> None:
 def create_database(database: str, echo: bool = False) -> None:
     """Create a database."""
     logger.debug(f"Creating database: {database}")
-    engine: sa.engine.base.Engine = pg_engine(database="postgres", echo=echo)
+    engine: sa.engine.Engine = pg_engine(database="postgres", echo=echo)
     pg_execute(engine, f'CREATE DATABASE "{database}"')
     logger.debug(f"Created database: {database}")
 
@@ -969,7 +979,7 @@ def create_database(database: str, echo: bool = False) -> None:
 def drop_database(database: str, echo: bool = False) -> None:
     """Drop a database."""
     logger.debug(f"Dropping database: {database}")
-    engine: sa.engine.base.Engine = pg_engine(database="postgres", echo=echo)
+    engine: sa.engine.Engine = pg_engine(database="postgres", echo=echo)
     pg_execute(engine, f'DROP DATABASE IF EXISTS "{database}"')
     logger.debug(f"Dropped database: {database}")
 
@@ -979,7 +989,7 @@ def create_extension(
 ) -> None:
     """Create a database extension."""
     logger.debug(f"Creating extension: {extension}")
-    engine: sa.engine.base.Engine = pg_engine(database=database, echo=echo)
+    engine: sa.engine.Engine = pg_engine(database=database, echo=echo)
     pg_execute(engine, f'CREATE EXTENSION IF NOT EXISTS "{extension}"')
     logger.debug(f"Created extension: {extension}")
 
@@ -987,7 +997,7 @@ def create_extension(
 def drop_extension(database: str, extension: str, echo: bool = False) -> None:
     """Drop a database extension."""
     logger.debug(f"Dropping extension: {extension}")
-    engine: sa.engine.base.Engine = pg_engine(database=database, echo=echo)
+    engine: sa.engine.Engine = pg_engine(database=database, echo=echo)
     pg_execute(engine, f'DROP EXTENSION IF EXISTS "{extension}"')
     logger.debug(f"Dropped extension: {extension}")
 

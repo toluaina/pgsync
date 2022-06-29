@@ -71,7 +71,7 @@ PGSync is written in Python (supporting version 3.7 onwards) and the stack is co
 PGSync leverages the [logical decoding](https://www.postgresql.org/docs/current/logicaldecoding.html) feature of [Postgres](https://www.postgresql.org) (introduced in PostgreSQL 9.4) to capture a continuous stream of change events.
 This feature needs to be enabled in your [Postgres](https://www.postgresql.org) configuration file by setting in the postgresql.conf file:
 ```
-> wal_level = logical
+wal_level = logical
 ```
 
 You can select any pivot table to be the root of your document.

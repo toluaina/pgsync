@@ -95,7 +95,7 @@ def fetch_tasks(doc: dict, block_size: Optional[int] = None) -> Generator:
     pages: dict = {}
     sync: Sync = Sync(doc)
     root: Node = sync.tree.build(sync.nodes)
-    statement: sa.sql.selectable.Select = sa.select(
+    statement: sa.sql.Select = sa.select(
         [
             sa.literal_column("1").label("x"),
             sa.literal_column("1").label("y"),

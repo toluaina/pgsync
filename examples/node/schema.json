@@ -1,0 +1,30 @@
+[
+    {
+        "database": "node",
+        "index": "node",
+        "nodes": {
+            "table": "node",
+            "label": "parent",
+            "children": [
+                {
+                    "table": "node",
+                    "label": "child",
+                    "children": [
+                        {
+                            "table": "node",
+                            "label": "grand_child",
+                            "relationship": {
+                                "variant": "object",
+                                "type": "one_to_one"
+                            }
+                        }
+                    ],
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_one"
+                    }
+                }
+            ]
+        }
+    }
+]

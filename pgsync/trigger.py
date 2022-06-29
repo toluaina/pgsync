@@ -1,5 +1,5 @@
 """PGSync Trigger template."""
-from .constants import MATERIALIZED_VIEW, TRIGGER_FUNC
+from .constants import DEFAULT_SCHEMA, MATERIALIZED_VIEW, TRIGGER_FUNC
 
 CREATE_TRIGGER_TEMPLATE = f"""
 CREATE OR REPLACE FUNCTION {TRIGGER_FUNC}() RETURNS TRIGGER AS $$
@@ -20,7 +20,7 @@ BEGIN
 
         SELECT primary_keys
         INTO _primary_keys
-        FROM {MATERIALIZED_VIEW}
+        FROM {DEFAULT_SCHEMA}.{MATERIALIZED_VIEW}
         WHERE table_name = TG_TABLE_NAME;
 
         old_row = ROW_TO_JSON(OLD);
@@ -35,7 +35,7 @@ BEGIN
 
             SELECT primary_keys, foreign_keys
             INTO _primary_keys, _foreign_keys
-            FROM {MATERIALIZED_VIEW}
+            FROM {DEFAULT_SCHEMA}.{MATERIALIZED_VIEW}
             WHERE table_name = TG_TABLE_NAME;
 
             new_row = ROW_TO_JSON(NEW);
