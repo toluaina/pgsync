@@ -2,6 +2,7 @@ import json
 from typing import List
 
 import click
+import sqlalchemy as sa
 from schema import Node
 from sqlalchemy.orm import sessionmaker
 
