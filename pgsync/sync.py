@@ -20,9 +20,8 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from sqlalchemy.sql import Values
 
 from . import __version__
-from .base import Base, compiled_query, get_foreign_keys, TupleIdentifierType
+from .base import Base, get_foreign_keys, TupleIdentifierType
 from .constants import (
-    DEFAULT_SCHEMA,
     DELETE,
     INSERT,
     META,
@@ -56,7 +55,14 @@ from .settings import (
     USE_ASYNC,
 )
 from .transform import get_private_keys, transform
-from .utils import exception, get_config, show_settings, threaded, Timer
+from .utils import (
+    compiled_query,
+    exception,
+    get_config,
+    show_settings,
+    threaded,
+    Timer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -265,9 +271,8 @@ class Sync(Base):
 
         self.teardown(drop_view=False)
 
-        self.create_function()
-
         for schema in self.schemas:
+            self.create_function(schema)
             tables: Set = set([])
             # tables with user defined foreign keys
             user_defined_fkey_tables: dict = {}
@@ -321,11 +326,11 @@ class Sync(Base):
             self.drop_triggers(
                 schema=schema, tables=tables, join_queries=join_queries
             )
-            # constrain views to the public schema only
             if drop_view:
-                self.drop_view(schema=DEFAULT_SCHEMA)
+                self.drop_view(schema)
 
-        self.drop_function()
+            self.drop_function(schema)
+
         self.drop_replication_slot(self.__name)
 
     def get_doc_id(self, primary_keys: List[str], table: str) -> str:

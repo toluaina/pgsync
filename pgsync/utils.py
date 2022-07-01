@@ -8,8 +8,11 @@ from time import time
 from typing import Callable, Optional
 from urllib.parse import ParseResult, urlparse
 
+import sqlalchemy as sa
+import sqlparse
+
 from .exc import SchemaError
-from .settings import CHECKPOINT_PATH, SCHEMA
+from .settings import CHECKPOINT_PATH, QUERY_LITERAL_BINDS, SCHEMA
 from .urls import get_elasticsearch_url, get_postgres_url, get_redis_url
 
 logger = logging.getLogger(__name__)
@@ -119,3 +122,29 @@ def get_config(config: Optional[str] = None) -> str:
     if not os.path.exists(config):
         raise IOError(f'Schema config "{config}" not found')
     return config
+
+
+def compiled_query(
+    query: str, label: Optional[str] = None, literal_binds: bool = False
+) -> None:
+    """Compile an SQLAlchemy query with an optional label."""
+
+    # overide env value of literal_binds
+    if QUERY_LITERAL_BINDS:
+        literal_binds = QUERY_LITERAL_BINDS
+
+    query: str = str(
+        query.compile(
+            dialect=sa.dialects.postgresql.dialect(),
+            compile_kwargs={"literal_binds": literal_binds},
+        )
+    )
+    query: str = sqlparse.format(query, reindent=True, keyword_case="upper")
+    if label:
+        logger.debug(f"\033[4m{label}:\033[0m\n{query}")
+        sys.stdout.write(f"\033[4m{label}:\033[0m\n{query}\n")
+    else:
+        logging.debug(f"{query}")
+        sys.stdout.write(f"{query}\n")
+    sys.stdout.write("-" * 79)
+    sys.stdout.write("\n")

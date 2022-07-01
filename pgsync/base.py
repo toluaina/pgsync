@@ -1,12 +1,10 @@
 """PGSync Base class."""
 import logging
 import os
-import sys
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
 import sqlalchemy as sa
-import sqlparse
 from sqlalchemy.dialects import postgresql  # noqa
 from sqlalchemy.orm import sessionmaker
 
@@ -28,14 +26,10 @@ from .exc import (
     TableNotFoundError,
 )
 from .node import Node
-from .settings import (
-    PG_SSLMODE,
-    PG_SSLROOTCERT,
-    QUERY_CHUNK_SIZE,
-    QUERY_LITERAL_BINDS,
-)
+from .settings import PG_SSLMODE, PG_SSLROOTCERT, QUERY_CHUNK_SIZE
 from .trigger import CREATE_TRIGGER_TEMPLATE
 from .urls import get_postgres_url
+from .utils import compiled_query
 from .view import create_view, DropView, is_view, RefreshView
 
 try:
@@ -542,7 +536,7 @@ class Base(object):
                     f'CREATE TRIGGER "{table}_{name}" '
                     f'AFTER {" OR ".join(tg_op)} ON "{schema}"."{table}" '
                     f"FOR EACH {level} EXECUTE PROCEDURE "
-                    f"{TRIGGER_FUNC}()",
+                    f"{schema}.{TRIGGER_FUNC}()",
                 )
         if join_queries:
             if queries:
@@ -576,11 +570,19 @@ class Base(object):
             for query in queries:
                 self.execute(sa.DDL(query))
 
-    def create_function(self) -> None:
-        self.execute(CREATE_TRIGGER_TEMPLATE)
+    def create_function(self, schema: str) -> None:
+        self.execute(
+            CREATE_TRIGGER_TEMPLATE.replace(
+                MATERIALIZED_VIEW,
+                f"{schema}.{MATERIALIZED_VIEW}",
+            ).replace(
+                TRIGGER_FUNC,
+                f"{schema}.{TRIGGER_FUNC}",
+            )
+        )
 
-    def drop_function(self) -> None:
-        self.execute(f"DROP FUNCTION IF EXISTS {TRIGGER_FUNC}()")
+    def drop_function(self, schema: str) -> None:
+        self.execute(f'DROP FUNCTION IF EXISTS "{schema}".{TRIGGER_FUNC}()')
 
     def disable_triggers(self, schema: str) -> None:
         """Disable all pgsync defined triggers in database."""
@@ -1000,29 +1002,3 @@ def drop_extension(database: str, extension: str, echo: bool = False) -> None:
     engine: sa.engine.Engine = pg_engine(database=database, echo=echo)
     pg_execute(engine, f'DROP EXTENSION IF EXISTS "{extension}"')
     logger.debug(f"Dropped extension: {extension}")
-
-
-def compiled_query(
-    query: str, label: Optional[str] = None, literal_binds: bool = False
-) -> None:
-    """Compile an SQLAlchemy query with an optional label."""
-
-    # overide env value of literal_binds
-    if QUERY_LITERAL_BINDS:
-        literal_binds = QUERY_LITERAL_BINDS
-
-    query: str = str(
-        query.compile(
-            dialect=sa.dialects.postgresql.dialect(),
-            compile_kwargs={"literal_binds": literal_binds},
-        )
-    )
-    query: str = sqlparse.format(query, reindent=True, keyword_case="upper")
-    if label:
-        logger.debug(f"\033[4m{label}:\033[0m\n{query}")
-        sys.stdout.write(f"\033[4m{label}:\033[0m\n{query}\n")
-    else:
-        logging.debug(f"{query}")
-        sys.stdout.write(f"{query}\n")
-    sys.stdout.write("-" * 79)
-    sys.stdout.write("\n")

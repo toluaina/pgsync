@@ -136,6 +136,7 @@ REDIS_SOCKET_TIMEOUT = env.int("REDIS_SOCKET_TIMEOUT", default=5)
 # number of items to write to Redis at a time
 REDIS_WRITE_CHUNK_SIZE = env.int("REDIS_WRITE_CHUNK_SIZE", default=1000)
 
+
 # Logging:
 def _get_logging_config(silent_loggers: Optional[str] = None):
     """Return the logging configuration based on environment variables."""

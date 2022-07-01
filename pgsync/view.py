@@ -160,15 +160,15 @@ def _get_constraints(
                 key_column_usage.c.table_schema == schema,
             ),
         )
-        .join(
-            constraint_column_usage,
-            sa.and_(
-                constraint_column_usage.c.constraint_name
-                == table_constraints.c.constraint_name,
-                constraint_column_usage.c.table_schema
-                == table_constraints.c.table_schema,
-            ),
-        )
+        # .join(
+        #     constraint_column_usage,
+        #     sa.and_(
+        #         constraint_column_usage.c.constraint_name
+        #         == table_constraints.c.constraint_name,
+        #         constraint_column_usage.c.table_schema
+        #         == table_constraints.c.table_schema,
+        #     ),
+        # )
         .where(
             *[
                 table_constraints.c.table_name.in_(tables),
@@ -308,13 +308,13 @@ def create_view(
         )
         .alias("t")
     )
-    logger.debug(f"Creating view: {DEFAULT_SCHEMA}.{MATERIALIZED_VIEW}")
-    engine.execute(CreateView(DEFAULT_SCHEMA, MATERIALIZED_VIEW, statement))
+    logger.debug(f"Creating view: {schema}.{MATERIALIZED_VIEW}")
+    engine.execute(CreateView(schema, MATERIALIZED_VIEW, statement))
     engine.execute(DropIndex("_idx"))
     engine.execute(
-        CreateIndex("_idx", DEFAULT_SCHEMA, MATERIALIZED_VIEW, ["table_name"])
+        CreateIndex("_idx", schema, MATERIALIZED_VIEW, ["table_name"])
     )
-    logger.debug(f"Created view: {DEFAULT_SCHEMA}.{MATERIALIZED_VIEW}")
+    logger.debug(f"Created view: {schema}.{MATERIALIZED_VIEW}")
 
 
 def is_view(
