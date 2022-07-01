@@ -242,7 +242,7 @@ def create_view(
         ):
             rows.setdefault(
                 table_name,
-                {"primary_keys": set([]), "foreign_keys": set([])},
+                {"primary_keys": set(), "foreign_keys": set()},
             )
             if primary_keys:
                 rows[table_name]["primary_keys"] = set(primary_keys)
@@ -258,7 +258,7 @@ def create_view(
     for table_name, columns in fetchall(_primary_keys(model, schema, tables)):
         rows.setdefault(
             table_name,
-            {"primary_keys": set([]), "foreign_keys": set([])},
+            {"primary_keys": set(), "foreign_keys": set()},
         )
         if columns:
             rows[table_name]["primary_keys"] |= set(columns)
@@ -266,7 +266,7 @@ def create_view(
     for table_name, columns in fetchall(_foreign_keys(model, schema, tables)):
         rows.setdefault(
             table_name,
-            {"primary_keys": set([]), "foreign_keys": set([])},
+            {"primary_keys": set(), "foreign_keys": set()},
         )
         if columns:
             rows[table_name]["foreign_keys"] |= set(columns)
@@ -275,7 +275,7 @@ def create_view(
         for table_name, columns in user_defined_fkey_tables.items():
             rows.setdefault(
                 table_name,
-                {"primary_keys": set([]), "foreign_keys": set([])},
+                {"primary_keys": set(), "foreign_keys": set()},
             )
             if columns:
                 rows[table_name]["foreign_keys"] |= set(columns)
@@ -283,7 +283,7 @@ def create_view(
     if not rows:
         rows.setdefault(
             None,
-            {"primary_keys": set([]), "foreign_keys": set([])},
+            {"primary_keys": set(), "foreign_keys": set()},
         )
 
     statement = sa.select(

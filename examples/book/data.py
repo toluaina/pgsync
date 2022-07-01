@@ -1,8 +1,10 @@
 import datetime
 import json
 import random
+from typing import Dict, List
 
 import click
+import sqlalchemy as sa
 from faker import Faker
 from schema import (
     Author,
@@ -43,7 +45,7 @@ def main(config, nsize):
 
     for document in json.load(open(config)):
 
-        engine = pg_engine(
+        engine: sa.engine.Engine = pg_engine(
             database=document.get("database", document["index"])
         )
         schema: str = document.get("schema", DEFAULT_SCHEMA)
@@ -54,14 +56,14 @@ def main(config, nsize):
         session = Session()
 
         # Bootstrap
-        continents = {
+        continents: Dict[str, Continent] = {
             "Europe": Continent(name="Europe"),
             "North America": Continent(name="North America"),
         }
         with subtransactions(session):
             session.add_all(continents.values())
 
-        countries = {
+        countries: Dict[str, Country] = {
             "United Kingdom": Country(
                 name="United Kingdom",
                 continent=continents["Europe"],
@@ -78,7 +80,7 @@ def main(config, nsize):
         with subtransactions(session):
             session.add_all(countries.values())
 
-        cities = {
+        cities: Dict[str, City] = {
             "London": City(name="London", country=countries["United Kingdom"]),
             "Paris": City(name="Paris", country=countries["France"]),
             "New York": City(
@@ -88,7 +90,7 @@ def main(config, nsize):
         with subtransactions(session):
             session.add_all(cities.values())
 
-        publishers = {
+        publishers: Dict[str, Publisher] = {
             "Oxford Press": Publisher(name="Oxford Press", is_active=True),
             "Penguin Books": Publisher(name="Penguin Books", is_active=False),
             "Pearson Press": Publisher(name="Pearson Press", is_active=True),
@@ -99,7 +101,7 @@ def main(config, nsize):
         with subtransactions(session):
             session.add_all(publishers.values())
 
-        authors = {
+        authors: Dict[str, Author] = {
             "Stephen King": Author(
                 name="Stephen King",
                 date_of_birth=datetime.datetime(1947, 9, 21),
@@ -129,7 +131,7 @@ def main(config, nsize):
         with subtransactions(session):
             session.add_all(authors.values())
 
-        subjects = {
+        subjects: Dict[str, Subject] = {
             "Literature": Subject(name="Literature"),
             "Poetry": Subject(name="Poetry"),
             "Romance": Subject(name="Romance"),
@@ -141,7 +143,7 @@ def main(config, nsize):
         with subtransactions(session):
             session.add_all(subjects.values())
 
-        languages = {
+        languages: Dict[str, Language] = {
             "en-GB": Language(code="en-GB"),
             "en-US": Language(code="en-US"),
             "de-DE": Language(code="de-DE"),
@@ -154,14 +156,14 @@ def main(config, nsize):
         with subtransactions(session):
             session.add_all(languages.values())
 
-        shelves = {
+        shelves: Dict[str, Shelf] = {
             "Shelf A": Shelf(shelf="Shelf A"),
             "Shelf B": Shelf(shelf="Shelf B"),
         }
         with subtransactions(session):
             session.add_all(shelves.values())
 
-        books = {
+        books: Dict[str, Book] = {
             "001": Book(
                 isbn="001",
                 title="It",
@@ -285,7 +287,7 @@ def main(config, nsize):
         with subtransactions(session):
             session.add_all(books.values())
 
-        ratings = [
+        ratings: List[Rating] = [
             Rating(value=1.1, book=books["001"]),
             Rating(value=2.1, book=books["002"]),
             Rating(value=3.1, book=books["003"]),
@@ -298,7 +300,7 @@ def main(config, nsize):
         with subtransactions(session):
             session.add_all(ratings)
 
-        book_authors = [
+        book_authors: List[BookAuthor] = [
             BookAuthor(book=books["001"], author=authors["Stephen King"]),
             BookAuthor(book=books["002"], author=authors["Stephen King"]),
             BookAuthor(book=books["003"], author=authors["J. K. Rowling"]),
@@ -313,7 +315,7 @@ def main(config, nsize):
         with subtransactions(session):
             session.add_all(book_authors)
 
-        book_subjects = [
+        book_subjects: List[BookSubject] = [
             BookSubject(book=books["001"], subject=subjects["Literature"]),
             BookSubject(book=books["002"], subject=subjects["Literature"]),
             BookSubject(book=books["003"], subject=subjects["Poetry"]),
@@ -332,7 +334,7 @@ def main(config, nsize):
         with subtransactions(session):
             session.add_all(book_subjects)
 
-        book_languages = [
+        book_languages: List[BookLanguage] = [
             BookLanguage(book=books["001"], language=languages["en-GB"]),
             BookLanguage(book=books["002"], language=languages["en-GB"]),
             BookLanguage(book=books["003"], language=languages["en-GB"]),
@@ -353,7 +355,7 @@ def main(config, nsize):
         with subtransactions(session):
             session.add_all(book_languages)
 
-        book_shelves = [
+        book_shelves: List[BookShelf] = [
             BookShelf(book=books["001"], shelf=shelves["Shelf A"]),
             BookShelf(book=books["001"], shelf=shelves["Shelf B"]),
             BookShelf(book=books["002"], shelf=shelves["Shelf A"]),

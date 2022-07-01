@@ -180,7 +180,7 @@ class Node(object):
         self._mapping: dict = {}
 
     def __str__(self):
-        return f"node: {self.schema}.{self.table}"
+        return f"Node: {self.schema}.{self.table}"
 
     @property
     def primary_keys(self):
@@ -210,9 +210,7 @@ class Node(object):
         self.children.append(node)
 
     def display(self, prefix: str = "", leaf: bool = True) -> None:
-        print(
-            prefix, " - " if leaf else "|- ", self.label, sep=""
-        )  # noqa T001
+        print(prefix, " - " if leaf else "|- ", self.name, sep="")  # noqa T001
         prefix += "   " if leaf else "|  "
         for i, child in enumerate(self.children):
             leaf = i == (len(self.children) - 1)

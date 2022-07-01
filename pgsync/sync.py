@@ -273,7 +273,7 @@ class Sync(Base):
 
         for schema in self.schemas:
             self.create_function(schema)
-            tables: Set = set([])
+            tables: Set = set()
             # tables with user defined foreign keys
             user_defined_fkey_tables: dict = {}
 
@@ -295,7 +295,7 @@ class Sync(Base):
                 if node.relationship.foreign_key.child:
                     columns.extend(node.relationship.foreign_key.child)
                 if columns:
-                    user_defined_fkey_tables.setdefault(node.table, set([]))
+                    user_defined_fkey_tables.setdefault(node.table, set())
                     user_defined_fkey_tables[node.table] |= set(columns)
             if tables:
                 self.create_view(schema, tables, user_defined_fkey_tables)
@@ -317,7 +317,7 @@ class Sync(Base):
         self.redis.delete()
 
         for schema in self.schemas:
-            tables: Set = set([])
+            tables: Set = set()
             for node in self.root.traverse_breadth_first():
                 tables |= set(node.relationship.through_tables)
                 tables |= set([node.table])
@@ -864,8 +864,8 @@ class Sync(Base):
         """
         if filters.get(node.table):
             _filters: list = []
-            keys: Set = set([])
-            values: Set = set([])
+            keys: Set = set()
+            values: Set = set()
             for _filter in filters.get(node.table):
                 where: list = []
                 for key, value in _filter.items():

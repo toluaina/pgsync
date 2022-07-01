@@ -108,10 +108,11 @@ class Base(object):
                 f"Invalid user permission {permissions}"
             )
 
-        # Azure usernames are of the form username@host on the SQLAlchemy
-        # engine - engine.url.username@host but stored in
-        # pg_user as just user.
-        # we need to extract the real username from: username@host.
+        # Microsoft Azure usernames are of the form username@host on
+        # the SQLAlchemy engine.
+        # e.g engine.url.username@host
+        # but stored in pg_user as just user.
+        # we need to extract the real username from: username@host
         host_part: str = self.engine.url.host.split(".")[0]
         username: str = username.split(f"@{host_part}")[0]
 
@@ -241,7 +242,7 @@ class Base(object):
             self.__indices[table] = sa.inspect(self.engine).get_indexes(table)
         return self.__indices[table]
 
-    def tables(self, schema: str) -> List:
+    def tables(self, schema: str) -> list:
         """:obj:`list` of :obj:`str`: Get all tables.
 
         returns the fully qualified table name with schema {schema}.{table}
@@ -250,8 +251,7 @@ class Base(object):
             metadata = sa.MetaData(schema=schema)
             metadata.reflect(self.__engine)
             self.__metadata[schema] = metadata
-        metadata = self.__metadata[schema]
-        return metadata.tables.keys()
+        return self.__metadata[schema].tables.keys()
 
     def _get_schema(self, schema: str, table: str) -> Tuple[str, str]:
         pairs: list = table.split(".")
@@ -705,7 +705,7 @@ class Base(object):
 
         payload.update(match.groupdict())
         span = match.span()
-        # trailing space is deliberate
+        # including trailing space below is deliberate
         suffix: str = f"{row[span[1]:]} "
         tg_op: str = payload["tg_op"]
 
@@ -739,7 +739,12 @@ class Base(object):
         return payload
 
     # Querying...
-    def execute(self, statement: sa.sql.Select, values=None, options=None):
+    def execute(
+        self,
+        statement: sa.sql.Select,
+        values: dict = None,
+        options: dict = None,
+    ) -> None:
         """Execute a query statement."""
         conn = self.__engine.connect()
         try:
@@ -753,7 +758,7 @@ class Base(object):
 
     def fetchone(
         self, statement: sa.sql.Select, label=None, literal_binds=False
-    ):
+    ) -> sa.engine.Row:
         """Fetch one row query."""
         if self.verbose:
             compiled_query(statement, label=label, literal_binds=literal_binds)
@@ -772,7 +777,7 @@ class Base(object):
         statement: sa.sql.Select,
         label: Optional[str] = None,
         literal_binds: bool = False,
-    ):
+    ) -> List[sa.engine.Row]:
         """Fetch all rows from a query statement."""
         if self.verbose:
             compiled_query(statement, label=label, literal_binds=literal_binds)
@@ -911,7 +916,7 @@ def pg_engine(
     sslmode: Optional[str] = None,
     sslrootcert: Optional[str] = None,
 ) -> sa.engine.Engine:
-    connect_args = {}
+    connect_args: dict = {}
     sslmode: str = sslmode or PG_SSLMODE
     sslrootcert: str = sslrootcert or PG_SSLROOTCERT
 

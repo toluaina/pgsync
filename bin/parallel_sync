@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 """
-Parallel sync is an experimental feature that leverages the available CPUs
-to increase throughput.
+Parallel sync is an experimental feature that leverages the available
+CPUs and/or threads to increase throughput.
 This is can be useful in environments that are subject to network latency.
 
 In this scenario, your PG database, Elasticsearch, and PGSync app servers are
@@ -281,8 +281,8 @@ def run_task(
         sync.index,
         sync.sync(ctid=task, txmin=txmin, txmax=txmax),
     )
-    print("done")
-    return 2
+    print("run_task complete")
+    return 1
 
 
 @click.command()
@@ -320,12 +320,12 @@ def run_task(
         ],
         case_sensitive=False,
     ),
-    default="synchronous",
+    default="multiprocess_async",
 )
 def main(config, nprocs, mode, verbose):
     """
     TODO:
-    - tracek progress across ncpus
+    - track progress across cpus/threads
     - save ctid
     - handle KeyboardInterrupt
     """

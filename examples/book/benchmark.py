@@ -25,7 +25,7 @@ FIELDS = {
 
 def insert_op(session: sessionmaker, model, nsize: int) -> None:
     faker: Faker = Faker()
-    rows: Set = set([])
+    rows: Set = set()
     for _ in range(nsize):
         kwargs = {}
         for column in model.__table__.columns:

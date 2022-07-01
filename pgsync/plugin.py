@@ -15,7 +15,7 @@ class Plugin(ABC):
 
     @abstractmethod
     def transform(self, doc: dict, **kwargs) -> dict:
-        """Must be implemented by all derived classes."""
+        """This must be implemented by all derived classes."""
         pass
 
 
@@ -26,7 +26,7 @@ class Plugins(object):
         self.reload()
 
     def reload(self) -> None:
-        """Reload the plugins from the available list."""
+        """Reloads the plugins from the available list."""
         self.plugins: list = []
         self._paths: list = []
         logger.debug(f"Reloading plugins from package: {self.package}")
@@ -73,7 +73,7 @@ class Plugins(object):
                 self.walk(f"{package}.{pkg}")
 
     def transform(self, docs: list) -> dict:
-        """Apply all plugins to each doc."""
+        """Applies all plugins to each doc."""
         for doc in docs:
             for plugin in self.plugins:
                 doc["_source"] = plugin.transform(
