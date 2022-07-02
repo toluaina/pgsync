@@ -2,7 +2,7 @@
 import logging
 import os
 from collections import defaultdict
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql  # noqa
@@ -76,6 +76,7 @@ class Base(object):
         self.__indices: Dict[str] = {}
         self.__views: Dict[str] = {}
         self.__materialized_views: Dict[str] = {}
+        self.__tables: Dict[str] = {}
         self.verbose: bool = verbose
         self._conn = None
 
@@ -243,23 +244,12 @@ class Base(object):
         return self.__indices[table]
 
     def tables(self, schema: str) -> list:
-        """:obj:`list` of :obj:`str`: Get all tables.
-
-        returns the fully qualified table name with schema {schema}.{table}
-        """
-        if schema not in self.__metadata:
-            metadata = sa.MetaData(schema=schema)
-            metadata.reflect(self.__engine)
-            self.__metadata[schema] = metadata
-        return self.__metadata[schema].tables.keys()
-
-    def _get_schema(self, schema: str, table: str) -> Tuple[str, str]:
-        pairs: list = table.split(".")
-        if len(pairs) == 2:
-            return pairs[0], pairs[1]
-        if len(pairs) == 1:
-            return schema, pairs[0]
-        raise ValueError(f"Invalid definition {table} for schema: {schema}")
+        """Get the table names for current schema."""
+        if schema not in self.__tables:
+            self.__tables[schema] = sa.inspect(self.engine).get_table_names(
+                schema
+            )
+        return self.__tables[schema]
 
     def truncate_table(self, table: str, schema: str = DEFAULT_SCHEMA) -> None:
         """Truncate a table.
@@ -273,9 +263,6 @@ class Base(object):
             schema (str): The database schema
 
         """
-        if not table.startswith(f"{schema}."):
-            table = f"{schema}.{table}"
-        schema, table = self._get_schema(schema, table)
         logger.debug(f"Truncating table: {schema}.{table}")
         query = f'TRUNCATE TABLE "{schema}"."{table}" CASCADE'
         self.execute(query)
@@ -521,7 +508,6 @@ class Base(object):
         """Create a database triggers."""
         queries: List[str] = []
         for table in self.tables(schema):
-            schema, table = self._get_schema(schema, table)
             if (tables and table not in tables) or (
                 table in self.views(schema)
             ):
@@ -554,7 +540,6 @@ class Base(object):
         """Drop all pgsync defined triggers in database."""
         queries: List[str] = []
         for table in self.tables(schema):
-            schema, table = self._get_schema(schema, table)
             if tables and table not in tables:
                 continue
             logger.debug(f"Dropping trigger on table: {schema}.{table}")
@@ -587,7 +572,6 @@ class Base(object):
     def disable_triggers(self, schema: str) -> None:
         """Disable all pgsync defined triggers in database."""
         for table in self.tables(schema):
-            schema, table = self._get_schema(schema, table)
             logger.debug(f"Disabling trigger on table: {schema}.{table}")
             for name in ("notify", "truncate"):
                 query = (
@@ -599,7 +583,6 @@ class Base(object):
     def enable_triggers(self, schema: str) -> None:
         """Enable all pgsync defined triggers in database."""
         for table in self.tables(schema):
-            schema, table = self._get_schema(schema, table)
             logger.debug(f"Enabling trigger on table: {schema}.{table}")
             for name in ("notify", "truncate"):
                 query = (

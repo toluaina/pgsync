@@ -75,23 +75,23 @@ class TestBase(object):
     def test_tables(self, connection):
         pg_base = Base(connection.engine.url.database)
         tables = [
-            "public.continent",
-            "public.country",
-            "public.publisher",
-            "public.book",
-            "public.city",
-            "public.book_subject",
-            "public.subject",
-            "public.book_language",
-            "public.language",
-            "public.book_shelf",
-            "public.shelf",
-            "public.author",
-            "public.book_author",
-            "public.rating",
-            "public.contact",
-            "public.contact_item",
-            "public.user",
+            "continent",
+            "country",
+            "publisher",
+            "book",
+            "city",
+            "book_subject",
+            "subject",
+            "book_language",
+            "language",
+            "book_shelf",
+            "shelf",
+            "author",
+            "book_author",
+            "rating",
+            "contact",
+            "contact_item",
+            "user",
         ]
         assert sorted(pg_base.tables("public")) == sorted(tables)
 
@@ -114,23 +114,6 @@ class TestBase(object):
         pg_base = Base(connection.engine.url.database)
         pg_base.create_replication_slot("slot_name")
         pg_base.drop_replication_slot("slot_name")
-
-    def test_get_schema(self, connection):
-        pg_base = Base(connection.engine.url.database)
-
-        pair1, pair2 = pg_base._get_schema("public", "public1.my_table")
-        assert pair1 == "public1"
-        assert pair2 == "my_table"
-
-        pair1, pair2 = pg_base._get_schema("public", "my_table")
-        assert pair1 == "public"
-        assert pair2 == "my_table"
-
-        with pytest.raises(ValueError) as excinfo:
-            pg_base._get_schema("public", "public1.my_table.foo")
-            assert "Invalid definition public1.my_table for public" == str(
-                excinfo.value
-            )
 
     @patch("pgsync.base.pg_execute")
     @patch("pgsync.base.pg_engine")
