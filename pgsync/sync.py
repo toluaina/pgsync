@@ -15,6 +15,7 @@ from typing import AnyStr, Generator, List, Optional, Set
 
 import click
 import sqlalchemy as sa
+import sqlparse
 from psycopg2 import OperationalError
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from sqlalchemy.sql import Values
@@ -227,7 +228,7 @@ class Sync(Base):
                     node,
                 )
 
-            for index in self.indices(node.table):
+            for index in self.indices(node.table, node.schema):
                 columns: list = foreign_keys.get(node.name, [])
                 if set(columns).issubset(index.get("column_names", [])) or set(
                     columns
@@ -243,13 +244,13 @@ class Sync(Base):
                     f'Missing index on table "{node.table}" for columns: '
                     f"{columns}\n"
                 )
-                command: str = (
+                query: str = sqlparse.format(
                     f'CREATE INDEX idx_{node.table}_{"_".join(columns)} ON '
-                    f'{node.table} ({", ".join(columns)})'
+                    f'{node.table} ({", ".join(columns)})',
+                    reindent=True,
+                    keyword_case="upper",
                 )
-                sys.stdout.write(
-                    f'Create one with: "\033[4m{command}\033[0m"\n'
-                )
+                sys.stdout.write(f'Create one with: "\033[4m{query}\033[0m"\n')
                 sys.stdout.write("-" * 80)
                 sys.stdout.write("\n")
                 sys.stdout.flush()

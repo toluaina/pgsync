@@ -205,7 +205,7 @@ def setup(config=None):
         database: str = document.get("database", document["index"])
         schema: str = document.get("schema", DEFAULT_SCHEMA)
         create_database(database)
-        engine = pg_engine(database=database)
+        engine: sa.engine.Engine = pg_engine(database=database)
         create_schema(engine, schema)
         engine = engine.connect().execution_options(
             schema_translate_map={None: schema}

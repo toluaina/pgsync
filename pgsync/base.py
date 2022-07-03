@@ -237,10 +237,12 @@ class Base(object):
                     self.__materialized_views[schema].append(table)
         return self.__materialized_views[schema]
 
-    def indices(self, table: str) -> list:
+    def indices(self, table: str, schema: str) -> list:
         """Get the database table indexes."""
         if table not in self.__indices:
-            self.__indices[table] = sa.inspect(self.engine).get_indexes(table)
+            self.__indices[table] = sa.inspect(self.engine).get_indexes(
+                table, schema=schema
+            )
         return self.__indices[table]
 
     def tables(self, schema: str) -> list:

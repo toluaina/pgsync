@@ -1,7 +1,9 @@
 import json
 from datetime import datetime, timedelta
+from typing import List
 
 import click
+import sqlalchemy as sa
 from schema import Bookings, Cities, Countries, Hosts, Places, Reviews, Users
 from sqlalchemy.orm import sessionmaker
 
@@ -21,8 +23,8 @@ def main(config):
 
     config: str = get_config(config)
     teardown(drop_db=False, config=config)
-    documents = json.load(open(config))
-    engine = pg_engine(
+    documents: List[dict] = json.load(open(config))
+    engine: sa.engine.Engine = pg_engine(
         database=documents[0].get("database", documents[0]["index"])
     )
     Session = sessionmaker(bind=engine, autoflush=True)

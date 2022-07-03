@@ -27,7 +27,7 @@ def main(config):
     for document in json.load(open(config)):
 
         database = document.get("database", document["index"])
-        engine = pg_engine(database=database)
+        engine: sa.engine.Engine = pg_engine(database=database)
         schema: str = document.get("schema", DEFAULT_SCHEMA)
         connection = engine.connect().execution_options(
             schema_translate_map={None: schema}

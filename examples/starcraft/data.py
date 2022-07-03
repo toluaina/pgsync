@@ -1,6 +1,7 @@
 import json
 
 import click
+import sqlalchemy as sa
 from schema import Specie, Structure, Unit
 from sqlalchemy.orm import sessionmaker
 
@@ -18,10 +19,10 @@ from pgsync.utils import get_config
 )
 def main(config):
 
-    config = get_config(config)
+    config: str = get_config(config)
     teardown(drop_db=False, config=config)
     documents = json.load(open(config))
-    engine = pg_engine(
+    engine: sa.engine.Engine = pg_engine(
         database=documents[0].get("database", documents[0]["index"])
     )
     Session = sessionmaker(bind=engine, autoflush=True)

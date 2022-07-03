@@ -93,9 +93,9 @@ class Reviews(Base):
 
 def setup(config=None):
     for document in json.load(open(config)):
-        database = document.get("database", document["index"])
+        database: str = document.get("database", document["index"])
         create_database(database)
-        engine = pg_engine(database=database)
+        engine: sa.engine.Engine = pg_engine(database=database)
         Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)
 
@@ -109,7 +109,7 @@ def setup(config=None):
 )
 def main(config):
 
-    config = get_config(config)
+    config: str = get_config(config)
     teardown(config=config)
     setup(config)
 
