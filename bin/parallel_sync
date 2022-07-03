@@ -2,15 +2,15 @@
 
 """
 Parallel sync is an experimental feature that leverages the available
-CPUs and/or threads to increase throughput.
-This is can be useful in environments that are subject to network latency.
+CPUs/threads to increase throughput.
+This is can be useful for environments that have a high latency.
 
-In this scenario, your PG database, Elasticsearch, and PGSync app servers are
-on different networks with a delay between request/response time.
+In this scenario, your PG database, Elasticsearch, and PGSync servers are
+on different subnets with a delay between request/response time.
 
-The main bottleneck, in this case, is usually roundtrip required for
-each database query.
-Even with server-side cursors in use, we are still only able to fetch
+The main bottleneck, in this case, is usually roundtrip of the database query.
+
+Even with server-side cursors, we are still only able to fetch
 a limited number of records at a time from the cursor.
 The delay in the next cursor fetch can slow down the overall sync
 considerably.
@@ -23,9 +23,10 @@ This approach uses the Tuple identifier record of the table columns.
 Each table contains a hidden system column - "ctid" of type "tid" that
 identifies the page record and row number in each block.
 
-We use this to paginate the sync process.
-Pagination here Technically implies that we are splitting each paged record
-between CPUs.
+We can use this to paginate the sync process.
+Pagination here technically implies that we are splitting each paged record
+between CPUs/threads.
+
 This allows us to perform Elasticserch bulk inserts in parallel.
 The "ctid" is a tuple of (page, row-number) e.g (1, 5) that identifies the
 row in a disk page.
@@ -325,9 +326,9 @@ def run_task(
 def main(config, nprocs, mode, verbose):
     """
     TODO:
-    - track progress across cpus/threads
-    - save ctid
-    - handle KeyboardInterrupt
+    - Track progress across cpus/threads
+    - Save ctid
+    - Handle KeyboardInterrupt
     """
 
     show_settings()

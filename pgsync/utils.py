@@ -24,10 +24,10 @@ HIGHLIGHT_END = "\033[0m:"
 def timeit(func: Callable):
     def timed(*args, **kwargs):
         since: float = time()
-        retval = func(*args, **kwargs)
+        fn = func(*args, **kwargs)
         until: float = time()
         sys.stdout.write(f"{func.__name__}: {until-since} secs\n")
-        return retval
+        return fn
 
     return timed
 
