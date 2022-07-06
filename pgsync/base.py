@@ -569,7 +569,9 @@ class Base(object):
         )
 
     def drop_function(self, schema: str) -> None:
-        self.execute(f'DROP FUNCTION IF EXISTS "{schema}".{TRIGGER_FUNC}()')
+        self.execute(
+            f'DROP FUNCTION IF EXISTS "{schema}".{TRIGGER_FUNC}() CASCADE'
+        )
 
     def disable_triggers(self, schema: str) -> None:
         """Disable all pgsync defined triggers in database."""

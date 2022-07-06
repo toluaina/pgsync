@@ -329,8 +329,7 @@ class Sync(Base):
             )
             if drop_view:
                 self.drop_view(schema)
-
-            self.drop_function(schema)
+                self.drop_function(schema)
 
         self.drop_replication_slot(self.__name)
 
