@@ -74,7 +74,10 @@ def get_postgres_url(
     if not password:
         logger.debug("Connecting to Postgres without password.")
         return f"postgresql+{driver}://{user}@{host}:{port}/{database}"
-    return f"postgresql+{driver}://{user}:{quote_plus(password)}@{host}:{port}/{database}"
+    return (
+        f"postgresql+{driver}://{user}:{quote_plus(password)}@{host}:{port}/"
+        f"{database}"
+    )
 
 
 def get_redis_url(

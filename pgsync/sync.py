@@ -1072,7 +1072,7 @@ class Sync(Base):
         cursor = conn.cursor()
         cursor.execute(f'LISTEN "{self.database}"')
         logger.debug(
-            f'Listening for notifications on channel "{self.database}"'
+            f'Listening to notifications on channel "{self.database}"'
         )
         items: list = []
 

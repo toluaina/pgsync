@@ -135,9 +135,6 @@ def _get_constraints(
         warnings.simplefilter("ignore", category=sa.exc.SAWarning)
         table_constraints = model("table_constraints", "information_schema")
         key_column_usage = model("key_column_usage", "information_schema")
-        constraint_column_usage = model(
-            "constraint_column_usage", "information_schema"
-        )
     return (
         sa.select(
             [
@@ -160,15 +157,6 @@ def _get_constraints(
                 key_column_usage.c.table_schema == schema,
             ),
         )
-        # .join(
-        #     constraint_column_usage,
-        #     sa.and_(
-        #         constraint_column_usage.c.constraint_name
-        #         == table_constraints.c.constraint_name,
-        #         constraint_column_usage.c.table_schema
-        #         == table_constraints.c.table_schema,
-        #     ),
-        # )
         .where(
             *[
                 table_constraints.c.table_name.in_(tables),

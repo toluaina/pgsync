@@ -2,7 +2,7 @@
 from collections import namedtuple
 
 import pytest
-from mock import patch
+from mock import ANY, patch
 
 from pgsync.exc import RDSError, SchemaError
 from pgsync.settings import LOGICAL_SLOT_CHUNK_SIZE
@@ -172,3 +172,116 @@ class TestSync(object):
                     },
                 )
         assert "rds.logical_replication is not enabled" in str(excinfo.value)
+
+    def test_status(self, sync):
+        with patch("pgsync.sync.sys") as mock_sys:
+            sync._status("mydb")
+            mock_sys.stdout.write.assert_called_once_with(
+                "mydb testdb "
+                "Xlog: [0] => "
+                "Db: [0] => "
+                "Redis: [total = 0 "
+                "pending = 0] => "
+                "Elastic: [0] ...\n"
+            )
+        sync.es.close()
+
+    @patch("pgsync.sync.logger")
+    def test_truncate_slots(self, mock_logger, sync):
+        with patch("pgsync.sync.Sync.logical_slot_get_changes") as mock_get:
+            sync._truncate = True
+            sync._truncate_slots()
+            mock_get.assert_called_once_with(
+                "testdb_testdb", upto_nchanges=None
+            )
+            mock_logger.debug.assert_called_once_with(
+                "Truncating replication slot: testdb_testdb"
+            )
+        sync.es.close()
+
+    @patch("pgsync.sync.ElasticHelper.bulk")
+    @patch("pgsync.sync.logger")
+    def test_pull(self, mock_logger, mock_es, sync):
+        with patch("pgsync.sync.Sync.logical_slot_changes") as mock_get:
+            sync.pull()
+            txmin = None
+            txmax = sync.txid_current - 1
+            mock_get.assert_called_once_with(txmin=txmin, txmax=txmax)
+            mock_logger.debug.assert_called_once_with(
+                f"pull txmin: {txmin} - txmax: {txmax}"
+            )
+            assert sync.checkpoint == txmax
+            assert sync._truncate is True
+            mock_es.assert_called_once_with("testdb", ANY)
+        sync.es.close()
+
+    @patch("pgsync.sync.ElasticHelper.bulk")
+    @patch("pgsync.sync.logger")
+    def test_on_publish(self, mock_logger, mock_es, sync):
+        payloads = [
+            {
+                "schema": "public",
+                "tg_op": "INSERT",
+                "table": "book",
+                "old": {"isbn": "001"},
+                "new": {"isbn": "0001"},
+                "xmin": 1234,
+            },
+            {
+                "schema": "public",
+                "tg_op": "INSERT",
+                "table": "book",
+                "old": {"isbn": "002"},
+                "new": {"isbn": "0002"},
+                "xmin": 1234,
+            },
+            {
+                "schema": "public",
+                "tg_op": "INSERT",
+                "table": "book",
+                "old": {"isbn": "003"},
+                "new": {"isbn": "0003"},
+                "xmin": 1234,
+            },
+        ]
+        sync._on_publish(payloads)
+        mock_logger.debug.assert_any_call("on_publish len 3")
+        assert sync.checkpoint == 1233
+        mock_es.assert_called_once_with("testdb", ANY)
+        sync.es.close()
+
+    @patch("pgsync.sync.ElasticHelper.bulk")
+    @patch("pgsync.sync.logger")
+    def test_on_publish_mixed_ops(self, mock_logger, mock_es, sync):
+        payloads = [
+            {
+                "schema": "public",
+                "tg_op": "INSERT",
+                "table": "book",
+                "old": {"isbn": "001"},
+                "new": {"isbn": "0001"},
+                "xmin": 1234,
+            },
+            {
+                "schema": "public",
+                "tg_op": "UPDATE",
+                "table": "book",
+                "old": {"isbn": "002"},
+                "new": {"isbn": "0002"},
+                "xmin": 1234,
+            },
+            {
+                "schema": "public",
+                "tg_op": "DELETE",
+                "table": "book",
+                "old": {"isbn": "003"},
+                "new": {"isbn": "0003"},
+                "xmin": 1234,
+            },
+        ]
+        sync._on_publish(payloads)
+        mock_logger.debug.assert_any_call("on_publish len 3")
+        assert sync.checkpoint == 1233
+        mock_es.debug.call_count == 3
+        mock_es.assert_any_call("testdb", ANY)
+        sync.es.close()
