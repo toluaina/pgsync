@@ -95,10 +95,10 @@ def compile_refresh_view(
 
 
 class CreateIndex(DDLElement):
-    def __init__(self, name: str, schema: str, view: str, columns: list):
+    def __init__(self, name: str, schema: str, entity: str, columns: list):
         self.schema: str = schema
         self.name: str = name
-        self.view: str = view
+        self.entity: str = entity
         self.columns: list = columns
 
 
@@ -108,7 +108,7 @@ def compile_create_index(
 ) -> str:
     return (
         f"CREATE UNIQUE INDEX {element.name} ON "
-        f'"{element.schema}"."{element.view}" ({", ".join(element.columns)})'
+        f'"{element.schema}"."{element.entity}" ({", ".join(element.columns)})'
     )
 
 
