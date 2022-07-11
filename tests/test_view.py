@@ -218,7 +218,10 @@ class TestView(object):
             pg_base.model, DEFAULT_SCHEMA, ["book", "publisher"]
         )
         rows = connection.execute(statement).fetchall()
-        assert rows == [("book", ["publisher_id", "buyer_id", "seller_id"])]
+        assert rows[0][0] == "book"
+        assert sorted(rows[0][1]) == sorted(
+            ["publisher_id", "buyer_id", "seller_id"]
+        )
 
     @patch("pgsync.view.logger")
     @pytest.mark.usefixtures("table_creator")
