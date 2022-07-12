@@ -12,6 +12,7 @@ pytest-runner
 pytest-mock
 pytest-sugar
 pytest-runner
+freezegun
 
 # pin to last know stable pytest
 pytest==6.2.5

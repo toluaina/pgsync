@@ -74,7 +74,8 @@ def exception(func: Callable):
                 f"Exiting...\n"
             )
             os._exit(-1)
-        return fn
+        else:
+            return fn
 
     return wrapper
 
@@ -144,7 +145,7 @@ def compiled_query(
         logger.debug(f"\033[4m{label}:\033[0m\n{query}")
         sys.stdout.write(f"\033[4m{label}:\033[0m\n{query}\n")
     else:
-        logging.debug(f"{query}")
+        logger.debug(f"{query}")
         sys.stdout.write(f"{query}\n")
     sys.stdout.write("-" * 79)
     sys.stdout.write("\n")

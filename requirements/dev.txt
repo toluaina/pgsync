@@ -10,9 +10,9 @@ attrs==21.4.0
     # via pytest
 black==22.6.0
     # via -r requirements/base.in
-boto3==1.24.22
+boto3==1.24.27
     # via -r requirements/base.in
-botocore==1.27.22
+botocore==1.27.27
     # via
     #   boto3
     #   s3transfer
@@ -51,7 +51,7 @@ elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
 environs==9.5.0
     # via -r requirements/base.in
-faker==13.14.0
+faker==13.15.0
     # via -r requirements/base.in
 filelock==3.7.1
     # via virtualenv
@@ -70,6 +70,8 @@ flake8-isort==4.1.1
 flake8-print==5.0.0
     # via -r requirements/test.in
 flake8-todo==0.7
+    # via -r requirements/test.in
+freezegun==1.2.1
     # via -r requirements/test.in
 greenlet==1.1.2
     # via sqlalchemy
@@ -116,7 +118,7 @@ platformdirs==2.5.2
     #   virtualenv
 pluggy==1.0.0
     # via pytest
-pre-commit==2.19.0
+pre-commit==2.20.0
     # via -r requirements/dev.in
 psycopg2-binary==2.9.3
     # via -r requirements/base.in
@@ -142,17 +144,18 @@ pytest==6.2.5
     #   pytest-sugar
 pytest-cov==3.0.0
     # via -r requirements/test.in
-pytest-mock==3.8.1
+pytest-mock==3.8.2
     # via -r requirements/test.in
 pytest-runner==6.0.0
     # via -r requirements/test.in
-pytest-sugar==0.9.4
+pytest-sugar==0.9.5
     # via -r requirements/test.in
 python-dateutil==2.8.2
     # via
     #   botocore
     #   elasticsearch-dsl
     #   faker
+    #   freezegun
 python-dotenv==0.20.0
     # via environs
 pyyaml==6.0
@@ -192,7 +195,7 @@ tomli==2.0.1
     #   coverage
 typing-extensions==4.3.0
     # via black
-urllib3==1.26.9
+urllib3==1.26.10
     # via
     #   botocore
     #   elasticsearch

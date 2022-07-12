@@ -78,4 +78,4 @@ class TestUrls(object):
             mock_logger.assert_not_called()
 
         with patch("pgsync.urls.Plugins", side_effect=ModuleNotFoundError):
-            _get_auth("something")
+            assert _get_auth("something") is None

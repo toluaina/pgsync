@@ -8,9 +8,9 @@ async-timeout==4.0.2
     # via redis
 black==22.6.0
     # via -r requirements/base.in
-boto3==1.24.22
+boto3==1.24.27
     # via -r requirements/base.in
-botocore==1.27.22
+botocore==1.27.27
     # via
     #   boto3
     #   s3transfer
@@ -38,7 +38,7 @@ elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
 environs==9.5.0
     # via -r requirements/base.in
-faker==13.14.0
+faker==13.15.0
     # via -r requirements/base.in
 greenlet==1.1.2
     # via sqlalchemy
@@ -96,7 +96,7 @@ tomli==2.0.1
     # via black
 typing-extensions==4.3.0
     # via black
-urllib3==1.26.9
+urllib3==1.26.10
     # via
     #   botocore
     #   elasticsearch
