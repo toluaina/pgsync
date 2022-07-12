@@ -328,7 +328,7 @@ def main(config, nprocs, mode, verbose):
     TODO:
     - Track progress across cpus/threads
     - Save ctid
-    - Handle KeyboardInterrupt
+    - Handle KeyboardInterrupt Exception
     """
 
     show_settings()
