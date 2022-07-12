@@ -23,4 +23,4 @@ you through the process.
 .. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
 
 .. _Github repo: https://github.com/toluaina/pgsync
-.. _tarball: https://github.com/toluaina/pgsync/tarball/master
+.. _tarball: https://github.com/toluaina/pgsync/tarball/main

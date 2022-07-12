@@ -35,7 +35,7 @@ You can install PGSync from [PyPI](https://pypi.org):
 
 Create a schema for the application named e.g **schema.json**
 
-[Example schema](https://github.com/toluaina/pgsync/blob/master/examples/airbnb/schema.json)
+[Example schema](https://github.com/toluaina/pgsync/blob/main/examples/airbnb/schema.json)
 
 Example spec
 
