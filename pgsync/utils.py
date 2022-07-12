@@ -68,7 +68,7 @@ def exception(func: Callable):
         try:
             fn = func(*args, **kwargs)
         except Exception as e:
-            name: str = threading.currentThread().getName()
+            name: str = threading.current_thread().getName()
             sys.stdout.write(
                 f"Exception in {func.__name__}() for thread {name}: {e}\n"
                 f"Exiting...\n"
