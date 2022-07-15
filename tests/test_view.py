@@ -4,7 +4,7 @@ import pytest
 import sqlalchemy as sa
 from mock import call, patch
 
-from pgsync.base import Base, subtransactions
+from pgsync.base import Base, create_schema, subtransactions
 from pgsync.constants import DEFAULT_SCHEMA
 from pgsync.view import (
     _foreign_keys,
@@ -223,25 +223,44 @@ class TestView(object):
             ["publisher_id", "buyer_id", "seller_id"]
         )
 
-    @patch("pgsync.view.logger")
     @pytest.mark.usefixtures("table_creator")
-    def test__create_view(self, mock_logger, connection, book_cls):
+    def test__create_view(self, connection, book_cls):
         pg_base = Base(connection.engine.url.database)
 
         def fetchall(statement):
             return connection.execute(statement).fetchall()
 
-        create_view(
-            connection.engine,
-            pg_base.model,
-            fetchall,
-            DEFAULT_SCHEMA,
-            ["book", "publisher"],
-            user_defined_fkey_tables={},
-            views=[],
-        )
-        assert mock_logger.debug.call_count == 2
-        assert mock_logger.debug.call_args_list == [
-            call("Creating view: public._view"),
-            call("Created view: public._view"),
-        ]
+        with patch("pgsync.view.logger") as mock_logger:
+            create_view(
+                connection.engine,
+                pg_base.model,
+                fetchall,
+                DEFAULT_SCHEMA,
+                ["book", "publisher"],
+                user_defined_fkey_tables={},
+                views=[],
+            )
+            assert mock_logger.debug.call_count == 2
+            assert mock_logger.debug.call_args_list == [
+                call("Creating view: public._view"),
+                call("Created view: public._view"),
+            ]
+
+        user_defined_fkey_tables = {"publisher": ["publisher_id"]}
+        create_schema(connection.engine, "myschema")
+
+        with patch("pgsync.view.logger") as mock_logger:
+            create_view(
+                connection.engine,
+                pg_base.model,
+                fetchall,
+                "myschema",
+                set(["book", "publisher"]),
+                user_defined_fkey_tables=user_defined_fkey_tables,
+                views=[],
+            )
+            assert mock_logger.debug.call_count == 2
+            assert mock_logger.debug.call_args_list == [
+                call("Creating view: myschema._view"),
+                call("Created view: myschema._view"),
+            ]

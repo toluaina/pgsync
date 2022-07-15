@@ -155,11 +155,17 @@ class TestUtils(object):
     @patch("pgsync.utils.sys")
     def test_exception(self, mock_sys):
         @exception
-        def fib(n):
+        def foo(n):
             raise RuntimeError
 
+        @exception
+        def bar(n):
+            pass
+
         with patch("pgsync.utils.os._exit", return_value=None):
-            fib(1)
+            foo(1)
             mock_sys.stdout.write.assert_called_once_with(
-                "Exception in fib() for thread MainThread: \nExiting...\n"
+                "Exception in foo() for thread MainThread: \nExiting...\n"
             )
+
+        bar(1)

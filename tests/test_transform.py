@@ -2,13 +2,7 @@
 import pytest
 
 from pgsync.constants import CONCAT_TRANSFORM, RENAME_TRANSFORM
-from pgsync.transform import (
-    _concat_fields,
-    _get_transform,
-    _rename_fields,
-    get_private_keys,
-    transform,
-)
+from pgsync.transform import get_private_keys, Transform
 
 
 @pytest.mark.usefixtures("table_creator")
@@ -76,7 +70,7 @@ class TestTransform(object):
             },
         }
 
-        transform_node = _get_transform(nodes, RENAME_TRANSFORM)
+        transform_node = Transform.get(nodes, RENAME_TRANSFORM)
         assert transform_node == {
             "id": "my_id",
             "code": "my_code",
@@ -89,7 +83,7 @@ class TestTransform(object):
             },
         }
 
-        transform_node = _get_transform(nodes, CONCAT_TRANSFORM)
+        transform_node = Transform.get(nodes, CONCAT_TRANSFORM)
         assert transform_node == {
             "Child1": {
                 "Grandchild_1": {
@@ -148,6 +142,7 @@ class TestTransform(object):
                     "level": "levelup",
                     "foo": "foos",
                     "bar": "bars",
+                    "xxx": 42,
                 }
             },
         }
@@ -158,16 +153,17 @@ class TestTransform(object):
             "code": "be",
             "foo": ["a", "b"],
             "bar": {"a": 1, "b": 2},
+            "xxx": "42.0",
             "Child1": [
                 {"column_1": 2, "column_2": "aa"},
                 {"column_1": 3, "column_2": "bb"},
             ],
             "Child2": [
                 {"column_1": 2, "column_2": "aa"},
-                {"column_1": 3, "column_2": "bb"},
+                {"column_1": 3, "column_2": "bb", "column_3": [1, "a"]},
             ],
         }
-        row = transform(row, nodes)
+        row = Transform.transform(row, nodes)
         assert row == {
             "Child1": [
                 {"column1": 2, "column_2": "aa"},
@@ -175,13 +171,14 @@ class TestTransform(object):
             ],
             "Child2": [
                 {"column2": "aa", "column_1": 2},
-                {"column2": "bb", "column_1": 3},
+                {"column2": "bb", "column_1": 3, "column_3": [1, "a"]},
             ],
             "levelup": 1,
             "my_code": "be",
             "my_id": "007",
             "foos": ["a", "b"],
             "bars": {"a": 1, "b": 2},
+            "42": "42.0",
         }
 
     def test_rename_fields(self):
@@ -205,7 +202,7 @@ class TestTransform(object):
                 {"column_1": 3, "column_2": "bb"},
             ],
         }
-        row = _rename_fields(row, nodes)
+        row = Transform.rename(row, nodes)
 
         assert row == {
             "levelup": 1,
@@ -328,7 +325,7 @@ class TestTransform(object):
                 "column_2": "ee",
             },
         }
-        row = transform(row, nodes)
+        row = Transform.transform(row, nodes)
         assert row == {
             "Child1": [
                 {"column_1": 2, "column_2": "aa", "column_3": "2_aa"},
@@ -381,7 +378,7 @@ class TestTransform(object):
                 {"column_1": 3, "column_2": "bb"},
             ],
         }
-        row = _concat_fields(row, nodes)
+        row = Transform.concat(row, nodes)
         assert row == {
             "level": 1,
             "id": "007",
@@ -405,10 +402,42 @@ class TestTransform(object):
     def test_get_private_keys(self):
         primary_keys = [
             {"publisher": {"id": [4]}},
-            None,
-            None,
-            None,
-            None,
-            None,
+            {"book_language": [{"id": [7]}, {"id": [15]}]},
+            [
+                [
+                    {"author": [{"id": [4]}]},
+                    [
+                        {"city": {"id": 2}},
+                        [{"country": {"id": 2}}, {"continent": {"id": 1}}],
+                    ],
+                    {"book_author": [{"id": [7]}]},
+                ],
+                [
+                    {"author": [{"id": [5]}]},
+                    [
+                        {"city": {"id": 1}},
+                        [{"country": {"id": 1}}, {"continent": {"id": 1}}],
+                    ],
+                    {"book_author": [{"id": [9]}]},
+                ],
+            ],
+            [
+                {"language": [{"id": [1]}], "book_language": [{"id": [7]}]},
+                {"language": [{"id": [6]}], "book_language": [{"id": [15]}]},
+            ],
+            [{"subject": [{"id": [4]}], "book_subject": [{"id": [7]}]}],
+            {"rating": {"id": [7]}},
         ]
-        assert get_private_keys(primary_keys) == {"publisher": {"id": [4]}}
+        assert get_private_keys(primary_keys) == {
+            "publisher": {"id": [4]},
+            "book_language": {"id": [7, 15]},
+            "author": {"id": [4, 5]},
+            "city": {"id": [1, 2]},
+            "country": {"id": [1, 2]},
+            "continent": {"id": [1]},
+            "book_author": {"id": [7, 9]},
+            "language": {"id": [1, 6]},
+            "subject": {"id": [4]},
+            "book_subject": {"id": [7]},
+            "rating": {"id": [7]},
+        }

@@ -55,7 +55,7 @@ from .settings import (
     REPLICATION_SLOT_CLEANUP_INTERVAL,
     USE_ASYNC,
 )
-from .transform import get_private_keys, transform
+from .transform import get_private_keys, Transform
 from .utils import (
     compiled_query,
     exception,
@@ -984,7 +984,7 @@ class Sync(Base):
             ):
                 bar.update(1)
 
-                row: dict = transform(row, self.nodes)
+                row: dict = Transform.transform(row, self.nodes)
 
                 row[META] = get_private_keys(keys)
                 if extra:

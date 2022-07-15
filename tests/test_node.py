@@ -1,7 +1,9 @@
 """Node tests."""
 import pytest
 
-from pgsync.node import Tree
+from pgsync.base import Base
+from pgsync.exc import RelationshipAttributeError
+from pgsync.node import get_node, node_from_table, Tree
 
 
 @pytest.mark.usefixtures("table_creator")
@@ -148,4 +150,52 @@ class TestNode(object):
                 assert node.table == "subject"
             if i == 8:
                 assert node.table == "book"
+        sync.es.close()
+
+    def test_relationship(self, sync):
+        nodes = {
+            "table": "book",
+            "children": [
+                {
+                    "table": "publisher",
+                    "relationship": {
+                        "xxx": "object",
+                        "type": "one_to_one",
+                    },
+                },
+            ],
+        }
+        tree = Tree(sync)
+        with pytest.raises(RelationshipAttributeError) as excinfo:
+            tree.build(nodes)
+        assert "Relationship attribute " in str(excinfo.value)
+        sync.es.close()
+
+    def test_get_node(self, sync):
+        nodes = {
+            "table": "book",
+            "children": [
+                {
+                    "table": "publisher",
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_one",
+                    },
+                },
+            ],
+        }
+        tree = Tree(sync)
+        node = get_node(tree, "book", nodes)
+        assert str(node) == "Node: public.book"
+
+        with pytest.raises(RuntimeError) as excinfo:
+            get_node(tree, "xxx", nodes)
+        assert "Node for xxx not found" in str(excinfo.value)
+
+        sync.es.close()
+
+    def test_node_from_table(self, sync, connection):
+        pg_base = Base(connection.engine.url.database)
+        node = node_from_table(pg_base, "book", "public")
+        assert str(node) == "Node: public.book"
         sync.es.close()
