@@ -11,7 +11,7 @@ import select
 import sys
 import time
 from collections import defaultdict
-from typing import AnyStr, Generator, List, Optional, Set
+from typing import AnyStr, Dict, Generator, List, Optional, Set
 
 import click
 import sqlalchemy as sa
@@ -269,7 +269,6 @@ class Sync(Base):
         """Create the database triggers and replication slot."""
 
         join_queries: bool = JOIN_QUERIES
-
         self.teardown(drop_view=False)
 
         for schema in self.schemas:
@@ -453,8 +452,8 @@ class Sync(Base):
         return payload_data
 
     def _insert_op(
-        self, node: Node, root: Node, filters: dict, payloads: dict
-    ) -> None:
+        self, node: Node, root: Node, filters: dict, payloads: List[dict]
+    ) -> dict:
 
         if node.table in self.tree.nodes:
 
@@ -520,9 +519,9 @@ class Sync(Base):
         node: Node,
         root: Node,
         filters: dict,
-        payloads: dict,
+        payloads: List[dict],
         extra: dict,
-    ) -> None:
+    ) -> dict:
 
         if node.table == root.table:
 
@@ -648,8 +647,8 @@ class Sync(Base):
         return filters
 
     def _delete_op(
-        self, node: Node, root: Node, filters: dict, payloads: dict
-    ) -> None:
+        self, node: Node, root: Node, filters: dict, payloads: List[dict]
+    ) -> dict:
 
         # when deleting a root node, just delete the doc in Elasticsearch
         if node.table == root.table:
@@ -757,16 +756,19 @@ class Sync(Base):
             {
                 'tg_op': 'INSERT',
                 'table': 'book',
-                'old': {'id': 1}, 'new': {'id': 4}
+                'old': {'id': 1},
+                'new': {'id': 4}
             },
             {
                 'tg_op': 'INSERT',
                 'table': 'book',
-                'old': {'id': 2}, 'new': {'id': 5}
+                'old': {'id': 2},
+                'new': {'id': 5}
             },
             {   'tg_op': 'INSERT',
                 'table': 'book',
-                'old': {'id': 3}, 'new': {'id': 6},
+                'old': {'id': 3},
+                'new': {'id': 6},
             }
             ...
         ]
@@ -850,7 +852,9 @@ class Sync(Base):
         if any(filters.values()):
             yield from self.sync(filters=filters, extra=extra)
 
-    def _build_filters(self, filters: List[dict], node: Node) -> None:
+    def _build_filters(
+        self, filters: Dict[str, List[dict]], node: Node
+    ) -> None:
         """
         Build SQLAlchemy filters.
 

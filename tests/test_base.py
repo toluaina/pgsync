@@ -1,7 +1,7 @@
 """Base tests."""
 
 import pytest
-from mock import patch
+from mock import ANY, call, patch
 
 from pgsync.base import (
     Base,
@@ -95,6 +95,75 @@ class TestBase(object):
         ]
         assert sorted(pg_base.tables("public")) == sorted(tables)
 
+    def test_indices(self, connection):
+        pg_base = Base(connection.engine.url.database)
+        assert pg_base.indices("book", "public") == []
+
+    @patch("pgsync.base.logger")
+    @patch("pgsync.sync.Base.execute")
+    def test_truncate_table(self, mock_execute, mock_logger, connection):
+        pg_base = Base(connection.engine.url.database)
+        pg_base.truncate_table("book")
+        mock_logger.debug.assert_called_once_with(
+            "Truncating table: public.book"
+        )
+        mock_execute.assert_called_once_with(
+            'TRUNCATE TABLE "public"."book" CASCADE'
+        )
+
+    @patch("pgsync.base.logger")
+    @patch("pgsync.sync.Base.truncate_table")
+    def test_truncate_tables(
+        self, mock_truncate_table, mock_logger, connection
+    ):
+        pg_base = Base(connection.engine.url.database)
+        pg_base.truncate_tables(["book", "user"])
+        mock_logger.debug.assert_called_once_with(
+            "Truncating tables: ['book', 'user']"
+        )
+        calls = [
+            call("book", schema="public"),
+            call("user", schema="public"),
+        ]
+        assert mock_truncate_table.call_args_list == calls
+
+    @patch("pgsync.base.logger")
+    @patch("pgsync.sync.Base.truncate_tables")
+    def test_truncate_schema(
+        self, mock_truncate_tables, mock_logger, connection
+    ):
+        pg_base = Base(connection.engine.url.database)
+        pg_base.truncate_schema("public")
+        mock_logger.debug.assert_called_once_with("Truncating schema: public")
+        mock_truncate_tables.assert_called_once_with(
+            [
+                "continent",
+                "country",
+                "contact",
+                "user",
+                "contact_item",
+                "city",
+                "publisher",
+                "book",
+                "author",
+                "book_subject",
+                "subject",
+                "book_language",
+                "language",
+                "book_shelf",
+                "shelf",
+                "rating",
+                "book_author",
+            ],
+            schema="public",
+        )
+
+    @patch("pgsync.sync.Base.truncate_schema")
+    def test_truncate_schemas(self, mock_truncate_schema, connection):
+        pg_base = Base(connection.engine.url.database)
+        pg_base.truncate_schemas()
+        mock_truncate_schema.assert_called_once_with("public")
+
     def test_replication_slots(self, connection):
         pg_base = Base(connection.engine.url.database)
         assert pg_base.replication_slots("noob") == []
@@ -103,17 +172,29 @@ class TestBase(object):
         )
         assert "testdb_testdb" == replication_slots[0][0]
 
-    def test_create_replication_slot(self, connection):
+    @patch("pgsync.base.logger")
+    def test_create_replication_slot(self, mock_logger, connection):
         pg_base = Base(connection.engine.url.database)
         row = pg_base.create_replication_slot("slot_name")
         assert row[0] == "slot_name"
         assert row[1] is not None
         pg_base.drop_replication_slot("slot_name")
+        calls = [
+            call("Creating replication slot: slot_name"),
+            call("Dropping replication slot: slot_name"),
+        ]
+        assert mock_logger.debug.call_args_list == calls
 
-    def test_drop_replication_slot(self, connection):
+    @patch("pgsync.base.logger")
+    def test_drop_replication_slot(self, mock_logger, connection):
         pg_base = Base(connection.engine.url.database)
         pg_base.create_replication_slot("slot_name")
         pg_base.drop_replication_slot("slot_name")
+        calls = [
+            call("Creating replication slot: slot_name"),
+            call("Dropping replication slot: slot_name"),
+        ]
+        assert mock_logger.debug.call_args_list == calls
 
     @patch("pgsync.base.pg_execute")
     @patch("pgsync.base.pg_engine")
@@ -202,6 +283,30 @@ class TestBase(object):
             connection.engine,
             'DROP EXTENSION IF EXISTS "my_ext"',
         )
+
+    @patch("pgsync.base.logger")
+    @patch("pgsync.sync.Base.engine")
+    def test_drop_view(self, mock_execute, mock_logger, connection):
+        pg_base = Base(connection.engine.url.database)
+        pg_base.drop_view("public")
+        calls = [
+            call("Dropping view: public._view"),
+            call("Dropped view: public._view"),
+        ]
+        assert mock_logger.debug.call_args_list == calls
+        mock_execute.execute.assert_called_once_with(ANY)
+
+    @patch("pgsync.base.logger")
+    @patch("pgsync.sync.Base.engine")
+    def test_refresh_view(self, mock_execute, mock_logger, connection):
+        pg_base = Base(connection.engine.url.database)
+        pg_base.refresh_view("foo", "public", concurrently=True)
+        calls = [
+            call("Refreshing view: public.foo"),
+            call("Refreshed view: public.foo"),
+        ]
+        assert mock_logger.debug.call_args_list == calls
+        mock_execute.execute.assert_called_once_with(ANY)
 
     def test_parse_logical_slot(
         self,
