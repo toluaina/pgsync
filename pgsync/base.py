@@ -661,7 +661,7 @@ class Base(object):
                 raise
         return value
 
-    def parse_logical_slot(self, row: str):
+    def parse_logical_slot(self, row: str) -> dict:
         def _parse_logical_slot(data):
 
             while True:

@@ -53,7 +53,7 @@ def apply_analyzer_to_mapping(mapping: dict, analyzer: dict) -> dict:
     return _mapping
 
 
-def get_configuration(es, index) -> dict:
+def get_configuration(es, index: str) -> dict:
     configuration: dict = es.indices.get_settings(index)[index]
     # skip these attributes
     for key in [
@@ -79,7 +79,7 @@ def get_configuration(es, index) -> dict:
 
 
 @timeit
-def create_es_mapping(index):
+def create_es_mapping(index: str) -> None:
     logger.debug(f"Create Elasticsearch mapping for index {index}")
     url: str = get_elasticsearch_url()
     es: Elasticsearch = Elasticsearch(
