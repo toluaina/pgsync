@@ -126,14 +126,11 @@ def get_config(config: Optional[str] = None) -> str:
 
 
 def compiled_query(
-    query: str, label: Optional[str] = None, literal_binds: bool = False
+    query: str,
+    label: Optional[str] = None,
+    literal_binds: bool = QUERY_LITERAL_BINDS,
 ) -> None:
     """Compile an SQLAlchemy query with an optional label."""
-
-    # overide env value of literal_binds
-    if QUERY_LITERAL_BINDS:
-        literal_binds = QUERY_LITERAL_BINDS
-
     query: str = str(
         query.compile(
             dialect=sa.dialects.postgresql.dialect(),
