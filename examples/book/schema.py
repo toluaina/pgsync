@@ -205,13 +205,13 @@ def setup(config=None):
         database: str = document.get("database", document["index"])
         schema: str = document.get("schema", DEFAULT_SCHEMA)
         create_database(database)
-        engine: sa.engine.Engine = pg_engine(database=database)
-        create_schema(engine, schema)
-        engine = engine.connect().execution_options(
-            schema_translate_map={None: schema}
-        )
-        Base.metadata.drop_all(engine)
-        Base.metadata.create_all(engine)
+        create_schema(database, schema)
+        with pg_engine(database) as engine:
+            engine = engine.connect().execution_options(
+                schema_translate_map={None: schema}
+            )
+            Base.metadata.drop_all(engine)
+            Base.metadata.create_all(engine)
 
 
 @click.command()

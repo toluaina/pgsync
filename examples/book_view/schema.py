@@ -44,34 +44,34 @@ def setup(config=None):
         database: str = document.get("database", document["index"])
         schema: str = document.get("schema", DEFAULT_SCHEMA)
         create_database(database)
-        engine = pg_engine(database=database)
-        create_schema(engine, schema)
-        engine = engine.connect().execution_options(
-            schema_translate_map={None: schema}
-        )
-        Base.metadata.drop_all(engine)
-        Base.metadata.create_all(engine)
-
-        metadata = sa.MetaData(schema=schema)
-        metadata.reflect(engine, views=True)
-
-        book_model = metadata.tables[f"{schema}.book"]
-        engine.execute(
-            CreateView(
-                schema,
-                "book_view",
-                book_model.select(),
+        create_schema(database, schema)
+        with pg_engine(database) as engine:
+            engine = engine.connect().execution_options(
+                schema_translate_map={None: schema}
             )
-        )
+            Base.metadata.drop_all(engine)
+            Base.metadata.create_all(engine)
 
-        publisher_model = metadata.tables[f"{schema}.publisher"]
-        engine.execute(
-            CreateView(
-                schema,
-                "publisher_view",
-                publisher_model.select(),
+            metadata = sa.MetaData(schema=schema)
+            metadata.reflect(engine, views=True)
+
+            book_model = metadata.tables[f"{schema}.book"]
+            engine.execute(
+                CreateView(
+                    schema,
+                    "book_view",
+                    book_model.select(),
+                )
             )
-        )
+
+            publisher_model = metadata.tables[f"{schema}.publisher"]
+            engine.execute(
+                CreateView(
+                    schema,
+                    "publisher_view",
+                    publisher_model.select(),
+                )
+            )
 
 
 @click.command()

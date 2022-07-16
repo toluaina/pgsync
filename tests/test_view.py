@@ -247,7 +247,7 @@ class TestView(object):
             ]
 
         user_defined_fkey_tables = {"publisher": ["publisher_id"]}
-        create_schema(connection.engine, "myschema")
+        create_schema(connection.engine.url.database, "myschema")
 
         with patch("pgsync.view.logger") as mock_logger:
             create_view(

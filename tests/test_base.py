@@ -7,6 +7,7 @@ from pgsync.base import (
     Base,
     create_database,
     create_extension,
+    create_schema,
     drop_database,
     drop_extension,
 )
@@ -199,6 +200,28 @@ class TestBase(object):
     @patch("pgsync.base.pg_execute")
     @patch("pgsync.base.pg_engine")
     @patch("pgsync.base.logger")
+    def test_create_schema(
+        self,
+        mock_logger,
+        mock_pg_engine,
+        mock_pg_execute,
+        connection,
+    ):
+        schema: str = "myschema"
+        database = connection.engine.url.database
+        create_schema(database, schema, echo=True)
+        assert mock_logger.debug.call_count == 2
+        mock_logger.debug.assert_any_call(f"Creating schema: {schema}")
+        mock_logger.debug.assert_any_call(f"Created schema: {schema}")
+        mock_pg_engine.assert_any_call(database, echo=True)
+        calls = [
+            call(mock_pg_engine, f'CREATE SCHEMA IF NOT EXISTS "{schema}"')
+        ]
+        mock_pg_execute.call_args_list == calls
+
+    @patch("pgsync.base.pg_execute")
+    @patch("pgsync.base.pg_engine")
+    @patch("pgsync.base.logger")
     def test_create_database(
         self,
         mock_logger,
@@ -207,16 +230,13 @@ class TestBase(object):
         connection,
     ):
         database = connection.engine.url.database
-        mock_pg_engine.return_value = connection.engine
         create_database(database, echo=True)
         assert mock_logger.debug.call_count == 2
         mock_logger.debug.assert_any_call(f"Creating database: {database}")
         mock_logger.debug.assert_any_call(f"Created database: {database}")
-        mock_pg_engine.assert_any_call(database="postgres", echo=True)
-        mock_pg_execute.assert_any_call(
-            connection.engine,
-            f'CREATE DATABASE "{database}"',
-        )
+        mock_pg_engine.assert_any_call("postgres", echo=True)
+        calls = [call(mock_pg_engine, f'CREATE DATABASE "{database}"')]
+        mock_pg_execute.call_args_list == calls
 
     @patch("pgsync.base.pg_execute")
     @patch("pgsync.base.pg_engine")
@@ -229,16 +249,13 @@ class TestBase(object):
         connection,
     ):
         database = connection.engine.url.database
-        mock_pg_engine.return_value = connection.engine
         drop_database(database, echo=True)
         assert mock_logger.debug.call_count == 2
         mock_logger.debug.assert_any_call(f"Dropping database: {database}")
         mock_logger.debug.assert_any_call(f"Dropped database: {database}")
-        mock_pg_engine.assert_any_call(database="postgres", echo=True)
-        mock_pg_execute.assert_any_call(
-            connection.engine,
-            f'DROP DATABASE IF EXISTS "{database}"',
-        )
+        mock_pg_engine.assert_any_call("postgres", echo=True)
+        calls = [call(mock_pg_engine, f'DROP DATABASE "{database}"')]
+        mock_pg_execute.call_args_list == calls
 
     @patch("pgsync.base.pg_execute")
     @patch("pgsync.base.pg_engine")
@@ -251,16 +268,15 @@ class TestBase(object):
         connection,
     ):
         database = connection.engine.url.database
-        mock_pg_engine.return_value = connection.engine
         create_extension(database, "my_ext", echo=True)
         assert mock_logger.debug.call_count == 2
         mock_logger.debug.assert_any_call("Creating extension: my_ext")
         mock_logger.debug.assert_any_call("Created extension: my_ext")
-        mock_pg_engine.assert_any_call(database=database, echo=True)
-        mock_pg_execute.assert_any_call(
-            connection.engine,
-            'CREATE EXTENSION IF NOT EXISTS "my_ext"',
-        )
+        mock_pg_engine.assert_any_call(database, echo=True)
+        calls = [
+            call(mock_pg_engine, 'CREATE EXTENSION IF NOT EXISTS "my_ext"')
+        ]
+        mock_pg_execute.call_args_list == calls
 
     @patch("pgsync.base.pg_execute")
     @patch("pgsync.base.pg_engine")
@@ -273,16 +289,13 @@ class TestBase(object):
         connection,
     ):
         database = connection.engine.url.database
-        mock_pg_engine.return_value = connection.engine
         drop_extension(database, "my_ext", echo=True)
         assert mock_logger.debug.call_count == 2
         mock_logger.debug.assert_any_call("Dropping extension: my_ext")
         mock_logger.debug.assert_any_call("Dropped extension: my_ext")
-        mock_pg_engine.assert_any_call(database=database, echo=True)
-        mock_pg_execute.assert_any_call(
-            connection.engine,
-            'DROP EXTENSION IF EXISTS "my_ext"',
-        )
+        mock_pg_engine.assert_any_call(database, echo=True)
+        calls = [call(mock_pg_engine, 'DROP EXTENSION IF NOT EXISTS "my_ext"')]
+        mock_pg_execute.call_args_list == calls
 
     @patch("pgsync.base.logger")
     @patch("pgsync.sync.Base.engine")

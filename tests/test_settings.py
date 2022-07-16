@@ -2,7 +2,7 @@
 import importlib
 
 from pgsync import settings
-from pgsync.base import pg_engine
+from pgsync.base import _pg_engine
 from pgsync.redisqueue import RedisQueue
 
 
@@ -25,7 +25,7 @@ def test_postgres_url(mocker):
         return_value="postgresql://kermit:frog@some-host:5432/wheel",
     )
     mocker.patch("logging.config.dictConfig")
-    engine = pg_engine("wheel")
+    engine = _pg_engine("wheel")
     mock_get_postgres_url.assert_called_once()
     url = "postgresql://kermit:frog@some-host:5432/wheel"
     assert str(engine.engine.url) == url

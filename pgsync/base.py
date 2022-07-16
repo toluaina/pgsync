@@ -68,7 +68,9 @@ class TupleIdentifierType(sa.types.UserDefinedType):
 class Base(object):
     def __init__(self, database: str, verbose: bool = False, *args, **kwargs):
         """Initialize the base class constructor."""
-        self.__engine: sa.engine.Engine = pg_engine(database, **kwargs)
+        self.__engine: sa.engine.Engine = _pg_engine(
+            database, echo=False, **kwargs
+        )
         self.__schemas: Optional[dict] = None
         # models is a dict of f'{schema}.{table}'
         self.models: Dict[str] = {}
@@ -729,19 +731,11 @@ class Base(object):
     def execute(
         self,
         statement: sa.sql.Select,
-        values: dict = None,
-        options: dict = None,
+        values: Optional[dict] = None,
+        options: Optional[dict] = None,
     ) -> None:
         """Execute a query statement."""
-        conn = self.__engine.connect()
-        try:
-            if options:
-                conn = conn.execution_options(**options)
-            conn.execute(statement, values)
-            conn.close()
-        except Exception as e:
-            logger.exception(f"Exception {e}")
-            raise
+        pg_execute(self.__engine, statement, values=values, options=options)
 
     def fetchone(
         self, statement: sa.sql.Select, label=None, literal_binds=False
@@ -902,6 +896,68 @@ def pg_engine(
     echo: bool = False,
     sslmode: Optional[str] = None,
     sslrootcert: Optional[str] = None,
+):
+    """Context manager for managing engines."""
+
+    class ControlledExecution:
+        def __init__(
+            self,
+            database: str,
+            user: Optional[str] = None,
+            host: Optional[str] = None,
+            password: Optional[str] = None,
+            port: Optional[str] = None,
+            echo: bool = False,
+            sslmode: Optional[str] = None,
+            sslrootcert: Optional[str] = None,
+        ):
+            self.database = database
+            self.user = user
+            self.host = host
+            self.password = password
+            self.port = port
+            self.echo = echo
+            self.sslmode = sslmode
+            self.sslrootcert = sslrootcert
+
+        def __enter__(self) -> sa.engine.Engine:
+            self._engine = _pg_engine(
+                database,
+                user=self.user,
+                host=self.host,
+                password=self.password,
+                port=self.port,
+                echo=self.echo,
+                sslmode=self.sslmode,
+                sslrootcert=self.sslrootcert,
+            )
+            return self._engine
+
+        def __exit__(self, type, value, traceback) -> None:
+            self._engine.connect().close()
+            self._engine.dispose()
+
+    return ControlledExecution(
+        database,
+        user=user,
+        host=host,
+        password=host,
+        port=port,
+        echo=echo,
+        sslmode=sslmode,
+        sslrootcert=sslrootcert,
+    )
+
+
+def _pg_engine(
+    database: str,
+    user: Optional[str] = None,
+    host: Optional[str] = None,
+    password: Optional[str] = None,
+    port: Optional[str] = None,
+    echo: bool = False,
+    sslmode: Optional[str] = None,
+    sslrootcert: Optional[str] = None,
 ) -> sa.engine.Engine:
     connect_args: dict = {}
     sslmode: str = sslmode or PG_SSLMODE
@@ -940,7 +996,7 @@ def pg_engine(
 
 def pg_execute(
     engine: sa.engine.Engine,
-    query: str,
+    statement: sa.sql.Select,
     values: Optional[list] = None,
     options: Optional[dict] = None,
 ) -> None:
@@ -949,32 +1005,34 @@ def pg_execute(
     try:
         if options:
             conn = conn.execution_options(**options)
-        conn.execute(query, values)
+        conn.execute(statement, values)
         conn.close()
     except Exception as e:
         logger.exception(f"Exception {e}")
         raise
 
 
-def create_schema(engine: sa.engine.Engine, schema: str) -> None:
+def create_schema(database: str, schema: str, echo: bool = False) -> None:
     """Create database schema."""
-    if schema != DEFAULT_SCHEMA:
-        engine.execute(sa.schema.CreateSchema(schema))
+    logger.debug(f"Creating schema: {schema}")
+    with pg_engine(database, echo=echo) as engine:
+        pg_execute(engine, sa.DDL(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+    logger.debug(f"Created schema: {schema}")
 
 
 def create_database(database: str, echo: bool = False) -> None:
     """Create a database."""
     logger.debug(f"Creating database: {database}")
-    engine: sa.engine.Engine = pg_engine(database="postgres", echo=echo)
-    pg_execute(engine, f'CREATE DATABASE "{database}"')
+    with pg_engine("postgres", echo=echo) as engine:
+        pg_execute(engine, sa.DDL(f'CREATE DATABASE "{database}"'))
     logger.debug(f"Created database: {database}")
 
 
 def drop_database(database: str, echo: bool = False) -> None:
     """Drop a database."""
     logger.debug(f"Dropping database: {database}")
-    engine: sa.engine.Engine = pg_engine(database="postgres", echo=echo)
-    pg_execute(engine, f'DROP DATABASE IF EXISTS "{database}"')
+    with pg_engine("postgres", echo=echo) as engine:
+        pg_execute(engine, sa.DDL(f'DROP DATABASE IF EXISTS "{database}"'))
     logger.debug(f"Dropped database: {database}")
 
 
@@ -983,14 +1041,16 @@ def create_extension(
 ) -> None:
     """Create a database extension."""
     logger.debug(f"Creating extension: {extension}")
-    engine: sa.engine.Engine = pg_engine(database=database, echo=echo)
-    pg_execute(engine, f'CREATE EXTENSION IF NOT EXISTS "{extension}"')
+    with pg_engine(database, echo=echo) as engine:
+        pg_execute(
+            engine, sa.DDL(f'CREATE EXTENSION IF NOT EXISTS "{extension}"')
+        )
     logger.debug(f"Created extension: {extension}")
 
 
 def drop_extension(database: str, extension: str, echo: bool = False) -> None:
     """Drop a database extension."""
     logger.debug(f"Dropping extension: {extension}")
-    engine: sa.engine.Engine = pg_engine(database=database, echo=echo)
-    pg_execute(engine, f'DROP EXTENSION IF EXISTS "{extension}"')
+    with pg_engine(database, echo=echo) as engine:
+        pg_execute(engine, sa.DDL(f'DROP EXTENSION IF EXISTS "{extension}"'))
     logger.debug(f"Dropped extension: {extension}")

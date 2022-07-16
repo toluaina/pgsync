@@ -86,6 +86,7 @@ def update_op(session: sessionmaker, model, nsize: int) -> None:
                     setattr(row[0], column, value)
                     session.commit()
                 except Exception as e:
+                    print(f"Exception {e}")
                     session.rollback()
 
 
@@ -108,6 +109,7 @@ def delete_op(session: sessionmaker, model, nsize: int) -> None:
                     ).delete()
                     session.commit()
                 except Exception as e:
+                    print(f"Exception {e}")
                     session.rollback()
 
 
@@ -139,29 +141,27 @@ def main(config, nsize, daemon, tg_op):
 
     config: str = get_config(config)
     documents: dict = json.load(open(config))
-    engine = pg_engine(
-        database=documents[0].get("database", documents[0]["index"])
-    )
-    Session = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-    session = Session()
+    with pg_engine(
+        documents[0].get("database", documents[0]["index"])
+    ) as engine:
+        Session = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+        session = Session()
 
-    model = Book
-    func = {
-        INSERT: insert_op,
-        UPDATE: update_op,
-        DELETE: delete_op,
-        TRUNCATE: truncate_op,
-    }
-    # lets do only the book model for now
-    while True:
-
-        if tg_op:
-            func[tg_op](session, model, nsize)
-        else:
-            func[choice(TG_OP)](session, model, nsize)
-
-        if not daemon:
-            break
+        model = Book
+        func = {
+            INSERT: insert_op,
+            UPDATE: update_op,
+            DELETE: delete_op,
+            TRUNCATE: truncate_op,
+        }
+        # lets do only the book model for now
+        while True:
+            if tg_op:
+                func[tg_op](session, model, nsize)
+            else:
+                func[choice(TG_OP)](session, model, nsize)
+            if not daemon:
+                break
 
 
 if __name__ == "__main__":

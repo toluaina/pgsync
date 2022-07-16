@@ -463,6 +463,7 @@ class TestParentSingleChildFkOnParent(object):
             "seller_id": None,
             "buyer_id": None,
             "title": "The Rabbit Club",
+            "tags": None,
         }
         assert_resync_empty(sync, nodes)
 

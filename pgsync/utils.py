@@ -55,7 +55,6 @@ def threaded(func: Callable):
         thread: threading.Thread = threading.Thread(
             target=func, args=args, kwargs=kwargs
         )
-        thread.daemon = True
         thread.start()
         return thread
 

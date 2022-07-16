@@ -219,6 +219,7 @@ class TestRoot(object):
                 "title",
                 "buyer_id",
                 "seller_id",
+                "tags",
             ]
         )
 
@@ -235,6 +236,7 @@ class TestRoot(object):
                 "title",
                 "buyer_id",
                 "seller_id",
+                "tags",
             ]
         )
         assert_resync_empty(sync, nodes)

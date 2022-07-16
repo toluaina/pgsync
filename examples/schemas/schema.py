@@ -30,19 +30,22 @@ def setup(config=None):
     for document in json.load(open(config)):
         database: str = document.get("database", document["index"])
         create_database(database)
-        engine: sa.engine.Engine = pg_engine(database=database)
         for schema in ("parent", "child"):
-            create_schema(engine, schema)
-        engine: sa.engine.Engine = engine.connect().execution_options(
-            schema_translate_map={None: "parent"}
-        )
-        Base.metadata.drop_all(engine)
-        Base.metadata.create_all(engine)
-        engine: sa.engine.Engine = engine.connect().execution_options(
-            schema_translate_map={None: "child"}
-        )
-        Base.metadata.drop_all(engine)
-        Base.metadata.create_all(engine)
+            create_schema(database, schema)
+
+        with pg_engine(database) as engine:
+            engine: sa.engine.Engine = engine.connect().execution_options(
+                schema_translate_map={None: "parent"}
+            )
+            Base.metadata.drop_all(engine)
+            Base.metadata.create_all(engine)
+
+        with pg_engine(database) as engine:
+            engine: sa.engine.Engine = engine.connect().execution_options(
+                schema_translate_map={None: "child"}
+            )
+            Base.metadata.drop_all(engine)
+            Base.metadata.create_all(engine)
 
 
 @click.command()
