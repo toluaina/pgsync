@@ -1,0 +1,7 @@
+All these examples can be run with:
+
+./examples/bootstrap.sh [directory name]
+
+e.g
+
+./examples/bootstrap.sh book

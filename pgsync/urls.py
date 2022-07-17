@@ -71,13 +71,13 @@ def get_postgres_url(
     password: str = _get_auth("PG_PASSWORD") or password or PG_PASSWORD
     port: str = port or PG_PORT
     driver: str = driver or PG_DRIVER
-    if not password:
-        logger.debug("Connecting to Postgres without password.")
-        return f"postgresql+{driver}://{user}@{host}:{port}/{database}"
-    return (
-        f"postgresql+{driver}://{user}:{quote_plus(password)}@{host}:{port}/"
-        f"{database}"
-    )
+    if password:
+        return (
+            f"postgresql+{driver}://{user}:{quote_plus(password)}@"
+            f"{host}:{port}/{database}"
+        )
+    logger.debug("Connecting to Postgres without password.")
+    return f"postgresql+{driver}://{user}@{host}:{port}/{database}"
 
 
 def get_redis_url(

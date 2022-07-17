@@ -85,7 +85,7 @@ class Base(object):
     def connect(self) -> None:
         """Connect to database."""
         try:
-            conn = self.__engine.connect()
+            conn = self.engine.connect()
             conn.close()
         except Exception as e:
             logger.exception(f"Cannot connect to database: {e}")
@@ -119,7 +119,7 @@ class Base(object):
         host_part: str = self.engine.url.host.split(".")[0]
         username: str = username.split(f"@{host_part}")[0]
 
-        with self.__engine.connect() as conn:
+        with self.engine.connect() as conn:
             return (
                 conn.execute(
                     sa.select([sa.column("usename")])
@@ -162,7 +162,7 @@ class Base(object):
         if name not in self.models:
             if schema not in self.__metadata:
                 metadata = sa.MetaData(schema=schema)
-                metadata.reflect(self.__engine, views=True)
+                metadata.reflect(self.engine, views=True)
                 self.__metadata[schema] = metadata
             metadata = self.__metadata[schema]
             if name not in metadata.tables:
@@ -195,11 +195,11 @@ class Base(object):
     @property
     def database(self) -> str:
         """str: Get the database name."""
-        return self.__engine.url.database
+        return self.engine.url.database
 
     @property
     def session(self) -> sessionmaker:
-        Session = sessionmaker(bind=self.__engine.connect(), autoflush=True)
+        Session = sessionmaker(bind=self.engine.connect(), autoflush=True)
         return Session()
 
     @property
@@ -467,7 +467,7 @@ class Base(object):
             upto_lsn=upto_lsn,
             upto_nchanges=upto_nchanges,
         )
-        with self.__engine.connect() as conn:
+        with self.engine.connect() as conn:
             return conn.execute(
                 statement.with_only_columns([sa.func.COUNT()])
             ).scalar()
@@ -735,7 +735,7 @@ class Base(object):
         options: Optional[dict] = None,
     ) -> None:
         """Execute a query statement."""
-        pg_execute(self.__engine, statement, values=values, options=options)
+        pg_execute(self.engine, statement, values=values, options=options)
 
     def fetchone(
         self, statement: sa.sql.Select, label=None, literal_binds=False
@@ -744,7 +744,7 @@ class Base(object):
         if self.verbose:
             compiled_query(statement, label=label, literal_binds=literal_binds)
 
-        conn = self.__engine.connect()
+        conn = self.engine.connect()
         try:
             row = conn.execute(statement).fetchone()
             conn.close()
@@ -763,7 +763,7 @@ class Base(object):
         if self.verbose:
             compiled_query(statement, label=label, literal_binds=literal_binds)
 
-        conn = self.__engine.connect()
+        conn = self.engine.connect()
         try:
             rows = conn.execute(statement).fetchall()
             conn.close()
@@ -778,7 +778,7 @@ class Base(object):
         chunk_size: Optional[int] = None,
     ):
         chunk_size: int = chunk_size or QUERY_CHUNK_SIZE
-        with self.__engine.connect() as conn:
+        with self.engine.connect() as conn:
             result = conn.execution_options(stream_results=True).execute(
                 statement.select()
             )
@@ -787,7 +787,7 @@ class Base(object):
                     yield keys, row, primary_keys
 
     def fetchcount(self, statement: sa.sql.Subquery) -> int:
-        with self.__engine.connect() as conn:
+        with self.engine.connect() as conn:
             return conn.execute(
                 statement.original.with_only_columns(
                     [sa.func.COUNT()]
