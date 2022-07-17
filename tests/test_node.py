@@ -1,14 +1,13 @@
 """Node tests."""
 import pytest
 
-from pgsync.base import Base
 from pgsync.exc import (
     InvalidSchemaError,
     NodeAttributeError,
     RelationshipAttributeError,
     TableNotInNodeError,
 )
-from pgsync.node import get_node, node_from_table, Tree
+from pgsync.node import Node, Tree
 
 
 @pytest.mark.usefixtures("table_creator")
@@ -187,19 +186,14 @@ class TestNode(object):
             ],
         }
         tree = Tree(sync)
-        node = get_node(tree, "book", nodes)
+        root: Node = tree.build(nodes)
+        node = tree.get_node(root, "book", "public")
         assert str(node) == "Node: public.book"
 
         with pytest.raises(RuntimeError) as excinfo:
-            get_node(tree, "xxx", nodes)
-        assert "Node for xxx not found" in str(excinfo.value)
+            tree.get_node(root, "xxx", "public")
+        assert "Node for public.xxx not found" in str(excinfo.value)
 
-        sync.es.close()
-
-    def test_node_from_table(self, sync, connection):
-        pg_base = Base(connection.engine.url.database)
-        node = node_from_table(pg_base, "book", "public")
-        assert str(node) == "Node: public.book"
         sync.es.close()
 
     def test_tree_build(self, sync):

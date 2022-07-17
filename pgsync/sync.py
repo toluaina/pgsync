@@ -39,7 +39,7 @@ from .exc import (
     SchemaError,
     SuperUserError,
 )
-from .node import get_node, Node, node_from_table, Tree
+from .node import Node, Tree
 from .plugin import Plugins
 from .querybuilder import QueryBuilder
 from .redisqueue import RedisQueue
@@ -112,7 +112,7 @@ class Sync(Base):
         self.count: dict = dict(xlog=0, db=0, redis=0)
 
     @property
-    def root(self) -> str:
+    def root(self) -> Node:
         if self.__root is None:
             self.__root = self.tree.build(self.nodes)
         return self.__root
@@ -211,16 +211,11 @@ class Sync(Base):
                 str(primary_key.name) for primary_key in node.primary_keys
             ]
 
-            if node.relationship.through_tables:
-                through_table: str = node.relationship.through_tables[0]
-                through: Node = node_from_table(
-                    self,
-                    through_table,
-                    node.schema,
-                )
+            if node.relationship.through_nodes:
+                through_node: Node = node.relationship.through_nodes[0]
                 foreign_keys: dict = get_foreign_keys(
                     node.parent,
-                    through,
+                    through_node,
                 )
             else:
                 foreign_keys: dict = get_foreign_keys(
@@ -280,7 +275,12 @@ class Sync(Base):
             for node in self.root.traverse_breadth_first():
                 if node.schema != schema:
                     continue
-                tables |= set(node.relationship.through_tables)
+                tables |= set(
+                    [
+                        through_node.table
+                        for through_node in node.relationship.through_nodes
+                    ]
+                )
                 tables |= set([node.table])
                 # we also need to bootstrap the base tables
                 tables |= set(node.base_tables)
@@ -319,7 +319,12 @@ class Sync(Base):
         for schema in self.schemas:
             tables: Set = set()
             for node in self.root.traverse_breadth_first():
-                tables |= set(node.relationship.through_tables)
+                tables |= set(
+                    [
+                        through_node.table
+                        for through_node in node.relationship.through_nodes
+                    ]
+                )
                 tables |= set([node.table])
                 # we also need to teardown the base tables
                 tables |= set(node.base_tables)
@@ -455,7 +460,7 @@ class Sync(Base):
         self, node: Node, root: Node, filters: dict, payloads: List[dict]
     ) -> dict:
 
-        if node.table in self.tree.nodes:
+        if node.table in self.tree.tables:
 
             if node.table == root.table:
 
@@ -786,14 +791,13 @@ class Sync(Base):
         # e.g a through table which we need to react to.
         # in this case, we find the parent of the through
         # table and force a re-sync.
-        if (
-            table not in self.tree.nodes
-            and table not in self.tree.through_nodes
-        ):
+        if table not in self.tree.tables:
             return
 
-        node: Node = get_node(self.tree, table, self.nodes)
-        root: Node = get_node(self.tree, self.nodes["table"], self.nodes)
+        node: Node = self.tree.get_node(self.root, table, payload["schema"])
+        root: Node = self.tree.get_node(
+            self.root, self.nodes["table"], payload["schema"]
+        )
 
         for payload in payloads:
             payload_data: dict = self._payload_data(payload)

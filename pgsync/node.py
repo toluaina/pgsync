@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import List, Optional, Set
+from typing import Dict, List, Optional, Set
 
 import sqlalchemy as sa
 
@@ -64,6 +64,7 @@ class Relationship:
         self.through_tables: List[str] = self.relationship.get(
             "through_tables", []
         )
+        self.through_nodes: List[Node] = []
 
         if not set(self.relationship.keys()).issubset(
             set(RELATIONSHIP_ATTRIBUTES)
@@ -235,8 +236,8 @@ class Tree:
     base: "base.Base"
 
     def __post_init__(self):
-        self.nodes: Set[str] = set()
-        self.through_nodes: Set[str] = set()
+        self.tables: Set[str] = set()
+        self.__nodes: Dict[Node] = {}
 
     def build(self, root: dict) -> Node:
 
@@ -253,7 +254,7 @@ class Tree:
             attrs = set(root.keys()).difference(set(NODE_ATTRIBUTES))
             raise NodeAttributeError(f"Unknown node attribute(s): {attrs}")
 
-        node = Node(
+        node: Node = Node(
             model=self.base.model(table, schema=schema),
             table=table,
             schema=schema,
@@ -265,50 +266,41 @@ class Tree:
             base_tables=root.get("base_tables", []),
             materialized=(table in self.base._materialized_views(schema)),
         )
-
-        self.nodes.add(node.table)
-
         for through_table in node.relationship.through_tables:
-            self.through_nodes.add(through_table)
+            node.relationship.through_nodes.append(
+                Node(
+                    model=self.base.model(through_table, schema=schema),
+                    table=through_table,
+                    schema=schema,
+                    parent=node,
+                    primary_key=[],
+                )
+            )
+
+        self.tables.add(node.table)
+        for through_node in node.relationship.through_nodes:
+            self.tables.add(through_node.table)
 
         for child in root.get("children", []):
-            if "table" not in child:
-                raise TableNotInNodeError(
-                    f"Table not specified in node: {child}"
-                )
-            if not set(child.keys()).issubset(set(NODE_ATTRIBUTES)):
-                attrs = set(child.keys()).difference(set(NODE_ATTRIBUTES))
-                raise NodeAttributeError(f"Unknown node attribute(s): {attrs}")
             node.add_child(self.build(child))
 
         return node
 
-
-# TODO: deprecate this method and use get_node
-def node_from_table(base, table: str, schema: str) -> Node:
-    return Node(
-        model=base.model(table, schema=schema),
-        table=table,
-        schema=schema,
-        label=table,
-        primary_key=[],
-    )
-
-
-def get_node(tree, table: str, node_dict: dict) -> Node:
-
-    root: Node = tree.build(node_dict)
-    for node in root.traverse_post_order():
-        if table == node.table:
-            return node
-        elif table in node.relationship.through_tables:
-            return Node(
-                model=tree.base.model(table, schema=node.schema),
-                table=table,
-                label=table,
-                schema=node.schema,
-                primary_key=[],
-                parent=node,
-            )
-    else:
-        raise RuntimeError(f"Node for {table} not found")
+    def get_node(self, root: Node, table: str, schema: str) -> Node:
+        """Get node by name."""
+        if (table, schema) not in self.__nodes:
+            for node in root.traverse_post_order():
+                if table == node.table and schema == node.schema:
+                    self.__nodes[(table, schema)] = node
+                    return self.__nodes[(table, schema)]
+                else:
+                    for through_node in node.relationship.through_nodes:
+                        if (
+                            table == through_node.table
+                            and schema == through_node.schema
+                        ):
+                            self.__nodes[(table, schema)] = through_node
+                            return self.__nodes[(table, schema)]
+            else:
+                raise RuntimeError(f"Node for {schema}.{table} not found")
+        return self.__nodes[(table, schema)]
