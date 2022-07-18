@@ -2,41 +2,43 @@
 
 """
 Parallel sync is an experimental feature that leverages the available
-CPUs/threads to increase throughput.
-This is can be useful for environments that have a high latency.
+CPU's/Threads to increase throughput.
+This is can be useful for environments that have a high network latency.
 
-In this scenario, your PG database, Elasticsearch, and PGSync servers are
-on different subnets with a delay between request/response time.
-
-The main bottleneck, in this case, is usually roundtrip of the database query.
+In this scenario, your PG database, Elasticsearch, and PGSync servers are on
+different networks with a delay between request/response time.
+The main bottleneck, in this case, is usually the roundtrip of the database
+query.
 
 Even with server-side cursors, we are still only able to fetch
 a limited number of records at a time from the cursor.
 The delay in the next cursor fetch can slow down the overall sync
 considerably.
 
-The solution here is to perform an initial "fast"/"parallel" sync using this
-tool to populate Elasticsearch with the majority of the records.
-We can then revert to the native sync process.
+The solution here is to perform an initial fast/parallel sync 
+to populate Elasticsearch in a single iteration.
+When this is complete, we can then continue to run the normal `pgsync`
+as a daemon.
 
 This approach uses the Tuple identifier record of the table columns.
-Each table contains a hidden system column - "ctid" of type "tid" that
+Each table contains a system column - "ctid" of type "tid" that
 identifies the page record and row number in each block.
 
 We can use this to paginate the sync process.
 Pagination here technically implies that we are splitting each paged record
-between CPUs/threads.
+between CPU's/Threads.
 
 This allows us to perform Elasticserch bulk inserts in parallel.
 The "ctid" is a tuple of (page, row-number) e.g (1, 5) that identifies the
 row in a disk page.
 
 This method allows us to fetch all paged row records upfront and split them
-into work units amongst the workers. Each chunk of work is defined by the
-BLOCK_SIZE and this corresponds to the number of root node records to process
-for each worker.
-The workers then query for each chunk of work filtering by the page number
-and row numbers assigned.
+into work units amongst the workers(threads/cpus).
+Each chunk of work is defined by the BLOCK_SIZE and corresponds to the number
+of root node records each worker needs to process.
+
+The worker's query for each chunk of work filtering by the page number
+and row numbers.
 """
 
 import asyncio
@@ -248,7 +250,7 @@ async def run_tasks(
     if isinstance(executor, ThreadPoolExecutor):
         # threads can share a common Sync object
         sync: Sync = Sync(doc, verbose=verbose, validate=validate)
-        tasks = [
+        tasks: list = [
             event_loop.run_in_executor(
                 executor, run_task, task, sync, None, verbose, validate
             )
@@ -262,7 +264,7 @@ async def run_tasks(
             for task in tasks
         ]
     completed, pending = await asyncio.wait(tasks)
-    results = [task.result() for task in completed]
+    results: list = [task.result() for task in completed]
     print("results: {!r}".format(results))
     print("exiting")
 
