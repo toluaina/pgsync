@@ -647,10 +647,7 @@ class Base(object):
         ):
             value: str = value.lstrip("'").rstrip("'")
         if type_.lower() == "boolean":
-            try:
-                value: bool = bool(value)
-            except ValueError:
-                raise
+            value: bool = bool(value)
         if type_.lower() in (
             "double precision",
             "float4",
