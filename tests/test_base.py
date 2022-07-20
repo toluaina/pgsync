@@ -496,10 +496,8 @@ class TestBase(object):
                     sa.select(1),
                     options={None: "AUTOCOMMIT"},
                 )
-            mock_logger.exception.assert_called_once_with(
-                "Exception keywords must be strings"
-            )
-            assert "keywords must be strings" == str(excinfo.value)
+            mock_logger.exception.assert_called_once()
+            assert "must be strings" in str(excinfo.value)
 
     def test_pg_engine(self, connection):
         with pytest.raises(ValueError) as excinfo:
