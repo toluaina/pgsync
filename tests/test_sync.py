@@ -7,7 +7,12 @@ import pytest
 from mock import ANY, call, patch
 
 from pgsync.base import Base
-from pgsync.exc import PrimaryKeyNotFoundError, RDSError, SchemaError
+from pgsync.exc import (
+    ForeignKeyError,
+    PrimaryKeyNotFoundError,
+    RDSError,
+    SchemaError,
+)
 from pgsync.node import Node
 from pgsync.settings import LOGICAL_SLOT_CHUNK_SIZE
 from pgsync.sync import Sync
@@ -30,6 +35,10 @@ def sync():
                         "relationship": {
                             "variant": "object",
                             "type": "one_to_one",
+                            "foreign_key": {
+                                "child": ["id"],
+                                "parent": ["publisher_id"],
+                            },
                         },
                     },
                 ],
@@ -44,6 +53,7 @@ def sync():
     _sync.engine.connect().close()
     _sync.engine.dispose()
     _sync.session.close()
+    _sync.es.close()
 
 
 @pytest.mark.usefixtures("table_creator")
@@ -122,7 +132,33 @@ class TestSync(object):
                     ]
                     assert mock_logger.debug.call_args_list == calls
 
-        sync.es.close()
+        with pytest.raises(Exception) as excinfo:
+            with patch(
+                "pgsync.sync.Sync.logical_slot_peek_changes"
+            ) as mock_peek:
+                mock_peek.side_effect = [
+                    [
+                        ROW(
+                            "table public.book: INSERT: id[integer]:10 isbn[character "  # noqa E501
+                            "varying]:'888' title[character varying]:'My book title' "  # noqa E501
+                            "description[character varying]:null copyright[character "  # noqa E501
+                            "varying]:null tags[jsonb]:null publisher_id[integer]:null",  # noqa E501
+                            1234,
+                        ),
+                    ],
+                    [],
+                ]
+
+                with patch(
+                    "pgsync.sync.Sync.logical_slot_get_changes"
+                ) as mock_get:
+                    with patch(
+                        "pgsync.sync.Sync.parse_logical_slot",
+                        side_effect=Exception,
+                    ):
+                        with patch("pgsync.sync.Sync.sync") as mock_sync:
+                            sync.logical_slot_changes()
+            assert "Error parsing row" in str(excinfo.value)
 
     @patch("pgsync.sync.ElasticHelper")
     def test_sync_validate(self, mock_es):
@@ -157,7 +193,7 @@ class TestSync(object):
             elif args[0] == "max_replication_slots":
                 raise RuntimeError(
                     "Ensure there is at least one replication slot defined "
-                    "by setting max_replication_slots=1"
+                    "by setting max_replication_slots = 1"
                 )
 
             elif args[0] == "wal_level":
@@ -183,8 +219,25 @@ class TestSync(object):
                 )
         assert (
             "Ensure there is at least one replication slot defined "
-            "by setting max_replication_slots=1" in str(excinfo.value)
+            "by setting max_replication_slots = 1" in str(excinfo.value)
         )
+
+        with pytest.raises(RuntimeError) as excinfo:
+            with patch(
+                "pgsync.base.Base.pg_settings",
+                return_value=-1,
+            ):
+                Sync(
+                    document={
+                        "index": "testdb",
+                        "nodes": {"table": "book"},
+                        "plugins": ["Hero"],
+                    },
+                )
+            assert (
+                "Ensure there is at least one replication slot defined "
+                "by setting max_replication_slots = 1" in str(excinfo.value)
+            )
 
         with pytest.raises(RuntimeError) as excinfo:
             with patch(
@@ -216,6 +269,30 @@ class TestSync(object):
                 )
         assert "rds.logical_replication is not enabled" in str(excinfo.value)
 
+        with pytest.raises(RuntimeError) as excinfo:
+            with patch(
+                "pgsync.base.Base.replication_slots",
+                return_value=None,
+            ):
+                Sync(
+                    document={
+                        "index": "testdb",
+                        "nodes": {"table": "book"},
+                        "plugins": ["Hero"],
+                    },
+                )
+            assert 'Replication slot "testdb_testdb" does not exist' in str(
+                excinfo.value
+            )
+
+        Sync(
+            document={
+                "index": "testdb",
+                "nodes": {"table": "book"},
+                "plugins": ["Hero"],
+            },
+        )
+
     def test_status(self, sync):
         with patch("pgsync.sync.sys") as mock_sys:
             sync._status("mydb")
@@ -227,7 +304,6 @@ class TestSync(object):
                 "pending = 0] => "
                 "Elastic: [0] ...\n"
             )
-        sync.es.close()
 
     @patch("pgsync.sync.logger")
     def test_truncate_slots(self, mock_logger, sync):
@@ -240,7 +316,6 @@ class TestSync(object):
             mock_logger.debug.assert_called_once_with(
                 "Truncating replication slot: testdb_testdb"
             )
-        sync.es.close()
 
     @patch("pgsync.sync.ElasticHelper.bulk")
     @patch("pgsync.sync.logger")
@@ -256,11 +331,10 @@ class TestSync(object):
             assert sync.checkpoint == txmax
             assert sync._truncate is True
             mock_es.assert_called_once_with("testdb", ANY)
-        sync.es.close()
 
     @patch("pgsync.sync.ElasticHelper.bulk")
     @patch("pgsync.sync.logger")
-    def test_on_publish(self, mock_logger, mock_es, sync):
+    def test__on_publish(self, mock_logger, mock_es, sync):
         payloads = [
             {
                 "schema": "public",
@@ -291,11 +365,10 @@ class TestSync(object):
         mock_logger.debug.assert_any_call("on_publish len 3")
         assert sync.checkpoint is not None
         mock_es.assert_called_once_with("testdb", ANY)
-        sync.es.close()
 
     @patch("pgsync.sync.ElasticHelper.bulk")
     @patch("pgsync.sync.logger")
-    def test_on_publish_mixed_ops(self, mock_logger, mock_es, sync):
+    def test__on_publish_mixed_ops(self, mock_logger, mock_es, sync):
         payloads = [
             {
                 "schema": "public",
@@ -327,7 +400,21 @@ class TestSync(object):
         assert sync.checkpoint is not None
         mock_es.debug.call_count == 3
         mock_es.assert_any_call("testdb", ANY)
-        sync.es.close()
+
+    @patch("pgsync.sync.Sync._on_publish")
+    def test_on_publish(self, mock_on_publish, sync):
+        payloads = [
+            {
+                "schema": "public",
+                "tg_op": "DELETE",
+                "table": "book",
+                "old": {"isbn": "003"},
+                "new": {"isbn": "0003"},
+                "xmin": 1234,
+            },
+        ]
+        sync.on_publish(payloads)
+        mock_on_publish.assert_called_once_with(payloads)
 
     def test_sync_analyze(self, sync):
         with patch("pgsync.sync.sys") as mock_sys:
@@ -358,8 +445,6 @@ class TestSync(object):
                     call("\n"),
                 ]
 
-        sync.es.close()
-
     def test__update_op(self, sync, connection):
         pg_base = Base(connection.engine.url.database)
         node = Node(
@@ -385,7 +470,6 @@ class TestSync(object):
         assert sync.es.doc_count == 1
         docs = sync.es.search("testdb", body={"query": {"match_all": {}}})
         assert len(docs["hits"]["hits"]) == 0
-        sync.es.close()
 
     def test__insert_op(self, sync, connection):
         pg_base = Base(connection.engine.url.database)
@@ -409,7 +493,28 @@ class TestSync(object):
         assert sync.es.doc_count == 0
         docs = sync.es.search("testdb", body={"query": {"match_all": {}}})
         assert len(docs["hits"]["hits"]) == 0
-        sync.es.close()
+
+        node = Node(
+            model=pg_base.model("publisher", schema="public"),
+            table="publisher",
+            schema="public",
+        )
+        payloads: List[dict] = [
+            {
+                "tg_op": "INSERT",
+                "table": "publisher",
+                "new": {"id": 1},
+            }
+        ]
+        node.parent = None
+        with pytest.raises(Exception):
+            with patch("pgsync.sync.logger") as mock_logger:
+                _filters = sync._insert_op(
+                    node, root, {"publisher": []}, payloads
+                )
+        mock_logger.exception.assert_called_once_with(
+            "Could not get parent from node: public.publisher"
+        )
 
     def test__delete_op(self, sync, connection):
         pg_base = Base(connection.engine.url.database)
@@ -433,7 +538,6 @@ class TestSync(object):
         assert sync.es.doc_count == 1
         docs = sync.es.search("testdb", body={"query": {"match_all": {}}})
         assert len(docs["hits"]["hits"]) == 0
-        sync.es.close()
 
     @patch("pgsync.sync.ElasticHelper")
     def test__truncate_op(self, mock_es, sync, connection):
@@ -448,7 +552,6 @@ class TestSync(object):
         _filters = sync._truncate_op(node, root, filters)
 
         assert _filters == {"book": []}
-        sync.es.close()
 
     def test__payload(self, sync):
         with patch("pgsync.sync.logger") as mock_logger:
@@ -545,8 +648,6 @@ class TestSync(object):
                 )
                 mock_op.assert_called_once()
 
-        sync.es.close()
-
     def test__build_filters(self, sync, connection):
         pg_base = Base(connection.engine.url.database)
         node = Node(
@@ -567,7 +668,6 @@ class TestSync(object):
             "book_1.isbn = :isbn_1 AND book_1.title = :title_1 OR "
             "book_1.isbn = :isbn_2 AND book_1.title = :title_2"
         )
-        sync.es.close()
 
     def test_checkpoint(self, sync):
         os.unlink(sync._checkpoint_file)
@@ -582,8 +682,6 @@ class TestSync(object):
             assert "Cannot assign a None value to checkpoint" == str(
                 excinfo.value
             )
-
-        sync.es.close()
 
     def test__payload_data(self, sync):
         payload_data = sync._payload_data(
@@ -623,7 +721,6 @@ class TestSync(object):
             }
         )
         assert payload_data == {"id": 1}
-        sync.es.close()
 
     def test_get_doc_id(self, sync):
         doc_id = sync.get_doc_id(["column_1", "column_2"], "book")
@@ -633,15 +730,12 @@ class TestSync(object):
             sync.get_doc_id([], "book")
             assert "No primary key found on table: book" == str(excinfo.value)
 
-        sync.es.close()
-
     @patch("pgsync.sync.ElasticHelper._create_setting")
     def test_create_setting(self, mock_es, sync):
         sync.create_setting()
         mock_es.assert_called_once_with(
             "testdb", ANY, setting=None, mapping=None, routing=None
         )
-        sync.es.close()
 
     @patch("pgsync.sync.Sync.teardown")
     def test_setup(self, mock_teardown, sync):
@@ -663,11 +757,12 @@ class TestSync(object):
                         join_queries=True,
                     )
                 mock_create_view.assert_called_once_with(
-                    "public", {"publisher", "book"}, {}
+                    "public",
+                    {"publisher", "book"},
+                    {"publisher": {"publisher_id", "id"}},
                 )
             mock_create_function.assert_called_once_with("public")
         mock_teardown.assert_called_once_with(drop_view=False)
-        sync.es.close()
 
     @patch("pgsync.redisqueue.RedisQueue.delete")
     def test_teardown(self, mock_redis, sync):
@@ -692,10 +787,20 @@ class TestSync(object):
             mock_drop_function.assert_called_once_with("public")
         mock_redis.assert_called_once()
         assert os.path.exists(sync._checkpoint_file) is False
-        sync.es.close()
 
     def test_root(self, sync):
         root = sync.root
         assert root is not None
         assert str(root) == "Node: public.book"
-        sync.es.close()
+
+    def test_payloads(self, sync):
+        payloads = [
+            {
+                "tg_op": "INSERT",
+                "table": "book",
+                "old": {"isbn": "001"},
+                "new": {"isbn": "002"},
+                "schema": "public",
+            },
+        ]
+        sync._payloads(payloads)

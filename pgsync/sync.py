@@ -311,7 +311,7 @@ class Sync(Base):
 
         try:
             os.unlink(self._checkpoint_file)
-        except OSError:
+        except (OSError, FileNotFoundError):
             pass
 
         self.redis.delete()

@@ -411,7 +411,7 @@ def table_creator(base, connection, model_mapping):
     base.metadata.drop_all(connection)
     try:
         os.unlink(f".{connection.engine.url.database}_testdb")
-    except OSError:
+    except (OSError, FileNotFoundError):
         pass
 
 

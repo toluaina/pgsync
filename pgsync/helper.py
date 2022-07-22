@@ -46,5 +46,5 @@ def teardown(
             if delete_checkpoint:
                 try:
                     os.unlink(sync._checkpoint_file)
-                except OSError:
+                except (OSError, FileNotFoundError):
                     pass

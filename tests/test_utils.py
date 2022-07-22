@@ -30,7 +30,7 @@ class TestUtils(object):
             get_config()
         assert "Schema config not set" in str(excinfo.value)
 
-        with pytest.raises(OSError) as excinfo:
+        with pytest.raises(FileNotFoundError) as excinfo:
             get_config("non_existent")
         assert 'Schema config "non_existent" not found' in str(excinfo.value)
         config = get_config("tests/fixtures/schema.json")

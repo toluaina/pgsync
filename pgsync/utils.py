@@ -121,7 +121,7 @@ def get_config(config: Optional[str] = None) -> str:
             "provide args --config /path/to/schema.json"
         )
     if not os.path.exists(config):
-        raise IOError(f'Schema config "{config}" not found')
+        raise FileNotFoundError(f'Schema config "{config}" not found')
     return config
 
 
