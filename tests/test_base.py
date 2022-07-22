@@ -107,13 +107,17 @@ class TestBase(object):
 
     @patch("pgsync.base.logger")
     @patch("pgsync.sync.Base.execute")
-    def test_truncate_table(self, mock_execute, mock_logger, connection):
+    @patch("pgsync.base.sa.DDL")
+    def test_truncate_table(
+        self, mock_ddl, mock_execute, mock_logger, connection
+    ):
         pg_base = Base(connection.engine.url.database)
         pg_base.truncate_table("book")
         mock_logger.debug.assert_called_once_with(
             "Truncating table: public.book"
         )
-        mock_execute.assert_called_once_with(
+        mock_execute.assert_called_once()
+        mock_ddl.assert_called_once_with(
             'TRUNCATE TABLE "public"."book" CASCADE'
         )
 

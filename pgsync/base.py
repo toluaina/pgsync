@@ -2,7 +2,7 @@
 import logging
 import os
 from collections import defaultdict
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql  # noqa
@@ -26,7 +26,12 @@ from .exc import (
     TableNotFoundError,
 )
 from .node import Node
-from .settings import PG_SSLMODE, PG_SSLROOTCERT, QUERY_CHUNK_SIZE
+from .settings import (
+    PG_SSLMODE,
+    PG_SSLROOTCERT,
+    QUERY_CHUNK_SIZE,
+    STREAM_RESULTS,
+)
 from .trigger import CREATE_TRIGGER_TEMPLATE
 from .urls import get_postgres_url
 from .utils import compiled_query
@@ -268,8 +273,7 @@ class Base(object):
 
         """
         logger.debug(f"Truncating table: {schema}.{table}")
-        query = f'TRUNCATE TABLE "{schema}"."{table}" CASCADE'
-        self.execute(query)
+        self.execute(sa.DDL(f'TRUNCATE TABLE "{schema}"."{table}" CASCADE'))
 
     def truncate_tables(
         self, tables: List[str], schema: str = DEFAULT_SCHEMA
@@ -530,7 +534,7 @@ class Base(object):
                 )
         if join_queries:
             if queries:
-                self.execute("; ".join(queries))
+                self.execute(sa.DDL("; ".join(queries)))
         else:
             for query in queries:
                 self.execute(sa.DDL(query))
@@ -554,7 +558,7 @@ class Base(object):
                 )
         if join_queries:
             if queries:
-                self.execute("; ".join(queries))
+                self.execute(sa.DDL("; ".join(queries)))
         else:
             for query in queries:
                 self.execute(sa.DDL(query))
@@ -572,7 +576,9 @@ class Base(object):
 
     def drop_function(self, schema: str) -> None:
         self.execute(
-            f'DROP FUNCTION IF EXISTS "{schema}".{TRIGGER_FUNC}() CASCADE'
+            sa.DDL(
+                f'DROP FUNCTION IF EXISTS "{schema}".{TRIGGER_FUNC}() CASCADE'
+            )
         )
 
     def disable_triggers(self, schema: str) -> None:
@@ -580,22 +586,24 @@ class Base(object):
         for table in self.tables(schema):
             logger.debug(f"Disabling trigger on table: {schema}.{table}")
             for name in ("notify", "truncate"):
-                query = (
-                    f'ALTER TABLE "{schema}"."{table}" '
-                    f"DISABLE TRIGGER {table}_{name}"
+                self.execute(
+                    sa.DDL(
+                        f'ALTER TABLE "{schema}"."{table}" '
+                        f"DISABLE TRIGGER {table}_{name}"
+                    )
                 )
-                self.execute(query)
 
     def enable_triggers(self, schema: str) -> None:
         """Enable all pgsync defined triggers in database."""
         for table in self.tables(schema):
             logger.debug(f"Enabling trigger on table: {schema}.{table}")
             for name in ("notify", "truncate"):
-                query = (
-                    f'ALTER TABLE "{schema}"."{table}" '
-                    f"ENABLE TRIGGER {table}_{name}"
+                self.execute(
+                    sa.DDL(
+                        f'ALTER TABLE "{schema}"."{table}" '
+                        f"ENABLE TRIGGER {table}_{name}"
+                    )
                 )
-                self.execute(query)
 
     @property
     def txid_current(self) -> int:
@@ -661,7 +669,7 @@ class Base(object):
         return value
 
     def parse_logical_slot(self, row: str) -> dict:
-        def _parse_logical_slot(data):
+        def _parse_logical_slot(data: str) -> Tuple[str, str]:
 
             while True:
 
@@ -669,11 +677,11 @@ class Base(object):
                 if not match:
                     break
 
-                key = match.groupdict().get("key")
+                key: str = match.groupdict().get("key")
                 if key:
                     key = key.replace('"', "")
-                value = match.groupdict().get("value")
-                type_ = match.groupdict().get("type")
+                value: str = match.groupdict().get("value")
+                type_: str = match.groupdict().get("type")
 
                 value = self.parse_value(type_, value)
 
@@ -701,23 +709,24 @@ class Base(object):
                 msg = f"Unknown {tg_op} operation for row: {row}"
                 raise LogicalSlotParseError(msg)
 
-            i = suffix.index("old-key:")
+            i: int = suffix.index("old-key:")
             if i > -1:
-                j = suffix.index("new-tuple:")
-                s = suffix[i + len("old-key:") : j]
+                j: int = suffix.index("new-tuple:")
+                s: str = suffix[i + len("old-key:") : j]
                 for key, value in _parse_logical_slot(s):
                     payload["old"][key] = value
 
             i = suffix.index("new-tuple:")
             if i > -1:
-                s = suffix[i + len("new-tuple:") :]
+                s: str = suffix[i + len("new-tuple:") :]
                 for key, value in _parse_logical_slot(s):
                     payload["new"][key] = value
         else:
             # this can be an INSERT, DELETE, UPDATE or TRUNCATE operation
             if tg_op not in TG_OP:
-                message = f"Unknown {tg_op} operation for row: {row}"
-                raise LogicalSlotParseError(message)
+                raise LogicalSlotParseError(
+                    f"Unknown {tg_op} operation for row: {row}"
+                )
 
             for key, value in _parse_logical_slot(suffix):
                 payload["new"][key] = value
@@ -773,12 +782,14 @@ class Base(object):
         self,
         statement: sa.sql.Select,
         chunk_size: Optional[int] = None,
+        stream_results: Optional[bool] = None,
     ):
         chunk_size: int = chunk_size or QUERY_CHUNK_SIZE
+        stream_results: bool = stream_results or STREAM_RESULTS
         with self.engine.connect() as conn:
-            result = conn.execution_options(stream_results=True).execute(
-                statement.select()
-            )
+            result = conn.execution_options(
+                stream_results=stream_results
+            ).execute(statement.select())
             for partition in result.partitions(chunk_size):
                 for keys, row, *primary_keys in partition:
                     yield keys, row, primary_keys
@@ -815,7 +826,7 @@ def subtransactions(session):
     return ControlledExecution(session)
 
 
-def _get_foreign_keys(model_a, model_b) -> dict:
+def _get_foreign_keys(model_a: sa.sql.Alias, model_b: sa.sql.Alias) -> dict:
 
     foreign_keys: dict = defaultdict(list)
 
@@ -1040,7 +1051,8 @@ def create_extension(
     logger.debug(f"Creating extension: {extension}")
     with pg_engine(database, echo=echo) as engine:
         pg_execute(
-            engine, sa.DDL(f'CREATE EXTENSION IF NOT EXISTS "{extension}"')
+            engine,
+            sa.DDL(f'CREATE EXTENSION IF NOT EXISTS "{extension}"'),
         )
     logger.debug(f"Created extension: {extension}")
 

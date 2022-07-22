@@ -55,7 +55,6 @@ from typing import Generator, Optional, Union
 import click
 import sqlalchemy as sa
 
-from pgsync.node import Node
 from pgsync.settings import BLOCK_SIZE
 from pgsync.sync import Sync
 from pgsync.utils import get_config, show_settings, timeit
@@ -97,14 +96,13 @@ def fetch_tasks(doc: dict, block_size: Optional[int] = None) -> Generator:
     block_size: int = block_size or BLOCK_SIZE
     pages: dict = {}
     sync: Sync = Sync(doc)
-    root: Node = sync.tree.build(sync.nodes)
     statement: sa.sql.Select = sa.select(
         [
             sa.literal_column("1").label("x"),
             sa.literal_column("1").label("y"),
             sa.column("ctid"),
         ]
-    ).select_from(root.model)
+    ).select_from(sync.root.model)
     i: int = 1
     for _, _, ctid in sync.fetchmany(statement):
         value: list = ctid[0].split(",")

@@ -36,6 +36,7 @@ REPLICATION_SLOT_CLEANUP_INTERVAL = env.float(
 # path to the application schema config
 SCHEMA = env.str("SCHEMA", default=None)
 USE_ASYNC = env.bool("USE_ASYNC", default=False)
+STREAM_RESULTS = env.bool("STREAM_RESULTS", default=True)
 
 # Elasticsearch:
 ELASTICSEARCH_API_KEY = env.str("ELASTICSEARCH_API_KEY", default=None)
