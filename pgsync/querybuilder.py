@@ -5,7 +5,6 @@ import sqlalchemy as sa
 
 from .base import Base, compiled_query, get_foreign_keys
 from .constants import OBJECT, ONE_TO_MANY, ONE_TO_ONE, SCALAR
-from .exc import FetchColumnForeignKeysError
 from .node import Node
 
 
@@ -19,7 +18,7 @@ class QueryBuilder(object):
         self.isouter: bool = True
 
     def _json_build_object(
-        self, columns: list
+        self, columns: list, chunk_size: int = 100
     ) -> sa.sql.elements.BinaryExpression:
         """
         Tries to get aroud the limitation of JSON_BUILD_OBJECT which
@@ -31,7 +30,6 @@ class QueryBuilder(object):
         at a time.
         """
         i: int = 0
-        chunk_size: int = 100
         expression: sa.sql.elements.BinaryExpression = None
         while i < len(columns):
             chunk = columns[i : i + chunk_size]
@@ -117,13 +115,6 @@ class QueryBuilder(object):
                 if value not in columns:
                     foreign_keys[table].pop(i)
             return foreign_keys[table]
-
-        msg: str = (
-            f"No keys for columns: {columns} and foreign_keys: {foreign_keys}"
-        )
-        if table:
-            msg += f" with table {table}"
-        raise FetchColumnForeignKeysError(msg)
 
     def _get_child_keys(self, node: Node, params: dict):
         row = sa.cast(

@@ -1,15 +1,15 @@
 [
     {
         "database": "airbnb",
-        "index": "reservations",
+        "index": "airbnb",
         "nodes": {
-            "table": "users",
+            "table": "user",
             "schema": "public",
             "columns": [
             ],
             "children": [
                 {
-                    "table": "bookings",
+                    "table": "booking",
                     "schema": "public",
                     "columns": [
                     ],
@@ -34,7 +34,7 @@
                     },
                     "children":[
                         {
-                            "table": "places",
+                            "table": "place",
                             "schema": "public",
                             "relationship": {
                                 "variant": "object",
@@ -42,7 +42,7 @@
                             },
                             "children": [
                                 {
-                                    "table": "cities",
+                                    "table": "city",
                                     "schema": "public",
                                     "relationship": {
                                         "variant": "object",
@@ -50,7 +50,7 @@
                                     },
                                     "children": [
                                         {
-                                            "table": "countries",
+                                            "table": "country",
                                             "schema": "public",
                                             "relationship": {
                                                 "variant": "object",
@@ -60,7 +60,7 @@
                                     ]
                                 },
                                 {  
-                                    "table": "hosts",
+                                    "table": "host",
                                     "schema": "public",
                                     "columns": [
                                         "email"
@@ -73,7 +73,7 @@
                             ]
                         },
                         {
-                            "table": "reviews",
+                            "table": "review",
                             "schema": "public",
                             "columns": [
                             ],

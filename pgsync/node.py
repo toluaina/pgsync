@@ -39,12 +39,13 @@ class ForeignKey:
         self.foreign_key: str = self.foreign_key or dict()
         self.parent: str = self.foreign_key.get("parent")
         self.child: str = self.foreign_key.get("child")
-        if not set(self.foreign_key.keys()).issubset(
-            set(RELATIONSHIP_FOREIGN_KEYS)
-        ):
-            raise RelationshipForeignKeyError(
-                "ForeignKey Relationship must contain a parent and child."
-            )
+        if self.foreign_key:
+            if sorted(self.foreign_key.keys()) != sorted(
+                RELATIONSHIP_FOREIGN_KEYS
+            ):
+                raise RelationshipForeignKeyError(
+                    "ForeignKey Relationship must contain a parent and child."
+                )
         self.parent = self.foreign_key.get("parent")
         self.child = self.foreign_key.get("child")
 
@@ -104,7 +105,7 @@ class Relationship:
 @dataclass
 class Node(object):
 
-    model: sa.sql.Alias
+    base: "base.Base"
     table: str
     schema: str
     materialized: bool = False
@@ -117,6 +118,7 @@ class Node(object):
     base_tables: Optional[list] = None
 
     def __post_init__(self):
+        self.model: sa.sql.Alias = self.base.model(self.table, self.schema)
         self.columns = self.columns or []
         self.children: List[Node] = []
         self.table_columns: List[str] = self.model.columns.keys()
@@ -179,6 +181,16 @@ class Node(object):
         self._subquery = None
         self._filters: list = []
         self._mapping: dict = {}
+        for through_table in self.relationship.through_tables:
+            self.relationship.through_nodes.append(
+                Node(
+                    base=self.base,
+                    table=through_table,
+                    schema=self.schema,
+                    parent=self,
+                    primary_key=[],
+                )
+            )
 
     def __str__(self):
         return f"Node: {self.schema}.{self.table}"
@@ -255,7 +267,7 @@ class Tree:
             raise NodeAttributeError(f"Unknown node attribute(s): {attrs}")
 
         node: Node = Node(
-            model=self.base.model(table, schema=schema),
+            base=self.base,
             table=table,
             schema=schema,
             primary_key=root.get("primary_key", []),
@@ -266,16 +278,6 @@ class Tree:
             base_tables=root.get("base_tables", []),
             materialized=(table in self.base._materialized_views(schema)),
         )
-        for through_table in node.relationship.through_tables:
-            node.relationship.through_nodes.append(
-                Node(
-                    model=self.base.model(through_table, schema=schema),
-                    table=through_table,
-                    schema=schema,
-                    parent=node,
-                    primary_key=[],
-                )
-            )
 
         self.tables.add(node.table)
         for through_node in node.relationship.through_nodes:

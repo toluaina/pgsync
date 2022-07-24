@@ -312,7 +312,9 @@ class Sync(Base):
         try:
             os.unlink(self._checkpoint_file)
         except (OSError, FileNotFoundError):
-            pass
+            logger.warning(
+                f"Checkpoint file not found: {self._checkpoint_file}"
+            )
 
         self.redis.delete()
 
@@ -1042,30 +1044,36 @@ class Sync(Base):
             fp.write(f"{value}\n")
         self._checkpoint: int = value
 
+    def _poll_redis(self) -> None:
+        payloads: dict = self.redis.bulk_pop()
+        if payloads:
+            logger.debug(f"poll_redis: {payloads}")
+            self.count["redis"] += len(payloads)
+            self.refresh_views()
+            self.on_publish(payloads)
+        time.sleep(REDIS_POLL_INTERVAL)
+
     @threaded
     @exception
     def poll_redis(self) -> None:
         """Consumer which polls Redis continuously."""
         while True:
-            payloads: dict = self.redis.bulk_pop()
-            if payloads:
-                logger.debug(f"poll_redis: {payloads}")
-                self.count["redis"] += len(payloads)
-                self.refresh_views()
-                self.on_publish(payloads)
-            time.sleep(REDIS_POLL_INTERVAL)
+            self._poll_redis()
+
+    async def _async_poll_redis(self) -> None:
+        payloads: dict = self.redis.bulk_pop()
+        if payloads:
+            logger.debug(f"poll_redis: {payloads}")
+            self.count["redis"] += len(payloads)
+            await self.async_refresh_views()
+            await self.async_on_publish(payloads)
+        await asyncio.sleep(REDIS_POLL_INTERVAL)
 
     @exception
     async def async_poll_redis(self) -> None:
         """Consumer which polls Redis continuously."""
         while True:
-            payloads: dict = self.redis.bulk_pop()
-            if payloads:
-                logger.debug(f"poll_redis: {payloads}")
-                self.count["redis"] += len(payloads)
-                await self.async_refresh_views()
-                await self.async_on_publish(payloads)
-            await asyncio.sleep(REDIS_POLL_INTERVAL)
+            await self._async_poll_redis()
 
     @threaded
     @exception
@@ -1111,7 +1119,7 @@ class Sync(Base):
                     self.count["db"] += 1
 
     @exception
-    def _poll_db(self) -> None:
+    def async_poll_db(self) -> None:
         """
         Producer which polls Postgres continuously.
 
@@ -1273,7 +1281,7 @@ class Sync(Base):
             cursor = self.conn.cursor()
             cursor.execute(f'LISTEN "{self.database}"')
             event_loop = asyncio.get_event_loop()
-            event_loop.add_reader(self.conn, self._poll_db)
+            event_loop.add_reader(self.conn, self.async_poll_db)
             tasks: list = [
                 event_loop.create_task(self.async_poll_redis()),
                 event_loop.create_task(self.async_truncate_slots()),

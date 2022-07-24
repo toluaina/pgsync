@@ -7,14 +7,9 @@ import pytest
 from mock import ANY, call, patch
 
 from pgsync.base import Base
-from pgsync.exc import (
-    ForeignKeyError,
-    PrimaryKeyNotFoundError,
-    RDSError,
-    SchemaError,
-)
+from pgsync.exc import PrimaryKeyNotFoundError, RDSError, SchemaError
 from pgsync.node import Node
-from pgsync.settings import LOGICAL_SLOT_CHUNK_SIZE
+from pgsync.settings import LOGICAL_SLOT_CHUNK_SIZE, REDIS_POLL_INTERVAL
 from pgsync.sync import Sync
 
 ROW = namedtuple("Row", ["data", "xid"])
@@ -43,7 +38,7 @@ def sync():
                     },
                 ],
             },
-        }
+        },
     )
     yield _sync
     _sync.logical_slot_get_changes(
@@ -448,7 +443,7 @@ class TestSync(object):
     def test__update_op(self, sync, connection):
         pg_base = Base(connection.engine.url.database)
         node = Node(
-            model=pg_base.model("book", schema="public"),
+            base=pg_base,
             table="book",
             schema="public",
         )
@@ -474,7 +469,7 @@ class TestSync(object):
     def test__insert_op(self, sync, connection):
         pg_base = Base(connection.engine.url.database)
         node = Node(
-            model=pg_base.model("book", schema="public"),
+            base=pg_base,
             table="book",
             schema="public",
         )
@@ -495,7 +490,7 @@ class TestSync(object):
         assert len(docs["hits"]["hits"]) == 0
 
         node = Node(
-            model=pg_base.model("publisher", schema="public"),
+            base=pg_base,
             table="publisher",
             schema="public",
         )
@@ -516,10 +511,11 @@ class TestSync(object):
             "Could not get parent from node: public.publisher"
         )
 
-    def test__delete_op(self, sync, connection):
+    @patch("pgsync.elastichelper.ElasticHelper.bulk")
+    def test__delete_op(self, mock_es, sync, connection):
         pg_base = Base(connection.engine.url.database)
         node = Node(
-            model=pg_base.model("book", schema="public"),
+            base=pg_base,
             table="book",
             schema="public",
         )
@@ -535,22 +531,33 @@ class TestSync(object):
         _filters = sync._delete_op(node, root, filters, payloads)
         assert _filters == {"book": []}
         sync.es.refresh("testdb")
-        assert sync.es.doc_count == 1
-        docs = sync.es.search("testdb", body={"query": {"match_all": {}}})
-        assert len(docs["hits"]["hits"]) == 0
+        mock_es.assert_called_once_with(
+            "testdb",
+            [{"_id": "001", "_index": "testdb", "_op_type": "delete"}],
+            raise_on_exception=None,
+            raise_on_error=None,
+        )
 
     @patch("pgsync.sync.ElasticHelper")
     def test__truncate_op(self, mock_es, sync, connection):
         pg_base = Base(connection.engine.url.database)
         node = Node(
-            model=pg_base.model("book", schema="public"),
+            base=pg_base,
             table="book",
             schema="public",
         )
         root: Node = node
         filters: dict = {"book": []}
         _filters = sync._truncate_op(node, root, filters)
+        assert _filters == {"book": []}
 
+        # truncate a non root table
+        node = Node(
+            base=pg_base,
+            table="publisher",
+            schema="public",
+        )
+        _filters = sync._truncate_op(node, root, filters)
         assert _filters == {"book": []}
 
     def test__payload(self, sync):
@@ -651,7 +658,7 @@ class TestSync(object):
     def test__build_filters(self, sync, connection):
         pg_base = Base(connection.engine.url.database)
         node = Node(
-            model=pg_base.model("book", schema="public"),
+            base=pg_base,
             table="book",
             schema="public",
         )
@@ -788,6 +795,14 @@ class TestSync(object):
         mock_redis.assert_called_once()
         assert os.path.exists(sync._checkpoint_file) is False
 
+        with patch("pgsync.sync.logger") as mock_logger:
+            with patch("pgsync.sync.Base.drop_replication_slot"):
+                self._checkpoint_file = "foo"
+                sync.teardown()
+                mock_logger.warning.assert_called_once_with(
+                    "Checkpoint file not found: ./.testdb_testdb"
+                )
+
     def test_root(self, sync):
         root = sync.root
         assert root is not None
@@ -804,3 +819,26 @@ class TestSync(object):
             },
         ]
         sync._payloads(payloads)
+
+    @patch("pgsync.sync.compiled_query")
+    def test_sync(self, mock_compiled_query, sync):
+        sync.verbose = True
+        for _ in sync.sync():
+            pass
+        mock_compiled_query.assert_called_once_with(ANY, "Query")
+
+    @patch("pgsync.sync.logger")
+    @patch("pgsync.sync.Sync.refresh_views")
+    @patch("pgsync.sync.Sync.on_publish")
+    @patch("pgsync.sync.time")
+    def test_poll_redis(
+        self, mock_time, mock_on_publish, mock_refresh_views, mock_logger, sync
+    ):
+        items = [{"tg_op": "INSERT"}, {"tg_op": "UPDATE"}]
+        sync.redis.bulk_push(items)
+        sync._poll_redis()
+        mock_on_publish.assert_called_once_with(items)
+        mock_refresh_views.assert_called_once()
+        mock_logger.debug.assert_called_once_with(f"poll_redis: {items}")
+        mock_time.sleep.assert_called_once_with(REDIS_POLL_INTERVAL)
+        assert sync.count["redis"] == 2

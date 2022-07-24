@@ -1,13 +1,18 @@
 """Node tests."""
 import pytest
 
+from pgsync.base import Base
 from pgsync.exc import (
     InvalidSchemaError,
+    MultipleThroughTablesError,
     NodeAttributeError,
     RelationshipAttributeError,
+    RelationshipForeignKeyError,
+    RelationshipTypeError,
+    RelationshipVariantError,
     TableNotInNodeError,
 )
-from pgsync.node import Node, Tree
+from pgsync.node import ForeignKey, Node, Relationship, Tree
 
 
 @pytest.mark.usefixtures("table_creator")
@@ -105,6 +110,16 @@ class TestNode(object):
                 },
             ],
         }
+
+    def test_node(self, connection):
+        pg_base = Base(connection.engine.url.database)
+        node = Node(
+            base=pg_base,
+            table="book",
+            schema="public",
+            label="book_label",
+        )
+        assert str(node) == "Node: public.book"
 
     def test_traverse_breadth_first(self, sync, nodes):
         root = Tree(sync).build(nodes)
@@ -266,3 +281,72 @@ class TestNode(object):
         )
 
         sync.es.close()
+
+
+@pytest.mark.usefixtures("table_creator")
+class TestForeignKey(object):
+    """ForeignKey tests."""
+
+    def test_init(self):
+        foreign_key = ForeignKey({"child": ["id"], "parent": ["publisher_id"]})
+        assert str(foreign_key) == "foreign_key: ['publisher_id']:['id']"
+        with pytest.raises(RelationshipForeignKeyError) as excinfo:
+            ForeignKey({"parent": ["publisher_id"]})
+        assert (
+            "ForeignKey Relationship must contain a parent and child."
+            in str(excinfo.value)
+        )
+
+
+@pytest.mark.usefixtures("table_creator")
+class TestRelationship(object):
+    """Relationship tests."""
+
+    def test_init(self):
+        relationship = Relationship(
+            {
+                "variant": "object",
+                "type": "one_to_one",
+                "through_tables": ["book_author"],
+            }
+        )
+        assert (
+            str(relationship)
+            == "relationship: object.one_to_one:['book_author']"
+        )
+
+        with pytest.raises(RelationshipAttributeError) as excinfo:
+            Relationship(
+                {
+                    "foo": "bar",
+                }
+            )
+        assert "Relationship attribute {'foo'} is invalid." in str(
+            excinfo.value
+        )
+
+        with pytest.raises(RelationshipTypeError) as excinfo:
+            Relationship(
+                {
+                    "type": "xyz",
+                }
+            )
+        assert 'Relationship type "xyz" is invalid.' in str(excinfo.value)
+
+        with pytest.raises(RelationshipVariantError) as excinfo:
+            Relationship(
+                {
+                    "variant": "xyz",
+                }
+            )
+        assert 'Relationship variant "xyz" is invalid.' in str(excinfo.value)
+
+        with pytest.raises(MultipleThroughTablesError) as excinfo:
+            Relationship(
+                {
+                    "variant": "object",
+                    "type": "one_to_one",
+                    "through_tables": ["book_author", "subject"],
+                }
+            )
+        assert "Multiple through tables" in str(excinfo.value)

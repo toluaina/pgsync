@@ -13,81 +13,81 @@ from pgsync.utils import get_config
 Base = declarative_base()
 
 
-class Users(Base):
-    __tablename__ = "users"
+class User(Base):
+    __tablename__ = "user"
     __table_args__ = (UniqueConstraint("email"),)
     id = sa.Column(sa.Integer, primary_key=True)
     email = sa.Column(sa.String, unique=True, nullable=False)
 
 
-class Hosts(Base):
-    __tablename__ = "hosts"
+class Host(Base):
+    __tablename__ = "host"
     __table_args__ = (UniqueConstraint("email"),)
     id = sa.Column(sa.Integer, primary_key=True)
     email = sa.Column(sa.String, unique=True, nullable=False)
 
 
-class Countries(Base):
-    __tablename__ = "countries"
+class Country(Base):
+    __tablename__ = "country"
     __table_args__ = (UniqueConstraint("name", "country_code"),)
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String, nullable=False)
     country_code = sa.Column(sa.String, nullable=False)
 
 
-class Cities(Base):
-    __tablename__ = "cities"
+class City(Base):
+    __tablename__ = "city"
     __table_args__ = (UniqueConstraint("name", "country_id"),)
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String, nullable=False)
-    country_id = sa.Column(sa.Integer, sa.ForeignKey(Countries.id))
+    country_id = sa.Column(sa.Integer, sa.ForeignKey(Country.id))
     country = sa.orm.relationship(
-        Countries,
-        backref=sa.orm.backref("countries"),
+        Country,
+        backref=sa.orm.backref("country"),
     )
 
 
-class Places(Base):
-    __tablename__ = "places"
+class Place(Base):
+    __tablename__ = "place"
     __table_args__ = (UniqueConstraint("host_id", "address", "city_id"),)
     id = sa.Column(sa.Integer, primary_key=True)
-    host_id = sa.Column(sa.Integer, sa.ForeignKey(Hosts.id))
+    host_id = sa.Column(sa.Integer, sa.ForeignKey(Host.id))
     address = sa.Column(sa.String, nullable=False)
-    city_id = sa.Column(sa.Integer, sa.ForeignKey(Cities.id))
+    city_id = sa.Column(sa.Integer, sa.ForeignKey(City.id))
     host = sa.orm.relationship(
-        Hosts,
-        backref=sa.orm.backref("hosts"),
+        Host,
+        backref=sa.orm.backref("host"),
     )
     city = sa.orm.relationship(
-        Cities,
-        backref=sa.orm.backref("cities"),
+        City,
+        backref=sa.orm.backref("city"),
     )
 
 
-class Bookings(Base):
-    __tablename__ = "bookings"
+class Booking(Base):
+    __tablename__ = "booking"
     __table_args__ = (UniqueConstraint("user_id", "place_id", "start_date"),)
     id = sa.Column(sa.Integer, primary_key=True)
-    user_id = sa.Column(sa.Integer, sa.ForeignKey(Users.id))
-    place_id = sa.Column(sa.Integer, sa.ForeignKey(Places.id))
+    user_id = sa.Column(sa.Integer, sa.ForeignKey(User.id))
+    place_id = sa.Column(sa.Integer, sa.ForeignKey(Place.id))
     start_date = sa.Column(sa.DateTime, default=datetime.now())
     end_date = sa.Column(sa.DateTime, default=datetime.now())
     price_per_night = sa.Column(sa.Float, default=0)
     num_nights = sa.Column(sa.Integer, nullable=False, default=1)
-    user = sa.orm.relationship(Users)
-    place = sa.orm.relationship(Places)
+    user = sa.orm.relationship(User)
+    place = sa.orm.relationship(Place)
 
 
-class Reviews(Base):
-    __tablename__ = "reviews"
+class Review(Base):
+    __tablename__ = "review"
     __table_args__ = (UniqueConstraint("booking_id"),)
     id = sa.Column(sa.Integer, primary_key=True)
-    booking_id = sa.Column(sa.Integer, sa.ForeignKey(Bookings.id))
+    booking_id = sa.Column(sa.Integer, sa.ForeignKey(Booking.id))
     rating = sa.Column(sa.SmallInteger, nullable=True)
     review_body = sa.Column(sa.Text, nullable=True)
     booking = sa.orm.relationship(
-        Bookings,
-        backref=sa.orm.backref("bookings"),
+        Booking,
+        backref=sa.orm.backref("booking"),
     )
 
 
