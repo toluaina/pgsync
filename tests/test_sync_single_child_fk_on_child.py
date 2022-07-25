@@ -16,7 +16,7 @@ from pgsync.node import Tree
 from pgsync.settings import NTHREADS_POLLDB
 from pgsync.sync import Sync
 
-from .helpers.utils import assert_resync_empty, noop, search
+from .helpers.utils import assert_resync_empty, noop, search, sort_list
 
 
 @pytest.mark.usefixtures("table_creator")
@@ -113,7 +113,7 @@ class TestParentSingleChildFkOnChild(object):
             ],
         }
         sync.nodes = nodes
-        docs = [doc for doc in sync.sync()]
+        docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
             "_meta": {"rating": {"id": [1]}},
@@ -158,7 +158,7 @@ class TestParentSingleChildFkOnChild(object):
             ],
         }
         sync.nodes = nodes
-        docs = [doc for doc in sync.sync()]
+        docs = [sort_list(doc) for doc in sync.sync()]
         docs = sorted(docs, key=lambda k: k["_id"])
 
         assert docs[0]["_id"] == "abc"
@@ -205,7 +205,7 @@ class TestParentSingleChildFkOnChild(object):
             ],
         }
         sync.nodes = nodes
-        docs = [doc for doc in sync.sync()]
+        docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
             "_meta": {"rating": {"id": [1]}},
@@ -250,7 +250,7 @@ class TestParentSingleChildFkOnChild(object):
             ],
         }
         sync.nodes = nodes
-        docs = [doc for doc in sync.sync()]
+        docs = [sort_list(doc) for doc in sync.sync()]
         docs = sorted(docs, key=lambda k: k["_id"])
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
@@ -297,7 +297,7 @@ class TestParentSingleChildFkOnChild(object):
             ],
         }
         sync.nodes = nodes
-        docs = [doc for doc in sync.sync()]
+        docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
             "_meta": {"rating": {"id": [1]}},
@@ -344,7 +344,7 @@ class TestParentSingleChildFkOnChild(object):
             ],
         }
         sync.nodes = nodes
-        docs = [doc for doc in sync.sync()]
+        docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
             "_meta": {"rating": {"id": [1]}},
@@ -377,7 +377,7 @@ class TestParentSingleChildFkOnChild(object):
             ],
         }
         sync.nodes = nodes
-        docs = [doc for doc in sync.sync()]
+        docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
 
         assert docs[0]["_source"] == {
@@ -422,7 +422,7 @@ class TestParentSingleChildFkOnChild(object):
             ],
         }
         sync.nodes = nodes
-        docs = [doc for doc in sync.sync()]
+        docs = [sort_list(doc) for doc in sync.sync()]
 
         fields = ["_meta", "description", "isbn", "rating", "title"]
         assert sorted(docs[0]["_source"].keys()) == sorted(fields)
@@ -449,7 +449,7 @@ class TestParentSingleChildFkOnChild(object):
             ],
         }
         sync.nodes = nodes
-        docs = [doc for doc in sync.sync()]
+        docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[2]["_source"] == {
             "_meta": {"rating": {"id": [3]}},
             "copyright": None,
@@ -531,7 +531,7 @@ class TestParentSingleChildFkOnChild(object):
             ],
         }
         sync.nodes = nodes
-        docs = [doc for doc in sync.sync()]
+        docs = [sort_list(doc) for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
         assert sources["abc"]["_meta"] == {"rating": {"id": [1]}}
         assert sources["def"]["_meta"] == {"rating": {"id": [2]}}
@@ -554,7 +554,7 @@ class TestParentSingleChildFkOnChild(object):
         }
         sync.nodes = nodes
         with pytest.raises(ForeignKeyError) as excinfo:
-            [doc for doc in sync.sync()]
+            [sort_list(doc) for doc in sync.sync()]
         msg = (
             "No foreign key relationship between "
             '"public.book" and "public.city"'
@@ -566,7 +566,7 @@ class TestParentSingleChildFkOnChild(object):
         nodes = {"table": "book", "children": [{"table": "rating"}]}
         sync.nodes = nodes
         with pytest.raises(RelationshipError) as excinfo:
-            [doc for doc in sync.sync()]
+            [sort_list(doc) for doc in sync.sync()]
         assert 'Relationship not present on "public.rating"' in str(
             excinfo.value
         )

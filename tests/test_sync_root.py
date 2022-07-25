@@ -12,7 +12,7 @@ from pgsync.exc import (
 from pgsync.settings import NTHREADS_POLLDB
 from pgsync.sync import Sync
 
-from .helpers.utils import assert_resync_empty, noop, search
+from .helpers.utils import assert_resync_empty, noop, search, sort_list
 
 
 @pytest.mark.usefixtures("table_creator")
@@ -190,7 +190,7 @@ class TestRoot(object):
             "columns": ["isbn", "title", "description", "xmin"],
         }
         sync.nodes = nodes
-        docs = [doc for doc in sync.sync()]
+        docs = [sort_list(doc) for doc in sync.sync()]
         assert sorted(docs[0]["_source"].keys()) == sorted(
             ["isbn", "title", "description", "xmin", "_meta"]
         )
@@ -200,7 +200,7 @@ class TestRoot(object):
         """Test the doc includes xmin column."""
         nodes = {"table": "book", "columns": ["isbn", "xmin"]}
         sync.nodes = nodes
-        docs = [doc for doc in sync.sync()]
+        docs = [sort_list(doc) for doc in sync.sync()]
         assert "xmin" in docs[0]["_source"]
         assert_resync_empty(sync, nodes)
 
@@ -208,7 +208,7 @@ class TestRoot(object):
         """Test we include all columns when no columns are specified."""
         nodes = {"table": "book", "columns": []}
         sync.nodes = nodes
-        docs = [doc for doc in sync.sync()]
+        docs = [sort_list(doc) for doc in sync.sync()]
         assert sorted(docs[0]["_source"].keys()) == sorted(
             [
                 "_meta",
@@ -225,7 +225,7 @@ class TestRoot(object):
 
         nodes = {"table": "book"}
         sync.nodes = nodes
-        docs = [doc for doc in sync.sync()]
+        docs = [sort_list(doc) for doc in sync.sync()]
         assert sorted(docs[0]["_source"].keys()) == sorted(
             [
                 "_meta",
@@ -246,7 +246,7 @@ class TestRoot(object):
         nodes = {"table": "book", "columns": ["foo"]}
         sync.nodes = nodes
         with pytest.raises(ColumnNotFoundError) as excinfo:
-            [doc for doc in sync.sync()]
+            [sort_list(doc) for doc in sync.sync()]
         assert 'Column "foo" not present on table "book"' in str(excinfo.value)
 
     def test_primary_key_is_doc_id(self, sync, data):
@@ -254,7 +254,7 @@ class TestRoot(object):
         # TODO also repeat this test for composite primary key
         nodes = {"table": "book", "columns": ["title"]}
         sync.nodes = nodes
-        docs = [doc for doc in sync.sync()]
+        docs = [sort_list(doc) for doc in sync.sync()]
         assert "abc" == docs[0]["_id"]
         assert "def" == docs[1]["_id"]
         assert "ghi" == docs[2]["_id"]
@@ -264,7 +264,7 @@ class TestRoot(object):
         """Test the private key is contained in the doc."""
         nodes = {"table": "book", "columns": ["isbn"]}
         sync.nodes = nodes
-        docs = [doc for doc in sync.sync()]
+        docs = [sort_list(doc) for doc in sync.sync()]
         assert "_meta" in docs[0]["_source"]
         assert_resync_empty(sync, nodes)
 
@@ -272,7 +272,7 @@ class TestRoot(object):
         """Ensure the doc only selected columns and builtins."""
         nodes = {"table": "book", "columns": ["isbn", "xmin"]}
         sync.nodes = nodes
-        docs = [doc for doc in sync.sync()]
+        docs = [sort_list(doc) for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
 
         assert sorted(sources["abc"].keys()) == sorted(
@@ -289,7 +289,7 @@ class TestRoot(object):
             ],
         }
         sync.nodes = nodes
-        docs = [doc for doc in sync.sync()]
+        docs = [sort_list(doc) for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
 
         assert sorted(sources["abc"].keys()) == sorted(
@@ -305,7 +305,7 @@ class TestRoot(object):
         nodes = {"table": "book", "columns": ["copyright", "publisher_id"]}
         sync.nodes = nodes
 
-        docs = [doc for doc in sync.sync()]
+        docs = [sort_list(doc) for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
 
         assert sorted(sources["abc"].keys()) == sorted(

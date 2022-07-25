@@ -32,18 +32,6 @@ class Transform(object):
                 elif isinstance(value, dict):
                     if key in nodes:
                         value = cls.rename(value, nodes[key])
-                elif (
-                    isinstance(value, list)
-                    and value
-                    and not isinstance(
-                        value[0],
-                        dict,
-                    )
-                ):
-                    try:
-                        value = sorted(value)
-                    except TypeError:
-                        pass
                 elif key in nodes.keys():
                     if isinstance(value, list):
                         value = [cls.rename(v, nodes[key]) for v in value]

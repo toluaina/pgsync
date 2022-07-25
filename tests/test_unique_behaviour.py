@@ -5,7 +5,7 @@ import pytest
 
 from pgsync.base import subtransactions
 
-from .helpers.utils import assert_resync_empty
+from .helpers.utils import assert_resync_empty, sort_list
 
 
 @pytest.mark.usefixtures("table_creator")
@@ -217,7 +217,7 @@ class TestUniqueBehaviour(object):
         Test regular sync produces the correct result
         """
         sync.nodes = nodes
-        docs = [doc for doc in sync.sync()]
+        docs = [sort_list(doc) for doc in sync.sync()]
         docs = sorted(docs, key=lambda k: k["_id"])
         assert docs == [
             {
