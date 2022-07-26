@@ -408,7 +408,7 @@ class Base(object):
         upto_nchanges: Optional[int] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[sa.engine.row.LegacyRow]:
+    ) -> None:
         """Get/Consume changes from a logical replication slot.
 
         To get one change and data in existing replication slot:
@@ -427,7 +427,7 @@ class Base(object):
             limit=limit,
             offset=offset,
         )
-        return self.fetchall(statement)
+        self.execute(statement)
 
     def logical_slot_peek_changes(
         self,
