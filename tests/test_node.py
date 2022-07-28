@@ -119,7 +119,7 @@ class TestNode(object):
             schema="public",
             label="book_label",
         )
-        assert str(node) == "Node: public.book"
+        assert str(node) == "Node: public.book_label"
 
     def test_traverse_breadth_first(self, sync, nodes):
         root = Tree(sync).build(nodes)

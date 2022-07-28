@@ -377,7 +377,9 @@ class TestNestedChildren(object):
 
     def test_sync(self, sync, nodes, data):
         """Test regular sync produces the correct result."""
+        sync.tree.__post_init__()
         sync.nodes = nodes
+        sync.root = sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert len(docs) == 3
         docs = sorted(docs, key=lambda k: k["_id"])
@@ -691,7 +693,7 @@ class TestNestedChildren(object):
             session.add_all(book_shelves)
 
         txmin = sync.checkpoint
-        sync.nodes = nodes
+        sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync(txmin=txmin)]
         assert len(docs) == 2
         docs = sorted(docs, key=lambda k: k["_id"])
@@ -813,7 +815,7 @@ class TestNestedChildren(object):
             )
 
         txmin = sync.checkpoint
-        sync.nodes = nodes
+        sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync(txmin=txmin)]
 
         assert len(docs) == 1
@@ -977,7 +979,7 @@ class TestNestedChildren(object):
                             sync.es.refresh("testdb")
 
         txmin = sync.checkpoint
-        sync.nodes = nodes
+        sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync(txmin=txmin)]
         assert len(docs) == 0
 
@@ -1832,7 +1834,7 @@ class TestNestedChildren(object):
             session.add(city)
 
         txmin = sync.checkpoint
-        sync.nodes = nodes
+        sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync(txmin=txmin)]
         assert len(docs) == 0
 
@@ -1865,7 +1867,7 @@ class TestNestedChildren(object):
             )
 
         txmin = sync.checkpoint
-        sync.nodes = nodes
+        sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync(txmin=txmin)]
         assert len(docs) == 0
 
@@ -1899,7 +1901,7 @@ class TestNestedChildren(object):
             )
 
         txmin = sync.checkpoint
-        sync.nodes = nodes
+        sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync(txmin=txmin)]
         assert len(docs) == 0
 
@@ -2065,7 +2067,7 @@ class TestNestedChildren(object):
                             sync.es.refresh("testdb")
 
         txmin = sync.checkpoint
-        sync.nodes = nodes
+        sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync(txmin=txmin)]
         assert docs == []
         docs = search(sync.es, "testdb")

@@ -97,7 +97,8 @@ class TestRoot(object):
         nodes = {"table": "book", "columns": ["isbn", "title", "description"]}
         txmin = sync.checkpoint
         txmax = sync.txid_current
-        sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [doc for doc in sync.sync(txmin=txmin, txmax=txmax)]
         assert docs == [
             {
@@ -148,6 +149,8 @@ class TestRoot(object):
             },
         }
         sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [doc for doc in sync.sync()]
         assert docs == [
             {
@@ -190,6 +193,8 @@ class TestRoot(object):
             "columns": ["isbn", "title", "description", "xmin"],
         }
         sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert sorted(docs[0]["_source"].keys()) == sorted(
             ["isbn", "title", "description", "xmin", "_meta"]
@@ -200,6 +205,8 @@ class TestRoot(object):
         """Test the doc includes xmin column."""
         nodes = {"table": "book", "columns": ["isbn", "xmin"]}
         sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert "xmin" in docs[0]["_source"]
         assert_resync_empty(sync, nodes)
@@ -208,6 +215,8 @@ class TestRoot(object):
         """Test we include all columns when no columns are specified."""
         nodes = {"table": "book", "columns": []}
         sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert sorted(docs[0]["_source"].keys()) == sorted(
             [
@@ -225,6 +234,8 @@ class TestRoot(object):
 
         nodes = {"table": "book"}
         sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert sorted(docs[0]["_source"].keys()) == sorted(
             [
@@ -245,8 +256,10 @@ class TestRoot(object):
         """Test an invalid column raises ColumnNotFoundError."""
         nodes = {"table": "book", "columns": ["foo"]}
         sync.nodes = nodes
+        sync.tree.__post_init__()
+
         with pytest.raises(ColumnNotFoundError) as excinfo:
-            [sort_list(doc) for doc in sync.sync()]
+            sync.tree.build(nodes)
         assert 'Column "foo" not present on table "book"' in str(excinfo.value)
 
     def test_primary_key_is_doc_id(self, sync, data):
@@ -254,6 +267,8 @@ class TestRoot(object):
         # TODO also repeat this test for composite primary key
         nodes = {"table": "book", "columns": ["title"]}
         sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert "abc" == docs[0]["_id"]
         assert "def" == docs[1]["_id"]
@@ -264,6 +279,8 @@ class TestRoot(object):
         """Test the private key is contained in the doc."""
         nodes = {"table": "book", "columns": ["isbn"]}
         sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert "_meta" in docs[0]["_source"]
         assert_resync_empty(sync, nodes)
@@ -272,6 +289,8 @@ class TestRoot(object):
         """Ensure the doc only selected columns and builtins."""
         nodes = {"table": "book", "columns": ["isbn", "xmin"]}
         sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
 
@@ -289,6 +308,8 @@ class TestRoot(object):
             ],
         }
         sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
 
@@ -304,6 +325,8 @@ class TestRoot(object):
         )
         nodes = {"table": "book", "columns": ["copyright", "publisher_id"]}
         sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
 
         docs = [sort_list(doc) for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
@@ -324,6 +347,8 @@ class TestRoot(object):
             "columns": ["isbn", "description", "copyright"],
         }
         sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [doc for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
 
@@ -353,6 +378,8 @@ class TestRoot(object):
         """Private keys should be included even if null."""
         nodes = {"table": "book", "columns": ["description"]}
         sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [doc for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
 
@@ -365,15 +392,17 @@ class TestRoot(object):
         """All node must include the table name."""
         nodes = {"no_table_specified": "book", "columns": ["description"]}
         sync.nodes = nodes
+        sync.tree.__post_init__()
         with pytest.raises(TableNotInNodeError):
-            [doc for doc in sync.sync()]
+            sync.tree.build(nodes)
 
     def test_node_valid_attributes(self, sync, data):
         """All node must have valid attributes."""
         nodes = {"table": "book", "unknown": "xyz", "columns": ["description"]}
         sync.nodes = nodes
+        sync.tree.__post_init__()
         with pytest.raises(NodeAttributeError):
-            [doc for doc in sync.sync()]
+            sync.tree.build(nodes)
 
     def test_update_primary_key_non_concurrent(self, data, book_cls):
         """

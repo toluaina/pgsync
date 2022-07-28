@@ -102,7 +102,6 @@ class Sync(Base):
         )
         self.redis: RedisQueue = RedisQueue(self.__name)
         self.tree: Tree = Tree(self)
-        self.__root: Node = None
         if validate:
             self.validate(repl_slots=repl_slots)
             self.create_setting()
@@ -110,12 +109,6 @@ class Sync(Base):
             self, verbose=self.verbose
         )
         self.count: dict = dict(xlog=0, db=0, redis=0)
-
-    @property
-    def root(self) -> Node:
-        if self.__root is None:
-            self.__root = self.tree.build(self.nodes)
-        return self.__root
 
     def validate(self, repl_slots: bool = True) -> None:
         """Perform all validation right away."""
@@ -191,6 +184,7 @@ class Sync(Base):
                 f"read/writable"
             )
 
+        self.root: Node = self.tree.build(self.nodes)
         self.root.display()
         for node in self.root.traverse_breadth_first():
             # ensure all base tables have at least one primary_key
@@ -459,20 +453,21 @@ class Sync(Base):
         return payload_data
 
     def _insert_op(
-        self, node: Node, root: Node, filters: dict, payloads: List[dict]
+        self, node: Node, filters: dict, payloads: List[dict]
     ) -> dict:
 
         if node.table in self.tree.tables:
 
-            if node.table == root.table:
+            if node.table == self.root.table:
 
                 for payload in payloads:
                     payload_data: dict = self._payload_data(payload)
                     primary_values = [
-                        payload_data[key] for key in node.model.primary_keys
+                        payload_data[key]
+                        for key in self.root.model.primary_keys
                     ]
                     primary_fields = dict(
-                        zip(node.model.primary_keys, primary_values)
+                        zip(self.root.model.primary_keys, primary_values)
                     )
                     filters[node.table].append(
                         {key: value for key, value in primary_fields.items()}
@@ -524,13 +519,12 @@ class Sync(Base):
     def _update_op(
         self,
         node: Node,
-        root: Node,
         filters: dict,
         payloads: List[dict],
         extra: dict,
     ) -> dict:
 
-        if node.table == root.table:
+        if node.table == self.root.table:
 
             # Here, we are performing two operations:
             # 1) Build a filter to sync the updated record(s)
@@ -552,12 +546,13 @@ class Sync(Base):
                 )
 
                 old_values: list = []
-                for key in root.model.primary_keys:
+                for key in self.root.model.primary_keys:
                     if key in payload.get("old").keys():
                         old_values.append(payload.get("old")[key])
 
                 new_values = [
-                    payload.get("new")[key] for key in root.model.primary_keys
+                    payload.get("new")[key]
+                    for key in self.root.model.primary_keys
                 ]
 
                 if (
@@ -565,7 +560,7 @@ class Sync(Base):
                     and old_values != new_values
                 ):
                     doc: dict = {
-                        "_id": self.get_doc_id(old_values, root.table),
+                        "_id": self.get_doc_id(old_values, self.root.table),
                         "_index": self.index,
                         "_op_type": "delete",
                     }
@@ -607,7 +602,7 @@ class Sync(Base):
                 for doc_id in self.es._search(self.index, node.table, fields):
                     where = {}
                     params = doc_id.split(PRIMARY_KEY_DELIMITER)
-                    for i, key in enumerate(root.model.primary_keys):
+                    for i, key in enumerate(self.root.model.primary_keys):
                         where[key] = params[i]
                     _filters.append(where)
 
@@ -644,30 +639,32 @@ class Sync(Base):
                     ):
                         where: dict = {}
                         params = doc_id.split(PRIMARY_KEY_DELIMITER)
-                        for i, key in enumerate(root.model.primary_keys):
+                        for i, key in enumerate(self.root.model.primary_keys):
                             where[key] = params[i]
                         _filters.append(where)
 
                 if _filters:
-                    filters[root.table].extend(_filters)
+                    filters[self.root.table].extend(_filters)
 
         return filters
 
     def _delete_op(
-        self, node: Node, root: Node, filters: dict, payloads: List[dict]
+        self, node: Node, filters: dict, payloads: List[dict]
     ) -> dict:
 
         # when deleting a root node, just delete the doc in Elasticsearch
-        if node.table == root.table:
+        if node.table == self.root.table:
 
             docs: list = []
             for payload in payloads:
                 payload_data: dict = self._payload_data(payload)
-                root_primary_values: list = [
-                    payload_data[key] for key in root.model.primary_keys
+                self.root_primary_values: list = [
+                    payload_data[key] for key in self.root.model.primary_keys
                 ]
                 doc: dict = {
-                    "_id": self.get_doc_id(root_primary_values, root.table),
+                    "_id": self.get_doc_id(
+                        self.root_primary_values, self.root.table
+                    ),
                     "_index": self.index,
                     "_op_type": "delete",
                 }
@@ -710,19 +707,19 @@ class Sync(Base):
                 for doc_id in self.es._search(self.index, node.table, fields):
                     where = {}
                     params = doc_id.split(PRIMARY_KEY_DELIMITER)
-                    for i, key in enumerate(root.model.primary_keys):
+                    for i, key in enumerate(self.root.model.primary_keys):
                         where[key] = params[i]
 
                     _filters.append(where)
 
                 if _filters:
-                    filters[root.table].extend(_filters)
+                    filters[self.root.table].extend(_filters)
 
         return filters
 
-    def _truncate_op(self, node: Node, root: Node, filters: dict) -> dict:
+    def _truncate_op(self, node: Node, filters: dict) -> dict:
 
-        if node.table == root.table:
+        if node.table == self.root.table:
 
             docs: list = []
             for doc_id in self.es._search(self.index, node.table):
@@ -743,11 +740,11 @@ class Sync(Base):
             for doc_id in self.es._search(self.index, node.table):
                 where: dict = {}
                 params = doc_id.split(PRIMARY_KEY_DELIMITER)
-                for i, key in enumerate(root.model.primary_keys):
+                for i, key in enumerate(self.root.model.primary_keys):
                     where[key] = params[i]
                 _filters.append(where)
             if _filters:
-                filters[root.table].extend(_filters)
+                filters[self.root.table].extend(_filters)
 
         return filters
 
@@ -797,9 +794,6 @@ class Sync(Base):
             return
 
         node: Node = self.tree.get_node(self.root, table, payload["schema"])
-        root: Node = self.tree.get_node(
-            self.root, self.nodes["table"], payload["schema"]
-        )
 
         for payload in payloads:
             payload_data: dict = self._payload_data(payload)
@@ -817,14 +811,13 @@ class Sync(Base):
 
         logger.debug(f"tg_op: {tg_op} table: {node.name}")
 
-        filters: dict = {node.table: [], root.table: []}
+        filters: dict = {node.table: [], self.root.table: []}
         extra: dict = {}
 
         if tg_op == INSERT:
 
             filters = self._insert_op(
                 node,
-                root,
                 filters,
                 payloads,
             )
@@ -833,7 +826,6 @@ class Sync(Base):
 
             filters = self._update_op(
                 node,
-                root,
                 filters,
                 payloads,
                 extra,
@@ -843,14 +835,13 @@ class Sync(Base):
 
             filters = self._delete_op(
                 node,
-                root,
                 filters,
                 payloads,
             )
 
         if tg_op == TRUNCATE:
 
-            filters = self._truncate_op(node, root, filters)
+            filters = self._truncate_op(node, filters)
 
         # If there are no filters, then don't execute the sync query
         # otherwise we would end up performing a full query
@@ -895,13 +886,17 @@ class Sync(Base):
         ctid: Optional[int] = None,
     ) -> Generator:
         if filters is None:
-            filters: dict = {}
+            filters = {}
 
-        root: Node = self.tree.build(self.nodes)
+        self.query_builder.isouter = True
+        self.query_builder.from_obj = None
 
-        self.query_builder.isouter: bool = True
+        for node in self.root.traverse_post_order():
+            node._subquery = None
+            node._filters = []
+            node.prepare_columns()
 
-        for node in root.traverse_post_order():
+        for node in self.root.traverse_post_order():
 
             self._build_filters(filters, node)
 

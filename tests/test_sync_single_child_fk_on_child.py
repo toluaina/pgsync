@@ -112,7 +112,8 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
@@ -157,7 +158,8 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         docs = sorted(docs, key=lambda k: k["_id"])
 
@@ -204,7 +206,8 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
@@ -249,7 +252,8 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         docs = sorted(docs, key=lambda k: k["_id"])
         assert docs[0]["_id"] == "abc"
@@ -296,7 +300,8 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
@@ -343,7 +348,8 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
@@ -377,6 +383,8 @@ class TestParentSingleChildFkOnChild(object):
             ],
         }
         sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
 
@@ -421,7 +429,8 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
 
         fields = ["_meta", "description", "isbn", "rating", "title"]
@@ -448,7 +457,8 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[2]["_source"] == {
             "_meta": {"rating": {"id": [3]}},
@@ -530,7 +540,8 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
         assert sources["abc"]["_meta"] == {"rating": {"id": [1]}}
@@ -552,7 +563,8 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.nodes = nodes
+        sync.tree.__post_init__()
+        sync.root = sync.tree.build(nodes)
         with pytest.raises(ForeignKeyError) as excinfo:
             [sort_list(doc) for doc in sync.sync()]
         msg = (
@@ -564,9 +576,9 @@ class TestParentSingleChildFkOnChild(object):
     def test_missing_relationships(self, sync, data):
         """Relationships must be present between parent and child"""
         nodes = {"table": "book", "children": [{"table": "rating"}]}
-        sync.nodes = nodes
+        sync.tree.__post_init__()
         with pytest.raises(RelationshipError) as excinfo:
-            [sort_list(doc) for doc in sync.sync()]
+            sync.tree.build(nodes)
         assert 'Relationship not present on "public.rating"' in str(
             excinfo.value
         )

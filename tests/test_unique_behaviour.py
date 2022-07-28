@@ -216,7 +216,10 @@ class TestUniqueBehaviour(object):
                   ----> User(seller) ----> Contact ----> ContactItem
         Test regular sync produces the correct result
         """
+        sync.tree.__nodes = {}
+        sync.tree.__post_init__()
         sync.nodes = nodes
+        sync.root = sync.tree.build(nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         docs = sorted(docs, key=lambda k: k["_id"])
         assert docs == [

@@ -447,7 +447,6 @@ class TestSync(object):
             table="book",
             schema="public",
         )
-        root: Node = node
         filters: dict = {"book": []}
         payloads: List[dict] = [
             {
@@ -459,7 +458,7 @@ class TestSync(object):
         ]
         extra: dict = {}
         assert sync.es.doc_count == 0
-        _filters = sync._update_op(node, root, filters, payloads, extra)
+        _filters = sync._update_op(node, filters, payloads, extra)
         sync.es.refresh("testdb")
         assert _filters == {"book": [{"isbn": "aa1"}]}
         assert sync.es.doc_count == 1
@@ -473,7 +472,6 @@ class TestSync(object):
             table="book",
             schema="public",
         )
-        root: Node = node
         filters: dict = {"book": []}
         payloads: List[dict] = [
             {
@@ -482,7 +480,7 @@ class TestSync(object):
                 "new": {"isbn": "001"},
             }
         ]
-        _filters = sync._insert_op(node, root, filters, payloads)
+        _filters = sync._insert_op(node, filters, payloads)
         assert _filters == {"book": [{"isbn": "001"}]}
         sync.es.refresh("testdb")
         assert sync.es.doc_count == 0
@@ -504,9 +502,7 @@ class TestSync(object):
         node.parent = None
         with pytest.raises(Exception):
             with patch("pgsync.sync.logger") as mock_logger:
-                _filters = sync._insert_op(
-                    node, root, {"publisher": []}, payloads
-                )
+                _filters = sync._insert_op(node, {"publisher": []}, payloads)
         mock_logger.exception.assert_called_once_with(
             "Could not get parent from node: public.publisher"
         )
@@ -519,7 +515,6 @@ class TestSync(object):
             table="book",
             schema="public",
         )
-        root: Node = node
         filters: dict = {"book": []}
         payloads: List[dict] = [
             {
@@ -528,7 +523,7 @@ class TestSync(object):
                 "new": {"isbn": "001"},
             }
         ]
-        _filters = sync._delete_op(node, root, filters, payloads)
+        _filters = sync._delete_op(node, filters, payloads)
         assert _filters == {"book": []}
         sync.es.refresh("testdb")
         mock_es.assert_called_once_with(
@@ -546,9 +541,8 @@ class TestSync(object):
             table="book",
             schema="public",
         )
-        root: Node = node
         filters: dict = {"book": []}
-        _filters = sync._truncate_op(node, root, filters)
+        _filters = sync._truncate_op(node, filters)
         assert _filters == {"book": []}
 
         # truncate a non root table
@@ -557,7 +551,7 @@ class TestSync(object):
             table="publisher",
             schema="public",
         )
-        _filters = sync._truncate_op(node, root, filters)
+        _filters = sync._truncate_op(node, filters)
         assert _filters == {"book": []}
 
     def test__payload(self, sync):
