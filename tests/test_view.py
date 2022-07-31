@@ -134,7 +134,7 @@ class TestView(object):
         """Test refresh materialized view."""
         view = "test_view_refresh"
         pg_base = Base(connection.engine.url.database)
-        model = pg_base.model("book", "public")
+        model = pg_base.models("book", "public")
         statement = sa.select([model.c.isbn]).select_from(model)
         connection.engine.execute(
             CreateView(DEFAULT_SCHEMA, view, statement, materialized=True)
@@ -207,7 +207,7 @@ class TestView(object):
     @pytest.mark.usefixtures("table_creator")
     def test_primary_keys(self, connection, book_cls):
         pg_base = Base(connection.engine.url.database)
-        statement = _primary_keys(pg_base.model, DEFAULT_SCHEMA, ["book"])
+        statement = _primary_keys(pg_base.models, DEFAULT_SCHEMA, ["book"])
         rows = connection.execute(statement).fetchall()
         assert rows == [("book", ["isbn"])]
 
@@ -215,7 +215,7 @@ class TestView(object):
     def test_foreign_keys(self, connection, book_cls):
         pg_base = Base(connection.engine.url.database)
         statement = _foreign_keys(
-            pg_base.model, DEFAULT_SCHEMA, ["book", "publisher"]
+            pg_base.models, DEFAULT_SCHEMA, ["book", "publisher"]
         )
         rows = connection.execute(statement).fetchall()
         assert rows[0][0] == "book"
@@ -233,7 +233,7 @@ class TestView(object):
         with patch("pgsync.view.logger") as mock_logger:
             create_view(
                 connection.engine,
-                pg_base.model,
+                pg_base.models,
                 fetchall,
                 DEFAULT_SCHEMA,
                 ["book", "publisher"],
@@ -252,7 +252,7 @@ class TestView(object):
         with patch("pgsync.view.logger") as mock_logger:
             create_view(
                 connection.engine,
-                pg_base.model,
+                pg_base.models,
                 fetchall,
                 "myschema",
                 set(["book", "publisher"]),

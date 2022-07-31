@@ -443,7 +443,7 @@ class TestSync(object):
     def test__update_op(self, sync, connection):
         pg_base = Base(connection.engine.url.database)
         node = Node(
-            base=pg_base,
+            models=pg_base.models,
             table="book",
             schema="public",
         )
@@ -468,7 +468,7 @@ class TestSync(object):
     def test__insert_op(self, sync, connection):
         pg_base = Base(connection.engine.url.database)
         node = Node(
-            base=pg_base,
+            models=pg_base.models,
             table="book",
             schema="public",
         )
@@ -488,7 +488,7 @@ class TestSync(object):
         assert len(docs["hits"]["hits"]) == 0
 
         node = Node(
-            base=pg_base,
+            models=pg_base.models,
             table="publisher",
             schema="public",
         )
@@ -511,7 +511,7 @@ class TestSync(object):
     def test__delete_op(self, mock_es, sync, connection):
         pg_base = Base(connection.engine.url.database)
         node = Node(
-            base=pg_base,
+            models=pg_base.models,
             table="book",
             schema="public",
         )
@@ -537,7 +537,7 @@ class TestSync(object):
     def test__truncate_op(self, mock_es, sync, connection):
         pg_base = Base(connection.engine.url.database)
         node = Node(
-            base=pg_base,
+            models=pg_base.models,
             table="book",
             schema="public",
         )
@@ -547,7 +547,7 @@ class TestSync(object):
 
         # truncate a non root table
         node = Node(
-            base=pg_base,
+            models=pg_base.models,
             table="publisher",
             schema="public",
         )
@@ -652,7 +652,7 @@ class TestSync(object):
     def test__build_filters(self, sync, connection):
         pg_base = Base(connection.engine.url.database)
         node = Node(
-            base=pg_base,
+            models=pg_base.models,
             table="book",
             schema="public",
         )

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 import sqlalchemy as sa
 
@@ -18,7 +18,6 @@ from .constants import (
 )
 from .exc import (
     ColumnNotFoundError,
-    InvalidSchemaError,
     MultipleThroughTablesError,
     NodeAttributeError,
     RelationshipAttributeError,
@@ -105,10 +104,9 @@ class Relationship:
 @dataclass
 class Node(object):
 
-    base: "base.Base"
+    models: Callable
     table: str
     schema: str
-    materialized: bool = False
     primary_key: Optional[list] = None
     label: Optional[str] = None
     transform: Optional[dict] = None
@@ -118,7 +116,7 @@ class Node(object):
     base_tables: Optional[list] = None
 
     def __post_init__(self):
-        self.model: sa.sql.Alias = self.base.model(self.table, self.schema)
+        self.model: sa.sql.Alias = self.models(self.table, self.schema)
         self.columns = self.columns or []
         self.children: List[Node] = []
         self.table_columns: List[str] = self.model.columns.keys()
@@ -147,7 +145,7 @@ class Node(object):
         for through_table in self.relationship.through_tables:
             self.relationship.through_nodes.append(
                 Node(
-                    base=self.base,
+                    models=self.models,
                     table=through_table,
                     schema=self.schema,
                     parent=self,
@@ -257,7 +255,8 @@ class Node(object):
 
 @dataclass
 class Tree:
-    base: "base.Base"
+
+    models: Callable
 
     def __post_init__(self):
         self.tables: Set[str] = set()
@@ -272,15 +271,12 @@ class Tree:
         if table is None:
             raise TableNotInNodeError(f"Table not specified in node: {data}")
 
-        if schema and schema not in self.base.schemas:
-            raise InvalidSchemaError(f"Unknown schema name(s): {schema}")
-
         if not set(data.keys()).issubset(set(NODE_ATTRIBUTES)):
             attrs = set(data.keys()).difference(set(NODE_ATTRIBUTES))
             raise NodeAttributeError(f"Unknown node attribute(s): {attrs}")
 
         node = Node(
-            base=self.base,
+            models=self.models,
             table=table,
             schema=schema,
             primary_key=data.get("primary_key", []),
@@ -289,7 +285,6 @@ class Tree:
             columns=data.get("columns", []),
             relationship=data.get("relationship", {}),
             base_tables=data.get("base_tables", []),
-            materialized=(table in self.base._materialized_views(schema)),
         )
 
         self.tables.add(node.table)

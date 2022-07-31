@@ -97,7 +97,7 @@ class TestUtils(object):
         self, mock_logger, mock_sys, connection
     ):
         pg_base = Base(connection.engine.url.database)
-        model = pg_base.model("book", "public")
+        model = pg_base.models("book", "public")
         statement = sa.select([model.c.isbn]).select_from(model)
         compiled_query(statement, label="foo", literal_binds=True)
         mock_logger.debug.assert_called_once_with(
@@ -112,7 +112,7 @@ class TestUtils(object):
         self, mock_logger, mock_sys, connection
     ):
         pg_base = Base(connection.engine.url.database)
-        model = pg_base.model("book", "public")
+        model = pg_base.models("book", "public")
         statement = sa.select([model.c.isbn]).select_from(model)
         compiled_query(statement, literal_binds=True)
         mock_logger.debug.assert_called_once_with(

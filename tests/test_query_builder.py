@@ -13,13 +13,13 @@ class TestQueryBuilder(object):
 
     def test__json_build_object(self, connection):
         pg_base = Base(connection.engine.url.database)
-        query_builder = QueryBuilder(pg_base)
+        query_builder = QueryBuilder()
 
         with pytest.raises(RuntimeError) as excinfo:
             query_builder._json_build_object([])
         assert "invalid expression" == str(excinfo.value)
         node = Node(
-            base=pg_base,
+            models=pg_base.models,
             table="book",
             schema="public",
         )
@@ -55,9 +55,9 @@ class TestQueryBuilder(object):
 
     def test__get_foreign_keys(self, connection):
         pg_base = Base(connection.engine.url.database)
-        query_builder = QueryBuilder(pg_base)
+        query_builder = QueryBuilder()
         book = Node(
-            base=pg_base,
+            models=pg_base.models,
             table="book",
             schema="public",
         )
@@ -70,7 +70,7 @@ class TestQueryBuilder(object):
         )
         assert expected in str(excinfo.value)
         publisher = Node(
-            base=pg_base,
+            models=pg_base.models,
             table="publisher",
             schema="public",
         )
@@ -81,7 +81,7 @@ class TestQueryBuilder(object):
         }
 
         subject = Node(
-            base=pg_base,
+            models=pg_base.models,
             table="subject",
             schema="public",
             relationship={
@@ -99,7 +99,7 @@ class TestQueryBuilder(object):
 
     def test__get_column_foreign_keys(self, connection):
         pg_base = Base(connection.engine.url.database)
-        query_builder = QueryBuilder(pg_base)
+        query_builder = QueryBuilder()
 
         foreign_keys = {
             "public.subject": ["column_a", "column_b", "column_X"],
@@ -107,7 +107,7 @@ class TestQueryBuilder(object):
         }
 
         subject = Node(
-            base=pg_base,
+            models=pg_base.models,
             table="subject",
             schema="public",
             relationship={

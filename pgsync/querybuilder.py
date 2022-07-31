@@ -3,7 +3,7 @@ from typing import Dict, List
 
 import sqlalchemy as sa
 
-from .base import Base, compiled_query, get_foreign_keys
+from .base import compiled_query, get_foreign_keys
 from .constants import OBJECT, ONE_TO_MANY, ONE_TO_ONE, SCALAR
 from .node import Node
 
@@ -11,9 +11,8 @@ from .node import Node
 class QueryBuilder(object):
     """Query builder."""
 
-    def __init__(self, base: Base, verbose: bool = False):
+    def __init__(self, verbose: bool = False):
         """Query builder constructor."""
-        self.base: Base = base
         self.verbose: bool = verbose
         self.isouter: bool = True
 

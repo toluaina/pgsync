@@ -78,7 +78,7 @@ class Base(object):
         )
         self.__schemas: Optional[dict] = None
         # models is a dict of f'{schema}.{table}'
-        self.models: Dict[str] = {}
+        self.__models: Dict[str] = {}
         self.__metadata: Dict[str] = {}
         self.__indices: Dict[str] = {}
         self.__views: Dict[str] = {}
@@ -152,7 +152,7 @@ class Base(object):
             )
 
     # Tables...
-    def model(self, table: str, schema: str) -> sa.sql.Alias:
+    def models(self, table: str, schema: str) -> sa.sql.Alias:
         """Get an SQLAlchemy model representation from a table.
 
         Args:
@@ -164,7 +164,7 @@ class Base(object):
 
         """
         name: str = f"{schema}.{table}"
-        if name not in self.models:
+        if name not in self.__models:
             if schema not in self.__metadata:
                 metadata = sa.MetaData(schema=schema)
                 metadata.reflect(self.engine, views=True)
@@ -189,9 +189,9 @@ class Base(object):
                 "primary_keys",
                 sorted([primary_key.key for primary_key in model.primary_key]),
             )
-            self.models[f"{model.original}"] = model
+            self.__models[f"{model.original}"] = model
 
-        return self.models[name]
+        return self.__models[name]
 
     @property
     def conn(self):
@@ -482,7 +482,7 @@ class Base(object):
     ) -> None:
         create_view(
             self.engine,
-            self.model,
+            self.models,
             self.fetchall,
             schema,
             tables,

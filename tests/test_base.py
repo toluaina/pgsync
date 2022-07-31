@@ -61,11 +61,10 @@ class TestBase(object):
 
     def test_model(self, connection):
         pg_base = Base(connection.engine.url.database)
-        model = pg_base.model("book", "public")
+        model = pg_base.models("book", "public")
         assert str(model.original) == "public.book"
-        assert pg_base.models["public.book"] == model
         with pytest.raises(TableNotFoundError) as excinfo:
-            pg_base.model("book", "bar")
+            pg_base.models("book", "bar")
             assert 'Table "bar.book" not found in registry' in str(
                 excinfo.value
             )

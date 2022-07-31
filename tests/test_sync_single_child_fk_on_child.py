@@ -486,7 +486,7 @@ class TestParentSingleChildFkOnChild(object):
         }
         sync.es.close()
         with pytest.raises(RelationshipTypeError) as excinfo:
-            Tree(sync).build(nodes)
+            Tree(sync.models).build(nodes)
         assert 'Relationship type "qwerty" is invalid' in str(excinfo.value)
 
     def test_invalid_relationship_variant(self, sync):
@@ -504,7 +504,7 @@ class TestParentSingleChildFkOnChild(object):
         }
         sync.es.close()
         with pytest.raises(RelationshipVariantError) as excinfo:
-            Tree(sync).build(nodes)
+            Tree(sync.models).build(nodes)
         assert 'Relationship variant "abcdefg" is invalid' in str(
             excinfo.value
         )
@@ -521,7 +521,7 @@ class TestParentSingleChildFkOnChild(object):
         }
         sync.es.close()
         with pytest.raises(RelationshipAttributeError) as excinfo:
-            Tree(sync).build(nodes)
+            Tree(sync.models).build(nodes)
         assert f"Relationship attribute {set(['foo'])} is invalid" in str(
             excinfo.value
         )

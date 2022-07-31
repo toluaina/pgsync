@@ -3,7 +3,6 @@ import pytest
 
 from pgsync.base import Base
 from pgsync.exc import (
-    InvalidSchemaError,
     MultipleThroughTablesError,
     NodeAttributeError,
     RelationshipAttributeError,
@@ -114,7 +113,7 @@ class TestNode(object):
     def test_node(self, connection):
         pg_base = Base(connection.engine.url.database)
         node = Node(
-            base=pg_base,
+            models=pg_base.models,
             table="book",
             schema="public",
             label="book_label",
@@ -122,7 +121,7 @@ class TestNode(object):
         assert str(node) == "Node: public.book_label"
 
     def test_traverse_breadth_first(self, sync, nodes):
-        root = Tree(sync).build(nodes)
+        root = Tree(sync.models).build(nodes)
         root.display()
         for i, node in enumerate(root.traverse_breadth_first()):
             if i == 0:
@@ -146,7 +145,7 @@ class TestNode(object):
         sync.es.close()
 
     def test_traverse_post_order(self, sync, nodes):
-        root = Tree(sync).build(nodes)
+        root = Tree(sync.models).build(nodes)
         root.display()
         for i, node in enumerate(root.traverse_post_order()):
             if i == 0:
@@ -183,7 +182,7 @@ class TestNode(object):
             ],
         }
         with pytest.raises(RelationshipAttributeError) as excinfo:
-            Tree(sync).build(nodes)
+            Tree(sync.models).build(nodes)
         assert "Relationship attribute " in str(excinfo.value)
         sync.es.close()
 
@@ -200,7 +199,7 @@ class TestNode(object):
                 },
             ],
         }
-        tree = Tree(sync)
+        tree = Tree(sync.models)
         root: Node = tree.build(nodes)
         node = tree.get_node(root, "book", "public")
         assert str(node) == "Node: public.book"
@@ -212,24 +211,16 @@ class TestNode(object):
         sync.es.close()
 
     def test_tree_build(self, sync):
-        with pytest.raises(InvalidSchemaError) as excinfo:
-            Tree(sync).build(
-                {
-                    "table": "book",
-                    "schema": "bar",
-                }
-            )
-        assert "Unknown schema name(s)" in str(excinfo.value)
 
         with pytest.raises(TableNotInNodeError) as excinfo:
-            Tree(sync).build(
+            Tree(sync.models).build(
                 {
                     "table": None,
                 }
             )
 
         with pytest.raises(NodeAttributeError) as excinfo:
-            Tree(sync).build(
+            Tree(sync.models).build(
                 {
                     "table": "book",
                     "foo": "bar",
@@ -238,7 +229,7 @@ class TestNode(object):
         assert "Unknown node attribute(s):" in str(excinfo.value)
 
         with pytest.raises(NodeAttributeError) as excinfo:
-            Tree(sync).build(
+            Tree(sync.models).build(
                 {
                     "table": "book",
                     "children": [
@@ -257,7 +248,7 @@ class TestNode(object):
         assert "Unknown node attribute(s):" in str(excinfo.value)
 
         with pytest.raises(TableNotInNodeError) as excinfo:
-            Tree(sync).build(
+            Tree(sync.models).build(
                 {
                     "table": "book",
                     "children": [
@@ -273,7 +264,7 @@ class TestNode(object):
             )
         assert "Table not specified in node" in str(excinfo.value)
 
-        Tree(sync).build(
+        Tree(sync.models).build(
             {
                 "table": "book",
                 "columns": ["tags->0"],

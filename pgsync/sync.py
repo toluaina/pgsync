@@ -34,6 +34,7 @@ from .constants import (
 from .elastichelper import ElasticHelper
 from .exc import (
     ForeignKeyError,
+    InvalidSchemaError,
     PrimaryKeyNotFoundError,
     RDSError,
     SchemaError,
@@ -101,13 +102,11 @@ class Sync(Base):
             CHECKPOINT_PATH, f".{self.__name}"
         )
         self.redis: RedisQueue = RedisQueue(self.__name)
-        self.tree: Tree = Tree(self)
+        self.tree: Tree = Tree(self.models)
         if validate:
             self.validate(repl_slots=repl_slots)
             self.create_setting()
-        self.query_builder: QueryBuilder = QueryBuilder(
-            self, verbose=self.verbose
-        )
+        self.query_builder: QueryBuilder = QueryBuilder(verbose=verbose)
         self.count: dict = dict(xlog=0, db=0, redis=0)
 
     def validate(self, repl_slots: bool = True) -> None:
@@ -187,6 +186,12 @@ class Sync(Base):
         self.root: Node = self.tree.build(self.nodes)
         self.root.display()
         for node in self.root.traverse_breadth_first():
+
+            if node.schema not in self.schemas:
+                raise InvalidSchemaError(
+                    f"Unknown schema name(s): {node.schema}"
+                )
+
             # ensure all base tables have at least one primary_key
             for table in node.base_tables:
                 model: sa.sql.Alias = self.model(table, node.schema)
@@ -1143,7 +1148,7 @@ class Sync(Base):
     def _refresh_views(self) -> None:
         for node in self.root.traverse_breadth_first():
             if node.table in self.views(node.schema):
-                if node.materialized:
+                if node.table in self.materialized_views(node.schema):
                     self.refresh_view(node.table, node.schema)
 
     def on_publish(self, payloads: list) -> None:

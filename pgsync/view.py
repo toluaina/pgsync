@@ -125,7 +125,7 @@ def compile_drop_index(
 
 
 def _get_constraints(
-    model: Callable,
+    models: Callable,
     schema: str,
     tables: List[str],
     label: str,
@@ -133,8 +133,8 @@ def _get_constraints(
 ) -> sa.sql.Select:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=sa.exc.SAWarning)
-        table_constraints = model("table_constraints", "information_schema")
-        key_column_usage = model("key_column_usage", "information_schema")
+        table_constraints = models("table_constraints", "information_schema")
+        key_column_usage = models("key_column_usage", "information_schema")
     return (
         sa.select(
             [
@@ -168,10 +168,10 @@ def _get_constraints(
 
 
 def _primary_keys(
-    model: Callable, schema: str, tables: List[str]
+    models: Callable, schema: str, tables: List[str]
 ) -> sa.sql.Select:
     return _get_constraints(
-        model,
+        models,
         schema,
         tables,
         label="primary_keys",
@@ -180,10 +180,10 @@ def _primary_keys(
 
 
 def _foreign_keys(
-    model: Callable, schema: str, tables: List[str]
+    models: Callable, schema: str, tables: List[str]
 ) -> sa.sql.Select:
     return _get_constraints(
-        model,
+        models,
         schema,
         tables,
         label="foreign_keys",
@@ -193,7 +193,7 @@ def _foreign_keys(
 
 def create_view(
     engine: sa.engine.Engine,
-    model: Callable,
+    models: Callable,
     fetchall: Callable,
     schema: str,
     tables: list,
@@ -243,7 +243,7 @@ def create_view(
         for table in set(tables):
             tables.add(f"{schema}.{table}")
 
-    for table_name, columns in fetchall(_primary_keys(model, schema, tables)):
+    for table_name, columns in fetchall(_primary_keys(models, schema, tables)):
         rows.setdefault(
             table_name,
             {"primary_keys": set(), "foreign_keys": set()},
@@ -251,7 +251,7 @@ def create_view(
         if columns:
             rows[table_name]["primary_keys"] |= set(columns)
 
-    for table_name, columns in fetchall(_foreign_keys(model, schema, tables)):
+    for table_name, columns in fetchall(_foreign_keys(models, schema, tables)):
         rows.setdefault(
             table_name,
             {"primary_keys": set(), "foreign_keys": set()},
