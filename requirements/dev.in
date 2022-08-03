@@ -5,3 +5,4 @@ coverage
 pip-tools
 pre-commit
 setuptools
+guppy3

@@ -14,8 +14,10 @@ from collections import defaultdict
 from typing import AnyStr, Dict, Generator, List, Optional, Set
 
 import click
+import psutil
 import sqlalchemy as sa
 import sqlparse
+from guppy import hpy
 from psycopg2 import OperationalError
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from sqlalchemy.sql import Values
@@ -61,6 +63,8 @@ from .utils import (
     compiled_query,
     exception,
     get_config,
+    mem_profile,
+    MemProfile,
     show_settings,
     threaded,
     Timer,
@@ -108,6 +112,7 @@ class Sync(Base):
             self.create_setting()
         self.query_builder: QueryBuilder = QueryBuilder(verbose=verbose)
         self.count: dict = dict(xlog=0, db=0, redis=0)
+        self.iteration = 0
 
     def validate(self, repl_slots: bool = True) -> None:
         """Perform all validation right away."""
@@ -1044,6 +1049,7 @@ class Sync(Base):
             fp.write(f"{value}\n")
         self._checkpoint: int = value
 
+    # @mem_profile("_poll_redis")
     def _poll_redis(self) -> None:
         payloads: dict = self.redis.bulk_pop()
         if payloads:
@@ -1077,6 +1083,7 @@ class Sync(Base):
 
     @threaded
     @exception
+    # @mem_profile("poll_db")
     def poll_db(self) -> None:
         """
         Producer which polls Postgres continuously.
@@ -1255,8 +1262,16 @@ class Sync(Base):
             await asyncio.sleep(LOG_INTERVAL)
 
     def _status(self, label: str) -> None:
+
+        h = hpy()
+
+        process = psutil.Process(os.getpid())
+        mem = process.memory_info().rss / float(2**20)
+
         sys.stdout.write(
             f"{label} {self.database} "
+            f"iteration: {self.iteration} "
+            f"Mem: {mem: 2.3f} MiB "
             f"Xlog: [{self.count['xlog']:,}] => "
             f"Db: [{self.count['db']:,}] => "
             f"Redis: [total = {self.count['redis']:,} "
@@ -1264,6 +1279,11 @@ class Sync(Base):
             f"Elastic: [{self.es.doc_count:,}] ...\n"
         )
         sys.stdout.flush()
+
+        if self.iteration % 2000 == 0:
+            print(h.heap())
+
+        self.iteration += 1
 
     def receive(self, nthreads_polldb: int) -> None:
         """

@@ -1,6 +1,7 @@
 """PGSync utils."""
 import logging
 import os
+import resource
 import sys
 import threading
 from datetime import timedelta
@@ -19,6 +20,64 @@ logger = logging.getLogger(__name__)
 
 HIGHLIGHT_START = "\033[4m"
 HIGHLIGHT_END = "\033[0m:"
+
+HEADER = "\033[95m"
+BLUE = "\033[94m"
+CYAN = "\033[96m"
+GREEN = "\033[92m"
+WARNING = "\033[93m"
+FAIL = "\033[91m"
+ENDC = "\033[0m"
+BOLD = "\033[1m"
+UNDERLINE = "\033[4m"
+
+
+def sizeof_fmt(num, suffix="B"):
+    for unit in ["", "K", "M", "G", "T", "P", "E", "Z"]:
+        if abs(num) < 1024.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f%s%s" % (num, "Y", suffix)
+
+
+def mem_profile(label):
+    def decorator(function):
+        def wrapper(*args, **kwargs):
+            a = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            sys.stdout.write(
+                f"{GREEN}{label} mem before: {sizeof_fmt(a)} ({a}) {ENDC}\n"
+            )
+            fn = function(*args, **kwargs)
+            b = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            sys.stdout.write(
+                f"{GREEN}{label} mem after : {sizeof_fmt(b)} ({b}) {ENDC} - {WARNING}{sizeof_fmt(b-a)}{ENDC}\n"
+            )
+            sys.stdout.write("=" * 100)
+            sys.stdout.write("\n")
+            return fn
+
+        return wrapper
+
+    return decorator
+
+
+class MemProfile:
+    def __init__(self, label: Optional[str] = None):
+        self.label: str = label or ""
+
+    def __enter__(self):
+        self.a = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        sys.stdout.write(
+            f"{OKGREEN}{self.label} mem before: {sizeof_fmt(self.a)} ({self.a}) {ENDC}\n"
+        )
+        return self
+
+    def __exit__(self, *args):
+        b = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        sys.stdout.write(
+            f"{OKGREEN}{self.label} mem after : {sizeof_fmt(b)} ({b}) {ENDC} - {WARNING}{sizeof_fmt(b-self.a)}{ENDC}\n"
+        )
+        sys.stdout.write("=" * 100)
 
 
 def timeit(func: Callable):
