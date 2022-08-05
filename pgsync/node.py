@@ -156,6 +156,9 @@ class Node(object):
     def __str__(self):
         return f"Node: {self.schema}.{self.label}"
 
+    def __hash__(self):
+        return hash(self.name)
+
     def prepare_columns(self):
 
         self.columns = []

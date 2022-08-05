@@ -1,7 +1,6 @@
 """PGSync Base class."""
 import logging
 import os
-from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
 import sqlalchemy as sa
@@ -20,12 +19,10 @@ from .constants import (
     UPDATE,
 )
 from .exc import (
-    ForeignKeyError,
     InvalidPermissionError,
     LogicalSlotParseError,
     TableNotFoundError,
 )
-from .node import Node
 from .settings import (
     PG_SSLMODE,
     PG_SSLROOTCERT,
@@ -824,75 +821,6 @@ def subtransactions(session):
                 raise
 
     return ControlledExecution(session)
-
-
-def _get_foreign_keys(model_a: sa.sql.Alias, model_b: sa.sql.Alias) -> dict:
-
-    foreign_keys: dict = defaultdict(list)
-
-    if model_a.foreign_keys:
-
-        for key in model_a.original.foreign_keys:
-            if key._table_key() == str(model_b.original):
-                foreign_keys[str(key.parent.table)].append(key.parent)
-                foreign_keys[str(key.column.table)].append(key.column)
-
-    if not foreign_keys:
-
-        if model_b.original.foreign_keys:
-
-            for key in model_b.original.foreign_keys:
-                if key._table_key() == str(model_a.original):
-                    foreign_keys[str(key.parent.table)].append(key.parent)
-                    foreign_keys[str(key.column.table)].append(key.column)
-
-    if not foreign_keys:
-        raise ForeignKeyError(
-            f"No foreign key relationship between "
-            f'"{model_a.original}" and "{model_b.original}"'
-        )
-
-    return foreign_keys
-
-
-def get_foreign_keys(node_a: Node, node_b: Node) -> dict:
-    """Return dict of single foreign key with multiple columns.
-
-    e.g:
-        {
-            fk1['table_1']: [column_1, column_2, column_N],
-            fk2['table_2']: [column_1, column_2, column_N],
-        }
-
-    column_1, column_2, column_N are of type ForeignKeyContraint
-    """
-    foreign_keys: dict = {}
-    # if either offers a foreign_key via relationship, use it!
-    if (
-        node_a.relationship.foreign_key.parent
-        or node_b.relationship.foreign_key.parent
-    ):
-        if node_a.relationship.foreign_key.parent:
-            foreign_keys[node_a.parent.name] = sorted(
-                node_a.relationship.foreign_key.parent
-            )
-            foreign_keys[node_a.name] = sorted(
-                node_a.relationship.foreign_key.child
-            )
-        if node_b.relationship.foreign_key.parent:
-            foreign_keys[node_b.parent.name] = sorted(
-                node_b.relationship.foreign_key.parent
-            )
-            foreign_keys[node_b.name] = sorted(
-                node_b.relationship.foreign_key.child
-            )
-    else:
-        for table, columns in _get_foreign_keys(
-            node_a.model,
-            node_b.model,
-        ).items():
-            foreign_keys[table] = sorted([column.name for column in columns])
-    return foreign_keys
 
 
 def pg_engine(

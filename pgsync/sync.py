@@ -23,7 +23,7 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from sqlalchemy.sql import Values
 
 from . import __version__
-from .base import Base, get_foreign_keys, TupleIdentifierType
+from .base import Base, TupleIdentifierType
 from .constants import (
     DELETE,
     INSERT,
@@ -66,6 +66,7 @@ from .utils import (
     mem_profile,
     MemProfile,
     show_settings,
+    sizeof_fmt,
     threaded,
     Timer,
 )
@@ -217,12 +218,12 @@ class Sync(Base):
 
             if node.relationship.through_nodes:
                 through_node: Node = node.relationship.through_nodes[0]
-                foreign_keys: dict = get_foreign_keys(
+                foreign_keys: dict = self.query_builder.get_foreign_keys(
                     node.parent,
                     through_node,
                 )
             else:
-                foreign_keys: dict = get_foreign_keys(
+                foreign_keys: dict = self.query_builder.get_foreign_keys(
                     node.parent,
                     node,
                 )
@@ -511,7 +512,7 @@ class Sync(Base):
             # handle case where we insert into a through table
             # set the parent as the new entity that has changed
             filters[node.parent.table] = []
-            foreign_keys = get_foreign_keys(
+            foreign_keys = self.query_builder.get_foreign_keys(
                 node.parent,
                 node,
             )
@@ -621,7 +622,7 @@ class Sync(Base):
                     fields = defaultdict(list)
 
                     try:
-                        foreign_keys = get_foreign_keys(
+                        foreign_keys = self.query_builder.get_foreign_keys(
                             node.parent,
                             node,
                         )
@@ -1267,11 +1268,13 @@ class Sync(Base):
 
         process = psutil.Process(os.getpid())
         mem = process.memory_info().rss / float(2**20)
+        x = h.heap()
 
         sys.stdout.write(
             f"{label} {self.database} "
             f"iteration: {self.iteration} "
             f"Mem: {mem: 2.3f} MiB "
+            f"X: {sizeof_fmt(x.size)}  "
             f"Xlog: [{self.count['xlog']:,}] => "
             f"Db: [{self.count['db']:,}] => "
             f"Redis: [total = {self.count['redis']:,} "
@@ -1280,8 +1283,8 @@ class Sync(Base):
         )
         sys.stdout.flush()
 
-        if self.iteration % 2000 == 0:
-            print(h.heap())
+        if self.iteration % 20 == 0:
+            print(x)
 
         self.iteration += 1
 
