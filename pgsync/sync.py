@@ -2,6 +2,7 @@
 
 """Sync module."""
 import asyncio
+import gc
 import json
 import logging
 import os
@@ -23,7 +24,7 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from sqlalchemy.sql import Values
 
 from . import __version__
-from .base import Base, TupleIdentifierType
+from .base import Base, Payload, TupleIdentifierType
 from .constants import (
     DELETE,
     INSERT,
@@ -410,13 +411,13 @@ class Sync(Base):
                     continue
                 rows.append(row)
 
-            payloads: list = []
+            payloads: List[Payload] = []
             for i, row in enumerate(rows):
                 logger.debug(f"txid: {row.xid}")
                 logger.debug(f"data: {row.data}")
                 # TODO: optimize this so we are not parsing the same row twice
                 try:
-                    payload = self.parse_logical_slot(row.data)
+                    payload: Payload = self.parse_logical_slot(row.data)
                 except Exception as e:
                     logger.exception(
                         f"Error parsing row: {e}\nRow data: {row.data}"
@@ -427,7 +428,9 @@ class Sync(Base):
                 j: int = i + 1
                 if j < len(rows):
                     try:
-                        payload2 = self.parse_logical_slot(rows[j].data)
+                        payload2: Payload = self.parse_logical_slot(
+                            rows[j].data
+                        )
                     except Exception as e:
                         logger.exception(
                             f"Error parsing row: {e}\nRow data: {rows[j].data}"
@@ -435,8 +438,8 @@ class Sync(Base):
                         raise
 
                     if (
-                        payload["tg_op"] != payload2["tg_op"]
-                        or payload["table"] != payload2["table"]
+                        payload.tg_op != payload2.tg_op
+                        or payload.table != payload2.table
                     ):
                         self.es.bulk(self.index, self._payloads(payloads))
                         payloads: list = []
@@ -455,16 +458,16 @@ class Sync(Base):
             total += len(changes)
             self.count["xlog"] += len(rows)
 
-    def _payload_data(self, payload: dict) -> dict:
+    def _payload_data(self, payload: Payload) -> dict:
         """Extract the payload data from the payload."""
-        payload_data = payload.get("new")
-        if payload["tg_op"] == DELETE:
-            if payload.get("old"):
-                payload_data = payload.get("old")
+        payload_data = payload.new
+        if payload.tg_op == DELETE:
+            if payload.old:
+                payload_data = payload.old
         return payload_data
 
     def _insert_op(
-        self, node: Node, filters: dict, payloads: List[dict]
+        self, node: Node, filters: dict, payloads: List[Payload]
     ) -> dict:
 
         if node.table in self.tree.tables:
@@ -558,12 +561,11 @@ class Sync(Base):
 
                 old_values: list = []
                 for key in self.root.model.primary_keys:
-                    if key in payload.get("old").keys():
-                        old_values.append(payload.get("old")[key])
+                    if key in payload.old.keys():
+                        old_values.append(payload.old[key])
 
                 new_values = [
-                    payload.get("new")[key]
-                    for key in self.root.model.primary_keys
+                    payload.new[key] for key in self.root.model.primary_keys
                 ]
 
                 if (
@@ -602,11 +604,11 @@ class Sync(Base):
 
                 for key, value in primary_fields.items():
                     fields[key].append(value)
-                    if None in payload["new"].values():
+                    if None in payload.new.values():
                         extra["table"] = node.table
                         extra["column"] = key
 
-                if None in payload["old"].values():
+                if None in payload.old.values():
                     for key, value in primary_fields.items():
                         fields[key].append(0)
 
@@ -633,8 +635,7 @@ class Sync(Base):
                         )
 
                     foreign_values = [
-                        payload.get("new", {}).get(k)
-                        for k in foreign_keys[node.name]
+                        payload.new.get(k) for k in foreign_keys[node.name]
                     ]
 
                     for key in [key.name for key in node.primary_keys]:
@@ -759,7 +760,7 @@ class Sync(Base):
 
         return filters
 
-    def _payloads(self, payloads: List[dict]) -> None:
+    def _payloads(self, payloads: List[Payload]) -> None:
         """
         The "payloads" is a list of payload operations to process together.
 
@@ -768,32 +769,31 @@ class Sync(Base):
 
         e.g:
         [
-            {
-                'tg_op': 'INSERT',
-                'table': 'book',
-                'old': {'id': 1},
-                'new': {'id': 4}
-            },
-            {
-                'tg_op': 'INSERT',
-                'table': 'book',
-                'old': {'id': 2},
-                'new': {'id': 5}
-            },
-            {   'tg_op': 'INSERT',
-                'table': 'book',
-                'old': {'id': 3},
-                'new': {'id': 6},
-            }
+            Payload(
+                tg_op='INSERT',
+                table='book',
+                old={'id': 1},
+                new={'id': 4},
+            ),
+            Payload(
+                tg_op='INSERT',
+                table='book',
+                old={'id': 2},
+                new={'id': 5},
+            ),
+            Payload(
+                tg_op='INSERT',
+                table='book',
+                old={'id': 3},
+                new={'id': 6},
+            ),
             ...
         ]
 
         """
-        payload: dict = payloads[0]
-        tg_op: str = payload["tg_op"]
-        table: str = payload["table"]
-        if tg_op not in TG_OP:
-            logger.exception(f"Unknown tg_op {tg_op}")
+        payload: Payload = payloads[0]
+        if payload.tg_op not in TG_OP:
+            logger.exception(f"Unknown tg_op {payload.tg_op}")
             raise
 
         # we might receive an event triggered for a table
@@ -801,13 +801,15 @@ class Sync(Base):
         # e.g a through table which we need to react to.
         # in this case, we find the parent of the through
         # table and force a re-sync.
-        if table not in self.tree.tables:
+        if payload.table not in self.tree.tables:
             return
 
-        node: Node = self.tree.get_node(self.root, table, payload["schema"])
+        node: Node = self.tree.get_node(
+            self.root, payload.table, payload.schema
+        )
 
         for payload in payloads:
-            payload_data: dict = self._payload_data(payload)
+            payload_data: Payload = self._payload_data(payload)
             # this is only required for the non truncate tg_ops
             if payload_data:
                 if not set(node.model.primary_keys).issubset(
@@ -816,16 +818,16 @@ class Sync(Base):
                     logger.exception(
                         f"Primary keys {node.model.primary_keys} not subset "
                         f"of payload data {payload_data.keys()} for table "
-                        f"{payload['schema']}.{payload['table']}"
+                        f"{payload.schema}.{payload.table}"
                     )
                     raise
 
-        logger.debug(f"tg_op: {tg_op} table: {node.name}")
+        logger.debug(f"tg_op: {payload.tg_op} table: {node.name}")
 
         filters: dict = {node.table: [], self.root.table: []}
         extra: dict = {}
 
-        if tg_op == INSERT:
+        if payload.tg_op == INSERT:
 
             filters = self._insert_op(
                 node,
@@ -833,7 +835,7 @@ class Sync(Base):
                 payloads,
             )
 
-        if tg_op == UPDATE:
+        if payload.tg_op == UPDATE:
 
             filters = self._update_op(
                 node,
@@ -842,7 +844,7 @@ class Sync(Base):
                 extra,
             )
 
-        if tg_op == DELETE:
+        if payload.tg_op == DELETE:
 
             filters = self._delete_op(
                 node,
@@ -850,7 +852,7 @@ class Sync(Base):
                 payloads,
             )
 
-        if tg_op == TRUNCATE:
+        if payload.tg_op == TRUNCATE:
 
             filters = self._truncate_op(node, filters)
 
@@ -1057,7 +1059,9 @@ class Sync(Base):
             logger.debug(f"poll_redis: {payloads}")
             self.count["redis"] += len(payloads)
             self.refresh_views()
-            self.on_publish(payloads)
+            self.on_publish(
+                list(map(lambda payload: Payload(**payload), payloads))
+            )
         time.sleep(REDIS_POLL_INTERVAL)
 
     @threaded
@@ -1159,13 +1163,13 @@ class Sync(Base):
                 if node.table in self.materialized_views(node.schema):
                     self.refresh_view(node.table, node.schema)
 
-    def on_publish(self, payloads: list) -> None:
+    def on_publish(self, payloads: List[Payload]) -> None:
         self._on_publish(payloads)
 
-    async def async_on_publish(self, payloads: list) -> None:
+    async def async_on_publish(self, payloads: List[Payload]) -> None:
         self._on_publish(payloads)
 
-    def _on_publish(self, payloads: list) -> None:
+    def _on_publish(self, payloads: List[Payload]) -> None:
         """
         Redis publish event handler.
 
@@ -1177,35 +1181,35 @@ class Sync(Base):
         # we substitute the views for the base table here
         for i, payload in enumerate(payloads):
             for node in self.root.traverse_breadth_first():
-                if payload["table"] in node.base_tables:
-                    payloads[i]["table"] = node.table
+                if payload.table in node.base_tables:
+                    payloads[i].table = node.table
 
         logger.debug(f"on_publish len {len(payloads)}")
         # Safe inserts are insert operations that can be performed in any order
         # Optimize the safe INSERTS
         # TODO repeat this for the other place too
         # if all payload operations are INSERTS
-        if set(map(lambda x: x["tg_op"], payloads)) == set([INSERT]):
+        if set(map(lambda x: x.tg_op, payloads)) == set([INSERT]):
 
             _payloads: dict = defaultdict(list)
 
             for payload in payloads:
-                _payloads[payload["table"]].append(payload)
+                _payloads[payload.table].append(payload)
 
             for _payload in _payloads.values():
                 self.es.bulk(self.index, self._payloads(_payload))
 
         else:
 
-            _payloads: list = []
+            _payloads: List[Payload] = []
             for i, payload in enumerate(payloads):
                 _payloads.append(payload)
                 j: int = i + 1
                 if j < len(payloads):
                     payload2 = payloads[j]
                     if (
-                        payload["tg_op"] != payload2["tg_op"]
-                        or payload["table"] != payload2["table"]
+                        payload.tg_op != payload2.tg_op
+                        or payload.table != payload2.table
                     ):
                         self.es.bulk(self.index, self._payloads(_payloads))
                         _payloads = []
@@ -1213,7 +1217,7 @@ class Sync(Base):
                     self.es.bulk(self.index, self._payloads(_payloads))
                     _payloads: list = []
 
-        txids: Set = set(map(lambda x: x["xmin"], payloads))
+        txids: Set = set(map(lambda x: x.xmin, payloads))
         # for truncate, tg_op txids is None so skip setting the checkpoint
         if txids != set([None]):
             self.checkpoint: int = min(min(txids), self.txid_current) - 1
@@ -1285,7 +1289,7 @@ class Sync(Base):
 
         if self.iteration % 20 == 0:
             print(x)
-
+        print("-" * 100)
         self.iteration += 1
 
     def receive(self, nthreads_polldb: int) -> None:

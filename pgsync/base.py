@@ -48,6 +48,27 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+class Payload(object):
+
+    __slots__ = ("tg_op", "table", "schema", "old", "new", "xmin")
+
+    def __init__(
+        self,
+        tg_op: str = Optional[None],
+        table: str = Optional[None],
+        schema: str = Optional[None],
+        old: dict = Optional[None],
+        new: dict = Optional[None],
+        xmin: int = Optional[None],
+    ):
+        self.tg_op: str = tg_op
+        self.table: str = table
+        self.schema: str = schema
+        self.old: dict = old or {}
+        self.new: dict = new or {}
+        self.xmin: str = xmin
+
+
 class TupleIdentifierType(sa.types.UserDefinedType):
     cache_ok: bool = True
 
@@ -665,7 +686,7 @@ class Base(object):
                 raise
         return value
 
-    def parse_logical_slot(self, row: str) -> dict:
+    def parse_logical_slot(self, row: str) -> Payload:
         def _parse_logical_slot(data: str) -> Tuple[str, str]:
 
             while True:
@@ -686,24 +707,19 @@ class Base(object):
                 data = f"{data[match.span()[1]:]} "
                 yield key, value
 
-        payload: dict = dict(
-            schema=None, tg_op=None, table=None, old={}, new={}
-        )
-
         match = LOGICAL_SLOT_PREFIX.search(row)
         if not match:
             raise LogicalSlotParseError(f"No match for row: {row}")
 
-        payload.update(match.groupdict())
+        payload: Payload = Payload(**match.groupdict())
         span = match.span()
         # including trailing space below is deliberate
         suffix: str = f"{row[span[1]:]} "
-        tg_op: str = payload["tg_op"]
 
         if "old-key" and "new-tuple" in suffix:
             # this can only be an UPDATE operation
-            if tg_op != UPDATE:
-                msg = f"Unknown {tg_op} operation for row: {row}"
+            if payload.tg_op != UPDATE:
+                msg = f"Unknown {payload.tg_op} operation for row: {row}"
                 raise LogicalSlotParseError(msg)
 
             i: int = suffix.index("old-key:")
@@ -711,22 +727,22 @@ class Base(object):
                 j: int = suffix.index("new-tuple:")
                 s: str = suffix[i + len("old-key:") : j]
                 for key, value in _parse_logical_slot(s):
-                    payload["old"][key] = value
+                    payload.old[key] = value
 
             i = suffix.index("new-tuple:")
             if i > -1:
                 s: str = suffix[i + len("new-tuple:") :]
                 for key, value in _parse_logical_slot(s):
-                    payload["new"][key] = value
+                    payload.new[key] = value
         else:
             # this can be an INSERT, DELETE, UPDATE or TRUNCATE operation
-            if tg_op not in TG_OP:
+            if payload.tg_op not in TG_OP:
                 raise LogicalSlotParseError(
-                    f"Unknown {tg_op} operation for row: {row}"
+                    f"Unknown {payload.tg_op} operation for row: {row}"
                 )
 
             for key, value in _parse_logical_slot(suffix):
-                payload["new"][key] = value
+                payload.new[key] = value
 
         return payload
 

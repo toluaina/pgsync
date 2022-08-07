@@ -54,36 +54,6 @@ class QueryBuilder(object):
 
         return expression
 
-    def __get_foreign_keys(
-        self, model_a: sa.sql.Alias, model_b: sa.sql.Alias
-    ) -> dict:
-        foreign_keys: dict = defaultdict(list)
-        if model_a.foreign_keys:
-            for key in model_a.original.foreign_keys:
-                if key._table_key() == str(model_b.original):
-                    foreign_keys[
-                        f"{key.parent.table.schema}.{key.parent.table.name}"
-                    ].append(str(key.parent.name))
-                    foreign_keys[
-                        f"{key.column.table.schema}.{key.column.table.name}"
-                    ].append(str(key.column.name))
-        if not foreign_keys:
-            if model_b.original.foreign_keys:
-                for key in model_b.original.foreign_keys:
-                    if key._table_key() == str(model_a.original):
-                        foreign_keys[
-                            f"{key.parent.table.schema}.{key.parent.table.name}"
-                        ].append(str(key.parent.name))
-                        foreign_keys[
-                            f"{key.column.table.schema}.{key.column.table.name}"
-                        ].append(str(key.column.name))
-        if not foreign_keys:
-            raise ForeignKeyError(
-                f"No foreign key relationship between "
-                f'"{model_a.original}" and "{model_b.original}"'
-            )
-        return foreign_keys
-
     # this is for handling non-through tables
     def get_foreign_keys(self, node_a: Node, node_b: Node) -> dict:
         if (node_a, node_b) not in self._cache:
@@ -115,25 +85,29 @@ class QueryBuilder(object):
                     for key in node_a.model.original.foreign_keys:
                         if key._table_key() == str(node_b.model.original):
                             fkeys[
-                                f"{key.parent.table.schema}.{key.parent.table.name}"
+                                f"{key.parent.table.schema}."
+                                f"{key.parent.table.name}"
                             ].append(str(key.parent.name))
                             fkeys[
-                                f"{key.column.table.schema}.{key.column.table.name}"
+                                f"{key.column.table.schema}."
+                                f"{key.column.table.name}"
                             ].append(str(key.column.name))
                 if not fkeys:
                     if node_b.model.original.foreign_keys:
                         for key in node_b.model.original.foreign_keys:
                             if key._table_key() == str(node_a.model.original):
                                 fkeys[
-                                    f"{key.parent.table.schema}.{key.parent.table.name}"
+                                    f"{key.parent.table.schema}."
+                                    f"{key.parent.table.name}"
                                 ].append(str(key.parent.name))
                                 fkeys[
-                                    f"{key.column.table.schema}.{key.column.table.name}"
+                                    f"{key.column.table.schema}."
+                                    f"{key.column.table.name}"
                                 ].append(str(key.column.name))
                 if not fkeys:
                     raise ForeignKeyError(
                         f"No foreign key relationship between "
-                        f'"{node_a.model.original}" and "{node_b.model.original}"'
+                        f"{node_a.model.original} and {node_b.model.original}"
                     )
 
                 for table, columns in fkeys.items():
@@ -144,9 +118,7 @@ class QueryBuilder(object):
         return self._cache[(node_a, node_b)]
 
     def _get_foreign_keys(self, node_a: Node, node_b: Node) -> Dict:
-        """
-        this is for handling through nodes
-        """
+        """This is for handling through nodes."""
         if (node_a, node_b) not in self._cache:
             if (
                 node_a.relationship.through_nodes
