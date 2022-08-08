@@ -10,6 +10,7 @@ from sqlalchemy.orm import sessionmaker
 from .constants import (
     BUILTIN_SCHEMAS,
     DEFAULT_SCHEMA,
+    DELETE,
     LOGICAL_SLOT_PREFIX,
     LOGICAL_SLOT_SUFFIX,
     MATERIALIZED_VIEW,
@@ -67,6 +68,13 @@ class Payload(object):
         self.old: dict = old or {}
         self.new: dict = new or {}
         self.xmin: str = xmin
+
+    @property
+    def data(self) -> dict:
+        """Extract the payload data from the payload."""
+        if self.tg_op == DELETE and self.old:
+            return self.old
+        return self.new
 
 
 class TupleIdentifierType(sa.types.UserDefinedType):
@@ -711,7 +719,10 @@ class Base(object):
         if not match:
             raise LogicalSlotParseError(f"No match for row: {row}")
 
-        payload: Payload = Payload(**match.groupdict())
+        data = {"old": None, "new": None}
+        data.update(**match.groupdict())
+        payload: Payload = Payload(**data)
+
         span = match.span()
         # including trailing space below is deliberate
         suffix: str = f"{row[span[1]:]} "

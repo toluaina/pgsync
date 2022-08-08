@@ -458,14 +458,6 @@ class Sync(Base):
             total += len(changes)
             self.count["xlog"] += len(rows)
 
-    def _payload_data(self, payload: Payload) -> dict:
-        """Extract the payload data from the payload."""
-        payload_data = payload.new
-        if payload.tg_op == DELETE:
-            if payload.old:
-                payload_data = payload.old
-        return payload_data
-
     def _insert_op(
         self, node: Node, filters: dict, payloads: List[Payload]
     ) -> dict:
@@ -475,9 +467,8 @@ class Sync(Base):
             if node.table == self.root.table:
 
                 for payload in payloads:
-                    payload_data: dict = self._payload_data(payload)
                     primary_values = [
-                        payload_data[key]
+                        payload.data[key]
                         for key in self.root.model.primary_keys
                     ]
                     primary_fields = dict(
@@ -503,11 +494,13 @@ class Sync(Base):
                 )
 
                 for payload in payloads:
-                    payload_data: dict = self._payload_data(payload)
                     for i, key in enumerate(foreign_keys[node.name]):
-                        value = payload_data[key]
                         filters[node.parent.table].append(
-                            {foreign_keys[node.parent.name][i]: value}
+                            {
+                                foreign_keys[node.parent.name][
+                                    i
+                                ]: payload.data[key]
+                            }
                         )
 
         else:
@@ -521,11 +514,9 @@ class Sync(Base):
             )
 
             for payload in payloads:
-                payload_data: dict = self._payload_data(payload)
                 for i, key in enumerate(foreign_keys[node.name]):
-                    value = payload_data[key]
                     filters[node.parent.table].append(
-                        {foreign_keys[node.parent.name][i]: value}
+                        {foreign_keys[node.parent.name][i]: payload.data[key]}
                     )
 
         return filters
@@ -548,9 +539,8 @@ class Sync(Base):
             #        and new document in Elasticsearch at the same time
             docs: list = []
             for payload in payloads:
-                payload_data: dict = self._payload_data(payload)
                 primary_values: list = [
-                    payload_data[key] for key in node.model.primary_keys
+                    payload.data[key] for key in node.model.primary_keys
                 ]
                 primary_fields: dict = dict(
                     zip(node.model.primary_keys, primary_values)
@@ -593,10 +583,8 @@ class Sync(Base):
                 _filters: list = []
                 fields: dict = defaultdict(list)
 
-                payload_data: dict = self._payload_data(payload)
-
                 primary_values: list = [
-                    payload_data[key] for key in node.model.primary_keys
+                    payload.data[key] for key in node.model.primary_keys
                 ]
                 primary_fields: dict = dict(
                     zip(node.model.primary_keys, primary_values)
@@ -669,9 +657,8 @@ class Sync(Base):
 
             docs: list = []
             for payload in payloads:
-                payload_data: dict = self._payload_data(payload)
                 self.root_primary_values: list = [
-                    payload_data[key] for key in self.root.model.primary_keys
+                    payload.data[key] for key in self.root.model.primary_keys
                 ]
                 doc: dict = {
                     "_id": self.get_doc_id(
@@ -681,7 +668,7 @@ class Sync(Base):
                     "_op_type": "delete",
                 }
                 if self.routing:
-                    doc["_routing"] = payload_data[self.routing]
+                    doc["_routing"] = payload.data[self.routing]
                 if self.es.major_version < 7 and not self.es.is_opensearch:
                     doc["_type"] = "_doc"
                 docs.append(doc)
@@ -703,9 +690,8 @@ class Sync(Base):
             # the child keys match in private, then get the root doc_id and
             # re-sync the child tables
             for payload in payloads:
-                payload_data: dict = self._payload_data(payload)
                 primary_values: list = [
-                    payload_data[key] for key in node.model.primary_keys
+                    payload.data[key] for key in node.model.primary_keys
                 ]
                 primary_fields = dict(
                     zip(node.model.primary_keys, primary_values)
@@ -809,15 +795,14 @@ class Sync(Base):
         )
 
         for payload in payloads:
-            payload_data: Payload = self._payload_data(payload)
             # this is only required for the non truncate tg_ops
-            if payload_data:
+            if payload.data:
                 if not set(node.model.primary_keys).issubset(
-                    set(payload_data.keys())
+                    set(payload.data.keys())
                 ):
                     logger.exception(
                         f"Primary keys {node.model.primary_keys} not subset "
-                        f"of payload data {payload_data.keys()} for table "
+                        f"of payload data {payload.data.keys()} for table "
                         f"{payload.schema}.{payload.table}"
                     )
                     raise

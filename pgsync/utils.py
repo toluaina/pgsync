@@ -50,7 +50,8 @@ def mem_profile(label):
             fn = function(*args, **kwargs)
             b = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
             sys.stdout.write(
-                f"{GREEN}{label} mem after : {sizeof_fmt(b)} ({b}) {ENDC} - {WARNING}{sizeof_fmt(b-a)}{ENDC}\n"
+                f"{GREEN}{label} mem after : {sizeof_fmt(b)} ({b}) {ENDC} - "
+                f"{WARNING}{sizeof_fmt(b-a)}{ENDC}\n"
             )
             sys.stdout.write("=" * 100)
             sys.stdout.write("\n")
@@ -68,14 +69,16 @@ class MemProfile:
     def __enter__(self):
         self.a = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
         sys.stdout.write(
-            f"{GREEN}{self.label} mem before: {sizeof_fmt(self.a)} ({self.a}) {ENDC}\n"
+            f"{GREEN}{self.label} mem before: {sizeof_fmt(self.a)} ({self.a}) "
+            f"{ENDC}\n"
         )
         return self
 
     def __exit__(self, *args):
         b = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
         sys.stdout.write(
-            f"{GREEN}{self.label} mem after : {sizeof_fmt(b)} ({b}) {ENDC} - {WARNING}{sizeof_fmt(b-self.a)}{ENDC}\n"
+            f"{GREEN}{self.label} mem after : {sizeof_fmt(b)} ({b}) {ENDC} - "
+            f"{WARNING}{sizeof_fmt(b-self.a)}{ENDC}\n"
         )
         sys.stdout.write("=" * 100)
 
