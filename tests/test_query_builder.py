@@ -2,7 +2,6 @@
 import pytest
 
 from pgsync.base import Base
-from pgsync.exc import ForeignKeyError
 from pgsync.node import Node
 from pgsync.querybuilder import QueryBuilder
 
@@ -52,50 +51,6 @@ class TestQueryBuilder(object):
             "book_1.tags) AS JSONB)"
         )
         assert str(expression) == expected
-
-    def test__get_foreign_keys(self, connection):
-        pg_base = Base(connection.engine.url.database)
-        query_builder = QueryBuilder()
-        book = Node(
-            models=pg_base.models,
-            table="book",
-            schema="public",
-        )
-        with pytest.raises(ForeignKeyError) as excinfo:
-            query_builder._get_foreign_keys(book, book)
-
-        expected = (
-            'No foreign key relationship between "public.book" '
-            'and "public.book"'
-        )
-        assert expected in str(excinfo.value)
-        publisher = Node(
-            models=pg_base.models,
-            table="publisher",
-            schema="public",
-        )
-        foreign_keys = query_builder._get_foreign_keys(book, publisher)
-        assert foreign_keys == {
-            "public.book": ["publisher_id"],
-            "public.publisher": ["id"],
-        }
-
-        subject = Node(
-            models=pg_base.models,
-            table="subject",
-            schema="public",
-            relationship={
-                "type": "one_to_many",
-                "variant": "scalar",
-                "through_tables": ["book_subject"],
-            },
-        )
-        foreign_keys = query_builder._get_foreign_keys(book, subject)
-        assert foreign_keys == {
-            "public.book_subject": ["subject_id", "book_isbn"],
-            "public.subject": ["id"],
-            "public.book": ["isbn"],
-        }
 
     def test__get_column_foreign_keys(self, connection):
         pg_base = Base(connection.engine.url.database)

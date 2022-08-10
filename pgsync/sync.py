@@ -21,6 +21,7 @@ import sqlparse
 from guppy import hpy
 from psycopg2 import OperationalError
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from pympler import asizeof
 from sqlalchemy.sql import Values
 
 from . import __version__
@@ -217,11 +218,11 @@ class Sync(Base):
                 str(primary_key.name) for primary_key in node.primary_keys
             ]
 
-            if node.relationship.through_nodes:
-                through_node: Node = node.relationship.through_nodes[0]
+            if node.relationship.throughs:
+                through: Node = node.relationship.throughs[0]
                 foreign_keys: dict = self.query_builder.get_foreign_keys(
                     node.parent,
-                    through_node,
+                    through,
                 )
             else:
                 foreign_keys: dict = self.query_builder.get_foreign_keys(
@@ -282,10 +283,7 @@ class Sync(Base):
                 if node.schema != schema:
                     continue
                 tables |= set(
-                    [
-                        through_node.table
-                        for through_node in node.relationship.through_nodes
-                    ]
+                    [through.table for through in node.relationship.throughs]
                 )
                 tables |= set([node.table])
                 # we also need to bootstrap the base tables
@@ -328,10 +326,7 @@ class Sync(Base):
             tables: Set = set()
             for node in self.root.traverse_breadth_first():
                 tables |= set(
-                    [
-                        through_node.table
-                        for through_node in node.relationship.through_nodes
-                    ]
+                    [through.table for through in node.relationship.throughs]
                 )
                 tables |= set([node.table])
                 # we also need to teardown the base tables
@@ -1062,7 +1057,9 @@ class Sync(Base):
             logger.debug(f"poll_redis: {payloads}")
             self.count["redis"] += len(payloads)
             await self.async_refresh_views()
-            await self.async_on_publish(payloads)
+            await self.async_on_publish(
+                list(map(lambda payload: Payload(**payload), payloads))
+            )
         await asyncio.sleep(REDIS_POLL_INTERVAL)
 
     @exception
@@ -1272,6 +1269,10 @@ class Sync(Base):
         )
         sys.stdout.flush()
 
+        # print("Size: ", asizeof.asizeof(self.root, limit=8))
+        # for node in self.root.traverse_breadth_first():
+        # nsize = asizeof.asizeof(self, limit=5)
+        # print(f"Size: {sizeof_fmt(nsize)} - {nsize}" )
         if self.iteration % 20 == 0:
             print(x)
         print("-" * 100)

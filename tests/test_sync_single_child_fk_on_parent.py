@@ -575,7 +575,7 @@ class TestParentSingleChildFkOnParent(object):
             [sort_list(doc) for doc in sync.sync()]
         msg = (
             "No foreign key relationship between "
-            '"public.book" and "public.city"'
+            "public.book and public.city"
         )
         assert msg in str(excinfo.value)
 

@@ -379,29 +379,26 @@ class TestBase(object):
         row = """
         table public."B1_XYZ": INSERT: "ID"[integer]:5 "CREATED_TIMESTAMP"[bigint]:222 "ADDRESS"[character varying]:'from3' "SOME_FIELD_KEY"[character varying]:'key3' "SOME_OTHER_FIELD_KEY"[character varying]:'issue3' "CHANNEL_ID"[integer]:3 "CHANNEL_NAME"[character varying]:'channel3' "ITEM_ID"[integer]:3 "MESSAGE"[character varying]:'message3' "RETRY"[integer]:4 "STATUS"[character varying]:'status' "SUBJECT"[character varying]:'sub3' "TIMESTAMP"[bigint]:33
         """  # noqa E501
-        values = pg_base.parse_logical_slot(row)
-        assert values == {
-            "new": {
-                "CHANNEL_ID": 3,
-                "CHANNEL_NAME": "channel3",
-                "CREATED_TIMESTAMP": 222,
-                "ADDRESS": "from3",
-                "ID": 5,
-                "ITEM_ID": 3,
-                "MESSAGE": "message3",
-                "RETRY": 4,
-                "SOME_FIELD_KEY": "key3",
-                "SOME_OTHER_FIELD_KEY": "issue3",
-                "STATUS": "status",
-                "SUBJECT": "sub3",
-                "TIMESTAMP": 33,
-            },
-            "old": {},
-            "schema": "public",
-            "table": "B1_XYZ",
-            "tg_op": "INSERT",
+        payload = pg_base.parse_logical_slot(row)
+        assert payload.data == {
+            "CHANNEL_ID": 3,
+            "CHANNEL_NAME": "channel3",
+            "CREATED_TIMESTAMP": 222,
+            "ADDRESS": "from3",
+            "ID": 5,
+            "ITEM_ID": 3,
+            "MESSAGE": "message3",
+            "RETRY": 4,
+            "SOME_FIELD_KEY": "key3",
+            "SOME_OTHER_FIELD_KEY": "issue3",
+            "STATUS": "status",
+            "SUBJECT": "sub3",
+            "TIMESTAMP": 33,
         }
-
+        assert payload.old == {}
+        assert payload.schema == "public"
+        assert payload.table == "B1_XYZ"
+        assert payload.tg_op == "INSERT"
         row = """
         table public."B1_XYZ": UNKNOWN: "ID"[integer]:5 "CREATED_TIMESTAMP"[bigint]:222 "ADDRESS"[character varying]:'from3' "SOME_FIELD_KEY"[character varying]:'key3' "SOME_OTHER_FIELD_KEY"[character varying]:'issue3' "CHANNEL_ID"[integer]:3 "CHANNEL_NAME"[character varying]:'channel3' "ITEM_ID"[integer]:3 "MESSAGE"[character varying]:'message3' "RETRY"[integer]:4 "STATUS"[character varying]:'status' "SUBJECT"[character varying]:'sub3' "TIMESTAMP"[bigint]:33
         """  # noqa E501
