@@ -462,7 +462,7 @@ class Sync(Base):
 
         if node.table in self.tree.tables:
 
-            if node.table == self.tree.root.table:
+            if node.is_root:
 
                 for payload in payloads:
                     primary_values = [
@@ -527,7 +527,7 @@ class Sync(Base):
         extra: dict,
     ) -> dict:
 
-        if node.table == self.tree.root.table:
+        if node.is_root:
 
             # Here, we are performing two operations:
             # 1) Build a filter to sync the updated record(s)
@@ -656,7 +656,7 @@ class Sync(Base):
     ) -> dict:
 
         # when deleting a root node, just delete the doc in Elasticsearch
-        if node.table == self.tree.root.table:
+        if node.is_root:
 
             docs: list = []
             for payload in payloads:
@@ -721,7 +721,7 @@ class Sync(Base):
 
     def _truncate_op(self, node: Node, filters: dict) -> dict:
 
-        if node.table == self.tree.root.table:
+        if node.is_root:
 
             docs: list = []
             for doc_id in self.es._search(self.index, node.table):
