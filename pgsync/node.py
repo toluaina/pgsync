@@ -263,6 +263,7 @@ class Tree:
     def __post_init__(self):
         self.tables: Set[str] = set()
         self.__nodes: Dict[Node] = {}
+        self.root: Optional[Node] = None
 
     def build(self, data: dict) -> Node:
 
@@ -277,7 +278,7 @@ class Tree:
             attrs = set(data.keys()).difference(set(NODE_ATTRIBUTES))
             raise NodeAttributeError(f"Unknown node attribute(s): {attrs}")
 
-        node = Node(
+        node: Node = Node(
             models=self.models,
             table=table,
             schema=schema,
@@ -288,6 +289,8 @@ class Tree:
             relationship=data.get("relationship", {}),
             base_tables=data.get("base_tables", []),
         )
+        if self.root is None:
+            self.root = node
 
         self.tables.add(node.table)
         for through in node.relationship.throughs:
@@ -299,11 +302,11 @@ class Tree:
         self.__nodes[key] = node
         return node
 
-    def get_node(self, root: Node, table: str, schema: str) -> Node:
+    def get_node(self, table: str, schema: str) -> Node:
         """Get node by name."""
         key: Tuple[str, str] = (schema, table)
         if key not in self.__nodes:
-            for node in root.traverse_post_order():
+            for node in self.root.traverse_post_order():
                 if table == node.table and schema == node.schema:
                     self.__nodes[key] = node
                     return self.__nodes[key]

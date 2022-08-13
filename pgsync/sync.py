@@ -116,6 +116,8 @@ class Sync(Base):
         self.query_builder: QueryBuilder = QueryBuilder(verbose=verbose)
         self.count: dict = dict(xlog=0, db=0, redis=0)
         self.iteration = 0
+        self.before = defaultdict(int)
+        self.after = defaultdict(int)
 
     def validate(self, repl_slots: bool = True) -> None:
         """Perform all validation right away."""
@@ -191,9 +193,10 @@ class Sync(Base):
                 f"read/writable"
             )
 
-        self.root: Node = self.tree.build(self.nodes)
-        self.root.display()
-        for node in self.root.traverse_breadth_first():
+        self.tree.build(self.nodes)
+        self.tree.root.display()
+
+        for node in self.tree.root.traverse_breadth_first():
 
             if node.schema not in self.schemas:
                 raise InvalidSchemaError(
@@ -209,7 +212,7 @@ class Sync(Base):
                     )
 
     def analyze(self) -> None:
-        for node in self.root.traverse_breadth_first():
+        for node in self.tree.root.traverse_breadth_first():
 
             if node.is_root:
                 continue
@@ -261,7 +264,7 @@ class Sync(Base):
         """Create Elasticsearch setting and mapping if required."""
         self.es._create_setting(
             self.index,
-            self.root,
+            self.tree.root,
             setting=self.setting,
             mapping=self.mapping,
             routing=self.routing,
@@ -279,7 +282,7 @@ class Sync(Base):
             # tables with user defined foreign keys
             user_defined_fkey_tables: dict = {}
 
-            for node in self.root.traverse_breadth_first():
+            for node in self.tree.root.traverse_breadth_first():
                 if node.schema != schema:
                     continue
                 tables |= set(
@@ -324,7 +327,7 @@ class Sync(Base):
 
         for schema in self.schemas:
             tables: Set = set()
-            for node in self.root.traverse_breadth_first():
+            for node in self.tree.root.traverse_breadth_first():
                 tables |= set(
                     [through.table for through in node.relationship.throughs]
                 )
@@ -459,15 +462,15 @@ class Sync(Base):
 
         if node.table in self.tree.tables:
 
-            if node.table == self.root.table:
+            if node.table == self.tree.root.table:
 
                 for payload in payloads:
                     primary_values = [
                         payload.data[key]
-                        for key in self.root.model.primary_keys
+                        for key in self.tree.root.model.primary_keys
                     ]
                     primary_fields = dict(
-                        zip(self.root.model.primary_keys, primary_values)
+                        zip(self.tree.root.model.primary_keys, primary_values)
                     )
                     filters[node.table].append(
                         {key: value for key, value in primary_fields.items()}
@@ -524,7 +527,7 @@ class Sync(Base):
         extra: dict,
     ) -> dict:
 
-        if node.table == self.root.table:
+        if node.table == self.tree.root.table:
 
             # Here, we are performing two operations:
             # 1) Build a filter to sync the updated record(s)
@@ -545,12 +548,13 @@ class Sync(Base):
                 )
 
                 old_values: list = []
-                for key in self.root.model.primary_keys:
+                for key in self.tree.root.model.primary_keys:
                     if key in payload.old.keys():
                         old_values.append(payload.old[key])
 
                 new_values = [
-                    payload.new[key] for key in self.root.model.primary_keys
+                    payload.new[key]
+                    for key in self.tree.root.model.primary_keys
                 ]
 
                 if (
@@ -558,7 +562,9 @@ class Sync(Base):
                     and old_values != new_values
                 ):
                     doc: dict = {
-                        "_id": self.get_doc_id(old_values, self.root.table),
+                        "_id": self.get_doc_id(
+                            old_values, self.tree.root.table
+                        ),
                         "_index": self.index,
                         "_op_type": "delete",
                     }
@@ -598,7 +604,7 @@ class Sync(Base):
                 for doc_id in self.es._search(self.index, node.table, fields):
                     where = {}
                     params = doc_id.split(PRIMARY_KEY_DELIMITER)
-                    for i, key in enumerate(self.root.model.primary_keys):
+                    for i, key in enumerate(self.tree.root.model.primary_keys):
                         where[key] = params[i]
                     _filters.append(where)
 
@@ -634,12 +640,14 @@ class Sync(Base):
                     ):
                         where: dict = {}
                         params = doc_id.split(PRIMARY_KEY_DELIMITER)
-                        for i, key in enumerate(self.root.model.primary_keys):
+                        for i, key in enumerate(
+                            self.tree.root.model.primary_keys
+                        ):
                             where[key] = params[i]
                         _filters.append(where)
 
                 if _filters:
-                    filters[self.root.table].extend(_filters)
+                    filters[self.tree.root.table].extend(_filters)
 
         return filters
 
@@ -648,16 +656,17 @@ class Sync(Base):
     ) -> dict:
 
         # when deleting a root node, just delete the doc in Elasticsearch
-        if node.table == self.root.table:
+        if node.table == self.tree.root.table:
 
             docs: list = []
             for payload in payloads:
-                self.root_primary_values: list = [
-                    payload.data[key] for key in self.root.model.primary_keys
+                self.tree.root_primary_values: list = [
+                    payload.data[key]
+                    for key in self.tree.root.model.primary_keys
                 ]
                 doc: dict = {
                     "_id": self.get_doc_id(
-                        self.root_primary_values, self.root.table
+                        self.tree.root_primary_values, self.tree.root.table
                     ),
                     "_index": self.index,
                     "_op_type": "delete",
@@ -700,19 +709,19 @@ class Sync(Base):
                 for doc_id in self.es._search(self.index, node.table, fields):
                     where = {}
                     params = doc_id.split(PRIMARY_KEY_DELIMITER)
-                    for i, key in enumerate(self.root.model.primary_keys):
+                    for i, key in enumerate(self.tree.root.model.primary_keys):
                         where[key] = params[i]
 
                     _filters.append(where)
 
                 if _filters:
-                    filters[self.root.table].extend(_filters)
+                    filters[self.tree.root.table].extend(_filters)
 
         return filters
 
     def _truncate_op(self, node: Node, filters: dict) -> dict:
 
-        if node.table == self.root.table:
+        if node.table == self.tree.root.table:
 
             docs: list = []
             for doc_id in self.es._search(self.index, node.table):
@@ -733,11 +742,11 @@ class Sync(Base):
             for doc_id in self.es._search(self.index, node.table):
                 where: dict = {}
                 params = doc_id.split(PRIMARY_KEY_DELIMITER)
-                for i, key in enumerate(self.root.model.primary_keys):
+                for i, key in enumerate(self.tree.root.model.primary_keys):
                     where[key] = params[i]
                 _filters.append(where)
             if _filters:
-                filters[self.root.table].extend(_filters)
+                filters[self.tree.root.table].extend(_filters)
 
         return filters
 
@@ -785,9 +794,7 @@ class Sync(Base):
         if payload.table not in self.tree.tables:
             return
 
-        node: Node = self.tree.get_node(
-            self.root, payload.table, payload.schema
-        )
+        node: Node = self.tree.get_node(payload.table, payload.schema)
 
         for payload in payloads:
             # this is only required for the non truncate tg_ops
@@ -804,7 +811,7 @@ class Sync(Base):
 
         logger.debug(f"tg_op: {payload.tg_op} table: {node.name}")
 
-        filters: dict = {node.table: [], self.root.table: []}
+        filters: dict = {node.table: [], self.tree.root.table: []}
         extra: dict = {}
 
         if payload.tg_op == INSERT:
@@ -884,12 +891,12 @@ class Sync(Base):
         self.query_builder.isouter = True
         self.query_builder.from_obj = None
 
-        for node in self.root.traverse_post_order():
+        for node in self.tree.root.traverse_post_order():
             node._subquery = None
             node._filters = []
             node.prepare_columns()
 
-        for node in self.root.traverse_post_order():
+        for node in self.tree.root.traverse_post_order():
 
             self._build_filters(filters, node)
 
@@ -1084,15 +1091,15 @@ class Sync(Base):
         logger.debug(
             f'Listening to notifications on channel "{self.database}"'
         )
-        items: list = []
+        payloads: list = []
 
         while True:
             # NB: consider reducing POLL_TIMEOUT to increase throughout
             if select.select([conn], [], [], POLL_TIMEOUT) == ([], [], []):
                 # Catch any hanging items from the last poll
-                if items:
-                    self.redis.bulk_push(items)
-                    items = []
+                if payloads:
+                    self.redis.bulk_push(payloads)
+                    payloads = []
                 continue
 
             try:
@@ -1102,13 +1109,13 @@ class Sync(Base):
                 os._exit(-1)
 
             while conn.notifies:
-                if len(items) >= REDIS_WRITE_CHUNK_SIZE:
-                    self.redis.bulk_push(items)
-                    items = []
+                if len(payloads) >= REDIS_WRITE_CHUNK_SIZE:
+                    self.redis.bulk_push(payloads)
+                    payloads = []
                 notification: AnyStr = conn.notifies.pop(0)
                 if notification.channel == self.database:
                     payload = json.loads(notification.payload)
-                    items.append(payload)
+                    payloads.append(payload)
                     logger.debug(f"on_notify: {payload}")
                     self.count["db"] += 1
 
@@ -1140,7 +1147,7 @@ class Sync(Base):
         self._refresh_views()
 
     def _refresh_views(self) -> None:
-        for node in self.root.traverse_breadth_first():
+        for node in self.tree.root.traverse_breadth_first():
             if node.table in self.views(node.schema):
                 if node.table in self.materialized_views(node.schema):
                     self.refresh_view(node.table, node.schema)
@@ -1162,7 +1169,7 @@ class Sync(Base):
         # this is used for the views.
         # we substitute the views for the base table here
         for i, payload in enumerate(payloads):
-            for node in self.root.traverse_breadth_first():
+            for node in self.tree.root.traverse_breadth_first():
                 if payload.table in node.base_tables:
                     payloads[i].table = node.table
 
@@ -1268,12 +1275,18 @@ class Sync(Base):
             f"Elastic: [{self.es.doc_count:,}] ...\n"
         )
         sys.stdout.flush()
+        from .utils import count, get_leaking_objects
 
-        # print("Size: ", asizeof.asizeof(self.root, limit=8))
-        # for node in self.root.traverse_breadth_first():
-        # nsize = asizeof.asizeof(self, limit=5)
-        # print(f"Size: {sizeof_fmt(nsize)} - {nsize}" )
-        if self.iteration % 20 == 0:
+        for i in gc.get_objects():
+            self.after[type(i)] += 1
+
+        for k in self.after:
+            if self.after[k] - self.before[k]:
+                print(f"DEBUG {k} = {self.after[k] - self.before[k]}")
+                print("-" * 70)
+        print("=" * 900)
+
+        if self.iteration % 30 == 0:
             print(x)
         print("-" * 100)
         self.iteration += 1

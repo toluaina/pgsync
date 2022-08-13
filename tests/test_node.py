@@ -200,12 +200,12 @@ class TestNode(object):
             ],
         }
         tree = Tree(sync.models)
-        root: Node = tree.build(nodes)
-        node = tree.get_node(root, "book", "public")
+        tree.build(nodes)
+        node = tree.get_node("book", "public")
         assert str(node) == "Node: public.book"
 
         with pytest.raises(RuntimeError) as excinfo:
-            tree.get_node(root, "xxx", "public")
+            tree.get_node("xxx", "public")
         assert "Node for public.xxx not found" in str(excinfo.value)
 
         sync.es.close()

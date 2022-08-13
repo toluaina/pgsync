@@ -1,4 +1,5 @@
 """PGSync utils."""
+import gc
 import logging
 import os
 import resource
@@ -30,6 +31,33 @@ FAIL = "\033[91m"
 ENDC = "\033[0m"
 BOLD = "\033[1m"
 UNDERLINE = "\033[4m"
+
+
+def count(typename, objects=None):
+    if objects is None:
+        objects = gc.get_objects()
+    return sum(1 for o in objects if type(o).__name__ == typename)
+
+
+def get_leaking_objects(objects=None):
+    if objects is None:
+        gc.collect()
+        objects = gc.get_objects()
+    ii = 0
+    try:
+        ids = set(id(i) for i in objects)
+        for i in objects:
+            ii += 1
+            for j in gc.get_referents(i):
+                if ii < 40:
+                    print("get_referents ", i)
+                    print("---" * 90)
+
+            ids.difference_update(id(j) for j in gc.get_referents(i))
+        # this then is our set of objects without referrers
+        return [i for i in objects if id(i) in ids]
+    finally:
+        objects = i = j = None  # clear cyclic references to frame
 
 
 def sizeof_fmt(num, suffix="B"):
