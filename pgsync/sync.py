@@ -660,13 +660,13 @@ class Sync(Base):
 
             docs: list = []
             for payload in payloads:
-                self.tree.root_primary_values: list = [
+                primary_values: list = [
                     payload.data[key]
                     for key in self.tree.root.model.primary_keys
                 ]
                 doc: dict = {
                     "_id": self.get_doc_id(
-                        self.tree.root_primary_values, self.tree.root.table
+                        primary_values, self.tree.root.table
                     ),
                     "_index": self.index,
                     "_op_type": "delete",
@@ -865,14 +865,10 @@ class Sync(Base):
         """
         if filters.get(node.table):
             _filters: list = []
-            keys: Set = set()
-            values: Set = set()
             for _filter in filters.get(node.table):
                 where: list = []
                 for key, value in _filter.items():
                     where.append(node.model.c[key] == value)
-                    keys.add(key)
-                    values.add(value)
                 _filters.append(sa.and_(*where))
 
             node._filters.append(sa.or_(*_filters))
