@@ -22,10 +22,9 @@ from guppy import hpy
 from psycopg2 import OperationalError
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from pympler import asizeof
-from sqlalchemy.sql import Values
 
 from . import __version__
-from .base import Base, Payload, TupleIdentifierType
+from .base import Base, Payload
 from .constants import (
     DELETE,
     INSERT,
@@ -851,7 +850,7 @@ class Sync(Base):
 
     def _build_filters(
         self, filters: Dict[str, List[dict]], node: Node
-    ) -> None:
+    ) -> sa.sql.elements.BooleanClauseList:
         """
         Build SQLAlchemy filters.
 
@@ -870,8 +869,7 @@ class Sync(Base):
                 for key, value in _filter.items():
                     where.append(node.model.c[key] == value)
                 _filters.append(sa.and_(*where))
-
-            node._filters.append(sa.or_(*_filters))
+            return sa.or_(*_filters)
 
     def sync(
         self,
@@ -879,7 +877,7 @@ class Sync(Base):
         txmin: Optional[int] = None,
         txmax: Optional[int] = None,
         extra: Optional[dict] = None,
-        ctid: Optional[int] = None,
+        ctid: Optional[dict] = None,
     ) -> Generator:
         if filters is None:
             filters = {}
@@ -890,73 +888,16 @@ class Sync(Base):
         for node in self.tree.root.traverse_post_order():
             node._subquery = None
             node._filters = []
-            node.prepare_columns()
+            node.setup()
 
-        for node in self.tree.root.traverse_post_order():
-
-            self._build_filters(filters, node)
-
-            if node.is_root:
-
-                if ctid is not None:
-                    subquery = []
-                    for page, rows in ctid.items():
-                        subquery.append(
-                            sa.select(
-                                [
-                                    sa.cast(
-                                        sa.literal_column(f"'({page},'")
-                                        .concat(sa.column("s"))
-                                        .concat(")"),
-                                        TupleIdentifierType,
-                                    )
-                                ]
-                            ).select_from(
-                                Values(
-                                    sa.column("s"),
-                                )
-                                .data([(row,) for row in rows])
-                                .alias("s")
-                            )
-                        )
-                    if subquery:
-                        node._filters.append(
-                            sa.or_(
-                                *[
-                                    node.model.c.ctid
-                                    == sa.any_(
-                                        sa.func.ARRAY(q.scalar_subquery())
-                                    )
-                                    for q in subquery
-                                ]
-                            )
-                        )
-
-                if txmin:
-                    node._filters.append(
-                        sa.cast(
-                            sa.cast(
-                                node.model.c.xmin,
-                                sa.Text,
-                            ),
-                            sa.BigInteger,
-                        )
-                        >= txmin
-                    )
-                if txmax:
-                    node._filters.append(
-                        sa.cast(
-                            sa.cast(
-                                node.model.c.xmin,
-                                sa.Text,
-                            ),
-                            sa.BigInteger,
-                        )
-                        < txmax
-                    )
+            _filters = self._build_filters(filters, node)
+            if _filters is not None:
+                node._filters.append(_filters)
 
             try:
-                self.query_builder.build_queries(node)
+                self.query_builder.build_queries(
+                    node, txmin=txmin, txmax=txmax, ctid=ctid
+                )
             except Exception as e:
                 logger.exception(f"Exception {e}")
                 raise
@@ -1271,16 +1212,33 @@ class Sync(Base):
             f"Elastic: [{self.es.doc_count:,}] ...\n"
         )
         sys.stdout.flush()
-        from .utils import count, get_leaking_objects
 
-        for i in gc.get_objects():
-            self.after[type(i)] += 1
+        e = asizeof.asizeof(self.es)
+        r = asizeof.asizeof(self.redis)
+        q = asizeof.asizeof(self.query_builder, limit=10)
+        ro = asizeof.asizeof(self.tree.root, limit=9)
+        t = asizeof.asizeof(self.tree, limit=12)
+        s = asizeof.asizeof(self, limit=5)
 
-        for k in self.after:
-            if self.after[k] - self.before[k]:
-                print(f"DEBUG {k} = {self.after[k] - self.before[k]}")
-                print("-" * 70)
-        print("=" * 900)
+        print("Reference...")
+        print(
+            f"Es    : {sys.getrefcount(self.es):2.0f} - {sizeof_fmt(e)} {e:8.0f}"
+        )
+        print(
+            f"Redis : {sys.getrefcount(self.redis):2.0f} - {sizeof_fmt(r)} {r:8.0f}"
+        )
+        print(
+            f"Root  : {sys.getrefcount(self.tree.root):2.0f} - {sizeof_fmt(ro)} {ro:8.0f}"
+        )
+        print(
+            f"Tree  : {sys.getrefcount(self.tree):2.0f} - {sizeof_fmt(t)} {t:8.0f}"
+        )
+        print(
+            f"build : {sys.getrefcount(self.query_builder):2.0f} - {sizeof_fmt(q)} {q:8.0f}"
+        )
+        print(
+            f"sync  : {sys.getrefcount(self):2.0f} - {sizeof_fmt(s)} {s:8.0f}"
+        )
 
         if self.iteration % 30 == 0:
             print(x)

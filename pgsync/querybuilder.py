@@ -1,10 +1,10 @@
 """PGSync QueryBuilder."""
 from collections import defaultdict
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import sqlalchemy as sa
 
-from .base import compiled_query
+from .base import compiled_query, TupleIdentifierType
 from .constants import OBJECT, ONE_TO_MANY, ONE_TO_ONE, SCALAR
 from .exc import ForeignKeyError
 from .node import Node
@@ -212,7 +212,13 @@ class QueryBuilder(object):
                 )
         return row.label("_keys")
 
-    def _root(self, node) -> None:
+    def _root(
+        self,
+        node: Node,
+        txmin: Optional[int] = None,
+        txmax: Optional[int] = None,
+        ctid: Optional[dict] = None,
+    ) -> None:
         columns = [
             sa.func.JSON_BUILD_ARRAY(
                 *[
@@ -231,6 +237,61 @@ class QueryBuilder(object):
 
         if self.from_obj is not None:
             node._subquery = node._subquery.select_from(self.from_obj)
+
+        if ctid is not None:
+            subquery = []
+            for page, rows in ctid.items():
+                subquery.append(
+                    sa.select(
+                        [
+                            sa.cast(
+                                sa.literal_column(f"'({page},'")
+                                .concat(sa.column("s"))
+                                .concat(")"),
+                                TupleIdentifierType,
+                            )
+                        ]
+                    ).select_from(
+                        sa.sql.Values(
+                            sa.column("s"),
+                        )
+                        .data([(row,) for row in rows])
+                        .alias("s")
+                    )
+                )
+            if subquery:
+                node._filters.append(
+                    sa.or_(
+                        *[
+                            node.model.c.ctid
+                            == sa.any_(sa.func.ARRAY(q.scalar_subquery()))
+                            for q in subquery
+                        ]
+                    )
+                )
+
+        if txmin:
+            node._filters.append(
+                sa.cast(
+                    sa.cast(
+                        node.model.c.xmin,
+                        sa.Text,
+                    ),
+                    sa.BigInteger,
+                )
+                >= txmin
+            )
+        if txmax:
+            node._filters.append(
+                sa.cast(
+                    sa.cast(
+                        node.model.c.xmin,
+                        sa.Text,
+                    ),
+                    sa.BigInteger,
+                )
+                < txmax
+            )
 
         if node._filters:
             node._subquery = node._subquery.where(sa.and_(*node._filters))
@@ -774,7 +835,13 @@ class QueryBuilder(object):
         if not node.is_root:
             node._subquery = node._subquery.lateral()
 
-    def build_queries(self, node: Node) -> None:
+    def build_queries(
+        self,
+        node: Node,
+        txmin: Optional[int] = None,
+        txmax: Optional[int] = None,
+        ctid: Optional[dict] = None,
+    ) -> None:
         """Build node query."""
         self.from_obj = None
 
@@ -782,7 +849,7 @@ class QueryBuilder(object):
         self._children(node)
 
         if node.is_root:
-            self._root(node)
+            self._root(node, txmin=txmin, txmax=txmax, ctid=ctid)
         else:
             # 2) subquery: these are for children creating their own columns
             if node.relationship.throughs:

@@ -131,7 +131,7 @@ class Node(object):
         if self.label is None:
             self.label = self.table
 
-        self.prepare_columns()
+        self.setup()
 
         self.relationship: Relationship = Relationship(self.relationship)
         self._subquery = None
@@ -158,7 +158,7 @@ class Node(object):
     def __hash__(self):
         return hash(self.name)
 
-    def prepare_columns(self):
+    def setup(self):
 
         self.columns = []
 

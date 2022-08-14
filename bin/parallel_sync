@@ -102,7 +102,7 @@ def fetch_tasks(doc: dict, block_size: Optional[int] = None) -> Generator:
             sa.literal_column("1").label("y"),
             sa.column("ctid"),
         ]
-    ).select_from(sync.root.model)
+    ).select_from(sync.tree.root.model)
     i: int = 1
     for _, _, ctid in sync.fetchmany(statement):
         value: list = ctid[0].split(",")
@@ -276,6 +276,7 @@ def run_task(
 ) -> int:
     if sync is None:
         sync: Sync = Sync(doc, verbose=verbose, validate=validate)
+        sync.tree.build(sync.nodes)
     txmin: int = sync.checkpoint
     txmax: int = sync.txid_current
     sync.es.bulk(

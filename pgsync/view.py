@@ -8,7 +8,6 @@ from sqlalchemy.dialects.postgresql import array
 from sqlalchemy.dialects.postgresql.base import PGDDLCompiler
 from sqlalchemy.ext import compiler
 from sqlalchemy.schema import DDLElement
-from sqlalchemy.sql import Values
 from sqlalchemy.sql.selectable import Select
 
 from .constants import DEFAULT_SCHEMA, MATERIALIZED_VIEW
@@ -275,7 +274,7 @@ def create_view(
         )
 
     statement = sa.select(
-        Values(
+        sa.sql.Values(
             sa.column("table_name"),
             sa.column("primary_keys"),
             sa.column("foreign_keys"),
