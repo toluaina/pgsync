@@ -171,63 +171,63 @@ class Transform(object):
                 transform_node[child.get("label", child["table"])] = node
         return transform_node
 
+    @classmethod
+    def get_primary_keys(cls, primary_keys: dict) -> dict:
+        """Get private keys entry from a nested dict."""
 
-def get_private_keys(primary_keys):
-    """Get private keys entry from a nested dict."""
-
-    def squash_list(values, _values=None):
-        if not _values:
-            _values = []
-        if isinstance(values, dict):
-            if len(values) == 1:
-                _values.append(values)
-            else:
-                for key, value in values.items():
-                    _values.extend(squash_list({key: value}))
-        elif isinstance(values, list):
-            for value in values:
-                _values.extend(squash_list(value))
-        return _values
-
-    target = []
-    for values in squash_list(primary_keys):
-        if len(values) > 1:
-            for key, value in values.items():
-                target.append({key: value})
-            continue
-        target.append(values)
-
-    target3 = []
-    for values in target:
-        for key, value in values.items():
-            if isinstance(value, dict):
-                target3.append({key: value})
-            elif isinstance(value, list):
-                _value = {}
-                for v in value:
-                    for _k, _v in v.items():
-                        _value.setdefault(_k, [])
-                        if isinstance(_v, list):
-                            _value[_k].extend(_v)
-                        else:
-                            _value[_k].append(_v)
-                target3.append({key: _value})
-
-    target4 = {}
-    for values in target3:
-        for key, value in values.items():
-            if key not in target4:
-                target4[key] = {}
-            for k, v in value.items():
-                if k not in target4[key]:
-                    target4[key][k] = []
-                if isinstance(v, list):
-                    for _v in v:
-                        if _v not in target4[key][k]:
-                            target4[key][k].append(_v)
-                    target4[key][k] = target4[key][k]
+        def squash_list(values, _values=None):
+            if not _values:
+                _values = []
+            if isinstance(values, dict):
+                if len(values) == 1:
+                    _values.append(values)
                 else:
-                    if v not in target4[key][k]:
-                        target4[key][k].append(v)
-            target4[key][k] = sorted(target4[key][k])
-    return target4
+                    for key, value in values.items():
+                        _values.extend(squash_list({key: value}))
+            elif isinstance(values, list):
+                for value in values:
+                    _values.extend(squash_list(value))
+            return _values
+
+        target = []
+        for values in squash_list(primary_keys):
+            if len(values) > 1:
+                for key, value in values.items():
+                    target.append({key: value})
+                continue
+            target.append(values)
+
+        target3 = []
+        for values in target:
+            for key, value in values.items():
+                if isinstance(value, dict):
+                    target3.append({key: value})
+                elif isinstance(value, list):
+                    _value = {}
+                    for v in value:
+                        for _k, _v in v.items():
+                            _value.setdefault(_k, [])
+                            if isinstance(_v, list):
+                                _value[_k].extend(_v)
+                            else:
+                                _value[_k].append(_v)
+                    target3.append({key: _value})
+
+        target4 = {}
+        for values in target3:
+            for key, value in values.items():
+                if key not in target4:
+                    target4[key] = {}
+                for k, v in value.items():
+                    if k not in target4[key]:
+                        target4[key][k] = []
+                    if isinstance(v, list):
+                        for _v in v:
+                            if _v not in target4[key][k]:
+                                target4[key][k].append(_v)
+                        target4[key][k] = target4[key][k]
+                    else:
+                        if v not in target4[key][k]:
+                            target4[key][k].append(v)
+                target4[key][k] = sorted(target4[key][k])
+        return target4

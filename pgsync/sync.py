@@ -12,7 +12,7 @@ import select
 import sys
 import time
 from collections import defaultdict
-from typing import AnyStr, Dict, Generator, List, Optional, Set
+from typing import AnyStr, Generator, List, Optional, Set
 
 import click
 import psutil
@@ -59,7 +59,7 @@ from .settings import (
     REPLICATION_SLOT_CLEANUP_INTERVAL,
     USE_ASYNC,
 )
-from .transform import get_private_keys, Transform
+from .transform import Transform
 from .utils import (
     compiled_query,
     exception,
@@ -848,29 +848,6 @@ class Sync(Base):
         if any(filters.values()):
             yield from self.sync(filters=filters, extra=extra)
 
-    def _build_filters(
-        self, filters: Dict[str, List[dict]], node: Node
-    ) -> sa.sql.elements.BooleanClauseList:
-        """
-        Build SQLAlchemy filters.
-
-        NB:
-        assumption dictionary is an AND and list is an OR
-
-        filters['book'] = [
-            {'id': 1, 'uid': '001'},
-            {'id': 2, 'uid': '002'}
-        ]
-        """
-        if filters.get(node.table):
-            _filters: list = []
-            for _filter in filters.get(node.table):
-                where: list = []
-                for key, value in _filter.items():
-                    where.append(node.model.c[key] == value)
-                _filters.append(sa.and_(*where))
-            return sa.or_(*_filters)
-
     def sync(
         self,
         filters: Optional[dict] = None,
@@ -879,9 +856,6 @@ class Sync(Base):
         extra: Optional[dict] = None,
         ctid: Optional[dict] = None,
     ) -> Generator:
-        if filters is None:
-            filters = {}
-
         self.query_builder.isouter = True
         self.query_builder.from_obj = None
 
@@ -890,13 +864,9 @@ class Sync(Base):
             node._filters = []
             node.setup()
 
-            _filters = self._build_filters(filters, node)
-            if _filters is not None:
-                node._filters.append(_filters)
-
             try:
                 self.query_builder.build_queries(
-                    node, txmin=txmin, txmax=txmax, ctid=ctid
+                    node, filters=filters, txmin=txmin, txmax=txmax, ctid=ctid
                 )
             except Exception as e:
                 logger.exception(f"Exception {e}")
@@ -924,7 +894,7 @@ class Sync(Base):
 
                 row: dict = Transform.transform(row, self.nodes)
 
-                row[META] = get_private_keys(keys)
+                row[META] = Transform.get_primary_keys(keys)
                 if extra:
                     if extra["table"] not in row[META]:
                         row[META][extra["table"]] = {}

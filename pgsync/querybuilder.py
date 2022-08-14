@@ -19,6 +19,29 @@ class QueryBuilder(object):
         self.isouter: bool = True
         self._cache: dict = {}
 
+    def _build_filters(
+        self, filters: Dict[str, List[dict]], node: Node
+    ) -> sa.sql.elements.BooleanClauseList:
+        """
+        Build SQLAlchemy filters.
+
+        NB:
+        assumption dictionary is an AND and list is an OR
+
+        filters['book'] = [
+            {'id': 1, 'uid': '001'},
+            {'id': 2, 'uid': '002'}
+        ]
+        """
+        if filters.get(node.table):
+            _filters: list = []
+            for _filter in filters.get(node.table):
+                where: list = []
+                for key, value in _filter.items():
+                    where.append(node.model.c[key] == value)
+                _filters.append(sa.and_(*where))
+            return sa.or_(*_filters)
+
     def _json_build_object(
         self, columns: list, chunk_size: int = 100
     ) -> sa.sql.elements.BinaryExpression:
@@ -838,12 +861,17 @@ class QueryBuilder(object):
     def build_queries(
         self,
         node: Node,
+        filters: Optional[dict] = None,
         txmin: Optional[int] = None,
         txmax: Optional[int] = None,
         ctid: Optional[dict] = None,
     ) -> None:
         """Build node query."""
         self.from_obj = None
+        if filters is not None:
+            _filters = self._build_filters(filters, node)
+            if _filters is not None:
+                node._filters.append(_filters)
 
         # 1) add all child columns from one level below
         self._children(node)

@@ -2,7 +2,7 @@
 import pytest
 
 from pgsync.constants import CONCAT_TRANSFORM, RENAME_TRANSFORM
-from pgsync.transform import get_private_keys, Transform
+from pgsync.transform import Transform
 
 
 @pytest.mark.usefixtures("table_creator")
@@ -399,7 +399,7 @@ class TestTransform(object):
         # - with list order maintained
         # - without destination specified
 
-    def test_get_private_keys(self):
+    def test_get_primary_keys(self):
         primary_keys = [
             {"publisher": {"id": [4]}},
             {"book_language": [{"id": [7]}, {"id": [15]}]},
@@ -428,7 +428,7 @@ class TestTransform(object):
             [{"subject": [{"id": [4]}], "book_subject": [{"id": [7]}]}],
             {"rating": {"id": [7]}},
         ]
-        assert get_private_keys(primary_keys) == {
+        assert Transform.get_primary_keys(primary_keys) == {
             "publisher": {"id": [4]},
             "book_language": {"id": [7, 15]},
             "author": {"id": [4, 5]},
