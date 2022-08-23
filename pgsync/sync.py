@@ -1148,7 +1148,7 @@ class Sync(Base):
     def _refresh_views(self) -> None:
         for node in self.root.traverse_breadth_first():
             if node.table in self.views(node.schema):
-                if node.table in self.materialized_views(node.schema):
+                if node.table in self._materialized_views(node.schema):
                     self.refresh_view(node.table, node.schema)
 
     def on_publish(self, payloads: list) -> None:
