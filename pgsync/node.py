@@ -288,8 +288,6 @@ class Tree:
         )
 
         self.tables.add(node.table)
-        for through_node in node.relationship.through_nodes:
-            self.tables.add(through_node.table)
 
         for child in data.get("children", []):
             node.add_child(self.build(child))
