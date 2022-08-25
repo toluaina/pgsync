@@ -124,7 +124,7 @@ $ curl -X GET http://[elasticsearch host]:9201/reservations/_search?pretty=true
 - Installation
   - Install PGSync from pypi using pip
     - ```$ pip install pgsync``` 
-  - Create a [schema.json](https://github.com/toluaina/pgsync/blob/main/examples/airbnb/schema.json) for you document representation
+  - Create a [schema.json](https://github.com/toluaina/pgsync/blob/main/examples/airbnb/schema.json) for your document representation
   - Bootstrap the database (one time only)
     - ```bootstrap --config schema.json```
   - Run the program with 
