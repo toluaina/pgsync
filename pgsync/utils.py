@@ -1,8 +1,6 @@
 """PGSync utils."""
-import gc
 import logging
 import os
-import resource
 import sys
 import threading
 from datetime import timedelta
@@ -21,94 +19,6 @@ logger = logging.getLogger(__name__)
 
 HIGHLIGHT_START = "\033[4m"
 HIGHLIGHT_END = "\033[0m:"
-
-HEADER = "\033[95m"
-BLUE = "\033[94m"
-CYAN = "\033[96m"
-GREEN = "\033[92m"
-WARNING = "\033[93m"
-FAIL = "\033[91m"
-ENDC = "\033[0m"
-BOLD = "\033[1m"
-UNDERLINE = "\033[4m"
-
-
-def count(typename, objects=None):
-    if objects is None:
-        objects = gc.get_objects()
-    return sum(1 for o in objects if type(o).__name__ == typename)
-
-
-def get_leaking_objects(objects=None):
-    if objects is None:
-        gc.collect()
-        objects = gc.get_objects()
-    ii = 0
-    try:
-        ids = set(id(i) for i in objects)
-        for i in objects:
-            ii += 1
-            for j in gc.get_referents(i):
-                if ii < 40:
-                    print("get_referents ", i)
-                    print("---" * 90)
-
-            ids.difference_update(id(j) for j in gc.get_referents(i))
-        # this then is our set of objects without referrers
-        return [i for i in objects if id(i) in ids]
-    finally:
-        objects = i = j = None  # clear cyclic references to frame
-
-
-def sizeof_fmt(num, suffix="B"):
-    for unit in ["", "K", "M", "G", "T", "P", "E", "Z"]:
-        if abs(num) < 1024.0:
-            return "%3.1f%s%s" % (num, unit, suffix)
-        num /= 1024.0
-    return "%.1f%s%s" % (num, "Y", suffix)
-
-
-def mem_profile(label):
-    def decorator(function):
-        def wrapper(*args, **kwargs):
-            a = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-            sys.stdout.write(
-                f"{GREEN}{label} mem before: {sizeof_fmt(a)} ({a}) {ENDC}\n"
-            )
-            fn = function(*args, **kwargs)
-            b = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-            sys.stdout.write(
-                f"{GREEN}{label} mem after : {sizeof_fmt(b)} ({b}) {ENDC} - "
-                f"{WARNING}{sizeof_fmt(b-a)}{ENDC}\n"
-            )
-            sys.stdout.write("=" * 100)
-            sys.stdout.write("\n")
-            return fn
-
-        return wrapper
-
-    return decorator
-
-
-class MemProfile:
-    def __init__(self, label: Optional[str] = None):
-        self.label: str = label or ""
-
-    def __enter__(self):
-        self.a = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-        sys.stdout.write(
-            f"{GREEN}{self.label} mem before: {sizeof_fmt(self.a)} ({self.a}) "
-            f"{ENDC}\n"
-        )
-        return self
-
-    def __exit__(self, *args):
-        b = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-        sys.stdout.write(
-            f"{GREEN}{self.label} mem after : {sizeof_fmt(b)} ({b}) {ENDC} - "
-            f"{WARNING}{sizeof_fmt(b-self.a)}{ENDC}\n"
-        )
-        sys.stdout.write("=" * 100)
 
 
 def timeit(func: Callable):

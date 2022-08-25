@@ -272,11 +272,11 @@ class Base(object):
 
     def indices(self, table: str, schema: str) -> list:
         """Get the database table indexes."""
-        if table not in self.__indices:
-            self.__indices[table] = sorted(
+        if (table, schema) not in self.__indices:
+            self.__indices[(table, schema)] = sorted(
                 sa.inspect(self.engine).get_indexes(table, schema=schema)
             )
-        return self.__indices[table]
+        return self.__indices[(table, schema)]
 
     def tables(self, schema: str) -> list:
         """Get the table names for current schema."""
@@ -817,6 +817,8 @@ class Base(object):
             for partition in result.partitions(chunk_size):
                 for keys, row, *primary_keys in partition:
                     yield keys, row, primary_keys
+            result.close()
+        self.engine.clear_compiled_cache()
 
     def fetchcount(self, statement: sa.sql.Subquery) -> int:
         with self.engine.connect() as conn:

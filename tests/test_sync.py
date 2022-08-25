@@ -503,9 +503,9 @@ class TestSync(object):
         with pytest.raises(Exception):
             with patch("pgsync.sync.logger") as mock_logger:
                 _filters = sync._insert_op(node, {"publisher": []}, payloads)
-        mock_logger.exception.assert_called_once_with(
-            "Could not get parent from node: public.publisher"
-        )
+            mock_logger.exception.assert_called_once_with(
+                "Could not get parent from node: public.publisher"
+            )
 
     @patch("pgsync.elastichelper.ElasticHelper.bulk")
     def test__delete_op(self, mock_es, sync, connection):
@@ -664,9 +664,9 @@ class TestSync(object):
             ]
         }
         assert len(node._filters) == 0
-        sync._build_filters(filters, node)
-        assert len(node._filters) == 1
-        assert str(node._filters[0]) == (
+        filters = sync.query_builder._build_filters(filters, node)
+        assert len(filters) == 2
+        assert str(filters) == (
             "book_1.isbn = :isbn_1 AND book_1.title = :title_1 OR "
             "book_1.isbn = :isbn_2 AND book_1.title = :title_2"
         )
@@ -799,7 +799,7 @@ class TestSync(object):
                 )
 
     def test_root(self, sync):
-        root = sync.root
+        root = sync.tree.root
         assert root is not None
         assert str(root) == "Node: public.book"
 

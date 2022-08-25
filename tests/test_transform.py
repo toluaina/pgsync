@@ -183,12 +183,15 @@ class TestTransform(object):
 
     def test_rename_fields(self):
         nodes = {
-            "id": "my_id",
-            "code": "my_code",
-            "level": "levelup",
-            "Child1": {"column_1": "column1"},
+            "transform": {
+                "rename": {
+                    "id": "my_id",
+                    "code": "my_code",
+                    "level": "levelup",
+                    "Child1": {"column_1": "column1"},
+                }
+            }
         }
-
         row = {
             "level": 1,
             "id": "007",
@@ -354,15 +357,19 @@ class TestTransform(object):
 
     def test_concat_fields(self):
         nodes = {
-            "Child1": {
-                "columns": ["column_1", "column_2"],
-                "delimiter": "_",
-                "destination": "column_3",
-            },
-            "Child2": {
-                "columns": ["column_1"],
-                "destination": "column_3",
-            },
+            "transform": {
+                "concat": {
+                    "Child1": {
+                        "columns": ["column_1", "column_2"],
+                        "delimiter": "_",
+                        "destination": "column_3",
+                    },
+                    "Child2": {
+                        "columns": ["column_1"],
+                        "destination": "column_3",
+                    },
+                }
+            }
         }
 
         row = {

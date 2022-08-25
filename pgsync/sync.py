@@ -2,7 +2,6 @@
 
 """Sync module."""
 import asyncio
-import gc
 import json
 import logging
 import os
@@ -15,13 +14,10 @@ from collections import defaultdict
 from typing import AnyStr, Generator, List, Optional, Set
 
 import click
-import psutil
 import sqlalchemy as sa
 import sqlparse
-from guppy import hpy
 from psycopg2 import OperationalError
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-from pympler import asizeof
 
 from . import __version__
 from .base import Base, Payload
@@ -64,10 +60,7 @@ from .utils import (
     compiled_query,
     exception,
     get_config,
-    mem_profile,
-    MemProfile,
     show_settings,
-    sizeof_fmt,
     threaded,
     Timer,
 )
@@ -114,9 +107,6 @@ class Sync(Base):
             self.create_setting()
         self.query_builder: QueryBuilder = QueryBuilder(verbose=verbose)
         self.count: dict = dict(xlog=0, db=0, redis=0)
-        self.iteration = 0
-        self.before = defaultdict(int)
-        self.after = defaultdict(int)
 
     def validate(self, repl_slots: bool = True) -> None:
         """Perform all validation right away."""
@@ -946,7 +936,6 @@ class Sync(Base):
             fp.write(f"{value}\n")
         self._checkpoint: int = value
 
-    # @mem_profile("_poll_redis")
     def _poll_redis(self) -> None:
         payloads: dict = self.redis.bulk_pop()
         if payloads:
@@ -984,7 +973,6 @@ class Sync(Base):
 
     @threaded
     @exception
-    # @mem_profile("poll_db")
     def poll_db(self) -> None:
         """
         Producer which polls Postgres continuously.
@@ -1163,18 +1151,8 @@ class Sync(Base):
             await asyncio.sleep(LOG_INTERVAL)
 
     def _status(self, label: str) -> None:
-
-        h = hpy()
-
-        process = psutil.Process(os.getpid())
-        mem = process.memory_info().rss / float(2**20)
-        x = h.heap()
-
         sys.stdout.write(
             f"{label} {self.database} "
-            f"iteration: {self.iteration} "
-            f"Mem: {mem: 2.3f} MiB "
-            f"X: {sizeof_fmt(x.size)}  "
             f"Xlog: [{self.count['xlog']:,}] => "
             f"Db: [{self.count['db']:,}] => "
             f"Redis: [total = {self.count['redis']:,} "
@@ -1182,38 +1160,6 @@ class Sync(Base):
             f"Elastic: [{self.es.doc_count:,}] ...\n"
         )
         sys.stdout.flush()
-
-        e = asizeof.asizeof(self.es)
-        r = asizeof.asizeof(self.redis)
-        q = asizeof.asizeof(self.query_builder, limit=10)
-        ro = asizeof.asizeof(self.tree.root, limit=9)
-        t = asizeof.asizeof(self.tree, limit=12)
-        s = asizeof.asizeof(self, limit=5)
-
-        print("Reference...")
-        print(
-            f"Es    : {sys.getrefcount(self.es):2.0f} - {sizeof_fmt(e)} {e:8.0f}"
-        )
-        print(
-            f"Redis : {sys.getrefcount(self.redis):2.0f} - {sizeof_fmt(r)} {r:8.0f}"
-        )
-        print(
-            f"Root  : {sys.getrefcount(self.tree.root):2.0f} - {sizeof_fmt(ro)} {ro:8.0f}"
-        )
-        print(
-            f"Tree  : {sys.getrefcount(self.tree):2.0f} - {sizeof_fmt(t)} {t:8.0f}"
-        )
-        print(
-            f"build : {sys.getrefcount(self.query_builder):2.0f} - {sizeof_fmt(q)} {q:8.0f}"
-        )
-        print(
-            f"sync  : {sys.getrefcount(self):2.0f} - {sizeof_fmt(s)} {s:8.0f}"
-        )
-
-        if self.iteration % 30 == 0:
-            print(x)
-        print("-" * 100)
-        self.iteration += 1
 
     def receive(self, nthreads_polldb: int) -> None:
         """
