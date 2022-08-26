@@ -482,13 +482,14 @@ class Sync(Base):
 
                 for payload in payloads:
                     for i, key in enumerate(foreign_keys[node.name]):
-                        filters[node.parent.table].append(
-                            {
-                                foreign_keys[node.parent.name][
-                                    i
-                                ]: payload.data[key]
-                            }
-                        )
+                        if key == foreign_keys[node.parent.name][i]:
+                            filters[node.parent.table].append(
+                                {
+                                    foreign_keys[node.parent.name][
+                                        i
+                                    ]: payload.data[key]
+                                }
+                            )
 
         else:
 

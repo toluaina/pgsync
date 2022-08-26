@@ -1,0 +1,12 @@
+#!/bin/sh
+
+source .env
+
+export PGPASSWORD=$PG_PASSWORD
+
+PG_DATABASE=book
+SLOT_NAME=book_book
+
+psql -U $PG_USER -h $PG_HOST -d $PG_DATABASE <<EOF
+    SELECT * FROM PG_LOGICAL_SLOT_PEEK_CHANGES('$SLOT_NAME', NULL, NULL)
+EOF
