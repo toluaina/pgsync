@@ -21,7 +21,7 @@ class QueryBuilder(object):
 
     def _build_filters(
         self, filters: Dict[str, List[dict]], node: Node
-    ) -> sa.sql.elements.BooleanClauseList:
+    ) -> Optional[sa.sql.elements.BooleanClauseList]:
         """
         Build SQLAlchemy filters.
 
@@ -33,14 +33,15 @@ class QueryBuilder(object):
             {'id': 2, 'uid': '002'}
         ]
         """
-        if filters.get(node.table):
-            _filters: list = []
-            for _filter in filters.get(node.table):
-                where: list = []
-                for key, value in _filter.items():
-                    where.append(node.model.c[key] == value)
-                _filters.append(sa.and_(*where))
-            return sa.or_(*_filters)
+        if filters is not None:
+            if filters.get(node.table):
+                _filters: list = []
+                for _filter in filters.get(node.table):
+                    where: list = []
+                    for key, value in _filter.items():
+                        where.append(node.model.c[key] == value)
+                    _filters.append(sa.and_(*where))
+                return sa.or_(*_filters)
 
     def _json_build_object(
         self, columns: list, chunk_size: int = 100
@@ -140,7 +141,7 @@ class QueryBuilder(object):
 
         return self._cache[(node_a, node_b)]
 
-    def _get_foreign_keys(self, node_a: Node, node_b: Node) -> Dict:
+    def _get_foreign_keys(self, node_a: Node, node_b: Node) -> dict:
         """This is for handling through nodes."""
         if (node_a, node_b) not in self._cache:
             if node_a.relationship.throughs or node_b.relationship.throughs:
@@ -175,7 +176,7 @@ class QueryBuilder(object):
         foreign_keys: dict,
         table: str = None,
         schema: str = None,
-    ):
+    ) -> dict:
         """
         Get the foreign keys where the columns are provided.
 
@@ -207,7 +208,9 @@ class QueryBuilder(object):
                     foreign_keys[table].pop(i)
             return foreign_keys[table]
 
-    def _get_child_keys(self, node: Node, params: dict):
+    def _get_child_keys(
+        self, node: Node, params: dict
+    ) -> sa.sql.elements.Label:
         row = sa.cast(
             sa.func.JSON_BUILD_OBJECT(
                 node.table,
@@ -343,13 +346,13 @@ class QueryBuilder(object):
                     child.parent, through
                 )
 
-                left_foreign_keys = self._get_column_foreign_keys(
+                left_foreign_keys: dict = self._get_column_foreign_keys(
                     child._subquery.columns,
                     foreign_keys,
                     table=through.name,
                     schema=child.schema,
                 )
-                right_foreign_keys = self._get_column_foreign_keys(
+                right_foreign_keys: dict = self._get_column_foreign_keys(
                     child.parent.model.columns,
                     foreign_keys,
                 )
@@ -448,7 +451,7 @@ class QueryBuilder(object):
                 continue
             foreign_keys[key] = values
 
-        foreign_key_columns = self._get_column_foreign_keys(
+        foreign_key_columns: dict = self._get_column_foreign_keys(
             node.model.columns,
             foreign_keys,
             table=node.table,
@@ -464,7 +467,7 @@ class QueryBuilder(object):
                 )
             )
 
-        _keys = self._get_child_keys(
+        _keys: sa.sql.elements.Label = self._get_child_keys(
             node, sa.func.JSON_BUILD_ARRAY(*params).label("_keys")
         )
 
@@ -522,7 +525,7 @@ class QueryBuilder(object):
                         continue
                     child_foreign_keys[key] = values
 
-                left_foreign_keys = self._get_column_foreign_keys(
+                left_foreign_keys: dict = self._get_column_foreign_keys(
                     child._subquery.columns,
                     child_foreign_keys,
                     table=child_through.table,
@@ -594,7 +597,7 @@ class QueryBuilder(object):
 
         outer_subquery = sa.select(columns)
 
-        parent_foreign_key_columns = self._get_column_foreign_keys(
+        parent_foreign_key_columns: dict = self._get_column_foreign_keys(
             through.columns,
             foreign_keys,
             schema=node.schema,
@@ -644,7 +647,7 @@ class QueryBuilder(object):
         ).label("_keys")
 
         left_foreign_keys = foreign_keys[node.name]
-        right_foreign_keys = self._get_column_foreign_keys(
+        right_foreign_keys: dict = self._get_column_foreign_keys(
             through.columns,
             foreign_keys,
             table=through.table,
@@ -711,7 +714,7 @@ class QueryBuilder(object):
 
             foreign_keys: dict = self._get_foreign_keys(node, child)
 
-            foreign_key_columns = self._get_column_foreign_keys(
+            foreign_key_columns: dict = self._get_column_foreign_keys(
                 child._subquery.columns,
                 foreign_keys,
             )
@@ -766,7 +769,7 @@ class QueryBuilder(object):
 
         foreign_keys: dict = self.get_foreign_keys(node.parent, node)
 
-        foreign_key_columns = self._get_column_foreign_keys(
+        foreign_key_columns: dict = self._get_column_foreign_keys(
             node.model.columns,
             foreign_keys,
             table=node.table,
@@ -832,7 +835,7 @@ class QueryBuilder(object):
         if from_obj is not None:
             node._subquery = node._subquery.select_from(from_obj)
 
-        parent_foreign_key_columns = self._get_column_foreign_keys(
+        parent_foreign_key_columns: dict = self._get_column_foreign_keys(
             node.parent.model.columns,
             foreign_keys,
             table=node.parent.table,
@@ -868,10 +871,9 @@ class QueryBuilder(object):
     ) -> None:
         """Build node query."""
         self.from_obj = None
-        if filters is not None:
-            _filters = self._build_filters(filters, node)
-            if _filters is not None:
-                node._filters.append(_filters)
+        _filters = self._build_filters(filters, node)
+        if _filters is not None:
+            node._filters.append(_filters)
 
         # 1) add all child columns from one level below
         self._children(node)
