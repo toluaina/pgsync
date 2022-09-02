@@ -8,11 +8,11 @@ async-timeout==4.0.2
     # via redis
 attrs==22.1.0
     # via pytest
-black==22.6.0
+black==22.8.0
     # via -r requirements/base.in
-boto3==1.24.60
+boto3==1.24.65
     # via -r requirements/base.in
-botocore==1.27.60
+botocore==1.27.65
     # via
     #   boto3
     #   s3transfer
@@ -42,7 +42,7 @@ elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
 environs==9.5.0
     # via -r requirements/base.in
-faker==14.1.0
+faker==14.2.0
     # via -r requirements/base.in
 flake8==5.0.4
     # via
@@ -90,7 +90,7 @@ packaging==21.3
     #   pytest
     #   pytest-sugar
     #   redis
-pathspec==0.9.0
+pathspec==0.10.1
     # via black
 platformdirs==2.5.2
     # via black

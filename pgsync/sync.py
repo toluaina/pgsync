@@ -80,7 +80,7 @@ class Sync(Base):
         **kwargs,
     ):
         """Constructor."""
-        self.index: str = document["index"]
+        self.index: str = document.get("index") or document["database"]
         self.pipeline: str = document.get("pipeline")
         self.plugins: list = document.get("plugins", [])
         self.nodes: dict = document.get("nodes", {})
