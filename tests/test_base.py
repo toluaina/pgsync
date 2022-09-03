@@ -18,6 +18,7 @@ from pgsync.constants import DEFAULT_SCHEMA
 from pgsync.exc import (
     InvalidPermissionError,
     LogicalSlotParseError,
+    ReplicationSlotError,
     TableNotFoundError,
 )
 from pgsync.view import CreateView, DropView
@@ -33,6 +34,39 @@ class TestBase(object):
         value = pg_base.pg_settings("max_replication_slots")
         assert int(value) > 0
         assert pg_base.pg_settings("xyz") is None
+
+    @patch("pgsync.base.logger")
+    def test__can_create_replication_slot(self, mock_logger, connection):
+        pg_base = Base(connection.engine.url.database)
+
+        pg_base.create_replication_slot("foo")
+        with patch("pgsync.base.Base.drop_replication_slot") as mock_slot:
+            with patch("pgsync.base.Base.create_replication_slot"):
+                pg_base._can_create_replication_slot("foo")
+                mock_logger.exception.assert_called_once_with(
+                    "Replication slot foo already exists"
+                )
+        assert mock_slot.call_args_list == [
+            call("foo"),
+            call("foo"),
+        ]
+
+        with patch("pgsync.base.Base.drop_replication_slot") as mock_slot:
+            pg_base._can_create_replication_slot("bar")
+            mock_slot.assert_called_once_with("bar")
+
+        with patch(
+            "pgsync.base.Base.create_replication_slot", side_effect=Exception
+        ) as mock_slot:
+            with pytest.raises(ReplicationSlotError) as excinfo:
+                pg_base._can_create_replication_slot("barx")
+            mock_slot.assert_called_once_with("barx")
+            msg = (
+                f'PG_USER "{pg_base.engine.url.username}" needs to be '
+                f"superuser or have permission to read, create and destroy "
+                f"replication slots to perform this action."
+            )
+            assert msg in str(excinfo.value)
 
     def test_has_permissions(self, connection):
         pg_base = Base(connection.engine.url.database)

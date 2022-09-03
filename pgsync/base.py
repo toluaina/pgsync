@@ -22,6 +22,7 @@ from .constants import (
 from .exc import (
     InvalidPermissionError,
     LogicalSlotParseError,
+    ReplicationSlotError,
     TableNotFoundError,
 )
 from .settings import (
@@ -132,6 +133,24 @@ class Base(object):
             )[0]
         except (TypeError, IndexError):
             return None
+
+    def _can_create_replication_slot(self, slot_name: str) -> None:
+        """Check if the given user can create and destroy replication slots."""
+        if self.replication_slots(slot_name):
+            logger.exception(f"Replication slot {slot_name} already exists")
+            self.drop_replication_slot(slot_name)
+
+        try:
+            self.create_replication_slot(slot_name)
+        except Exception as e:
+            logger.exception(f"{e}")
+            raise ReplicationSlotError(
+                f'PG_USER "{self.engine.url.username}" needs to be '
+                f"superuser or have permission to read, create and destroy "
+                f"replication slots to perform this action."
+            )
+        else:
+            self.drop_replication_slot(slot_name)
 
     def has_permissions(self, username: str, permissions: List[str]) -> bool:
         """Check if the given user is a superuser or replication user."""

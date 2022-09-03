@@ -37,7 +37,6 @@ from .exc import (
     PrimaryKeyNotFoundError,
     RDSError,
     SchemaError,
-    SuperUserError,
 )
 from .node import Node, Tree
 from .plugin import Plugins
@@ -118,6 +117,7 @@ class Sync(Base):
             )
 
         self.connect()
+
         if self.plugins:
             self._plugins: Plugins = Plugins("plugins", self.plugins)
 
@@ -139,35 +139,26 @@ class Sync(Base):
                 "Enable logical decoding by setting wal_level = logical"
             )
 
+        self._can_create_replication_slot("_tmp_")
+
         rds_logical_replication: Optional[str] = self.pg_settings(
             "rds.logical_replication"
         )
-
-        if rds_logical_replication:
-            if rds_logical_replication.lower() == "off":
-                raise RDSError("rds.logical_replication is not enabled")
-        else:
-            if not self.has_permissions(
-                self.engine.url.username,
-                ["usesuper", "userepl"],
-            ):
-                raise SuperUserError(
-                    f'PG_USER "{self.engine.url.username}" needs to be '
-                    f"superuser or have replication role permission to "
-                    f"perform this action. "
-                    f"Ensure usesuper or userepl is True in pg_user"
-                )
+        if (
+            rds_logical_replication
+            and rds_logical_replication.lower() == "off"
+        ):
+            raise RDSError("rds.logical_replication is not enabled")
 
         if self.index is None:
             raise ValueError("Index is missing for document")
 
         # ensure we have run bootstrap and the replication slot exists
-        if repl_slots:
-            if not self.replication_slots(self.__name):
-                raise RuntimeError(
-                    f'Replication slot "{self.__name}" does not exist.\n'
-                    f'Make sure you have run the "bootstrap" command.'
-                )
+        if repl_slots and not self.replication_slots(self.__name):
+            raise RuntimeError(
+                f'Replication slot "{self.__name}" does not exist.\n'
+                f'Make sure you have run the "bootstrap" command.'
+            )
 
         # ensure the checkpoint dirpath is valid
         if not os.path.exists(CHECKPOINT_PATH):

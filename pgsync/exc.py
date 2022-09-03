@@ -117,7 +117,7 @@ class MultipleThroughTablesError(Exception):
         return repr(self.value)
 
 
-class SuperUserError(Exception):
+class ReplicationSlotError(Exception):
     def __init__(self, value):
         self.value = value
 
