@@ -59,6 +59,7 @@ from .utils import (
     compiled_query,
     exception,
     get_config,
+    load_config,
     show_settings,
     threaded,
     Timer,
@@ -185,7 +186,7 @@ class Sync(Base):
 
             # ensure all base tables have at least one primary_key
             for table in node.base_tables:
-                model: sa.sql.Alias = self.model(table, node.schema)
+                model: sa.sql.Alias = self.models(table, node.schema)
                 if not model.primary_keys:
                     raise PrimaryKeyNotFoundError(
                         f"No primary key(s) for base table: {table}"
@@ -1294,7 +1295,8 @@ def main(
     show_settings(config)
 
     with Timer():
-        for document in json.load(open(config)):
+
+        for document in load_config(config):
             sync: Sync = Sync(document, verbose=verbose, **kwargs)
 
             if analyze:

@@ -1,4 +1,3 @@
-import json
 from random import choice
 from typing import Set
 
@@ -10,7 +9,7 @@ from sqlalchemy.orm import sessionmaker
 
 from pgsync.base import pg_engine
 from pgsync.constants import DELETE, INSERT, TG_OP, TRUNCATE, UPDATE
-from pgsync.utils import get_config, show_settings, Timer
+from pgsync.utils import get_config, load_config, show_settings, Timer
 
 FIELDS = {
     "isbn": "isbn13",
@@ -140,7 +139,7 @@ def main(config, nsize, daemon, tg_op):
     show_settings()
 
     config: str = get_config(config)
-    documents: dict = json.load(open(config))
+    documents: dict = next(load_config(config))
     with pg_engine(
         documents[0].get("database", documents[0]["index"])
     ) as engine:

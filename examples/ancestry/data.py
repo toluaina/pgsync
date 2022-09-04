@@ -1,12 +1,10 @@
-import json
-
 import click
 from schema import Child, GrandChild, GreatGrandChild, Parent, Surrogate
 from sqlalchemy.orm import sessionmaker
 
 from pgsync.base import pg_engine, subtransactions
 from pgsync.helper import teardown
-from pgsync.utils import get_config
+from pgsync.utils import get_config, load_config
 
 
 @click.command()
@@ -20,10 +18,8 @@ def main(config):
 
     config: str = get_config(config)
     teardown(drop_db=False, config=config)
-    documents = json.load(open(config))
-    with pg_engine(
-        documents[0].get("database", documents[0]["index"])
-    ) as engine:
+    documents = next(load_config(config))
+    with pg_engine(documents.get("database", documents["index"])) as engine:
         Session = sessionmaker(bind=engine, autoflush=True)
         session = Session()
 

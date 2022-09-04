@@ -10,5 +10,17 @@
                 "description"
             ]
         }
+    },
+    {
+        "database": "$foo",
+        "index": "$bar",
+        "nodes": {
+            "table": "book",
+            "columns": [
+                "isbn",
+                "title",
+                "description"
+            ]
+        }
     }
 ]

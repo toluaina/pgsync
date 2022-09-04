@@ -1,5 +1,3 @@
-import json
-
 import click
 import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
@@ -7,7 +5,7 @@ from sqlalchemy.schema import UniqueConstraint
 
 from pgsync.base import create_database, pg_engine
 from pgsync.helper import teardown
-from pgsync.utils import get_config
+from pgsync.utils import get_config, load_config
 
 Base = declarative_base()
 
@@ -47,8 +45,8 @@ class Structure(Base):
     specie_id = sa.Column(sa.Integer, nullable=False)
 
 
-def setup(config=None):
-    for document in json.load(open(config)):
+def setup(config: str) -> None:
+    for document in load_config(config):
         database: str = document.get("database", document["index"])
         create_database(database)
         with pg_engine(database) as engine:

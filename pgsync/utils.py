@@ -1,9 +1,11 @@
 """PGSync utils."""
+import json
 import logging
 import os
 import sys
 import threading
 from datetime import timedelta
+from string import Template
 from time import time
 from typing import Callable, Optional
 from urllib.parse import ParseResult, urlparse
@@ -123,6 +125,17 @@ def get_config(config: Optional[str] = None) -> str:
     if not os.path.exists(config):
         raise FileNotFoundError(f'Schema config "{config}" not found')
     return config
+
+
+def load_config(config: str) -> dict:
+    with open(config, "r") as documents:
+        for document in json.load(documents):
+            for key, value in document.items():
+                try:
+                    document[key] = Template(value).safe_substitute(os.environ)
+                except TypeError:
+                    pass
+            yield document
 
 
 def compiled_query(

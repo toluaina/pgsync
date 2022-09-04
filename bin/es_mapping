@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 """Create a custom NGram analyzer for the default mapping."""
-import json
 import logging
 
 import click
@@ -9,7 +8,7 @@ from elasticsearch import Elasticsearch, helpers
 
 from pgsync.settings import ELASTICSEARCH_TIMEOUT, ELASTICSEARCH_VERIFY_CERTS
 from pgsync.urls import get_elasticsearch_url
-from pgsync.utils import get_config, timeit
+from pgsync.utils import get_config, load_config, timeit
 
 logger = logging.getLogger(__name__)
 
@@ -115,9 +114,7 @@ def main(config):
     """Create custom NGram analyzer for the default mapping."""
 
     config: str = get_config(config)
-    for index in set(
-        [document["index"] for document in json.load(open(config))]
-    ):
+    for index in set([document["index"] for document in load_config(config)]):
         create_es_mapping(index)
 
 

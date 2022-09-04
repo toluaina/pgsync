@@ -1,4 +1,5 @@
 """Utils tests."""
+import os
 from urllib.parse import ParseResult, urlparse
 
 import pytest
@@ -14,6 +15,7 @@ from pgsync.utils import (
     exception,
     get_config,
     get_redacted_url,
+    load_config,
     show_settings,
     threaded,
     timeit,
@@ -33,8 +35,30 @@ class TestUtils(object):
         with pytest.raises(FileNotFoundError) as excinfo:
             get_config("non_existent")
         assert 'Schema config "non_existent" not found' in str(excinfo.value)
-        config = get_config("tests/fixtures/schema.json")
+        config: str = get_config("tests/fixtures/schema.json")
         assert config == "tests/fixtures/schema.json"
+
+    def test_load_config(self):
+        os.environ["foo"] = "mydb"
+        os.environ["bar"] = "myindex"
+        config: str = get_config("tests/fixtures/schema.json")
+        data = load_config(config)
+        assert next(data) == {
+            "database": "fakedb",
+            "index": "fake_index",
+            "nodes": {
+                "table": "book",
+                "columns": ["isbn", "title", "description"],
+            },
+        }
+        assert next(data) == {
+            "database": "mydb",
+            "index": "myindex",
+            "nodes": {
+                "table": "book",
+                "columns": ["isbn", "title", "description"],
+            },
+        }
 
     @patch("pgsync.utils.logger")
     def test_show_settings(self, mock_logger):

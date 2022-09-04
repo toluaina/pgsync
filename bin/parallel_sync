@@ -42,7 +42,6 @@ and row numbers.
 """
 
 import asyncio
-import json
 import multiprocessing
 import os
 import sys
@@ -57,7 +56,7 @@ import sqlalchemy as sa
 
 from pgsync.settings import BLOCK_SIZE
 from pgsync.sync import Sync
-from pgsync.utils import get_config, show_settings, timeit
+from pgsync.utils import get_config, load_config, show_settings, timeit
 
 
 def logical_slot_changes(
@@ -335,18 +334,20 @@ def main(config, nprocs, mode, verbose):
     show_settings()
     config: str = get_config(config)
 
-    for doc in json.load(open(config)):
-        tasks: Generator = fetch_tasks(doc)
+    for document in load_config(config):
+        tasks: Generator = fetch_tasks(document)
         if mode == "synchronous":
-            synchronous(tasks, doc, verbose=verbose)
+            synchronous(tasks, document, verbose=verbose)
         elif mode == "multithreaded":
-            multithreaded(tasks, doc, nprocs=nprocs, verbose=verbose)
+            multithreaded(tasks, document, nprocs=nprocs, verbose=verbose)
         elif mode == "multiprocess":
-            multiprocess(tasks, doc, nprocs=nprocs, verbose=verbose)
+            multiprocess(tasks, document, nprocs=nprocs, verbose=verbose)
         elif mode == "multithreaded_async":
-            multithreaded_async(tasks, doc, nprocs=nprocs, verbose=verbose)
+            multithreaded_async(
+                tasks, document, nprocs=nprocs, verbose=verbose
+            )
         elif mode == "multiprocess_async":
-            multiprocess_async(tasks, doc, nprocs=nprocs, verbose=verbose)
+            multiprocess_async(tasks, document, nprocs=nprocs, verbose=verbose)
 
 
 if __name__ == "__main__":

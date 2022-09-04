@@ -1,5 +1,3 @@
-import json
-
 import click
 from schema import Book, Publisher
 from sqlalchemy.orm import sessionmaker
@@ -8,7 +6,7 @@ from pgsync.base import pg_engine, subtransactions
 from pgsync.constants import DEFAULT_SCHEMA
 from pgsync.helper import teardown
 from pgsync.sync import Sync
-from pgsync.utils import get_config
+from pgsync.utils import get_config, load_config
 
 
 @click.command()
@@ -23,9 +21,9 @@ def main(config):
     config: str = get_config(config)
     teardown(drop_db=False, config=config)
 
-    for document in json.load(open(config)):
+    for document in load_config(config):
 
-        database = document.get("database", document["index"])
+        database: str = document.get("database", document["index"])
         with pg_engine(database) as engine:
             schema: str = document.get("schema", DEFAULT_SCHEMA)
             connection = engine.connect().execution_options(
@@ -111,6 +109,8 @@ def main(config):
                 session.add_all(books.values())
 
             sync: Sync = Sync(document, validate=False)
+
+            sync.tree.build(sync.nodes)
 
             sync.refresh_views()
 

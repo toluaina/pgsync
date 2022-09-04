@@ -1,7 +1,7 @@
 """Helper tests."""
 import pytest
 import sqlalchemy as sa
-from mock import patch
+from mock import ANY, call, patch
 
 from pgsync.helper import teardown
 
@@ -18,7 +18,11 @@ class TestHelper(object):
         mock_sync.truncate_schemas.return_value = None
         with patch("pgsync.helper.drop_database") as mock_db:
             teardown(drop_db=True, config="fixtures/schema.json")
-            mock_db.assert_called_once()
+            assert mock_db.call_args_list == [
+                call(ANY),
+                call(ANY),
+            ]
+
         mock_logger.warning.assert_not_called()
 
     @patch("pgsync.sync.ElasticHelper")
@@ -29,4 +33,7 @@ class TestHelper(object):
         with patch("pgsync.sync.Sync") as mock_sync:
             mock_sync.truncate_schemas.side_effect = sa.exc.OperationalError
             teardown(drop_db=False, config="fixtures/schema.json")
-            mock_logger.warning.assert_called_once()
+            assert mock_logger.warning.call_args_list == [
+                call(ANY),
+                call(ANY),
+            ]

@@ -1,5 +1,3 @@
-import json
-
 import click
 import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
@@ -7,7 +5,7 @@ from sqlalchemy.schema import ForeignKeyConstraint, UniqueConstraint
 
 from pgsync.base import create_database, pg_engine
 from pgsync.helper import teardown
-from pgsync.utils import get_config
+from pgsync.utils import get_config, load_config
 
 Base = declarative_base()
 
@@ -104,9 +102,9 @@ class RealAnswer(Base):
     )
 
 
-def setup(config=None):
-    for document in json.load(open(config)):
-        database = document.get("database", document["index"])
+def setup(config: str) -> None:
+    for document in load_config(config):
+        database: str = document.get("database", document["index"])
         create_database(database)
         with pg_engine(database) as engine:
             Base.metadata.drop_all(engine)
@@ -122,7 +120,7 @@ def setup(config=None):
 )
 def main(config):
 
-    config = get_config(config)
+    config: str = get_config(config)
     teardown(config=config)
     setup(config)
 
