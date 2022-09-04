@@ -18,7 +18,7 @@ def main(config):
 
     config: str = get_config(config)
     teardown(drop_db=False, config=config)
-    documents = next(load_config(config))
+    document = next(load_config(config))
     database: str = document.get("database", document["index"])
     with pg_engine(database) as engine:
         Session = sessionmaker(bind=engine, autoflush=True)

@@ -139,10 +139,9 @@ def main(config, nsize, daemon, tg_op):
     show_settings()
 
     config: str = get_config(config)
-    documents: dict = next(load_config(config))
-    with pg_engine(
-        documents[0].get("database", documents[0]["index"])
-    ) as engine:
+    document: dict = next(load_config(config))
+    database: str = document.get("database", document["index"])
+    with pg_engine(database) as engine:
         Session = sessionmaker(bind=engine, autoflush=False, autocommit=False)
         session = Session()
 
