@@ -15,7 +15,7 @@ from .constants import (
     ELASTICSEARCH_TYPES,
     META,
 )
-from .node import Node
+from .node import Tree
 from .settings import (
     ELASTICSEARCH_API_KEY,
     ELASTICSEARCH_API_KEY_ID,
@@ -243,7 +243,7 @@ class ElasticHelper(object):
     def _create_setting(
         self,
         index: str,
-        node: Node,
+        tree: Tree,
         setting: Optional[dict] = None,
         mapping: Optional[dict] = None,
         routing: Optional[str] = None,
@@ -262,7 +262,7 @@ class ElasticHelper(object):
                 else:
                     body.update(**{"mappings": {"properties": mapping}})
             else:
-                mapping: dict = self._build_mapping(node, routing)
+                mapping: dict = self._build_mapping(tree, routing)
                 if mapping:
                     body.update(**mapping)
             try:
@@ -280,9 +280,9 @@ class ElasticHelper(object):
                 f"created setting: {self.__client.indices.get_settings(index)}"
             )
 
-    def _build_mapping(self, root: Node, routing: str) -> Optional[dict]:
+    def _build_mapping(self, tree: Tree, routing: str) -> Optional[dict]:
         """Get the Elasticsearch mapping from the schema transform."""
-        for node in root.traverse_post_order():
+        for node in tree.traverse_post_order():
 
             rename: dict = node.transform.get("rename", {})
             mapping: dict = node.transform.get("mapping", {})
@@ -319,13 +319,13 @@ class ElasticHelper(object):
                 node.parent._mapping["properties"][node.label] = node._mapping
 
         if routing:
-            root._mapping["_routing"] = {"required": True}
+            tree.root._mapping["_routing"] = {"required": True}
 
-        if root._mapping:
+        if tree.root._mapping:
             if self.major_version < 7 and not self.is_opensearch:
-                root._mapping = {"_doc": root._mapping}
+                tree.root._mapping = {"_doc": tree.root._mapping}
 
-            return dict(mappings=root._mapping)
+            return dict(mappings=tree.root._mapping)
 
 
 def get_elasticsearch_client(url: str) -> Elasticsearch:

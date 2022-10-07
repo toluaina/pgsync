@@ -265,6 +265,15 @@ class Tree:
         self.__nodes: Dict[Node] = {}
         self.root: Optional[Node] = None
 
+    def display(self) -> None:
+        self.root.display()
+
+    def traverse_breadth_first(self) -> Node:
+        return self.root.traverse_breadth_first()
+
+    def traverse_post_order(self) -> Node:
+        return self.root.traverse_post_order()
+
     def build(self, data: dict) -> Node:
 
         table: str = data.get("table")

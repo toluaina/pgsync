@@ -6,11 +6,11 @@
 #
 async-timeout==4.0.2
     # via redis
-black==22.8.0
+black==22.10.0
     # via -r requirements/base.in
-boto3==1.24.86
+boto3==1.24.88
     # via -r requirements/base.in
-botocore==1.27.86
+botocore==1.27.88
     # via
     #   boto3
     #   s3transfer
@@ -64,7 +64,7 @@ pathspec==0.10.1
     # via black
 platformdirs==2.5.2
     # via black
-psycopg2-binary==2.9.3
+psycopg2-binary==2.9.4
     # via -r requirements/base.in
 pyparsing==3.0.9
     # via packaging
@@ -94,7 +94,7 @@ sqlparse==0.4.3
     # via -r requirements/base.in
 tomli==2.0.1
     # via black
-typing-extensions==4.3.0
+typing-extensions==4.4.0
     # via black
 urllib3==1.26.12
     # via

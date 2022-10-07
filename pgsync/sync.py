@@ -175,9 +175,9 @@ class Sync(Base):
             )
 
         self.tree.build(self.nodes)
-        self.tree.root.display()
+        self.tree.display()
 
-        for node in self.tree.root.traverse_breadth_first():
+        for node in self.tree.traverse_breadth_first():
 
             if node.schema not in self.schemas:
                 raise InvalidSchemaError(
@@ -193,7 +193,7 @@ class Sync(Base):
                     )
 
     def analyze(self) -> None:
-        for node in self.tree.root.traverse_breadth_first():
+        for node in self.tree.traverse_breadth_first():
 
             if node.is_root:
                 continue
@@ -245,7 +245,7 @@ class Sync(Base):
         """Create Elasticsearch setting and mapping if required."""
         self.es._create_setting(
             self.index,
-            self.tree.root,
+            self.tree,
             setting=self.setting,
             mapping=self.mapping,
             routing=self.routing,
@@ -263,7 +263,7 @@ class Sync(Base):
             # tables with user defined foreign keys
             user_defined_fkey_tables: dict = {}
 
-            for node in self.tree.root.traverse_breadth_first():
+            for node in self.tree.traverse_breadth_first():
                 if node.schema != schema:
                     continue
                 tables |= set(
@@ -308,7 +308,7 @@ class Sync(Base):
 
         for schema in self.schemas:
             tables: Set = set()
-            for node in self.tree.root.traverse_breadth_first():
+            for node in self.tree.traverse_breadth_first():
                 tables |= set(
                     [through.table for through in node.relationship.throughs]
                 )
@@ -333,7 +333,10 @@ class Sync(Base):
         return f"{PRIMARY_KEY_DELIMITER}".join(map(str, primary_keys))
 
     def logical_slot_changes(
-        self, txmin: Optional[int] = None, txmax: Optional[int] = None
+        self,
+        txmin: Optional[int] = None,
+        txmax: Optional[int] = None,
+        upto_nchanges: Optional[int] = None,
     ) -> None:
         """
         Process changes from the db logical replication logs.
@@ -368,14 +371,14 @@ class Sync(Base):
             self.__name,
             txmin=txmin,
             txmax=txmax,
-            upto_nchanges=None,
+            upto_nchanges=upto_nchanges,
         )
         while True:
             changes: int = self.logical_slot_peek_changes(
                 self.__name,
                 txmin=txmin,
                 txmax=txmax,
-                upto_nchanges=None,
+                upto_nchanges=upto_nchanges,
                 limit=limit,
                 offset=offset,
             )
@@ -429,7 +432,7 @@ class Sync(Base):
                 self.__name,
                 txmin=txmin,
                 txmax=txmax,
-                upto_nchanges=None,
+                upto_nchanges=upto_nchanges,
                 limit=limit,
                 offset=offset,
             )
@@ -1107,7 +1110,7 @@ class Sync(Base):
         # forward pass sync
         self.es.bulk(self.index, self.sync(txmin=txmin, txmax=txmax))
         # now sync up to txmax to capture everything we may have missed
-        self.logical_slot_changes(txmin=txmin, txmax=txmax)
+        self.logical_slot_changes(txmin=txmin, txmax=txmax, upto_nchanges=None)
         self.checkpoint: int = txmax or self.txid_current
         self._truncate: bool = True
 

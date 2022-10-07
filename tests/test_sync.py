@@ -319,7 +319,9 @@ class TestSync(object):
             sync.pull()
             txmin = None
             txmax = sync.txid_current - 1
-            mock_get.assert_called_once_with(txmin=txmin, txmax=txmax)
+            mock_get.assert_called_once_with(
+                txmin=txmin, txmax=txmax, upto_nchanges=None
+            )
             mock_logger.debug.assert_called_once_with(
                 f"pull txmin: {txmin} - txmax: {txmax}"
             )
