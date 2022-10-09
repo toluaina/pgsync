@@ -7,7 +7,7 @@ import threading
 from datetime import timedelta
 from string import Template
 from time import time
-from typing import Callable, Optional
+from typing import Callable, Generator, Optional
 from urllib.parse import ParseResult, urlparse
 
 import sqlalchemy as sa
@@ -84,11 +84,12 @@ def exception(func: Callable):
 
 def get_redacted_url(result: ParseResult) -> ParseResult:
     if result.password:
-        username: str = result.username
-        hostname: str = result.hostname
-        result = result._replace(
-            netloc=f"{username}:{'*' * len(result.password)}@{hostname}"
-        )
+        username: Optional[str] = result.username
+        hostname: Optional[str] = result.hostname
+        if username and hostname:
+            result = result._replace(
+                netloc=f"{username}:{'*' * len(result.password)}@{hostname}"
+            )
     return result
 
 
@@ -104,18 +105,18 @@ def show_settings(schema: Optional[str] = None) -> None:
         urlparse(get_postgres_url("postgres"))
     )
     logger.info(f"URL: {result.geturl()}")
-    result: ParseResult = get_redacted_url(urlparse(get_elasticsearch_url()))
+    result = get_redacted_url(urlparse(get_elasticsearch_url()))
     logger.info(f"{HIGHLIGHT_START}Elasticsearch{HIGHLIGHT_END}")
     logger.info(f"URL: {result.geturl()}")
     logger.info(f"{HIGHLIGHT_START}Redis{HIGHLIGHT_END}")
-    result: ParseResult = get_redacted_url(urlparse(get_redis_url()))
+    result = get_redacted_url(urlparse(get_redis_url()))
     logger.info(f"URL: {result.geturl()}")
     logger.info("-" * 65)
 
 
 def get_config(config: Optional[str] = None) -> str:
     """Return the schema config for PGSync."""
-    config: str = config or SCHEMA
+    config = config or SCHEMA
     if not config:
         raise SchemaError(
             "Schema config not set\n. "
@@ -127,7 +128,7 @@ def get_config(config: Optional[str] = None) -> str:
     return config
 
 
-def load_config(config: str) -> dict:
+def load_config(config: str) -> Generator:
     with open(config, "r") as documents:
         for document in json.load(documents):
             for key, value in document.items():
@@ -139,18 +140,18 @@ def load_config(config: str) -> dict:
 
 
 def compiled_query(
-    query: str,
+    query: sa.sql.Select,
     label: Optional[str] = None,
     literal_binds: bool = QUERY_LITERAL_BINDS,
 ) -> None:
     """Compile an SQLAlchemy query with an optional label."""
-    query: str = str(
+    query = str(
         query.compile(
             dialect=sa.dialects.postgresql.dialect(),
             compile_kwargs={"literal_binds": literal_binds},
         )
     )
-    query: str = sqlparse.format(query, reindent=True, keyword_case="upper")
+    query = sqlparse.format(query, reindent=True, keyword_case="upper")
     if label:
         logger.debug(f"\033[4m{label}:\033[0m\n{query}")
         sys.stdout.write(f"\033[4m{label}:\033[0m\n{query}\n")

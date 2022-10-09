@@ -1112,7 +1112,7 @@ class Sync(Base):
         # now sync up to txmax to capture everything we may have missed
         self.logical_slot_changes(txmin=txmin, txmax=txmax, upto_nchanges=None)
         self.checkpoint: int = txmax or self.txid_current
-        self._truncate: bool = True
+        self._truncate = True
 
     @threaded
     @exception

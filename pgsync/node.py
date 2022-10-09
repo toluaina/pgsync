@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Set, Tuple
+from typing import Callable, Dict, Generator, List, Optional, Set, Tuple
 
 import sqlalchemy as sa
 
@@ -241,7 +241,7 @@ class Node(object):
             leaf = i == (len(self.children) - 1)
             child.display(prefix, leaf)
 
-    def traverse_breadth_first(self) -> Node:
+    def traverse_breadth_first(self) -> Generator:
         stack: List[Node] = [self]
         while stack:
             node: Node = stack.pop(0)
@@ -249,7 +249,7 @@ class Node(object):
             for child in node.children:
                 stack.append(child)
 
-    def traverse_post_order(self) -> Node:
+    def traverse_post_order(self) -> Generator:
         for child in self.children:
             yield from child.traverse_post_order()
         yield self
@@ -268,10 +268,10 @@ class Tree:
     def display(self) -> None:
         self.root.display()
 
-    def traverse_breadth_first(self) -> Node:
+    def traverse_breadth_first(self) -> Generator:
         return self.root.traverse_breadth_first()
 
-    def traverse_post_order(self) -> Node:
+    def traverse_post_order(self) -> Generator:
         return self.root.traverse_post_order()
 
     def build(self, data: dict) -> Node:
@@ -315,7 +315,7 @@ class Tree:
         """Get node by name."""
         key: Tuple[str, str] = (schema, table)
         if key not in self.__nodes:
-            for node in self.root.traverse_post_order():
+            for node in self.traverse_post_order():
                 if table == node.table and schema == node.schema:
                     self.__nodes[key] = node
                     return self.__nodes[key]

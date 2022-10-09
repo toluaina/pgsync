@@ -157,14 +157,6 @@ class LogicalSlotParseError(Exception):
         return repr(self.value)
 
 
-class InvalidPermissionError(Exception):
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
-
-
 class RDSError(Exception):
     def __init__(self, value):
         self.value = value

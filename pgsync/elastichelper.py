@@ -110,21 +110,19 @@ class ElasticHelper(object):
         raise_on_error: Optional[bool] = None,
     ) -> None:
         """Pull sync data from generator to Elasticsearch."""
-        chunk_size: int = chunk_size or ELASTICSEARCH_CHUNK_SIZE
-        max_chunk_bytes: int = max_chunk_bytes or ELASTICSEARCH_MAX_CHUNK_BYTES
-        thread_count: int = thread_count or ELASTICSEARCH_THREAD_COUNT
-        queue_size: int = queue_size or ELASTICSEARCH_QUEUE_SIZE
+        chunk_size = chunk_size or ELASTICSEARCH_CHUNK_SIZE
+        max_chunk_bytes = max_chunk_bytes or ELASTICSEARCH_MAX_CHUNK_BYTES
+        thread_count = thread_count or ELASTICSEARCH_THREAD_COUNT
+        queue_size = queue_size or ELASTICSEARCH_QUEUE_SIZE
         # max_retries, initial_backoff & max_backoff are only applicable when
         # streaming bulk is in use
-        max_retries: int = max_retries or ELASTICSEARCH_MAX_RETRIES
-        initial_backoff: float = (
-            initial_backoff or ELASTICSEARCH_INITIAL_BACKOFF
-        )
-        max_backoff: float = max_backoff or ELASTICSEARCH_MAX_BACKOFF
-        raise_on_exception: bool = (
+        max_retries = max_retries or ELASTICSEARCH_MAX_RETRIES
+        initial_backoff = initial_backoff or ELASTICSEARCH_INITIAL_BACKOFF
+        max_backoff = max_backoff or ELASTICSEARCH_MAX_BACKOFF
+        raise_on_exception = (
             raise_on_exception or ELASTICSEARCH_RAISE_ON_EXCEPTION
         )
-        raise_on_error: bool = raise_on_error or ELASTICSEARCH_RAISE_ON_ERROR
+        raise_on_error = raise_on_error or ELASTICSEARCH_RAISE_ON_ERROR
 
         try:
             self._bulk(
@@ -164,7 +162,7 @@ class ElasticHelper(object):
         """Bulk index, update, delete docs to Elasticsearch."""
         # when using multiple threads for poll_db we need to account for other
         # threads performing deletions
-        ignore_status: Tuple[int] = (400, 404)
+        ignore_status: Tuple[int, int] = (400, 404)
 
         if ELASTICSEARCH_STREAMING_BULK:
             for _ in helpers.streaming_bulk(
@@ -213,7 +211,7 @@ class ElasticHelper(object):
             'uid': ['a002', 'a009'],
         }
         """
-        fields: dict = fields or {}
+        fields = fields or {}
         search: Search = Search(using=self.__client, index=index)
         # explicitly exclude all fields since we only need the doc _id
         search = search.source(excludes=["*"])
@@ -262,7 +260,7 @@ class ElasticHelper(object):
                 else:
                     body.update(**{"mappings": {"properties": mapping}})
             else:
-                mapping: dict = self._build_mapping(tree, routing)
+                mapping = self._build_mapping(tree, routing)
                 if mapping:
                     body.update(**mapping)
             try:
@@ -274,13 +272,17 @@ class ElasticHelper(object):
             logger.debug(f"create index response {response}")
             # check the result of the mapping on the index
             logger.debug(
-                f"created mapping: {self.__client.indices.get_mapping(index)}"
+                f"created mapping: "
+                f"{self.__client.indices.get_mapping(index=index)}"
             )
             logger.debug(
-                f"created setting: {self.__client.indices.get_settings(index)}"
+                f"created setting: "
+                f"{self.__client.indices.get_settings(index=index)}"
             )
 
-    def _build_mapping(self, tree: Tree, routing: str) -> Optional[dict]:
+    def _build_mapping(
+        self, tree: Tree, routing: Optional[str] = None
+    ) -> Optional[dict]:
         """Get the Elasticsearch mapping from the schema transform."""
         for node in tree.traverse_post_order():
 
@@ -326,6 +328,8 @@ class ElasticHelper(object):
                 tree.root._mapping = {"_doc": tree.root._mapping}
 
             return dict(mappings=tree.root._mapping)
+
+        return None
 
 
 def get_elasticsearch_client(url: str) -> Elasticsearch:

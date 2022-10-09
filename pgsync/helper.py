@@ -22,7 +22,7 @@ def teardown(
     validate: bool = False,
 ) -> None:
     """Teardown helper."""
-    config: str = get_config(config)
+    config = get_config(config)
 
     for document in load_config(config):
         sync: Sync = Sync(document, validate=validate)

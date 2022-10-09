@@ -16,7 +16,6 @@ from pgsync.base import (
 )
 from pgsync.constants import DEFAULT_SCHEMA
 from pgsync.exc import (
-    InvalidPermissionError,
     LogicalSlotParseError,
     ReplicationSlotError,
     TableNotFoundError,
@@ -67,31 +66,6 @@ class TestBase(object):
                 f"replication slots to perform this action."
             )
             assert msg in str(excinfo.value)
-
-    def test_has_permissions(self, connection):
-        pg_base = Base(connection.engine.url.database)
-        pg_base.verbose = False
-        assert (
-            pg_base.has_permissions(
-                connection.engine.url.username,
-                ["usesuper"],
-            )
-            is True
-        )
-
-        assert (
-            pg_base.has_permissions(
-                "spiderman",
-                ["usesuper"],
-            )
-            is False
-        )
-
-        with pytest.raises(InvalidPermissionError):
-            pg_base.has_permissions(
-                connection.engine.url.username,
-                ["sudo"],
-            )
 
     def test_model(self, connection):
         pg_base = Base(connection.engine.url.database)

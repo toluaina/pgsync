@@ -42,11 +42,11 @@ def get_elasticsearch_url(
     port: Optional[int] = None,
 ) -> str:
     """Return the URL to connect to Elasticsearch."""
-    scheme: str = scheme or ELASTICSEARCH_SCHEME
-    host: str = host or ELASTICSEARCH_HOST
-    port: str = port or ELASTICSEARCH_PORT
-    user: str = user or ELASTICSEARCH_USER
-    password: str = (
+    scheme = scheme or ELASTICSEARCH_SCHEME
+    host = host or ELASTICSEARCH_HOST
+    port = port or ELASTICSEARCH_PORT
+    user = user or ELASTICSEARCH_USER
+    password = (
         _get_auth("ELASTICSEARCH_PASSWORD")
         or password
         or ELASTICSEARCH_PASSWORD
@@ -66,11 +66,11 @@ def get_postgres_url(
     driver: Optional[str] = None,
 ) -> str:
     """Return the URL to connect to Postgres."""
-    user: str = user or PG_USER
-    host: str = host or PG_HOST
-    password: str = _get_auth("PG_PASSWORD") or password or PG_PASSWORD
-    port: str = port or PG_PORT
-    driver: str = driver or PG_DRIVER
+    user = user or PG_USER
+    host = host or PG_HOST
+    password = _get_auth("PG_PASSWORD") or password or PG_PASSWORD
+    port = port or PG_PORT
+    driver = driver or PG_DRIVER
     if password:
         return (
             f"postgresql+{driver}://{user}:{quote_plus(password)}@"
@@ -88,11 +88,11 @@ def get_redis_url(
     db: Optional[str] = None,
 ) -> str:
     """Return the URL to connect to Redis."""
-    host: str = host or REDIS_HOST
-    password: str = _get_auth("REDIS_AUTH") or password or REDIS_AUTH
-    port: str = port or REDIS_PORT
-    db: str = db or REDIS_DB
-    scheme: str = scheme or REDIS_SCHEME
+    host = host or REDIS_HOST
+    password = _get_auth("REDIS_AUTH") or password or REDIS_AUTH
+    port = port or REDIS_PORT
+    db = db or REDIS_DB
+    scheme = scheme or REDIS_SCHEME
     if password:
         return f"{scheme}://:{quote_plus(password)}@{host}:{port}/{db}"
     logger.debug("Connecting to Redis without password.")

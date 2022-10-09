@@ -1,7 +1,7 @@
 """PGSync Base class."""
 import logging
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql  # noqa
@@ -20,7 +20,6 @@ from .constants import (
     UPDATE,
 )
 from .exc import (
-    InvalidPermissionError,
     LogicalSlotParseError,
     ReplicationSlotError,
     TableNotFoundError,
@@ -151,50 +150,6 @@ class Base(object):
             )
         else:
             self.drop_replication_slot(slot_name)
-
-    def has_permissions(self, username: str, permissions: List[str]) -> bool:
-        """Check if the given user is a superuser or replication user."""
-        if not set(permissions).issubset(
-            set(("usecreatedb", "usesuper", "userepl"))
-        ):
-            raise InvalidPermissionError(
-                f"Invalid user permission {permissions}"
-            )
-
-        # Microsoft Azure usernames are of the form username@host on
-        # the SQLAlchemy engine.
-        # e.g engine.url.username@host
-        # but stored in pg_user as just user.
-        # we need to extract the real username from: username@host
-        host_part: str = self.engine.url.host.split(".")[0]
-        username: str = username.split(f"@{host_part}")[0]
-
-        with self.engine.connect() as conn:
-            return (
-                conn.execute(
-                    sa.select([sa.column("usename")])
-                    .select_from(sa.text("pg_user"))
-                    .where(
-                        sa.and_(
-                            *[
-                                sa.column("usename") == username,
-                                sa.or_(
-                                    *[
-                                        (
-                                            sa.column(permission)
-                                            == True  # noqa E712
-                                        )
-                                        for permission in permissions
-                                    ]
-                                ),
-                            ]
-                        )
-                    )
-                    .with_only_columns([sa.func.COUNT()])
-                    .order_by(None)
-                ).scalar()
-                > 0
-            )
 
     # Tables...
     def models(self, table: str, schema: str) -> sa.sql.Alias:
@@ -523,7 +478,7 @@ class Base(object):
 
     # Views...
     def create_view(
-        self, schema: str, tables: list, user_defined_fkey_tables: dict
+        self, schema: str, tables: Set, user_defined_fkey_tables: dict
     ) -> None:
         create_view(
             self.engine,
@@ -687,7 +642,7 @@ class Base(object):
             "smallserial",
         ):
             try:
-                value: int = int(value)
+                value = int(value)
             except ValueError:
                 raise
         if type_.lower() in (
@@ -698,9 +653,9 @@ class Base(object):
             "uuid",
             "varchar",
         ):
-            value: str = value.lstrip("'").rstrip("'")
+            value = value.lstrip("'").rstrip("'")
         if type_.lower() == "boolean":
-            value: bool = bool(value)
+            value = bool(value)
         if type_.lower() in (
             "double precision",
             "float4",
@@ -708,7 +663,7 @@ class Base(object):
             "real",
         ):
             try:
-                value: float = float(value)
+                value = float(value)
             except ValueError:
                 raise
         return value
@@ -761,7 +716,7 @@ class Base(object):
 
             i = suffix.index("new-tuple:")
             if i > -1:
-                s: str = suffix[i + len("new-tuple:") :]
+                s = suffix[i + len("new-tuple:") :]
                 for key, value in _parse_logical_slot(s):
                     payload.new[key] = value
         else:
@@ -827,8 +782,8 @@ class Base(object):
         chunk_size: Optional[int] = None,
         stream_results: Optional[bool] = None,
     ):
-        chunk_size: int = chunk_size or QUERY_CHUNK_SIZE
-        stream_results: bool = stream_results or STREAM_RESULTS
+        chunk_size = chunk_size or QUERY_CHUNK_SIZE
+        stream_results = stream_results or STREAM_RESULTS
         with self.engine.connect() as conn:
             result = conn.execution_options(
                 stream_results=stream_results
@@ -876,7 +831,7 @@ def pg_engine(
     user: Optional[str] = None,
     host: Optional[str] = None,
     password: Optional[str] = None,
-    port: Optional[str] = None,
+    port: Optional[int] = None,
     echo: bool = False,
     sslmode: Optional[str] = None,
     sslrootcert: Optional[str] = None,
@@ -890,7 +845,7 @@ def pg_engine(
             user: Optional[str] = None,
             host: Optional[str] = None,
             password: Optional[str] = None,
-            port: Optional[str] = None,
+            port: Optional[int] = None,
             echo: bool = False,
             sslmode: Optional[str] = None,
             sslrootcert: Optional[str] = None,
@@ -938,14 +893,14 @@ def _pg_engine(
     user: Optional[str] = None,
     host: Optional[str] = None,
     password: Optional[str] = None,
-    port: Optional[str] = None,
+    port: Optional[int] = None,
     echo: bool = False,
     sslmode: Optional[str] = None,
     sslrootcert: Optional[str] = None,
 ) -> sa.engine.Engine:
     connect_args: dict = {}
-    sslmode: str = sslmode or PG_SSLMODE
-    sslrootcert: str = sslrootcert or PG_SSLROOTCERT
+    sslmode = sslmode or PG_SSLMODE
+    sslrootcert = sslrootcert or PG_SSLROOTCERT
 
     if sslmode:
         if sslmode not in (
@@ -984,7 +939,7 @@ def pg_execute(
     values: Optional[list] = None,
     options: Optional[dict] = None,
 ) -> None:
-    options: dict = options or {"isolation_level": "AUTOCOMMIT"}
+    options = options or {"isolation_level": "AUTOCOMMIT"}
     conn = engine.connect()
     try:
         if options:

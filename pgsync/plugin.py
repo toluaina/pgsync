@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from importlib import import_module
 from inspect import getmembers, isclass
 from pkgutil import iter_modules
-from typing import Optional
+from typing import Generator, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ class Plugins(object):
             ]:
                 self.walk(f"{package}.{pkg}")
 
-    def transform(self, docs: list) -> dict:
+    def transform(self, docs: list) -> Generator:
         """Applies all plugins to each doc."""
         for doc in docs:
             for plugin in self.plugins:
@@ -92,3 +92,4 @@ class Plugins(object):
                 except Exception as e:
                     logger.exception(f"Error calling auth: {e}")
                     return None
+        return None

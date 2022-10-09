@@ -1,6 +1,6 @@
 """PGSync transform."""
 import logging
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from .constants import (  # noqa
     CONCAT_TRANSFORM,
@@ -34,7 +34,7 @@ class Transform(object):
             "name": "publisher_name"
         },
         """
-        result: dict = result or {}
+        result = result or {}
         if isinstance(data, dict):
             for key, value in data.items():
                 if isinstance(nodes.get(key), str):
@@ -73,7 +73,7 @@ class Transform(object):
             "delimiter": "-"
         },
         """
-        result: dict = result or {}
+        result = result or {}
         if isinstance(nodes, list):
             for node in nodes:
                 cls._concat(data, node, result=result)
@@ -203,7 +203,7 @@ class Transform(object):
                 if isinstance(value, dict):
                     target3.append({key: value})
                 elif isinstance(value, list):
-                    _value = {}
+                    _value: Dict[Any, Any] = {}
                     for v in value:
                         for _k, _v in v.items():
                             _value.setdefault(_k, [])
