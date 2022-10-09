@@ -4,4 +4,4 @@
 
 __author__ = "Tolu Aina"
 __email__ = "tolu@pgsync.com"
-__version__ = "2.3.2"
+__version__ = "2.3.3"
