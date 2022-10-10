@@ -202,20 +202,22 @@ class Sync(Base):
                 str(primary_key.name) for primary_key in node.primary_keys
             ]
 
+            foreign_keys: dict
             if node.relationship.throughs:
                 through: Node = node.relationship.throughs[0]
-                foreign_keys: dict = self.query_builder.get_foreign_keys(
-                    node.parent,
+                foreign_keys = self.query_builder.get_foreign_keys(
+                    node,
                     through,
                 )
             else:
-                foreign_keys: dict = self.query_builder.get_foreign_keys(
+                foreign_keys = self.query_builder.get_foreign_keys(
                     node.parent,
                     node,
                 )
 
+            columns: list
             for index in self.indices(node.table, node.schema):
-                columns: list = foreign_keys.get(node.name, [])
+                columns = foreign_keys.get(node.name, [])
                 if set(columns).issubset(index.get("column_names", [])) or set(
                     columns
                 ).issubset(primary_keys):
@@ -225,7 +227,7 @@ class Sync(Base):
                     )
                     break
             else:
-                columns: list = foreign_keys.get(node.name, [])
+                columns = foreign_keys.get(node.name, [])
                 sys.stdout.write(
                     f'Missing index on table "{node.table}" for columns: '
                     f"{columns}\n"
