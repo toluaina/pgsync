@@ -78,7 +78,7 @@ class Sync(Base):
         validate: bool = True,
         repl_slots: bool = True,
         **kwargs,
-    ):
+    ) -> None:
         """Constructor."""
         self.index: str = document.get("index") or document["database"]
         self.pipeline: str = document.get("pipeline")

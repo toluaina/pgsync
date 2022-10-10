@@ -1,7 +1,7 @@
 """PGSync Base."""
 import logging
 import os
-from typing import Dict, List, Optional, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql  # noqa
@@ -97,19 +97,21 @@ class TupleIdentifierType(sa.types.UserDefinedType):
 
 
 class Base(object):
-    def __init__(self, database: str, verbose: bool = False, *args, **kwargs):
+    def __init__(
+        self, database: str, verbose: bool = False, *args, **kwargs
+    ) -> None:
         """Initialize the base class constructor."""
         self.__engine: sa.engine.Engine = _pg_engine(
             database, echo=False, **kwargs
         )
         self.__schemas: Optional[dict] = None
         # models is a dict of f'{schema}.{table}'
-        self.__models: Dict[str] = {}
-        self.__metadata: Dict[str] = {}
-        self.__indices: Dict[str] = {}
-        self.__views: Dict[str] = {}
-        self.__materialized_views: Dict[str] = {}
-        self.__tables: Dict[str] = {}
+        self.__models: dict = {}
+        self.__metadata: dict = {}
+        self.__indices: dict = {}
+        self.__views: dict = {}
+        self.__materialized_views: dict = {}
+        self.__tables: dict = {}
         self.verbose: bool = verbose
         self._conn = None
 
@@ -213,7 +215,7 @@ class Base(object):
         return self.__engine
 
     @property
-    def schemas(self) -> list:
+    def schemas(self) -> dict:
         """Get the database schema names."""
         if self.__schemas is None:
             self.__schemas = sa.inspect(self.engine).get_schema_names()
@@ -735,14 +737,17 @@ class Base(object):
     def execute(
         self,
         statement: sa.sql.Select,
-        values: Optional[dict] = None,
+        values: Optional[list] = None,
         options: Optional[dict] = None,
     ) -> None:
         """Execute a query statement."""
         pg_execute(self.engine, statement, values=values, options=options)
 
     def fetchone(
-        self, statement: sa.sql.Select, label=None, literal_binds=False
+        self,
+        statement: sa.sql.Select,
+        label: Optional[str] = None,
+        literal_binds: bool = False,
     ) -> sa.engine.Row:
         """Fetch one row query."""
         if self.verbose:
