@@ -1,4 +1,4 @@
-"""PGSync plugin."""
+"""PGSync Plugin."""
 import logging
 import os
 from abc import ABC, abstractmethod

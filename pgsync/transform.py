@@ -1,4 +1,4 @@
-"""PGSync transform."""
+"""PGSync Transform."""
 import logging
 from typing import Any, Dict, Optional
 

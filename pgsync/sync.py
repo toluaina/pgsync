@@ -845,7 +845,7 @@ class Sync(Base):
         self.query_builder.isouter = True
         self.query_builder.from_obj = None
 
-        for node in self.tree.root.traverse_post_order():
+        for node in self.tree.traverse_post_order():
             node._subquery = None
             node._filters = []
             node.setup()
@@ -1038,7 +1038,7 @@ class Sync(Base):
         self._refresh_views()
 
     def _refresh_views(self) -> None:
-        for node in self.tree.root.traverse_breadth_first():
+        for node in self.tree.traverse_breadth_first():
             if node.table in self.views(node.schema):
                 if node.table in self._materialized_views(node.schema):
                     self.refresh_view(node.table, node.schema)
@@ -1060,7 +1060,7 @@ class Sync(Base):
         # this is used for the views.
         # we substitute the views for the base table here
         for i, payload in enumerate(payloads):
-            for node in self.tree.root.traverse_breadth_first():
+            for node in self.tree.traverse_breadth_first():
                 if payload.table in node.base_tables:
                     payloads[i].table = node.table
 

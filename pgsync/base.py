@@ -1,4 +1,4 @@
-"""PGSync Base class."""
+"""PGSync Base."""
 import logging
 import os
 from typing import Dict, List, Optional, Set, Tuple

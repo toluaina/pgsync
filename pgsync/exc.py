@@ -1,4 +1,4 @@
-"""PGSync Error classes."""
+"""PGSync Error."""
 
 
 class RelationshipTypeError(Exception):
