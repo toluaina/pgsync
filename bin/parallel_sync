@@ -80,6 +80,7 @@ class Task:
         sync: Sync = Sync(
             self.doc, verbose=self.verbose, validate=self.validate
         )
+        sync.tree.build(sync.nodes)
         txmin: int = sync.checkpoint
         txmax: int = sync.txid_current
         sync.es.bulk(
@@ -92,7 +93,7 @@ class Task:
 
 @timeit
 def fetch_tasks(doc: dict, block_size: Optional[int] = None) -> Generator:
-    block_size: int = block_size or BLOCK_SIZE
+    block_size = block_size or BLOCK_SIZE
     pages: dict = {}
     sync: Sync = Sync(doc)
     statement: sa.sql.Select = sa.select(
@@ -122,6 +123,7 @@ def synchronous(
 ) -> None:
     sys.stdout.write("Synchronous\n")
     sync: Sync = Sync(doc, verbose=verbose, validate=validate)
+    sync.tree.build(sync.nodes)
     txmin: int = sync.checkpoint
     txmax: int = sync.txid_current
     index: str = sync.index
@@ -157,6 +159,8 @@ def multithreaded(
     nprocs: int = nprocs or 1
     queue: Queue = Queue()
     sync: Sync = Sync(doc, verbose=verbose, validate=validate)
+    sync.tree.build(sync.nodes)
+
     for _ in range(nprocs):
         thread: Thread = Thread(
             target=worker,
@@ -275,7 +279,7 @@ def run_task(
 ) -> int:
     if sync is None:
         sync: Sync = Sync(doc, verbose=verbose, validate=validate)
-        sync.tree.build(sync.nodes)
+    sync.tree.build(sync.nodes)
     txmin: int = sync.checkpoint
     txmax: int = sync.txid_current
     sync.es.bulk(
