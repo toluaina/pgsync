@@ -1,7 +1,6 @@
 """Generic fixtures for PGSync tests."""
 import logging
 import os
-import warnings
 
 import pytest
 import sqlalchemy as sa
@@ -13,8 +12,6 @@ from pgsync.base import Base, create_database, drop_database
 from pgsync.constants import DEFAULT_SCHEMA
 from pgsync.sync import Sync
 from pgsync.urls import get_postgres_url
-
-warnings.filterwarnings("error")
 
 logging.getLogger("faker").setLevel(logging.ERROR)
 

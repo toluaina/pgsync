@@ -3,7 +3,7 @@ import pytest
 import sqlalchemy as sa
 from mock import ANY, call, patch
 
-from pgsync.helper import teardown
+from pgsync import helper
 
 
 @pytest.mark.usefixtures("table_creator")
@@ -17,7 +17,7 @@ class TestHelper(object):
         mock_config.return_value = "tests/fixtures/schema.json"
         mock_sync.truncate_schemas.return_value = None
         with patch("pgsync.helper.drop_database") as mock_db:
-            teardown(drop_db=True, config="fixtures/schema.json")
+            helper.teardown(drop_db=True, config="fixtures/schema.json")
             assert mock_db.call_args_list == [
                 call(ANY),
                 call(ANY),
@@ -32,7 +32,7 @@ class TestHelper(object):
         mock_config.return_value = "tests/fixtures/schema.json"
         with patch("pgsync.sync.Sync") as mock_sync:
             mock_sync.truncate_schemas.side_effect = sa.exc.OperationalError
-            teardown(drop_db=False, config="fixtures/schema.json")
+            helper.teardown(drop_db=False, config="fixtures/schema.json")
             assert mock_logger.warning.call_args_list == [
                 call(ANY),
                 call(ANY),
