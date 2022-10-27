@@ -44,6 +44,7 @@ and row numbers.
 import asyncio
 import multiprocessing
 import os
+import re
 import sys
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import dataclass
@@ -54,9 +55,32 @@ from typing import Generator, Optional, Union
 import click
 import sqlalchemy as sa
 
-from pgsync.settings import BLOCK_SIZE
+from pgsync.settings import BLOCK_SIZE, CHECKPOINT_PATH
 from pgsync.sync import Sync
-from pgsync.utils import get_config, load_config, show_settings, timeit
+from pgsync.utils import (
+    compiled_query,
+    get_config,
+    load_config,
+    show_settings,
+    timeit,
+)
+
+
+def save_ctid(page: int, row: int, name: str) -> None:
+    checkpoint_file: str = os.path.join(CHECKPOINT_PATH, f".{name}.ctid")
+    with open(checkpoint_file, "w+") as fp:
+        fp.write(f"{page},{row}\n")
+
+
+def read_ctid(name: str) -> None:
+    checkpoint_file: str = os.path.join(CHECKPOINT_PATH, f".{name}.ctid")
+    if os.path.exists(checkpoint_file):
+        with open(checkpoint_file, "r") as fp:
+            pairs: str = fp.read().split()[0].split(",")
+            page = int(pairs[0])
+            row = int(pairs[1])
+            return page, row
+    return None, None
 
 
 def logical_slot_changes(
@@ -92,10 +116,19 @@ class Task:
 
 
 @timeit
-def fetch_tasks(doc: dict, block_size: Optional[int] = None) -> Generator:
+def fetch_tasks(
+    doc: dict,
+    block_size: Optional[int] = None,
+) -> Generator:
     block_size = block_size or BLOCK_SIZE
     pages: dict = {}
     sync: Sync = Sync(doc)
+    page: Optional[int] = None
+    row: Optional[int] = None
+    name: str = re.sub(
+        "[^0-9a-zA-Z_]+", "", f"{sync.database.lower()}_{sync.index}"
+    )
+    page, row = read_ctid(name=name)
     statement: sa.sql.Select = sa.select(
         [
             sa.literal_column("1").label("x"),
@@ -103,6 +136,51 @@ def fetch_tasks(doc: dict, block_size: Optional[int] = None) -> Generator:
             sa.column("ctid"),
         ]
     ).select_from(sync.tree.root.model)
+
+    # filter by Page
+    if page:
+        statement = statement.where(
+            sa.cast(
+                sa.func.SPLIT_PART(
+                    sa.func.REPLACE(
+                        sa.func.REPLACE(
+                            sa.cast(sa.column("ctid"), sa.Text),
+                            "(",
+                            "",
+                        ),
+                        ")",
+                        "",
+                    ),
+                    ",",
+                    1,
+                ),
+                sa.Integer,
+            )
+            > page
+        )
+
+    # filter by Row
+    if row:
+        statement = statement.where(
+            sa.cast(
+                sa.func.SPLIT_PART(
+                    sa.func.REPLACE(
+                        sa.func.REPLACE(
+                            sa.cast(sa.column("ctid"), sa.Text),
+                            "(",
+                            "",
+                        ),
+                        ")",
+                        "",
+                    ),
+                    ",",
+                    2,
+                ),
+                sa.Integer,
+            )
+            > row
+        )
+
     i: int = 1
     for _, _, ctid in sync.fetchmany(statement):
         value: list = ctid[0].split(",")
@@ -234,6 +312,8 @@ def multiprocess_async(
         event_loop.run_until_complete(
             run_tasks(executor, tasks, doc, verbose=verbose, validate=validate)
         )
+    except KeyboardInterrupt:
+        pass
     finally:
         event_loop.close()
 
@@ -286,7 +366,14 @@ def run_task(
         sync.index,
         sync.sync(ctid=task, txmin=txmin, txmax=txmax),
     )
-    print("run_task complete")
+    if len(task) > 0:
+        page: int = max(task.keys())
+        row: int = max(task[page])
+        name: str = re.sub(
+            "[^0-9a-zA-Z_]+", "", f"{sync.database.lower()}_{sync.index}"
+        )
+        save_ctid(page=page, row=row, name=name)
+
     return 1
 
 

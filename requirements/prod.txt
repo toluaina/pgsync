@@ -8,9 +8,9 @@ async-timeout==4.0.2
     # via redis
 black==22.10.0
     # via -r requirements/base.in
-boto3==1.24.94
+boto3==1.25.3
     # via -r requirements/base.in
-botocore==1.27.94
+botocore==1.28.3
     # via
     #   boto3
     #   s3transfer
@@ -52,7 +52,7 @@ marshmallow==3.18.0
     # via environs
 mypy-extensions==0.4.3
     # via black
-newrelic==8.2.1
+newrelic==8.4.0
     # via -r requirements/prod.in
 packaging==21.3
     # via
@@ -62,7 +62,7 @@ pathspec==0.10.1
     # via black
 platformdirs==2.5.2
     # via black
-psycopg2-binary==2.9.4
+psycopg2-binary==2.9.5
     # via -r requirements/base.in
 pyparsing==3.0.9
     # via packaging
