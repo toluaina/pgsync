@@ -987,7 +987,7 @@ class Sync(Base):
         payloads: list = []
 
         while True:
-            # NB: consider reducing POLL_TIMEOUT to increase throughout
+            # NB: consider reducing POLL_TIMEOUT to increase throughput
             if select.select([conn], [], [], POLL_TIMEOUT) == ([], [], []):
                 # Catch any hanging items from the last poll
                 if payloads:

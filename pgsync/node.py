@@ -164,7 +164,7 @@ class Node(object):
 
         for column_name in self.column_names:
 
-            tokens = None
+            tokens: Optional[list] = None
             if any(op in column_name for op in JSONB_OPERATORS):
                 tokens = re.split(
                     f"({'|'.join(JSONB_OPERATORS)})",
