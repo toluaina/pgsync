@@ -69,11 +69,11 @@ class TestRedisQueue(object):
         queue.delete()
         queue.bulk_push([1, 2])
         items = queue.bulk_pop()
-        mock_logger.debug.assert_called_once_with("bulk_pop nsize: 2")
+        mock_logger.debug.assert_called_once_with("bulk_pop size: 2")
         assert items == [1, 2]
         queue.bulk_push([3, 4, 5])
         items = queue.bulk_pop()
-        mock_logger.debug.assert_any_call("bulk_pop nsize: 3")
+        mock_logger.debug.assert_any_call("bulk_pop size: 3")
         assert items == [3, 4, 5]
         queue.delete()
 
