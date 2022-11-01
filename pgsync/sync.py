@@ -595,44 +595,6 @@ class Sync(Base):
                         where[key] = params[i]
                     _filters.append(where)
 
-                # also handle foreign_keys
-                if node.parent:
-                    fields = defaultdict(list)
-
-                    try:
-                        foreign_keys = self.query_builder.get_foreign_keys(
-                            node.parent,
-                            node,
-                        )
-                    except ForeignKeyError:
-                        foreign_keys = self.query_builder._get_foreign_keys(
-                            node.parent,
-                            node,
-                        )
-
-                    foreign_values = [
-                        payload.new.get(k) for k in foreign_keys[node.name]
-                    ]
-
-                    for key in [key.name for key in node.primary_keys]:
-                        for value in foreign_values:
-                            if value:
-                                fields[key].append(value)
-                    # TODO: we should combine this with the filter above
-                    # so we only hit Elasticsearch once
-                    for doc_id in self.es._search(
-                        self.index,
-                        node.parent.table,
-                        fields,
-                    ):
-                        where: dict = {}
-                        params = doc_id.split(PRIMARY_KEY_DELIMITER)
-                        for i, key in enumerate(
-                            self.tree.root.model.primary_keys
-                        ):
-                            where[key] = params[i]
-                        _filters.append(where)
-
                 if _filters:
                     filters[self.tree.root.table].extend(_filters)
 
