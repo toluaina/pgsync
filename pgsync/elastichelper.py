@@ -5,6 +5,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import boto3
 from elasticsearch import Elasticsearch, helpers, RequestsHttpConnection
+from elasticsearch.exceptions import RequestError
 from elasticsearch_dsl import Q, Search
 from elasticsearch_dsl.query import Bool
 from requests_aws4auth import AWS4Auth
@@ -227,8 +228,13 @@ class ElasticHelper(object):
                     ]
                 )
             )
-        for hit in search.scan():
-            yield hit.meta.id
+        try:
+            for hit in search.scan():
+                yield hit.meta.id
+        except RequestError as e:
+            logger.warning(f"RequestError: {e}")
+            if "is out of range for a long" not in str(e):
+                raise
 
     def search(self, index: str, body: dict):
         """
