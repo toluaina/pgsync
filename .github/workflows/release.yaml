@@ -1,0 +1,24 @@
+name: Build Image, Push to ECR & Deploy to EKS
+
+on:
+  push:
+    branches:
+    - master
+
+jobs:
+  deploy:
+    name: Build Image, Push to ECR & Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    - name: "[Production] Build Image, Push to ECR & Deploy"
+      if: ${{ github.ref_name == 'master' }}
+      uses: gorilainvest/gorila-actions@master
+      with:
+        action: aws-deploy-image
+        environment: production
+        aws-access-key-id: ${{ secrets.CSHARP_AWS_ACCESS_KEY_ID }}
+        aws-access-key-secret: ${{ secrets.CSHARP_AWS_ACCESS_KEY_SECRET }}
+        sshkey: ${{ secrets.ACTIONS_CHECKOUT_SSH }}
+        ecr-access-key-id: ${{ secrets.MANAGEMENT_ECR_AWS_ACCESS_KEY_ID }}
+        ecr-access-key: ${{ secrets.MANAGEMENT_ECR_AWS_SECRET_ACCESS_KEY }}
