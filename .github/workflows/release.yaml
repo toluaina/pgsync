@@ -10,7 +10,7 @@ jobs:
     name: Build Image, Push to ECR & Deploy
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
+    steps:
     - name: "[Production] Build Image, Push to ECR & Deploy"
       if: ${{ github.ref_name == 'master' }}
       uses: gorilainvest/gorila-actions@master
