@@ -3,7 +3,7 @@ name: Build Image, Push to ECR & Deploy to EKS
 on:
   push:
     branches:
-    - master
+    - main
 
 jobs:
   deploy:
@@ -12,7 +12,7 @@ jobs:
     timeout-minutes: 10
     steps:
     - name: "[Production] Build Image, Push to ECR & Deploy"
-      if: ${{ github.ref_name == 'master' }}
+      if: ${{ github.ref_name == 'main' }}
       uses: gorilainvest/gorila-actions@master
       with:
         action: aws-deploy-image
