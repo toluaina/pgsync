@@ -429,7 +429,7 @@ class Base(object):
             limit=limit,
             offset=offset,
         )
-        self.execute(statement)
+        self.execute(statement, options=dict(stream_results=STREAM_RESULTS))
 
     def logical_slot_peek_changes(
         self,
