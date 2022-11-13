@@ -111,11 +111,23 @@ class TestBase(object):
     def test_indices(self, connection):
         pg_base = Base(connection.engine.url.database)
         assert pg_base.indices("contact_item", "public") == [
-            {'name': 'contact_item_contact_id_key', 'unique': True, 'column_names': ['contact_id'],
-             'include_columns': [], 'duplicates_constraint': 'contact_item_contact_id_key',
-             'dialect_options': {'postgresql_include': []}},
-            {'name': 'contact_item_name_key', 'unique': True, 'column_names': ['name'], 'include_columns': [],
-             'duplicates_constraint': 'contact_item_name_key', 'dialect_options': {'postgresql_include': []}}]
+            {
+                "name": "contact_item_contact_id_key",
+                "unique": True,
+                "column_names": ["contact_id"],
+                "include_columns": [],
+                "duplicates_constraint": "contact_item_contact_id_key",
+                "dialect_options": {"postgresql_include": []},
+            },
+            {
+                "name": "contact_item_name_key",
+                "unique": True,
+                "column_names": ["name"],
+                "include_columns": [],
+                "duplicates_constraint": "contact_item_name_key",
+                "dialect_options": {"postgresql_include": []},
+            },
+        ]
 
     @patch("pgsync.base.logger")
     @patch("pgsync.sync.Base.execute")

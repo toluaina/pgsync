@@ -250,7 +250,9 @@ class Base(object):
         """Get the database table indexes."""
         if (table, schema) not in self.__indices:
             indexes = sa.inspect(self.engine).get_indexes(table, schema=schema)
-            self.__indices[(table, schema)] = sorted(indexes, key=lambda d: d['name'])
+            self.__indices[(table, schema)] = sorted(
+                indexes, key=lambda d: d["name"]
+            )
         return self.__indices[(table, schema)]
 
     def tables(self, schema: str) -> list:
