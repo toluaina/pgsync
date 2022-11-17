@@ -10,9 +10,9 @@ attrs==22.1.0
     # via pytest
 black==22.10.0
     # via -r requirements/base.in
-boto3==1.26.5
+boto3==1.26.11
     # via -r requirements/base.in
-botocore==1.29.5
+botocore==1.29.11
     # via
     #   boto3
     #   s3transfer
@@ -42,9 +42,9 @@ elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
 environs==9.5.0
     # via -r requirements/base.in
-exceptiongroup==1.0.1
+exceptiongroup==1.0.4
     # via pytest
-faker==15.3.1
+faker==15.3.2
     # via -r requirements/base.in
 flake8==5.0.4
     # via
@@ -76,7 +76,7 @@ jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-marshmallow==3.18.0
+marshmallow==3.19.0
     # via environs
 mccabe==0.7.0
     # via flake8
@@ -90,9 +90,9 @@ packaging==21.3
     #   pytest
     #   pytest-sugar
     #   redis
-pathspec==0.10.1
+pathspec==0.10.2
     # via black
-platformdirs==2.5.3
+platformdirs==2.5.4
     # via black
 pluggy==1.0.0
     # via pytest
@@ -147,7 +147,7 @@ six==1.16.0
     #   requests-aws4auth
 snowballstemmer==2.2.0
     # via pydocstyle
-sqlalchemy==1.4.43
+sqlalchemy==1.4.44
     # via -r requirements/base.in
 sqlparse==0.4.3
     # via -r requirements/base.in
