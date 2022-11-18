@@ -44,10 +44,12 @@ from .querybuilder import QueryBuilder
 from .redisqueue import RedisQueue
 from .settings import (
     CHECKPOINT_PATH,
+    FILTER_CHUNK_SIZE,
     JOIN_QUERIES,
     LOG_INTERVAL,
     LOGICAL_SLOT_CHUNK_SIZE,
     NTHREADS_POLLDB,
+    POLL_INTERVAL,
     POLL_TIMEOUT,
     REDIS_POLL_INTERVAL,
     REDIS_WRITE_CHUNK_SIZE,
@@ -56,10 +58,12 @@ from .settings import (
 )
 from .transform import Transform
 from .utils import (
+    chunks,
     compiled_query,
     exception,
     get_config,
     load_config,
+    MutuallyExclusiveOption,
     show_settings,
     threaded,
     Timer,
@@ -77,6 +81,7 @@ class Sync(Base):
         verbose: bool = False,
         validate: bool = True,
         repl_slots: bool = True,
+        display_tree: bool = False,
         **kwargs,
     ) -> None:
         """Constructor."""
@@ -100,6 +105,7 @@ class Sync(Base):
         self._checkpoint_file: str = os.path.join(
             CHECKPOINT_PATH, f".{self.__name}"
         )
+        self.display_tree: bool = display_tree
         self.redis: RedisQueue = RedisQueue(self.__name)
         self.tree: Tree = Tree(self.models)
         if validate:
@@ -175,7 +181,8 @@ class Sync(Base):
             )
 
         self.tree.build(self.nodes)
-        self.tree.display()
+        if self.display_tree:
+            self.tree.display()
 
         for node in self.tree.traverse_breadth_first():
 
@@ -471,7 +478,6 @@ class Sync(Base):
                     raise
 
                 # set the parent as the new entity that has changed
-                filters[node.parent.table] = []
                 foreign_keys = self.query_builder._get_foreign_keys(
                     node.parent,
                     node,
@@ -492,7 +498,6 @@ class Sync(Base):
 
             # handle case where we insert into a through table
             # set the parent as the new entity that has changed
-            filters[node.parent.table] = []
             foreign_keys = self.query_builder.get_foreign_keys(
                 node.parent,
                 node,
@@ -798,7 +803,13 @@ class Sync(Base):
 
         logger.debug(f"tg_op: {payload.tg_op} table: {node.name}")
 
-        filters: dict = {node.table: [], self.tree.root.table: []}
+        filters: dict = {
+            node.table: [],
+            self.tree.root.table: [],
+        }
+        if not node.is_root:
+            filters[node.parent.table] = []
+
         extra: dict = {}
 
         if payload.tg_op == INSERT:
@@ -834,7 +845,33 @@ class Sync(Base):
         # otherwise we would end up performing a full query
         # and sync the entire db!
         if any(filters.values()):
-            yield from self.sync(filters=filters, extra=extra)
+            """
+            Filters is a dict of tables where each key is a list of id's
+            {
+                'city': [1, 2, 3],
+                'book': [
+                    {'id': '1'},
+                    {'id': '2'},
+                    {'id': '7'},
+                    ...
+                ]
+            }
+            """
+            # Lets chunk at only the root node for now.
+            for chunk in chunks(
+                filters[self.tree.root.table],
+                FILTER_CHUNK_SIZE,
+            ):
+                values: dict = {
+                    self.tree.root.table: chunk,
+                    node.table: filters[node.table],
+                }
+                if not node.is_root:
+                    filters[node.parent.table] = filters[node.table]
+                yield from self.sync(
+                    filters=values,
+                    extra=extra,
+                )
 
     def sync(
         self,
@@ -1207,7 +1244,21 @@ class Sync(Base):
     help="Schema config",
     type=click.Path(exists=True),
 )
-@click.option("--daemon", "-d", is_flag=True, help="Run as a daemon")
+@click.option(
+    "--daemon",
+    "-d",
+    is_flag=True,
+    help="Run as a daemon (Incompatible with --polling)",
+    cls=MutuallyExclusiveOption,
+    mutually_exclusive=["polling"],
+)
+@click.option(
+    "--polling",
+    is_flag=True,
+    help="Polling mode (Incompatible with -d)",
+    cls=MutuallyExclusiveOption,
+    mutually_exclusive=["daemon"],
+)
 @click.option("--host", "-h", help="PG_HOST override")
 @click.option("--password", is_flag=True, help="Prompt for database password")
 @click.option("--port", "-p", help="PG_PORT override", type=int)
@@ -1272,6 +1323,7 @@ def main(
     version,
     analyze,
     nthreads_polldb,
+    polling,
 ):
     """Main application syncer."""
     if version:
@@ -1301,17 +1353,29 @@ def main(
 
     with Timer():
 
-        for document in load_config(config):
-            sync: Sync = Sync(document, verbose=verbose, **kwargs)
+        if analyze:
 
-            if analyze:
+            for document in load_config(config):
+                sync: Sync = Sync(document, verbose=verbose, **kwargs)
                 sync.analyze()
-                continue
 
-            sync.pull()
+        elif polling:
 
-            if daemon:
-                sync.receive(nthreads_polldb)
+            while True:
+                for document in load_config(config):
+                    sync: Sync = Sync(
+                        document, verbose=verbose, display_tree=False, **kwargs
+                    )
+                    sync.pull()
+                time.sleep(POLL_INTERVAL)
+
+        else:
+
+            for document in load_config(config):
+                sync: Sync = Sync(document, verbose=verbose, **kwargs)
+                sync.pull()
+                if daemon:
+                    sync.receive(nthreads_polldb)
 
 
 if __name__ == "__main__":

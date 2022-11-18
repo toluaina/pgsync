@@ -10,6 +10,7 @@ from time import time
 from typing import Callable, Generator, Optional
 from urllib.parse import ParseResult, urlparse
 
+import click
 import sqlalchemy as sa
 import sqlparse
 
@@ -21,6 +22,12 @@ logger = logging.getLogger(__name__)
 
 HIGHLIGHT_BEGIN = "\033[4m"
 HIGHLIGHT_END = "\033[0m:"
+
+
+def chunks(l: list, n: int):
+    """Yield successive n-sized chunks from l"""
+    for i in range(0, len(l), n):
+        yield l[i : i + n]
 
 
 def timeit(func: Callable):
@@ -160,3 +167,26 @@ def compiled_query(
         sys.stdout.write(f"{query}\n")
     sys.stdout.write("-" * 79)
     sys.stdout.write("\n")
+
+
+class MutuallyExclusiveOption(click.Option):
+    def __init__(self, *args, **kwargs):
+        self.mutually_exclusive = set(kwargs.pop("mutually_exclusive", []))
+        help = kwargs.get("help", "")
+        if self.mutually_exclusive:
+            kwargs["help"] = help + (
+                f" NOTE: This argument is mutually exclusive with "
+                f" arguments: [{', '.join(self.mutually_exclusive)}]."
+            )
+        super(MutuallyExclusiveOption, self).__init__(*args, **kwargs)
+
+    def handle_parse_result(self, ctx, opts, args):
+        if self.mutually_exclusive.intersection(opts) and self.name in opts:
+            raise click.UsageError(
+                f"Illegal usage: `{self.name}` is mutually exclusive with "
+                f"arguments `{', '.join(self.mutually_exclusive)}`."
+            )
+
+        return super(MutuallyExclusiveOption, self).handle_parse_result(
+            ctx, opts, args
+        )

@@ -38,8 +38,9 @@ class QueryBuilder(object):
                 _filters: list = []
                 for _filter in filters.get(node.table):
                     where: list = []
-                    for key, value in _filter.items():
-                        where.append(node.model.c[key] == value)
+                    for column, value in _filter.items():
+                        where.append(node.model.c[column] == value)
+                    # and clause is applied when we have a composite primary key
                     _filters.append(sa.and_(*where))
                 return sa.or_(*_filters)
 
