@@ -77,6 +77,14 @@ class InvalidSchemaError(Exception):
         return repr(self.value)
 
 
+class InvalidTGOPError(Exception):
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
+
+
 class NodeAttributeError(Exception):
     def __init__(self, value):
         self.value = value

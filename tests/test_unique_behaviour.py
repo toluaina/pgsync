@@ -5,7 +5,7 @@ import pytest
 
 from pgsync.base import subtransactions
 
-from .helpers.utils import assert_resync_empty, sort_list
+from .testing_utils import assert_resync_empty, sort_list
 
 
 @pytest.mark.usefixtures("table_creator")

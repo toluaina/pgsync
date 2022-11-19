@@ -19,7 +19,7 @@ import sqlparse
 from psycopg2 import OperationalError
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-from . import __version__
+from . import __version__, settings
 from .base import Base, Payload
 from .constants import (
     DELETE,
@@ -34,6 +34,7 @@ from .elastichelper import ElasticHelper
 from .exc import (
     ForeignKeyError,
     InvalidSchemaError,
+    InvalidTGOPError,
     PrimaryKeyNotFoundError,
     RDSError,
     SchemaError,
@@ -42,20 +43,6 @@ from .node import Node, Tree
 from .plugin import Plugins
 from .querybuilder import QueryBuilder
 from .redisqueue import RedisQueue
-from .settings import (
-    CHECKPOINT_PATH,
-    FILTER_CHUNK_SIZE,
-    JOIN_QUERIES,
-    LOG_INTERVAL,
-    LOGICAL_SLOT_CHUNK_SIZE,
-    NTHREADS_POLLDB,
-    POLL_INTERVAL,
-    POLL_TIMEOUT,
-    REDIS_POLL_INTERVAL,
-    REDIS_WRITE_CHUNK_SIZE,
-    REPLICATION_SLOT_CLEANUP_INTERVAL,
-    USE_ASYNC,
-)
 from .transform import Transform
 from .utils import (
     chunks,
@@ -103,7 +90,7 @@ class Sync(Base):
         self._plugins: Plugins = None
         self._truncate: bool = False
         self._checkpoint_file: str = os.path.join(
-            CHECKPOINT_PATH, f".{self.__name}"
+            settings.CHECKPOINT_PATH, f".{self.__name}"
         )
         self.show_tree: bool = show_tree
         self.redis: RedisQueue = RedisQueue(self.__name)
@@ -168,15 +155,15 @@ class Sync(Base):
             )
 
         # ensure the checkpoint dirpath is valid
-        if not os.path.exists(CHECKPOINT_PATH):
+        if not os.path.exists(settings.CHECKPOINT_PATH):
             raise RuntimeError(
-                f'Ensure the checkpoint directory exists "{CHECKPOINT_PATH}" '
+                f'Ensure the checkpoint directory exists "{settings.CHECKPOINT_PATH}" '
                 f"and is readable."
             )
 
-        if not os.access(CHECKPOINT_PATH, os.W_OK | os.R_OK):
+        if not os.access(settings.CHECKPOINT_PATH, os.W_OK | os.R_OK):
             raise RuntimeError(
-                f'Ensure the checkpoint directory "{CHECKPOINT_PATH}" is '
+                f'Ensure the checkpoint directory "{settings.CHECKPOINT_PATH}" is '
                 f"read/writable"
             )
 
@@ -263,7 +250,7 @@ class Sync(Base):
     def setup(self) -> None:
         """Create the database triggers and replication slot."""
 
-        join_queries: bool = JOIN_QUERIES
+        join_queries: bool = settings.JOIN_QUERIES
         self.teardown(drop_view=False)
 
         for schema in self.schemas:
@@ -304,7 +291,7 @@ class Sync(Base):
     def teardown(self, drop_view: bool = True) -> None:
         """Drop the database triggers and replication slot."""
 
-        join_queries: bool = JOIN_QUERIES
+        join_queries: bool = settings.JOIN_QUERIES
 
         try:
             os.unlink(self._checkpoint_file)
@@ -375,7 +362,7 @@ class Sync(Base):
         # by limiting to a smaller batch size.
         offset: int = 0
         total: int = 0
-        limit: int = LOGICAL_SLOT_CHUNK_SIZE
+        limit: int = settings.LOGICAL_SLOT_CHUNK_SIZE
         count: int = self.logical_slot_count_changes(
             self.__name,
             txmin=txmin,
@@ -670,9 +657,11 @@ class Sync(Base):
                 docs.append(doc)
             if docs:
                 raise_on_exception: Optional[bool] = (
-                    False if USE_ASYNC else None
+                    False if settings.USE_ASYNC else None
                 )
-                raise_on_error: Optional[bool] = False if USE_ASYNC else None
+                raise_on_error: Optional[bool] = (
+                    False if settings.USE_ASYNC else None
+                )
                 self.es.bulk(
                     self.index,
                     docs,
@@ -776,7 +765,7 @@ class Sync(Base):
         payload: Payload = payloads[0]
         if payload.tg_op not in TG_OP:
             logger.exception(f"Unknown tg_op {payload.tg_op}")
-            raise
+            raise InvalidTGOPError(f"Unknown tg_op {payload.tg_op}")
 
         # we might receive an event triggered for a table
         # that is not in the tree node.
@@ -862,16 +851,16 @@ class Sync(Base):
             }
             """
             for l1 in chunks(
-                filters.get(self.tree.root.table), FILTER_CHUNK_SIZE
+                filters.get(self.tree.root.table), settings.FILTER_CHUNK_SIZE
             ):
                 if filters.get(node.table):
                     for l2 in chunks(
-                        filters.get(node.table), FILTER_CHUNK_SIZE
+                        filters.get(node.table), settings.FILTER_CHUNK_SIZE
                     ):
                         if not node.is_root and filters.get(node.parent.table):
                             for l3 in chunks(
                                 filters.get(node.parent.table),
-                                FILTER_CHUNK_SIZE,
+                                settings.FILTER_CHUNK_SIZE,
                             ):
                                 yield from self.sync(
                                     filters={
@@ -1002,7 +991,7 @@ class Sync(Base):
             self.on_publish(
                 list(map(lambda payload: Payload(**payload), payloads))
             )
-        time.sleep(REDIS_POLL_INTERVAL)
+        time.sleep(settings.REDIS_POLL_INTERVAL)
 
     @threaded
     @exception
@@ -1020,7 +1009,7 @@ class Sync(Base):
             await self.async_on_publish(
                 list(map(lambda payload: Payload(**payload), payloads))
             )
-        await asyncio.sleep(REDIS_POLL_INTERVAL)
+        await asyncio.sleep(settings.REDIS_POLL_INTERVAL)
 
     @exception
     async def async_poll_redis(self) -> None:
@@ -1047,7 +1036,11 @@ class Sync(Base):
 
         while True:
             # NB: consider reducing POLL_TIMEOUT to increase throughput
-            if select.select([conn], [], [], POLL_TIMEOUT) == ([], [], []):
+            if select.select([conn], [], [], settings.POLL_TIMEOUT) == (
+                [],
+                [],
+                [],
+            ):
                 # Catch any hanging items from the last poll
                 if payloads:
                     self.redis.bulk_push(payloads)
@@ -1061,7 +1054,7 @@ class Sync(Base):
                 os._exit(-1)
 
             while conn.notifies:
-                if len(payloads) >= REDIS_WRITE_CHUNK_SIZE:
+                if len(payloads) >= settings.REDIS_WRITE_CHUNK_SIZE:
                     self.redis.bulk_push(payloads)
                     payloads = []
                 notification: AnyStr = conn.notifies.pop(0)
@@ -1181,13 +1174,13 @@ class Sync(Base):
         """Truncate the logical replication slot."""
         while True:
             self._truncate_slots()
-            time.sleep(REPLICATION_SLOT_CLEANUP_INTERVAL)
+            time.sleep(settings.REPLICATION_SLOT_CLEANUP_INTERVAL)
 
     @exception
     async def async_truncate_slots(self) -> None:
         while True:
             self._truncate_slots()
-            await asyncio.sleep(REPLICATION_SLOT_CLEANUP_INTERVAL)
+            await asyncio.sleep(settings.REPLICATION_SLOT_CLEANUP_INTERVAL)
 
     def _truncate_slots(self) -> None:
         if self._truncate:
@@ -1199,13 +1192,13 @@ class Sync(Base):
     def status(self) -> None:
         while True:
             self._status(label="Sync")
-            time.sleep(LOG_INTERVAL)
+            time.sleep(settings.LOG_INTERVAL)
 
     @exception
     async def async_status(self) -> None:
         while True:
             self._status(label="Async")
-            await asyncio.sleep(LOG_INTERVAL)
+            await asyncio.sleep(settings.LOG_INTERVAL)
 
     def _status(self, label: str) -> None:
         sys.stdout.write(
@@ -1228,7 +1221,7 @@ class Sync(Base):
         2. Pull everything so far and also replay replication logs.
         3. Consume all changes from Redis.
         """
-        if USE_ASYNC:
+        if settings.USE_ASYNC:
             self._conn = self.engine.connect().connection
             self._conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cursor = self.conn.cursor()
@@ -1332,7 +1325,7 @@ class Sync(Base):
     "-n",
     help="Number of threads to spawn for poll db",
     type=int,
-    default=NTHREADS_POLLDB,
+    default=settings.NTHREADS_POLLDB,
 )
 def main(
     config,
@@ -1396,7 +1389,7 @@ def main(
                     )
                     sync.pull()
                 show_tree = False
-                time.sleep(POLL_INTERVAL)
+                time.sleep(settings.POLL_INTERVAL)
 
         else:
 

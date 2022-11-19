@@ -1,4 +1,5 @@
 """Sync tests."""
+import importlib
 import os
 from collections import namedtuple
 from typing import List
@@ -7,10 +8,16 @@ import pytest
 from mock import ANY, call, patch
 
 from pgsync.base import Base, Payload
-from pgsync.exc import PrimaryKeyNotFoundError, RDSError, SchemaError
+from pgsync.exc import (
+    InvalidTGOPError,
+    PrimaryKeyNotFoundError,
+    RDSError,
+    SchemaError,
+)
 from pgsync.node import Node
-from pgsync.settings import LOGICAL_SLOT_CHUNK_SIZE, REDIS_POLL_INTERVAL
-from pgsync.sync import Sync
+from pgsync.sync import settings, Sync
+
+from .testing_utils import override_env_var
 
 ROW = namedtuple("Row", ["data", "xid"])
 
@@ -69,7 +76,7 @@ class TestSync(object):
                     txmin=None,
                     txmax=None,
                     upto_nchanges=None,
-                    limit=LOGICAL_SLOT_CHUNK_SIZE,
+                    limit=settings.LOGICAL_SLOT_CHUNK_SIZE,
                     offset=0,
                 )
                 mock_sync.assert_not_called()
@@ -86,7 +93,7 @@ class TestSync(object):
                     txmin=None,
                     txmax=None,
                     upto_nchanges=None,
-                    limit=LOGICAL_SLOT_CHUNK_SIZE,
+                    limit=settings.LOGICAL_SLOT_CHUNK_SIZE,
                     offset=0,
                 )
                 mock_sync.assert_not_called()
@@ -115,7 +122,7 @@ class TestSync(object):
                         txmin=None,
                         txmax=None,
                         upto_nchanges=None,
-                        limit=LOGICAL_SLOT_CHUNK_SIZE,
+                        limit=settings.LOGICAL_SLOT_CHUNK_SIZE,
                         offset=0,
                     )
                     mock_get.assert_called_once()
@@ -558,20 +565,6 @@ class TestSync(object):
         assert _filters == {"book": []}
 
     def test__payload(self, sync):
-        with patch("pgsync.sync.logger") as mock_logger:
-            with pytest.raises(RuntimeError):
-                for _ in sync._payloads(
-                    [
-                        Payload(
-                            tg_op="XXX",
-                            table="book",
-                            old={"id": 1},
-                        ),
-                    ]
-                ):
-                    pass
-            mock_logger.exception.assert_called_once_with("Unknown tg_op XXX")
-
         with patch("pgsync.sync.Sync._insert_op") as mock_op:
             with patch("pgsync.sync.logger") as mock_logger:
                 for _ in sync._payloads(
@@ -815,7 +808,52 @@ class TestSync(object):
                 schema="public",
             ),
         ]
-        sync._payloads(payloads)
+        for _ in sync._payloads(payloads):
+            pass
+
+    def test_payloads_invalid_tg_op(self, mocker, sync):
+        payloads: List[Payload] = [
+            Payload(
+                tg_op="FOO",
+                table="book",
+                old={"isbn": "001"},
+                new={"isbn": "002"},
+                schema="public",
+            ),
+        ]
+        with patch("pgsync.sync.logger") as mock_logger:
+            with pytest.raises(InvalidTGOPError) as excinfo:
+                for _ in sync._payloads(payloads):
+                    pass
+            mock_logger.exception.assert_called_once_with("Unknown tg_op FOO")
+
+    def test_payloads_in_batches(self, mocker, sync):
+        payloads: List[Payload] = [
+            Payload(
+                tg_op="INSERT",
+                table="book",
+                old={"isbn": "001"},
+                new={"isbn": "002"},
+                schema="public",
+            )
+        ] * 20
+        with patch("pgsync.sync.Sync.sync") as mock_sync:
+            with override_env_var(FILTER_CHUNK_SIZE="4"):
+                importlib.reload(settings)
+                for _ in sync._payloads(payloads):
+                    pass
+        assert mock_sync.call_count == 25
+        assert mock_sync.call_args_list[-1] == call(
+            filters={
+                "book": [
+                    {"isbn": "002"},
+                    {"isbn": "002"},
+                    {"isbn": "002"},
+                    {"isbn": "002"},
+                ]
+            },
+            extra={},
+        )
 
     @patch("pgsync.sync.compiled_query")
     def test_sync(self, mock_compiled_query, sync):
@@ -837,5 +875,5 @@ class TestSync(object):
         mock_on_publish.assert_called_once_with([ANY, ANY])
         mock_refresh_views.assert_called_once()
         mock_logger.debug.assert_called_once_with(f"poll_redis: {items}")
-        mock_time.sleep.assert_called_once_with(REDIS_POLL_INTERVAL)
+        mock_time.sleep.assert_called_once_with(settings.REDIS_POLL_INTERVAL)
         assert sync.count["redis"] == 2

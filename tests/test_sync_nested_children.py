@@ -8,7 +8,7 @@ from pgsync.base import subtransactions
 from pgsync.settings import NTHREADS_POLLDB
 from pgsync.sync import Sync
 
-from .helpers.utils import assert_resync_empty, noop, search, sort_list
+from .testing_utils import assert_resync_empty, noop, search, sort_list
 
 
 @pytest.mark.usefixtures("table_creator")
