@@ -1324,6 +1324,8 @@ class Sync(Base):
     is_flag=True,
     default=False,
     help="Analyse database",
+    cls=MutuallyExclusiveOption,
+    mutually_exclusive=["daemon", "polling"],
 )
 @click.option(
     "--nthreads_polldb",
