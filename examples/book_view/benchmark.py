@@ -9,7 +9,7 @@ from sqlalchemy.orm import sessionmaker
 
 from pgsync.base import pg_engine
 from pgsync.constants import DELETE, INSERT, TG_OP, UPDATE
-from pgsync.utils import get_config, load_config, show_settings, Timer
+from pgsync.utils import config_loader, get_config, show_settings, Timer
 
 FIELDS = {
     "isbn": "isbn13",
@@ -132,7 +132,7 @@ def main(config, nsize, daemon, tg_op):
     show_settings()
 
     config: str = get_config(config)
-    document: dict = next(load_config(config))
+    document: dict = next(config_loader(config))
     database: str = document.get("database", document["index"])
     with pg_engine(database) as engine:
         Session = sessionmaker(bind=engine, autoflush=False, autocommit=False)

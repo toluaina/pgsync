@@ -60,9 +60,9 @@ from .transform import Transform
 from .utils import (
     chunks,
     compiled_query,
+    config_loader,
     exception,
     get_config,
-    load_config,
     MutuallyExclusiveOption,
     show_settings,
     threaded,
@@ -81,7 +81,7 @@ class Sync(Base):
         verbose: bool = False,
         validate: bool = True,
         repl_slots: bool = True,
-        display_tree: bool = False,
+        show_tree: bool = True,
         **kwargs,
     ) -> None:
         """Constructor."""
@@ -105,7 +105,7 @@ class Sync(Base):
         self._checkpoint_file: str = os.path.join(
             CHECKPOINT_PATH, f".{self.__name}"
         )
-        self.display_tree: bool = display_tree
+        self.show_tree: bool = show_tree
         self.redis: RedisQueue = RedisQueue(self.__name)
         self.tree: Tree = Tree(self.models)
         if validate:
@@ -181,7 +181,7 @@ class Sync(Base):
             )
 
         self.tree.build(self.nodes)
-        if self.display_tree:
+        if self.show_tree:
             self.tree.display()
 
         for node in self.tree.traverse_breadth_first():
@@ -848,7 +848,11 @@ class Sync(Base):
             """
             Filters is a dict of tables where each key is a list of id's
             {
-                'city': [1, 2, 3],
+                'city': [
+                    {'id': '1'},
+                    {'id': '4'},
+                    {'id': '5'},
+                ],
                 'book': [
                     {'id': '1'},
                     {'id': '2'},
@@ -857,21 +861,39 @@ class Sync(Base):
                 ]
             }
             """
-            # Lets chunk at only the root node for now.
-            for chunk in chunks(
-                filters[self.tree.root.table],
-                FILTER_CHUNK_SIZE,
+            for l1 in chunks(
+                filters.get(self.tree.root.table), FILTER_CHUNK_SIZE
             ):
-                values: dict = {
-                    self.tree.root.table: chunk,
-                    node.table: filters[node.table],
-                }
-                if not node.is_root:
-                    filters[node.parent.table] = filters[node.table]
-                yield from self.sync(
-                    filters=values,
-                    extra=extra,
-                )
+                if filters.get(node.table):
+                    for l2 in chunks(
+                        filters.get(node.table), FILTER_CHUNK_SIZE
+                    ):
+                        if not node.is_root and filters.get(node.parent.table):
+                            for l3 in chunks(
+                                filters.get(node.parent.table),
+                                FILTER_CHUNK_SIZE,
+                            ):
+                                yield from self.sync(
+                                    filters={
+                                        self.tree.root.table: l1,
+                                        node.table: l2,
+                                        node.parent.table: l3,
+                                    },
+                                    extra=extra,
+                                )
+                        else:
+                            yield from self.sync(
+                                filters={
+                                    self.tree.root.table: l1,
+                                    node.table: l2,
+                                },
+                                extra=extra,
+                            )
+                else:
+                    yield from self.sync(
+                        filters={self.tree.root.table: l1},
+                        extra=extra,
+                    )
 
     def sync(
         self,
@@ -1355,23 +1377,28 @@ def main(
 
         if analyze:
 
-            for document in load_config(config):
+            for document in config_loader(config):
                 sync: Sync = Sync(document, verbose=verbose, **kwargs)
                 sync.analyze()
 
         elif polling:
 
+            show_tree: bool = True
             while True:
-                for document in load_config(config):
+                for document in config_loader(config):
                     sync: Sync = Sync(
-                        document, verbose=verbose, display_tree=False, **kwargs
+                        document,
+                        verbose=verbose,
+                        show_tree=show_tree,
+                        **kwargs,
                     )
                     sync.pull()
+                show_tree = False
                 time.sleep(POLL_INTERVAL)
 
         else:
 
-            for document in load_config(config):
+            for document in config_loader(config):
                 sync: Sync = Sync(document, verbose=verbose, **kwargs)
                 sync.pull()
                 if daemon:

@@ -179,7 +179,7 @@ class Base(object):
             model = metadata.tables[name]
             model.append_column(sa.Column("xmin", sa.BigInteger))
             model.append_column(sa.Column("ctid"), TupleIdentifierType)
-            # support SQLQlchemy/Postgres 14 which somehow now reflects
+            # support SQLAlchemy/Postgres 14 which somehow now reflects
             # the oid column
             if "oid" not in [column.name for column in model.columns]:
                 model.append_column(

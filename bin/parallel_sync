@@ -59,8 +59,8 @@ from pgsync.settings import BLOCK_SIZE, CHECKPOINT_PATH
 from pgsync.sync import Sync
 from pgsync.utils import (
     compiled_query,
+    config_loader,
     get_config,
-    load_config,
     show_settings,
     timeit,
 )
@@ -425,7 +425,7 @@ def main(config, nprocs, mode, verbose):
     show_settings()
     config: str = get_config(config)
 
-    for document in load_config(config):
+    for document in config_loader(config):
         tasks: Generator = fetch_tasks(document)
         if mode == "synchronous":
             synchronous(tasks, document, verbose=verbose)

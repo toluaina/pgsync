@@ -6,7 +6,7 @@ from sqlalchemy.schema import UniqueConstraint
 from pgsync.base import create_database, create_schema, pg_engine
 from pgsync.constants import DEFAULT_SCHEMA
 from pgsync.helper import teardown
-from pgsync.utils import get_config, load_config
+from pgsync.utils import config_loader, get_config
 
 Base = declarative_base()
 
@@ -199,7 +199,7 @@ class BookShelf(Base):
 
 
 def setup(config: str) -> None:
-    for document in load_config(config):
+    for document in config_loader(config):
         database: str = document.get("database", document["index"])
         schema: str = document.get("schema", DEFAULT_SCHEMA)
         create_database(database)

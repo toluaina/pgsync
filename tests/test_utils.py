@@ -12,10 +12,10 @@ from pgsync.exc import SchemaError
 from pgsync.urls import get_elasticsearch_url, get_postgres_url, get_redis_url
 from pgsync.utils import (
     compiled_query,
+    config_loader,
     exception,
     get_config,
     get_redacted_url,
-    load_config,
     show_settings,
     threaded,
     timeit,
@@ -38,11 +38,11 @@ class TestUtils(object):
         config: str = get_config("tests/fixtures/schema.json")
         assert config == "tests/fixtures/schema.json"
 
-    def test_load_config(self):
+    def test_config_loader(self):
         os.environ["foo"] = "mydb"
         os.environ["bar"] = "myindex"
         config: str = get_config("tests/fixtures/schema.json")
-        data = load_config(config)
+        data = config_loader(config)
         assert next(data) == {
             "database": "fakedb",
             "index": "fake_index",

@@ -27,22 +27,27 @@ class QueryBuilder(object):
 
         NB:
         assumption dictionary is an AND and list is an OR
-
-        filters['book'] = [
-            {'id': 1, 'uid': '001'},
-            {'id': 2, 'uid': '002'}
-        ]
+        filters = {
+            'book': [
+                {'id': 1, 'uid': '001'},
+                {'id': 2, 'uid': '002'},
+            ],
+            'city': [
+                {'id': 1},
+                {'id': 2},
+            ],
+        }
         """
         if filters is not None:
             if filters.get(node.table):
-                _filters: list = []
-                for _filter in filters.get(node.table):
+                clause: list = []
+                for values in filters.get(node.table):
                     where: list = []
-                    for column, value in _filter.items():
+                    for column, value in values.items():
                         where.append(node.model.c[column] == value)
                     # and clause is applied when we have a composite primary key
-                    _filters.append(sa.and_(*where))
-                return sa.or_(*_filters)
+                    clause.append(sa.and_(*where))
+                return sa.or_(*clause)
 
     def _json_build_object(
         self, columns: list, chunk_size: int = 100
@@ -59,7 +64,7 @@ class QueryBuilder(object):
         i: int = 0
         expression: sa.sql.elements.BinaryExpression = None
         while i < len(columns):
-            chunk = columns[i : i + chunk_size]
+            chunk: list = columns[i : i + chunk_size]
             if i == 0:
                 expression = sa.cast(
                     sa.func.JSON_BUILD_OBJECT(*chunk),

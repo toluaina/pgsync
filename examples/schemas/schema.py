@@ -4,7 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from pgsync.base import create_database, create_schema, pg_engine
 from pgsync.helper import teardown
-from pgsync.utils import get_config, load_config
+from pgsync.utils import config_loader, get_config
 
 Base = declarative_base()
 
@@ -25,7 +25,7 @@ class Child(Base):
 
 
 def setup(config: str) -> None:
-    for document in load_config(config):
+    for document in config_loader(config):
         database: str = document.get("database", document["index"])
         create_database(database)
         for schema in ("parent", "child"):

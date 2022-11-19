@@ -5,7 +5,7 @@ from sqlalchemy.schema import UniqueConstraint
 
 from pgsync.base import create_database, pg_engine
 from pgsync.helper import teardown
-from pgsync.utils import get_config, load_config
+from pgsync.utils import config_loader, get_config
 
 Base = declarative_base()
 
@@ -88,7 +88,7 @@ class UserTag(Base):
 
 
 def setup(config: str) -> None:
-    for document in load_config(config):
+    for document in config_loader(config):
         database: str = document.get("database", document["index"])
         create_database(database)
         with pg_engine(database) as engine:

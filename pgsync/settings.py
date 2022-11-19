@@ -28,7 +28,7 @@ POLL_TIMEOUT = env.float("POLL_TIMEOUT", default=0.1)
 QUERY_LITERAL_BINDS = env.bool("QUERY_LITERAL_BINDS", default=False)
 # db query chunk size (how many records to fetch at a time)
 QUERY_CHUNK_SIZE = env.int("QUERY_CHUNK_SIZE", default=10000)
-FILTER_CHUNK_SIZE = env.int("FILTER_CHUNK_SIZE", default=10000)
+FILTER_CHUNK_SIZE = env.int("FILTER_CHUNK_SIZE", default=5000)
 # replication slot cleanup interval (in secs)
 REPLICATION_SLOT_CLEANUP_INTERVAL = env.float(
     "REPLICATION_SLOT_CLEANUP_INTERVAL",
@@ -39,7 +39,7 @@ SCHEMA = env.str("SCHEMA", default=None)
 USE_ASYNC = env.bool("USE_ASYNC", default=False)
 STREAM_RESULTS = env.bool("STREAM_RESULTS", default=True)
 # db polling interval
-POLL_INTERVAL = env.float("POLL_INTERVAL", default=0.5)
+POLL_INTERVAL = env.float("POLL_INTERVAL", default=0.1)
 
 # Elasticsearch:
 ELASTICSEARCH_API_KEY = env.str("ELASTICSEARCH_API_KEY", default=None)

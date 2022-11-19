@@ -7,7 +7,7 @@ import threading
 from datetime import timedelta
 from string import Template
 from time import time
-from typing import Callable, Generator, Optional
+from typing import Callable, Generator, Optional, Set
 from urllib.parse import ParseResult, urlparse
 
 import click
@@ -135,7 +135,7 @@ def get_config(config: Optional[str] = None) -> str:
     return config
 
 
-def load_config(config: str) -> Generator:
+def config_loader(config: str) -> Generator:
     with open(config, "r") as documents:
         for document in json.load(documents):
             for key, value in document.items():
@@ -171,8 +171,10 @@ def compiled_query(
 
 class MutuallyExclusiveOption(click.Option):
     def __init__(self, *args, **kwargs):
-        self.mutually_exclusive = set(kwargs.pop("mutually_exclusive", []))
-        help = kwargs.get("help", "")
+        self.mutually_exclusive: Set = set(
+            kwargs.pop("mutually_exclusive", [])
+        )
+        help: str = kwargs.get("help", "")
         if self.mutually_exclusive:
             kwargs["help"] = help + (
                 f" NOTE: This argument is mutually exclusive with "

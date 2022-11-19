@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker
 
 from pgsync.base import pg_engine, subtransactions
 from pgsync.helper import teardown
-from pgsync.utils import get_config, load_config
+from pgsync.utils import config_loader, get_config
 
 
 @click.command()
@@ -19,7 +19,7 @@ def main(config):
 
     config: str = get_config(config)
     teardown(drop_db=False, config=config)
-    document: dict = next(load_config(config))
+    document: dict = next(config_loader(config))
     database: str = document.get("database", document["index"])
     with pg_engine(database) as engine:
         Session = sessionmaker(bind=engine, autoflush=True)
