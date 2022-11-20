@@ -803,7 +803,6 @@ class TestSync(object):
             Payload(
                 tg_op="INSERT",
                 table="book",
-                old={"isbn": "001"},
                 new={"isbn": "002"},
                 schema="public",
             ),
@@ -822,17 +821,17 @@ class TestSync(object):
             ),
         ]
         with patch("pgsync.sync.logger") as mock_logger:
-            with pytest.raises(InvalidTGOPError) as excinfo:
+            with pytest.raises(InvalidTGOPError):
                 for _ in sync._payloads(payloads):
                     pass
             mock_logger.exception.assert_called_once_with("Unknown tg_op FOO")
 
     def test_payloads_in_batches(self, mocker, sync):
+        # inserting a root node
         payloads: List[Payload] = [
             Payload(
                 tg_op="INSERT",
                 table="book",
-                old={"isbn": "001"},
                 new={"isbn": "002"},
                 schema="public",
             )
@@ -854,6 +853,32 @@ class TestSync(object):
             },
             extra={},
         )
+
+        # updating a child table
+        payloads: List[Payload] = [
+            Payload(
+                tg_op="UPDATE",
+                table="publisher",
+                new={"id": 1, "name": "foo"},
+                old={"id": 1},
+                schema="public",
+            )
+        ]
+        filters: dict = {
+            "book": [
+                {"isbn": "001"},
+            ],
+            "publisher": [
+                {"id": 1},
+            ],
+        }
+        with patch("pgsync.sync.Sync._update_op", return_value=filters):
+            with patch("pgsync.sync.Sync.sync") as mock_sync:
+                with override_env_var(FILTER_CHUNK_SIZE="1"):
+                    importlib.reload(settings)
+                    for _ in sync._payloads(payloads):
+                        pass
+                mock_sync.assert_called_once_with(filters=filters, extra={})
 
     @patch("pgsync.sync.compiled_query")
     def test_sync(self, mock_compiled_query, sync):

@@ -24,10 +24,10 @@ HIGHLIGHT_BEGIN = "\033[4m"
 HIGHLIGHT_END = "\033[0m:"
 
 
-def chunks(l: list, n: int):
+def chunks(value: list, size: int) -> list:
     """Yield successive n-sized chunks from l"""
-    for i in range(0, len(l), n):
-        yield l[i : i + n]
+    for i in range(0, len(value), size):
+        yield value[i : i + size]
 
 
 def timeit(func: Callable):

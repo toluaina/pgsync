@@ -157,14 +157,14 @@ class Sync(Base):
         # ensure the checkpoint dirpath is valid
         if not os.path.exists(settings.CHECKPOINT_PATH):
             raise RuntimeError(
-                f'Ensure the checkpoint directory exists "{settings.CHECKPOINT_PATH}" '
-                f"and is readable."
+                f"Ensure the checkpoint directory exists "
+                f'"{settings.CHECKPOINT_PATH}" and is readable.'
             )
 
         if not os.access(settings.CHECKPOINT_PATH, os.W_OK | os.R_OK):
             raise RuntimeError(
-                f'Ensure the checkpoint directory "{settings.CHECKPOINT_PATH}" is '
-                f"read/writable"
+                f'Ensure the checkpoint directory "{settings.CHECKPOINT_PATH}"'
+                f" is read/writable"
             )
 
         self.tree.build(self.nodes)
@@ -810,7 +810,6 @@ class Sync(Base):
             )
 
         if payload.tg_op == UPDATE:
-
             filters = self._update_op(
                 node,
                 filters,
@@ -835,6 +834,10 @@ class Sync(Base):
         # and sync the entire db!
         if any(filters.values()):
             """
+            Filters are applied when an insert, update or delete operation
+            occurs. For a large table update, this normally results
+            in a large sql query with multiple OR clauses
+
             Filters is a dict of tables where each key is a list of id's
             {
                 'city': [

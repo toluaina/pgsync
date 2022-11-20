@@ -45,7 +45,7 @@ class QueryBuilder(object):
                     where: list = []
                     for column, value in values.items():
                         where.append(node.model.c[column] == value)
-                    # and clause is applied when we have a composite primary key
+                    # and clause is applied for composite primary keys
                     clause.append(sa.and_(*where))
                 return sa.or_(*clause)
 
