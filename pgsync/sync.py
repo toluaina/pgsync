@@ -68,7 +68,6 @@ class Sync(Base):
         verbose: bool = False,
         validate: bool = True,
         repl_slots: bool = True,
-        show_tree: bool = True,
         **kwargs,
     ) -> None:
         """Constructor."""
@@ -92,12 +91,13 @@ class Sync(Base):
         self._checkpoint_file: str = os.path.join(
             settings.CHECKPOINT_PATH, f".{self.__name}"
         )
-        self.show_tree: bool = show_tree
         self.redis: RedisQueue = RedisQueue(self.__name)
         self.tree: Tree = Tree(self.models)
+        self.tree.build(self.nodes)
         if validate:
             self.validate(repl_slots=repl_slots)
             self.create_setting()
+
         self.query_builder: QueryBuilder = QueryBuilder(verbose=verbose)
         self.count: dict = dict(xlog=0, db=0, redis=0)
 
@@ -167,9 +167,7 @@ class Sync(Base):
                 f" is read/writable"
             )
 
-        self.tree.build(self.nodes)
-        if self.show_tree:
-            self.tree.display()
+        self.tree.display()
 
         for node in self.tree.traverse_breadth_first():
 
@@ -1381,18 +1379,18 @@ def main(
 
         elif polling:
 
-            show_tree: bool = True
+            validate: bool = True
             while True:
                 for document in config_loader(config):
                     sync: Sync = Sync(
                         document,
                         verbose=verbose,
-                        show_tree=show_tree,
+                        validate=validate,
                         **kwargs,
                     )
                     sync.pull()
-                show_tree = False
                 time.sleep(settings.POLL_INTERVAL)
+                validate = False
 
         else:
 

@@ -12,3 +12,7 @@ redis
 requests-aws4auth
 sqlalchemy
 sqlparse
+
+# pin these libs because latest flake8 does not allow newer versions of importlib-metadata https://github.com/PyCQA/flake8/issues/1522
+importlib-metadata==4.2.0
+virtualenv==20.16.2

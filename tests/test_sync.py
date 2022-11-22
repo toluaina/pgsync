@@ -164,7 +164,7 @@ class TestSync(object):
 
     @patch("pgsync.sync.ElasticHelper")
     def test_sync_validate(self, mock_es):
-        with pytest.raises(SchemaError) as excinfo:
+        with pytest.raises(AttributeError) as excinfo:
             Sync(
                 document={
                     "index": "testdb",
@@ -174,9 +174,7 @@ class TestSync(object):
                 validate=True,
                 repl_slots=False,
             )
-        assert "Incompatible schema. Please run v2 schema migration" in str(
-            excinfo.value
-        )
+        assert "'list' object has no attribute 'get'" in str(excinfo.value)
 
         Sync(
             document={
