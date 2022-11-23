@@ -984,7 +984,7 @@ class Sync(Base):
         self._checkpoint: int = value
 
     def _poll_redis(self) -> None:
-        payloads: dict = self.redis.bulk_pop()
+        payloads: list = self.redis.bulk_pop()
         if payloads:
             logger.debug(f"poll_redis: {payloads}")
             self.count["redis"] += len(payloads)
@@ -1002,7 +1002,7 @@ class Sync(Base):
             self._poll_redis()
 
     async def _async_poll_redis(self) -> None:
-        payloads: dict = self.redis.bulk_pop()
+        payloads: list = self.redis.bulk_pop()
         if payloads:
             logger.debug(f"poll_redis: {payloads}")
             self.count["redis"] += len(payloads)
