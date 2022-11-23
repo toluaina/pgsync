@@ -93,11 +93,16 @@ class Sync(Base):
         )
         self.redis: RedisQueue = RedisQueue(self.__name)
         self.tree: Tree = Tree(self.models)
-        self.tree.build(self.nodes)
+        # NB: Don't raise if used in teardown mode
+        try:
+            self.tree.build(self.nodes)
+        except:
+            pass
         if validate:
             self.validate(repl_slots=repl_slots)
             self.create_setting()
-
+        if self.plugins:
+            self._plugins: Plugins = Plugins("plugins", self.plugins)
         self.query_builder: QueryBuilder = QueryBuilder(verbose=verbose)
         self.count: dict = dict(xlog=0, db=0, redis=0)
 
@@ -111,9 +116,6 @@ class Sync(Base):
             )
 
         self.connect()
-
-        if self.plugins:
-            self._plugins: Plugins = Plugins("plugins", self.plugins)
 
         max_replication_slots: Optional[str] = self.pg_settings(
             "max_replication_slots"
@@ -501,7 +503,6 @@ class Sync(Base):
         node: Node,
         filters: dict,
         payloads: List[dict],
-        extra: dict,
     ) -> dict:
 
         if node.is_root:
@@ -570,13 +571,6 @@ class Sync(Base):
 
                 for key, value in primary_fields.items():
                     fields[key].append(value)
-                    if None in payload.new.values():
-                        extra["table"] = node.table
-                        extra["column"] = key
-
-                if None in payload.old.values():
-                    for key, value in primary_fields.items():
-                        fields[key].append(0)
 
                 for doc_id in self.es._search(self.index, node.table, fields):
                     where = {}
@@ -797,8 +791,6 @@ class Sync(Base):
         if not node.is_root:
             filters[node.parent.table] = []
 
-        extra: dict = {}
-
         if payload.tg_op == INSERT:
 
             filters = self._insert_op(
@@ -812,7 +804,6 @@ class Sync(Base):
                 node,
                 filters,
                 payloads,
-                extra,
             )
 
         if payload.tg_op == DELETE:
@@ -869,7 +860,6 @@ class Sync(Base):
                                         node.table: l2,
                                         node.parent.table: l3,
                                     },
-                                    extra=extra,
                                 )
                         else:
                             yield from self.sync(
@@ -877,12 +867,10 @@ class Sync(Base):
                                     self.tree.root.table: l1,
                                     node.table: l2,
                                 },
-                                extra=extra,
                             )
                 else:
                     yield from self.sync(
                         filters={self.tree.root.table: l1},
-                        extra=extra,
                     )
 
     def sync(
@@ -890,7 +878,6 @@ class Sync(Base):
         filters: Optional[dict] = None,
         txmin: Optional[int] = None,
         txmax: Optional[int] = None,
-        extra: Optional[dict] = None,
         ctid: Optional[dict] = None,
     ) -> Generator:
         self.query_builder.isouter = True
@@ -932,12 +919,6 @@ class Sync(Base):
                 row: dict = Transform.transform(row, self.nodes)
 
                 row[META] = Transform.get_primary_keys(keys)
-                if extra:
-                    if extra["table"] not in row[META]:
-                        row[META][extra["table"]] = {}
-                    if extra["column"] not in row[META][extra["table"]]:
-                        row[META][extra["table"]][extra["column"]] = []
-                    row[META][extra["table"]][extra["column"]].append(0)
 
                 if self.verbose:
                     print(f"{(i+1)})")
@@ -1379,14 +1360,12 @@ def main(
 
         elif polling:
 
+            # TODO: use Singleton pattern to enforce single instance of Sync
             validate: bool = True
             while True:
                 for document in config_loader(config):
                     sync: Sync = Sync(
-                        document,
-                        verbose=verbose,
-                        validate=validate,
-                        **kwargs,
+                        document, verbose=verbose, validate=validate, **kwargs
                     )
                     sync.pull()
                 time.sleep(settings.POLL_INTERVAL)

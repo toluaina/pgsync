@@ -164,7 +164,7 @@ class TestSync(object):
 
     @patch("pgsync.sync.ElasticHelper")
     def test_sync_validate(self, mock_es):
-        with pytest.raises(AttributeError) as excinfo:
+        with pytest.raises(SchemaError) as excinfo:
             Sync(
                 document={
                     "index": "testdb",
@@ -174,7 +174,9 @@ class TestSync(object):
                 validate=True,
                 repl_slots=False,
             )
-        assert "'list' object has no attribute 'get'" in str(excinfo.value)
+        assert "Incompatible schema. Please run v2 schema migration" in str(
+            excinfo.value
+        )
 
         Sync(
             document={
@@ -463,9 +465,8 @@ class TestSync(object):
                 new={"isbn": "aa1"},
             )
         ]
-        extra: dict = {}
         assert sync.es.doc_count == 0
-        _filters = sync._update_op(node, filters, payloads, extra)
+        _filters = sync._update_op(node, filters, payloads)
         sync.es.refresh("testdb")
         assert _filters == {"book": [{"isbn": "aa1"}]}
         assert sync.es.doc_count == 1
@@ -849,7 +850,6 @@ class TestSync(object):
                     {"isbn": "002"},
                 ]
             },
-            extra={},
         )
 
         # updating a child table
@@ -876,7 +876,7 @@ class TestSync(object):
                     importlib.reload(settings)
                     for _ in sync._payloads(payloads):
                         pass
-                mock_sync.assert_called_once_with(filters=filters, extra={})
+                mock_sync.assert_called_once_with(filters=filters)
 
     @patch("pgsync.sync.compiled_query")
     def test_sync(self, mock_compiled_query, sync):

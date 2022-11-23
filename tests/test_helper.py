@@ -25,16 +25,20 @@ class TestHelper(object):
 
         mock_logger.warning.assert_not_called()
 
-    @pytest.mark.skip(reason="need to fix this...")
     @patch("pgsync.sync.ElasticHelper")
     @patch("pgsync.helper.logger")
     @patch("pgsync.helper.get_config")
     def test_teardown_without_drop_db(self, mock_config, mock_logger, mock_es):
         mock_config.return_value = "tests/fixtures/schema.json"
-        with patch("pgsync.sync.Sync") as mock_sync:
-            mock_sync.truncate_schemas.side_effect = sa.exc.OperationalError
-            helper.teardown(drop_db=False, config="fixtures/schema.json")
-            assert mock_logger.warning.call_args_list == [
-                call(ANY),
-                call(ANY),
-            ]
+
+        with patch("pgsync.node.Tree.build", return_value=None):
+            with patch("pgsync.sync.Sync") as mock_sync:
+                mock_sync.tree.build.return_value = None
+                mock_sync.truncate_schemas.side_effect = (
+                    sa.exc.OperationalError
+                )
+                helper.teardown(drop_db=False, config="fixtures/schema.json")
+                assert mock_logger.warning.call_args_list == [
+                    call(ANY),
+                    call(ANY),
+                ]
