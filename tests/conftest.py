@@ -10,6 +10,7 @@ from sqlalchemy.schema import UniqueConstraint
 
 from pgsync.base import Base, create_database, drop_database
 from pgsync.constants import DEFAULT_SCHEMA
+from pgsync.singleton import Singleton
 from pgsync.sync import Sync
 from pgsync.urls import get_postgres_url
 
@@ -55,6 +56,7 @@ def sync():
     _sync = Sync(
         {
             "index": "testdb",
+            "database": "testdb",
             "nodes": {"table": "book"},
         }
     )
@@ -66,6 +68,7 @@ def sync():
     _sync.engine.connect().close()
     _sync.engine.dispose()
     _sync.session.close()
+    Singleton._instances = {}
 
 
 def pytest_addoption(parser):

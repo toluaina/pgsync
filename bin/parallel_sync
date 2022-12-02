@@ -285,12 +285,9 @@ def multithreaded_async(
     sys.stdout.write("Multi-threaded async\n")
     executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=nprocs)
     event_loop = asyncio.get_event_loop()
-    try:
-        event_loop.run_until_complete(
-            run_tasks(executor, tasks, doc, verbose=verbose, validate=validate)
-        )
-    finally:
-        event_loop.close()
+    event_loop.run_until_complete(
+        run_tasks(executor, tasks, doc, verbose=verbose, validate=validate)
+    )
     logical_slot_changes(doc, verbose=verbose, validate=validate)
 
 
@@ -311,8 +308,6 @@ def multiprocess_async(
         )
     except KeyboardInterrupt:
         pass
-    finally:
-        event_loop.close()
     logical_slot_changes(doc, verbose=verbose, validate=validate)
 
 
@@ -323,11 +318,11 @@ async def run_tasks(
     verbose: bool = False,
     validate: bool = False,
 ) -> None:
-    event_loop = asyncio.get_event_loop()
     sync: Optional[Sync] = None
     if isinstance(executor, ThreadPoolExecutor):
         # threads can share a common Sync object
         sync = Sync(doc, verbose=verbose, validate=validate)
+    event_loop = asyncio.get_event_loop()
     completed, pending = await asyncio.wait(
         [
             event_loop.run_in_executor(

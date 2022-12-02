@@ -43,6 +43,7 @@ from .node import Node, Tree
 from .plugin import Plugins
 from .querybuilder import QueryBuilder
 from .redisqueue import RedisQueue
+from .singleton import Singleton
 from .transform import Transform
 from .utils import (
     chunks,
@@ -59,7 +60,7 @@ from .utils import (
 logger = logging.getLogger(__name__)
 
 
-class Sync(Base):
+class Sync(Base, metaclass=Singleton):
     """Main application class for Sync."""
 
     def __init__(
@@ -93,11 +94,7 @@ class Sync(Base):
         )
         self.redis: RedisQueue = RedisQueue(self.__name)
         self.tree: Tree = Tree(self.models)
-        # NB: Don't raise if used in teardown mode
-        try:
-            self.tree.build(self.nodes)
-        except:
-            pass
+        self.tree.build(self.nodes)
         if validate:
             self.validate(repl_slots=repl_slots)
             self.create_setting()
@@ -1360,16 +1357,11 @@ def main(
 
         elif polling:
 
-            # TODO: use Singleton pattern to enforce single instance of Sync
-            validate: bool = True
             while True:
                 for document in config_loader(config):
-                    sync: Sync = Sync(
-                        document, verbose=verbose, validate=validate, **kwargs
-                    )
+                    sync: Sync = Sync(document, verbose=verbose, **kwargs)
                     sync.pull()
                 time.sleep(settings.POLL_INTERVAL)
-                validate = False
 
         else:
 

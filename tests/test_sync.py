@@ -15,6 +15,7 @@ from pgsync.exc import (
     SchemaError,
 )
 from pgsync.node import Node
+from pgsync.singleton import Singleton
 from pgsync.sync import settings, Sync
 
 from .testing_utils import override_env_var
@@ -27,6 +28,7 @@ def sync():
     _sync = Sync(
         {
             "index": "testdb",
+            "database": "testdb",
             "nodes": {
                 "table": "book",
                 "columns": ["isbn", "title", "description"],
@@ -47,6 +49,7 @@ def sync():
             },
         },
     )
+    Singleton._instances = {}
     yield _sync
     _sync.logical_slot_get_changes(
         f"{_sync.database}_testdb",
@@ -164,10 +167,12 @@ class TestSync(object):
 
     @patch("pgsync.sync.ElasticHelper")
     def test_sync_validate(self, mock_es):
+
         with pytest.raises(SchemaError) as excinfo:
             Sync(
                 document={
                     "index": "testdb",
+                    "database": "testdb",
                     "nodes": ["foo"],
                 },
                 verbose=False,
@@ -181,6 +186,7 @@ class TestSync(object):
         Sync(
             document={
                 "index": "testdb",
+                "database": "testdb",
                 "nodes": {"table": "book"},
                 "plugins": ["Hero"],
             },
@@ -215,6 +221,7 @@ class TestSync(object):
                 Sync(
                     document={
                         "index": "testdb",
+                        "database": "testdb",
                         "nodes": {"table": "book"},
                         "plugins": ["Hero"],
                     },
@@ -232,6 +239,7 @@ class TestSync(object):
                 Sync(
                     document={
                         "index": "testdb",
+                        "database": "testdb",
                         "nodes": {"table": "book"},
                         "plugins": ["Hero"],
                     },
@@ -249,6 +257,7 @@ class TestSync(object):
                 Sync(
                     document={
                         "index": "testdb",
+                        "database": "testdb",
                         "nodes": {"table": "book"},
                         "plugins": ["Hero"],
                     },
@@ -265,6 +274,7 @@ class TestSync(object):
                 Sync(
                     document={
                         "index": "testdb",
+                        "database": "testdb",
                         "nodes": {"table": "book"},
                         "plugins": ["Hero"],
                     },
@@ -279,6 +289,7 @@ class TestSync(object):
                 Sync(
                     document={
                         "index": "testdb",
+                        "database": "testdb",
                         "nodes": {"table": "book"},
                         "plugins": ["Hero"],
                     },
@@ -290,6 +301,7 @@ class TestSync(object):
         Sync(
             document={
                 "index": "testdb",
+                "database": "testdb",
                 "nodes": {"table": "book"},
                 "plugins": ["Hero"],
             },

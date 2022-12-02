@@ -6,6 +6,7 @@ import pytest
 
 from pgsync.base import subtransactions
 from pgsync.settings import NTHREADS_POLLDB
+from pgsync.singleton import Singleton
 from pgsync.sync import Sync
 
 from .testing_utils import assert_resync_empty, noop, search, sort_list
@@ -229,6 +230,8 @@ class TestNestedChildren(object):
             f"{sync.database}_testdb",
             upto_nchanges=None,
         )
+
+        Singleton._instances = {}
 
         yield (
             books,
@@ -674,6 +677,7 @@ class TestNestedChildren(object):
 
         document = {
             "index": "testdb",
+            "database": "testdb",
             "nodes": nodes,
         }
 
@@ -798,6 +802,7 @@ class TestNestedChildren(object):
     def test_update_root(self, data, nodes, book_cls):
         document = {
             "index": "testdb",
+            "database": "testdb",
             "nodes": nodes,
         }
         # 1. sync first to add the initial document
@@ -918,6 +923,7 @@ class TestNestedChildren(object):
     ):
         document = {
             "index": "testdb",
+            "database": "testdb",
             "nodes": nodes,
         }
         # 1. sync first to add the initial document
@@ -1164,6 +1170,7 @@ class TestNestedChildren(object):
 
         document = {
             "index": "testdb",
+            "database": "testdb",
             "nodes": nodes,
         }
 
@@ -1393,6 +1400,7 @@ class TestNestedChildren(object):
         # update a new through child with op
         document = {
             "index": "testdb",
+            "database": "testdb",
             "nodes": nodes,
         }
 
@@ -1620,6 +1628,7 @@ class TestNestedChildren(object):
         # delete a new through child with op
         document = {
             "index": "testdb",
+            "database": "testdb",
             "nodes": nodes,
         }
 
@@ -1816,6 +1825,7 @@ class TestNestedChildren(object):
 
         document = {
             "index": "testdb",
+            "database": "testdb",
             "nodes": nodes,
         }
 
@@ -1845,6 +1855,7 @@ class TestNestedChildren(object):
         # update a new non-through child with noop
         document = {
             "index": "testdb",
+            "database": "testdb",
             "nodes": nodes,
         }
 
@@ -1878,6 +1889,7 @@ class TestNestedChildren(object):
         # delete a new non-through child with noop
         document = {
             "index": "testdb",
+            "database": "testdb",
             "nodes": nodes,
         }
 
@@ -2031,6 +2043,7 @@ class TestNestedChildren(object):
 
         document = {
             "index": "testdb",
+            "database": "testdb",
             "nodes": nodes,
         }
         # sync first to add the initial document

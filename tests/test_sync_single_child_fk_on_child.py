@@ -14,6 +14,7 @@ from pgsync.exc import (
 )
 from pgsync.node import Tree
 from pgsync.settings import NTHREADS_POLLDB
+from pgsync.singleton import Singleton
 from pgsync.sync import Sync
 
 from .testing_utils import assert_resync_empty, noop, search, sort_list
@@ -62,6 +63,7 @@ class TestParentSingleChildFkOnChild(object):
             f"{sync.database}_testdb",
             upto_nchanges=None,
         )
+        Singleton._instances = {}
 
         yield (
             books,
@@ -589,6 +591,7 @@ class TestParentSingleChildFkOnChild(object):
         """Test sync updates primary_key then sync in non-concurrent mode."""
         document = {
             "index": "testdb",
+            "database": "testdb",
             "nodes": {
                 "table": "book",
                 "columns": ["isbn", "title"],
@@ -687,6 +690,7 @@ class TestParentSingleChildFkOnChild(object):
         """Test sync updates primary_key and then sync in concurrent mode."""
         document = {
             "index": "testdb",
+            "database": "testdb",
             "nodes": {
                 "table": "book",
                 "columns": ["isbn", "title"],
@@ -805,6 +809,7 @@ class TestParentSingleChildFkOnChild(object):
         """Test sync insert and then sync in non-concurrent mode."""
         document = {
             "index": "testdb",
+            "database": "testdb",
             "nodes": {
                 "table": "book",
                 "columns": ["isbn", "title"],
@@ -907,6 +912,7 @@ class TestParentSingleChildFkOnChild(object):
         """Test sync update and then sync in non-concurrent mode."""
         document = {
             "index": "testdb",
+            "database": "testdb",
             "nodes": {
                 "table": "book",
                 "columns": ["isbn", "title"],
@@ -996,6 +1002,7 @@ class TestParentSingleChildFkOnChild(object):
         """Test sync update and then sync in concurrent mode."""
         document = {
             "index": "testdb",
+            "database": "testdb",
             "nodes": {
                 "table": "book",
                 "columns": ["isbn", "title"],
@@ -1100,6 +1107,7 @@ class TestParentSingleChildFkOnChild(object):
         """Test sync delete and then sync in concurrent mode."""
         document = {
             "index": "testdb",
+            "database": "testdb",
             "nodes": {
                 "table": "book",
                 "columns": ["isbn", "title"],
