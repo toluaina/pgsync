@@ -981,6 +981,23 @@ def drop_database(database: str, echo: bool = False) -> None:
     logger.debug(f"Dropped database: {database}")
 
 
+def database_exists(database: str, echo: bool = False) -> bool:
+    """Check if database is present."""
+    with pg_engine("postgres", echo=echo) as engine:
+        conn = engine.connect()
+        try:
+            row = conn.execute(
+                sa.DDL(
+                    f"SELECT 1 FROM pg_database WHERE datname = '{database}'"
+                )
+            ).first()
+            conn.close()
+        except Exception as e:
+            logger.exception(f"Exception {e}")
+            raise
+        return row is not None
+
+
 def create_extension(
     database: str, extension: str, echo: bool = False
 ) -> None:

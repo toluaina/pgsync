@@ -16,12 +16,13 @@ class TestHelper(object):
     def test_teardown_with_drop_db(self, mock_sync, mock_config, mock_logger):
         mock_config.return_value = "tests/fixtures/schema.json"
         mock_sync.truncate_schemas.return_value = None
-        with patch("pgsync.helper.drop_database") as mock_db:
-            helper.teardown(drop_db=True, config="fixtures/schema.json")
-            assert mock_db.call_args_list == [
-                call(ANY),
-                call(ANY),
-            ]
+        with patch("pgsync.helper.database_exists", return_value=True):
+            with patch("pgsync.helper.drop_database") as mock_db:
+                helper.teardown(drop_db=True, config="fixtures/schema.json")
+                assert mock_db.call_args_list == [
+                    call(ANY),
+                    call(ANY),
+                ]
 
         mock_logger.warning.assert_not_called()
 
