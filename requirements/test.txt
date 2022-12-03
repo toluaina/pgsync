@@ -48,8 +48,9 @@ faker==15.3.4
     # via -r requirements/base.in
 filelock==3.8.0
     # via virtualenv
-flake8==6.0.0
+flake8==5.0.4
     # via
+    #   -r requirements/test.in
     #   flake8-debugger
     #   flake8-docstrings
     #   flake8-isort
@@ -104,7 +105,7 @@ pluggy==1.0.0
     # via pytest
 psycopg2-binary==2.9.5
     # via -r requirements/base.in
-pycodestyle==2.10.0
+pycodestyle==2.9.1
     # via
     #   flake8
     #   flake8-debugger
@@ -112,7 +113,7 @@ pycodestyle==2.10.0
     #   flake8-todo
 pydocstyle==6.1.1
     # via flake8-docstrings
-pyflakes==3.0.1
+pyflakes==2.5.0
     # via flake8
 pyparsing==3.0.9
     # via packaging
