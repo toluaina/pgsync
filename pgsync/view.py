@@ -194,6 +194,7 @@ def create_view(
     engine: sa.engine.Engine,
     models: Callable,
     fetchall: Callable,
+    index: str,
     schema: str,
     tables: Set,
     user_defined_fkey_tables: dict,
@@ -213,28 +214,34 @@ def create_view(
     So if 'specie' was the only row before, and the next query returns
     'unit' and 'structure', we want to end up with the result below.
 
-    table_name | primary_keys | foreign_keys
-    -----------+--------------+--------------
-    specie     | {id}         | {id, user_id}
-    unit       | {id}         | {id, profile_id}
-    structure  | {id}         | {id}
+    index | table_name | primary_keys | foreign_keys
+    ------+------------+--------------+--------------
+    foo   | specie     | {id}         | {id, user_id}
+    foo   | unit       | {id}         | {id, profile_id}
+    foo   | structure  | {id}         | {id}
+    bar   | unit       | {id}         | {id, profile_id}
+    bar   | structure  | {id}         | {id}
     """
 
     rows: dict = {}
     if MATERIALIZED_VIEW in views:
-        for table_name, primary_keys, foreign_keys in fetchall(
+        for index_name, table_name, primary_keys, foreign_keys in fetchall(
             sa.select(["*"]).select_from(
                 sa.text(f"{schema}.{MATERIALIZED_VIEW}")
             )
         ):
             rows.setdefault(
-                table_name,
+                (index_name, table_name),
                 {"primary_keys": set(), "foreign_keys": set()},
             )
             if primary_keys:
-                rows[table_name]["primary_keys"] = set(primary_keys)
+                rows[(index_name, table_name)]["primary_keys"] = set(
+                    primary_keys
+                )
             if foreign_keys:
-                rows[table_name]["foreign_keys"] = set(foreign_keys)
+                rows[(index_name, table_name)]["foreign_keys"] = set(
+                    foreign_keys
+                )
 
         engine.execute(DropView(schema, MATERIALIZED_VIEW))
 
@@ -244,37 +251,38 @@ def create_view(
 
     for table_name, columns in fetchall(_primary_keys(models, schema, tables)):
         rows.setdefault(
-            table_name,
+            (index, table_name),
             {"primary_keys": set(), "foreign_keys": set()},
         )
         if columns:
-            rows[table_name]["primary_keys"] |= set(columns)
+            rows[(index, table_name)]["primary_keys"] |= set(columns)
 
     for table_name, columns in fetchall(_foreign_keys(models, schema, tables)):
         rows.setdefault(
-            table_name,
+            (index, table_name),
             {"primary_keys": set(), "foreign_keys": set()},
         )
         if columns:
-            rows[table_name]["foreign_keys"] |= set(columns)
+            rows[(index, table_name)]["foreign_keys"] |= set(columns)
 
     if user_defined_fkey_tables:
         for table_name, columns in user_defined_fkey_tables.items():
             rows.setdefault(
-                table_name,
+                (index, table_name),
                 {"primary_keys": set(), "foreign_keys": set()},
             )
             if columns:
-                rows[table_name]["foreign_keys"] |= set(columns)
+                rows[(index, table_name)]["foreign_keys"] |= set(columns)
 
     if not rows:
         rows.setdefault(
-            None,
+            (None, None),
             {"primary_keys": set(), "foreign_keys": set()},
         )
 
     statement = sa.select(
         sa.sql.Values(
+            sa.column("index"),
             sa.column("table_name"),
             sa.column("primary_keys"),
             sa.column("foreign_keys"),
@@ -282,6 +290,7 @@ def create_view(
         .data(
             [
                 (
+                    index_name,
                     table_name,
                     array(fields["primary_keys"])
                     if fields.get("primary_keys")
@@ -290,7 +299,7 @@ def create_view(
                     if fields.get("foreign_keys")
                     else None,
                 )
-                for table_name, fields in rows.items()
+                for (index_name, table_name), fields in rows.items()
             ]
         )
         .alias("t")
@@ -299,7 +308,7 @@ def create_view(
     engine.execute(CreateView(schema, MATERIALIZED_VIEW, statement))
     engine.execute(DropIndex("_idx"))
     engine.execute(
-        CreateIndex("_idx", schema, MATERIALIZED_VIEW, ["table_name"])
+        CreateIndex("_idx", schema, MATERIALIZED_VIEW, ["table_name", "index"])
     )
     logger.debug(f"Created view: {schema}.{MATERIALIZED_VIEW}")
 

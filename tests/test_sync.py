@@ -765,6 +765,7 @@ class TestSync(object):
                         join_queries=True,
                     )
                 mock_create_view.assert_called_once_with(
+                    "testdb",
                     "public",
                     {"publisher", "book"},
                     {"publisher": {"publisher_id", "id"}},

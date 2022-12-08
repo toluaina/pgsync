@@ -5,6 +5,7 @@ CREATE_TRIGGER_TEMPLATE = f"""
 CREATE OR REPLACE FUNCTION {TRIGGER_FUNC}() RETURNS TRIGGER AS $$
 DECLARE
   channel TEXT;
+  indices TEXT [];
   old_row JSON;
   new_row JSON;
   notification JSON;
@@ -15,6 +16,12 @@ DECLARE
 BEGIN
     -- database is also the channel name.
     channel := CURRENT_DATABASE();
+
+    indices := (
+        SELECT array_agg(index)
+        FROM {MATERIALIZED_VIEW}
+        WHERE table_name = TG_TABLE_NAME
+    );
 
     IF TG_OP = 'DELETE' THEN
 
@@ -61,6 +68,7 @@ BEGIN
         'xmin', xmin,
         'new', new_row,
         'old', old_row,
+        'indices', indices,
         'tg_op', TG_OP,
         'table', TG_TABLE_NAME,
         'schema', TG_TABLE_SCHEMA
