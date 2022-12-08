@@ -14,11 +14,11 @@ class TestTrigger(object):
 CREATE OR REPLACE FUNCTION table_notify() RETURNS TRIGGER AS $$
 DECLARE
   channel TEXT;
-  indices TEXT [];
   old_row JSON;
   new_row JSON;
   notification JSON;
   xmin BIGINT;
+  _indices TEXT [];
   _primary_keys TEXT [];
   _foreign_keys TEXT [];
 
@@ -26,16 +26,10 @@ BEGIN
     -- database is also the channel name.
     channel := CURRENT_DATABASE();
 
-    indices := (
-        SELECT array_agg(index)
-        FROM _view
-        WHERE table_name = TG_TABLE_NAME
-    );
-
     IF TG_OP = 'DELETE' THEN
 
-        SELECT primary_keys
-        INTO _primary_keys
+        SELECT primary_keys, indices
+        INTO _primary_keys, _indices
         FROM _view
         WHERE table_name = TG_TABLE_NAME;
 
@@ -49,8 +43,8 @@ BEGIN
     ELSE
         IF TG_OP <> 'TRUNCATE' THEN
 
-            SELECT primary_keys, foreign_keys
-            INTO _primary_keys, _foreign_keys
+            SELECT primary_keys, foreign_keys, indices
+            INTO _primary_keys, _foreign_keys, _indices
             FROM _view
             WHERE table_name = TG_TABLE_NAME;
 
@@ -77,7 +71,7 @@ BEGIN
         'xmin', xmin,
         'new', new_row,
         'old', old_row,
-        'indices', indices,
+        'indices', _indices,
         'tg_op', TG_OP,
         'table', TG_TABLE_NAME,
         'schema', TG_TABLE_SCHEMA
