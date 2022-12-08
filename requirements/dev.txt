@@ -22,7 +22,7 @@ bump2version==1.0.1
     # via bumpversion
 bumpversion==0.6.0
     # via -r requirements/base.in
-certifi==2022.9.24
+certifi==2022.12.7
     # via
     #   elasticsearch
     #   requests
@@ -49,8 +49,6 @@ elasticsearch-dsl==7.4.0
     # via -r requirements/base.in
 environs==9.5.0
     # via -r requirements/base.in
-exceptiongroup==1.0.4
-    # via pytest
 faker==15.3.4
     # via -r requirements/base.in
 filelock==3.8.0
@@ -182,14 +180,6 @@ termcolor==2.1.1
     # via pytest-sugar
 toml==0.10.2
     # via pre-commit
-tomli==2.0.1
-    # via
-    #   black
-    #   build
-    #   coverage
-    #   pytest
-typing-extensions==4.4.0
-    # via black
 urllib3==1.26.13
     # via
     #   botocore
