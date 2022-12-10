@@ -1185,7 +1185,7 @@ class Sync(Base, metaclass=Singleton):
 
     def _status(self, label: str) -> None:
         sys.stdout.write(
-            f"{label} {self.database} "
+            f"{label} {self.database}:{self.index} "
             f"Xlog: [{self.count['xlog']:,}] => "
             f"Db: [{self.count['db']:,}] => "
             f"Redis: [total = {self.count['redis']:,} "
