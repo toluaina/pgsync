@@ -8,11 +8,11 @@ async-timeout==4.0.2
     # via redis
 attrs==22.1.0
     # via pytest
-black==22.10.0
+black==22.12.0
     # via -r requirements/base.in
-boto3==1.26.22
+boto3==1.26.28
     # via -r requirements/base.in
-botocore==1.29.22
+botocore==1.29.28
     # via
     #   boto3
     #   s3transfer
@@ -20,7 +20,7 @@ bump2version==1.0.1
     # via bumpversion
 bumpversion==0.6.0
     # via -r requirements/base.in
-certifi==2022.9.24
+certifi==2022.12.7
     # via
     #   elasticsearch
     #   requests
@@ -46,7 +46,7 @@ exceptiongroup==1.0.4
     # via pytest
 faker==15.3.4
     # via -r requirements/base.in
-filelock==3.8.0
+filelock==3.8.2
     # via virtualenv
 flake8==5.0.4
     # via
@@ -75,7 +75,7 @@ importlib-metadata==4.2.0
     # via -r requirements/base.in
 iniconfig==1.1.1
     # via pytest
-isort==5.10.1
+isort==5.11.1
     # via flake8-isort
 jmespath==1.0.1
     # via
@@ -89,15 +89,14 @@ mock==4.0.3
     # via -r requirements/test.in
 mypy-extensions==0.4.3
     # via black
-packaging==21.3
+packaging==22.0
     # via
     #   marshmallow
     #   pytest
     #   pytest-sugar
-    #   redis
-pathspec==0.10.2
+pathspec==0.10.3
     # via black
-platformdirs==2.5.4
+platformdirs==2.6.0
     # via
     #   black
     #   virtualenv
@@ -115,8 +114,6 @@ pydocstyle==6.1.1
     # via flake8-docstrings
 pyflakes==2.5.0
     # via flake8
-pyparsing==3.0.9
-    # via packaging
 pytest==7.2.0
     # via
     #   -r requirements/test.in
@@ -139,7 +136,7 @@ python-dateutil==2.8.2
     #   freezegun
 python-dotenv==0.21.0
     # via environs
-redis==4.3.5
+redis==4.4.0
     # via -r requirements/base.in
 requests==2.28.1
     # via requests-aws4auth
@@ -154,7 +151,7 @@ six==1.16.0
     #   requests-aws4auth
 snowballstemmer==2.2.0
     # via pydocstyle
-sqlalchemy==1.4.44
+sqlalchemy==1.4.45
     # via -r requirements/base.in
 sqlparse==0.4.3
     # via -r requirements/base.in
