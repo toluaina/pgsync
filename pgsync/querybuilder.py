@@ -719,10 +719,15 @@ class QueryBuilder(object):
             onclause: list = []
 
             foreign_keys: dict = self._get_foreign_keys(node, child)
-
+            table: Optional[str] = (
+                child.relationship.throughs[0].table if child.relationship.throughs
+                else None
+            )
             foreign_key_columns: list = self._get_column_foreign_keys(
                 child._subquery.columns,
                 foreign_keys,
+                table=table,
+                schema=node.schema,
             )
 
             for i in range(len(foreign_key_columns)):
