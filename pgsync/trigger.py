@@ -9,6 +9,7 @@ DECLARE
   new_row JSON;
   notification JSON;
   xmin BIGINT;
+  _indices TEXT [];
   _primary_keys TEXT [];
   _foreign_keys TEXT [];
 
@@ -18,8 +19,8 @@ BEGIN
 
     IF TG_OP = 'DELETE' THEN
 
-        SELECT primary_keys
-        INTO _primary_keys
+        SELECT primary_keys, indices
+        INTO _primary_keys, _indices
         FROM {MATERIALIZED_VIEW}
         WHERE table_name = TG_TABLE_NAME;
 
@@ -33,8 +34,8 @@ BEGIN
     ELSE
         IF TG_OP <> 'TRUNCATE' THEN
 
-            SELECT primary_keys, foreign_keys
-            INTO _primary_keys, _foreign_keys
+            SELECT primary_keys, foreign_keys, indices
+            INTO _primary_keys, _foreign_keys, _indices
             FROM {MATERIALIZED_VIEW}
             WHERE table_name = TG_TABLE_NAME;
 
@@ -61,6 +62,7 @@ BEGIN
         'xmin', xmin,
         'new', new_row,
         'old', old_row,
+        'indices', _indices,
         'tg_op', TG_OP,
         'table', TG_TABLE_NAME,
         'schema', TG_TABLE_SCHEMA

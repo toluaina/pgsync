@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
 
 class Payload(object):
 
-    __slots__ = ("tg_op", "table", "schema", "old", "new", "xmin")
+    __slots__ = ("tg_op", "table", "schema", "old", "new", "xmin", "indices")
 
     def __init__(
         self,
@@ -61,6 +61,7 @@ class Payload(object):
         old: dict = Optional[None],
         new: dict = Optional[None],
         xmin: int = Optional[None],
+        indices: List[str] = Optional[None],
     ):
         self.tg_op: str = tg_op
         self.table: str = table
@@ -68,6 +69,7 @@ class Payload(object):
         self.old: dict = old or {}
         self.new: dict = new or {}
         self.xmin: str = xmin
+        self.indices: List[str] = indices
 
     @property
     def data(self) -> dict:
@@ -481,12 +483,17 @@ class Base(object):
 
     # Views...
     def create_view(
-        self, schema: str, tables: Set, user_defined_fkey_tables: dict
+        self,
+        index: str,
+        schema: str,
+        tables: Set,
+        user_defined_fkey_tables: dict,
     ) -> None:
         create_view(
             self.engine,
             self.models,
             self.fetchall,
+            index,
             schema,
             tables,
             user_defined_fkey_tables,

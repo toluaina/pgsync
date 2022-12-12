@@ -311,7 +311,7 @@ class TestSync(object):
         with patch("pgsync.sync.sys") as mock_sys:
             sync._status("mydb")
             mock_sys.stdout.write.assert_called_once_with(
-                "mydb testdb "
+                "mydb testdb:testdb "
                 "Xlog: [0] => "
                 "Db: [0] => "
                 "Redis: [total = 0 "
@@ -765,6 +765,7 @@ class TestSync(object):
                         join_queries=True,
                     )
                 mock_create_view.assert_called_once_with(
+                    "testdb",
                     "public",
                     {"publisher", "book"},
                     {"publisher": {"publisher_id", "id"}},

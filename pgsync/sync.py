@@ -279,7 +279,9 @@ class Sync(Base, metaclass=Singleton):
                     user_defined_fkey_tables.setdefault(node.table, set())
                     user_defined_fkey_tables[node.table] |= set(columns)
             if tables:
-                self.create_view(schema, tables, user_defined_fkey_tables)
+                self.create_view(
+                    self.index, schema, tables, user_defined_fkey_tables
+                )
                 self.create_triggers(
                     schema, tables=tables, join_queries=join_queries
                 )
@@ -1039,9 +1041,10 @@ class Sync(Base, metaclass=Singleton):
                 notification: AnyStr = conn.notifies.pop(0)
                 if notification.channel == self.database:
                     payload = json.loads(notification.payload)
-                    payloads.append(payload)
-                    logger.debug(f"on_notify: {payload}")
-                    self.count["db"] += 1
+                    if self.index in payload["indices"]:
+                        payloads.append(payload)
+                        logger.debug(f"on_notify: {payload}")
+                        self.count["db"] += 1
 
     @exception
     def async_poll_db(self) -> None:
@@ -1060,9 +1063,10 @@ class Sync(Base, metaclass=Singleton):
             notification: AnyStr = self.conn.notifies.pop(0)
             if notification.channel == self.database:
                 payload = json.loads(notification.payload)
-                self.redis.bulk_push([payload])
-                logger.debug(f"on_notify: {payload}")
-                self.count["db"] += 1
+                if self.index in payload["indices"]:
+                    self.redis.bulk_push([payload])
+                    logger.debug(f"on_notify: {payload}")
+                    self.count["db"] += 1
 
     def refresh_views(self) -> None:
         self._refresh_views()
@@ -1181,7 +1185,7 @@ class Sync(Base, metaclass=Singleton):
 
     def _status(self, label: str) -> None:
         sys.stdout.write(
-            f"{label} {self.database} "
+            f"{label} {self.database}:{self.index} "
             f"Xlog: [{self.count['xlog']:,}] => "
             f"Db: [{self.count['db']:,}] => "
             f"Redis: [total = {self.count['redis']:,} "
