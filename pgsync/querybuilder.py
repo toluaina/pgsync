@@ -728,7 +728,7 @@ class QueryBuilder(object):
                 child._subquery.columns,
                 foreign_keys,
                 table=table,
-                schema=node.schema,
+                schema=child.schema,
             )
 
             for i in range(len(foreign_key_columns)):
