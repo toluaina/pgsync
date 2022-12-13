@@ -8,7 +8,7 @@ services:
     environment:
       - POSTGRES_USER=pgsync
       - POSTGRES_PASSWORD=PLEASE_CHANGE_ME
-      - POSTGRES_DB=airbnb
+      - POSTGRES_DB=postgres
   redis:
     image: redis
     command: redis-server --requirepass PLEASE_CHANGE_ME
