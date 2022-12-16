@@ -298,6 +298,21 @@ class TestSync(object):
                 excinfo.value
             )
 
+        with patch(
+            "pgsync.base.Base._materialized_views",
+            side_effect=RuntimeError("hey there"),
+        ):
+            with pytest.raises(RuntimeError) as excinfo:
+                Sync(
+                    document={
+                        "index": "testdb",
+                        "database": "testdb",
+                        "nodes": {"table": "book"},
+                        "plugins": ["Hero"],
+                    },
+                )
+                assert "hey there" in str(excinfo.value)
+
         Sync(
             document={
                 "index": "testdb",
@@ -306,6 +321,7 @@ class TestSync(object):
                 "plugins": ["Hero"],
             },
         )
+        # raise
 
     def test_status(self, sync):
         with patch("pgsync.sync.sys") as mock_sys:

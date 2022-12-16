@@ -114,6 +114,7 @@ class Base(object):
         self.__views: dict = {}
         self.__materialized_views: dict = {}
         self.__tables: dict = {}
+        self.__columns: dict = {}
         self.verbose: bool = verbose
         self._conn = None
 
@@ -264,6 +265,15 @@ class Base(object):
                 sa.inspect(self.engine).get_table_names(schema)
             )
         return self.__tables[schema]
+
+    def columns(self, schema: str, table: str) -> list:
+        """Get the column names for a table/view."""
+        if (table, schema) not in self.__columns:
+            columns = sa.inspect(self.engine).get_columns(table, schema=schema)
+            self.__columns[(table, schema)] = sorted(
+                [column["name"] for column in columns]
+            )
+        return self.__columns[(table, schema)]
 
     def truncate_table(self, table: str, schema: str = DEFAULT_SCHEMA) -> None:
         """Truncate a table.

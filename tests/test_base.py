@@ -129,6 +129,25 @@ class TestBase(object):
             },
         ]
 
+    def test_columns(self, connection):
+        pg_base = Base(connection.engine.url.database)
+        assert pg_base.columns("public", "book") == [
+            "buyer_id",
+            "copyright",
+            "description",
+            "isbn",
+            "publisher_id",
+            "seller_id",
+            "tags",
+            "title",
+        ]
+        assert pg_base.columns("public", "shelf") == ["id", "shelf"]
+        assert pg_base.columns("public", "book_author") == [
+            "author_id",
+            "book_isbn",
+            "id",
+        ]
+
     @patch("pgsync.base.logger")
     @patch("pgsync.sync.Base.execute")
     @patch("pgsync.base.sa.DDL")

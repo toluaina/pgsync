@@ -181,6 +181,13 @@ TRIGGER_FUNC = "table_notify"
 # added underscore to reduce chance of collisions
 MATERIALIZED_VIEW = "_view"
 
+MATERIALIZED_VIEW_COLUMNS = [
+    "foreign_keys",
+    "indices",
+    "primary_keys",
+    "table_name",
+]
+
 # Primary key delimiter
 PRIMARY_KEY_DELIMITER = "|"
 

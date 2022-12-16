@@ -24,6 +24,8 @@ from .base import Base, Payload
 from .constants import (
     DELETE,
     INSERT,
+    MATERIALIZED_VIEW,
+    MATERIALIZED_VIEW_COLUMNS,
     META,
     PRIMARY_KEY_DELIMITER,
     TG_OP,
@@ -169,6 +171,16 @@ class Sync(Base, metaclass=Singleton):
         self.tree.display()
 
         for node in self.tree.traverse_breadth_first():
+
+            # ensure internal materialized view compatibility
+            if MATERIALIZED_VIEW in self._materialized_views(node.schema):
+                if MATERIALIZED_VIEW_COLUMNS != self.columns(
+                    node.schema, MATERIALIZED_VIEW
+                ):
+                    raise RuntimeError(
+                        f"Required materialized view columns not present on "
+                        f"{MATERIALIZED_VIEW}. Please re-run bootstrap."
+                    )
 
             if node.schema not in self.schemas:
                 raise InvalidSchemaError(
