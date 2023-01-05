@@ -7,31 +7,31 @@
 [![codecov](https://codecov.io/gh/toluaina/pgsync/branch/main/graph/badge.svg?token=cvQzYkz6CV)](https://codecov.io/gh/toluaina/pgsync)
 
 
-## PostgreSQL to Elasticsearch sync
+## PostgreSQL to Elasticsearch/Opensearch sync
 
-[PGSync](https://pgsync.com) is a middleware for syncing data from [Postgres](https://www.postgresql.org) to [Elasticsearch](https://www.elastic.co/products/elastic-stack) effortlessly.
+[PGSync](https://pgsync.com) is a middleware for syncing data from [Postgres](https://www.postgresql.org) to [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[Opensearch](https://opensearch.org/) effortlessly.
 It allows you to keep [Postgres](https://www.postgresql.org) as your source of truth and
-expose structured denormalized documents in [Elasticsearch](https://www.elastic.co/products/elastic-stack).
+expose structured denormalized documents in [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[Opensearch](https://opensearch.org/).
 
-Changes to nested entities are propagated to [Elasticsearch](https://www.elastic.co/products/elastic-stack).
+Changes to nested entities are propagated to [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[Opensearch](https://opensearch.org/).
 PGSync's advanced query builder then generates optimized SQL queries 
 on the fly based on your schema.
 PGSync's advisory model allows you to quickly move and transform large volumes of data quickly whilst maintaining relational integrity.
 
 Simply describe your document structure or schema in JSON and [PGSync](https://pgsync.com) will 
-continuously capture changes in your data and load it into [Elasticsearch](https://www.elastic.co/products/elastic-stack) 
+continuously capture changes in your data and load it into [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[Opensearch](https://opensearch.org/) 
 without writing any code.
 [PGSync](https://pgsync.com) transforms your relational data into a structured document format.
 
 It allows you to take advantage of the expressive power and scalability of 
-[Elasticsearch](https://www.elastic.co/products/elastic-stack) directly from [Postgres](https://www.postgresql.org). 
+[Elasticsearch](https://www.elastic.co/products/elastic-stack)/[Opensearch](https://opensearch.org/) directly from [Postgres](https://www.postgresql.org). 
 You don't have to write complex queries and transformation pipelines.
 PGSync is lightweight, flexible and fast.
 
-[Elasticsearch](https://www.elastic.co/products/elastic-stack) is more suited as as secondary denormalised search engine to accompany a more traditional normalized datastore.
-Moreover, you shouldn't store your primary data in [Elasticsearch](https://www.elastic.co/products/elastic-stack).
+[Elasticsearch](https://www.elastic.co/products/elastic-stack)/[Opensearch](https://opensearch.org/) is more suited as as secondary denormalised search engine to accompany a more traditional normalized datastore.
+Moreover, you shouldn't store your primary data in [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[Opensearch](https://opensearch.org/).
 
-So how do you then get your data into [Elasticsearch](https://www.elastic.co/products/elastic-stack) in the first place? 
+So how do you then get your data into [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[Opensearch](https://opensearch.org/) in the first place? 
 Tools like [Logstash](https://www.elastic.co/products/logstash) and [Kafka](https://kafka.apache.org) can aid this task but they still require a bit 
 of engineering and development.
 
@@ -45,28 +45,28 @@ Other benefits of PGSync include:
 
 #### Why?
 
-At a high level, you have data in a Postgres database and you want to mirror it in Elasticsearch.  
-This means every change to your data (***Insert***, ***Update***, ***Delete*** and ***Truncate*** statements) needs to be replicated to Elasticsearch. 
-At first, this seems easy and then it's not. Simply add some code to copy the data to Elasticsearch after updating the database (or so called dual writes).
+At a high level, you have data in a Postgres database and you want to mirror it in Elasticsearch/Opensearch.  
+This means every change to your data (***Insert***, ***Update***, ***Delete*** and ***Truncate*** statements) needs to be replicated to Elasticsearch/Opensearch. 
+At first, this seems easy and then it's not. Simply add some code to copy the data to Elasticsearch/Opensearch after updating the database (or so called dual writes).
 Writing SQL queries spanning multiple tables and involving multiple relationships are hard to write.
 Detecting changes within a nested document can also be quite hard.
-Of course, if your data never changed, then you could just take a snapshot in time and load it into Elasticsearch as a one-off operation.
+Of course, if your data never changed, then you could just take a snapshot in time and load it into Elasticsearch/Opensearch as a one-off operation.
 
 PGSync is appropriate for you if:
-- [Postgres](https://www.postgresql.org) is your read/write source of truth whilst [Elasticsearch](https://www.elastic.co/products/elastic-stack) is your 
+- [Postgres](https://www.postgresql.org) is your read/write source of truth whilst [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[Opensearch](https://opensearch.org/) is your 
 read-only search layer.
 - You need to denormalize relational data into a NoSQL data source.
 - Your data is constantly changing.
 - You have existing data in a relational database such as [Postgres](https://www.postgresql.org) and you need
-a secondary NoSQL database like [Elasticsearch](https://www.elastic.co/products/elastic-stack) for text-based queries or autocomplete queries to mirror the existing data without having your application perform dual writes.
+a secondary NoSQL database like [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[Opensearch](https://opensearch.org/) for text-based queries or autocomplete queries to mirror the existing data without having your application perform dual writes.
 - You want to keep your existing data untouched whilst taking advantage of
-the search capabilities of [Elasticsearch](https://www.elastic.co/products/elastic-stack) by exposing a view of your data without compromising the security of your relational data.
+the search capabilities of [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[Opensearch](https://opensearch.org/) by exposing a view of your data without compromising the security of your relational data.
 - Or you simply want to expose a view of your relational data for search purposes.
 
 
 #### How it works
 
-PGSync is written in Python (supporting version 3.7 onwards) and the stack is composed of: [Redis](https://redis.io), [Elasticsearch](https://www.elastic.co/products/elastic-stack), [Postgres](https://www.postgresql.org), and [SQlAlchemy](https://www.sqlalchemy.org).
+PGSync is written in Python (supporting version 3.7 onwards) and the stack is composed of: [Redis](https://redis.io), [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[Opensearch](https://opensearch.org/), [Postgres](https://www.postgresql.org), and [SQlAlchemy](https://www.sqlalchemy.org).
 
 PGSync leverages the [logical decoding](https://www.postgresql.org/docs/current/logicaldecoding.html) feature of [Postgres](https://www.postgresql.org) (introduced in PostgreSQL 9.4) to capture a continuous stream of change events.
 This feature needs to be enabled in your [Postgres](https://www.postgresql.org) configuration file by setting in the postgresql.conf file:
@@ -82,7 +82,7 @@ PGSync operates in an event-driven model by creating triggers for tables in your
 
 *This is the only time PGSync will ever make any changes to your database.*
 
-**NOTE**: **If you change the structure of your PGSync's schema config, you would need to rebuild your Elasticsearch indices.**
+**NOTE**: **If you change the structure of your PGSync's schema config, you would need to rebuild your Elasticsearch/Opensearch indices.**
 There are plans to support zero-downtime migrations to streamline this process.
 
 
@@ -101,9 +101,9 @@ Run:
 $ docker-compose up
 ```
 
-Show the content in Elasticsearch
+Show the content in Elasticsearch/Opensearch
 ```
-$ curl -X GET http://[elasticsearch host]:9201/reservations/_search?pretty=true
+$ curl -X GET http://[elasticsearch/opensearch host]:9201/reservations/_search?pretty=true
 ```
 
 ##### Manual configuration
@@ -140,7 +140,7 @@ Key features of PGSync are:
 - Easily denormalize relational data. 
 - Works with any PostgreSQL database (version 9.6 or later). 
 - Negligible impact on database performance.
-- Transactionally consistent output in Elasticsearch. This means: writes appear only when they are committed to the database, insert, update and delete operations appear in the same order as they were committed (as opposed to eventual consistency).
+- Transactionally consistent output in Elasticsearch/Opensearch. This means: writes appear only when they are committed to the database, insert, update and delete operations appear in the same order as they were committed (as opposed to eventual consistency).
 - Fault-tolerant: does not lose data, even if processes crash or a network interruption occurs, etc. The process can be recovered from the last checkpoint.
 - Returns the data directly as Postgres JSON from the database for speed.
 - Supports composite primary and foreign keys.
@@ -155,7 +155,7 @@ Key features of PGSync are:
 - [Python](https://www.python.org) 3.7+
 - [Postgres](https://www.postgresql.org) 9.6+
 - [Redis](https://redis.io) 3.1.0
-- [Elasticsearch](https://www.elastic.co/products/elastic-stack) 6.3.1+
+- [Elasticsearch](https://www.elastic.co/products/elastic-stack) 6.3.1+ or [Opensearch](https://opensearch.org/) 1.3.7+
 - [SQlAlchemy](https://www.sqlalchemy.org) 1.3.4+
 
 
@@ -211,7 +211,7 @@ A **_pivot_** table indicates the root of your document.
 }
 ```
 
-To get this document structure in [Elasticsearch](https://www.elastic.co/products/elastic-stack)
+To get this document structure in [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[Opensearch](https://opensearch.org/)
 
 ```json
 [
@@ -288,7 +288,7 @@ PGSync addresses the following challenges:
 - PGSync requires little development effort. You simply define a schema config describing your data.
 - PGSync generates advanced queries matching your schema directly.
 - PGSync allows you to easily rebuild your indexes in case of a schema change.
-- You can expose only the data you require in Elasticsearch.
+- You can expose only the data you require in Elasticsearch/Opensearch.
 - Supports multiple Postgres schemas for multi-tennant applications.
 
 
