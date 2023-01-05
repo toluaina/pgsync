@@ -30,6 +30,7 @@ from .settings import (
     ELASTICSEARCH_CLIENT_KEY,
     ELASTICSEARCH_CLOUD_ID,
     ELASTICSEARCH_HTTP_COMPRESS,
+    ELASTICSEARCH_IGNORE_STATUS,
     ELASTICSEARCH_INITIAL_BACKOFF,
     ELASTICSEARCH_MAX_BACKOFF,
     ELASTICSEARCH_MAX_CHUNK_BYTES,
@@ -109,6 +110,7 @@ class ElasticHelper(object):
         max_backoff: Optional[float] = None,
         raise_on_exception: Optional[bool] = None,
         raise_on_error: Optional[bool] = None,
+        ignore_status: Tuple[int] = None,
     ) -> None:
         """Pull sync data from generator to Elasticsearch."""
         chunk_size = chunk_size or ELASTICSEARCH_CHUNK_SIZE
@@ -124,6 +126,7 @@ class ElasticHelper(object):
             raise_on_exception or ELASTICSEARCH_RAISE_ON_EXCEPTION
         )
         raise_on_error = raise_on_error or ELASTICSEARCH_RAISE_ON_ERROR
+        ignore_status = ignore_status or ELASTICSEARCH_IGNORE_STATUS
 
         try:
             self._bulk(
@@ -139,6 +142,7 @@ class ElasticHelper(object):
                 max_backoff=max_backoff,
                 raise_on_exception=raise_on_exception,
                 raise_on_error=raise_on_error,
+                ignore_status=ignore_status,
             )
         except Exception as e:
             logger.exception(f"Exception {e}")
@@ -159,12 +163,9 @@ class ElasticHelper(object):
         max_backoff: float,
         raise_on_exception: bool,
         raise_on_error: bool,
+        ignore_status: Tuple[int],
     ):
         """Bulk index, update, delete docs to Elasticsearch."""
-        # when using multiple threads for poll_db we need to account for other
-        # threads performing deletions
-        ignore_status: Tuple[int, int] = (400, 404)
-
         if ELASTICSEARCH_STREAMING_BULK:
             for _ in helpers.streaming_bulk(
                 self.__client,

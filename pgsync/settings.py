@@ -117,6 +117,12 @@ ELASTICSEARCH_VERIFY_CERTS = env.bool(
     "ELASTICSEARCH_VERIFY_CERTS", default=True
 )
 
+# when using multiple threads for poll_db we need to account for other
+# threads performing deletions.
+ELASTICSEARCH_IGNORE_STATUS = env.list(
+    "ELASTICSEARCH_IGNORE_STATUS", default=[404]
+)
+
 # Postgres:
 PG_HOST = env.str("PG_HOST", default="localhost")
 PG_PASSWORD = env.str("PG_PASSWORD", default=None)
