@@ -16,7 +16,7 @@ import sqlparse
 
 from .exc import SchemaError
 from .settings import CHECKPOINT_PATH, QUERY_LITERAL_BINDS, SCHEMA
-from .urls import get_elasticsearch_url, get_postgres_url, get_redis_url
+from .urls import get_postgres_url, get_redis_url, get_search_url
 
 logger = logging.getLogger(__name__)
 
@@ -112,8 +112,8 @@ def show_settings(schema: Optional[str] = None) -> None:
         urlparse(get_postgres_url("postgres"))
     )
     logger.info(f"URL: {result.geturl()}")
-    result = get_redacted_url(urlparse(get_elasticsearch_url()))
-    logger.info(f"{HIGHLIGHT_BEGIN}Elasticsearch{HIGHLIGHT_END}")
+    result = get_redacted_url(urlparse(get_search_url()))
+    logger.info(f"{HIGHLIGHT_BEGIN}Search{HIGHLIGHT_END}")
     logger.info(f"URL: {result.geturl()}")
     logger.info(f"{HIGHLIGHT_BEGIN}Redis{HIGHLIGHT_END}")
     result = get_redacted_url(urlparse(get_redis_url()))

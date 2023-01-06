@@ -32,7 +32,6 @@ from .constants import (
     TRUNCATE,
     UPDATE,
 )
-from .elastichelper import ElasticHelper
 from .exc import (
     ForeignKeyError,
     InvalidSchemaError,
@@ -45,6 +44,7 @@ from .node import Node, Tree
 from .plugin import Plugins
 from .querybuilder import QueryBuilder
 from .redisqueue import RedisQueue
+from .search_client import SearchClient
 from .singleton import Singleton
 from .transform import Transform
 from .utils import (
@@ -84,7 +84,7 @@ class Sync(Base, metaclass=Singleton):
         super().__init__(
             document.get("database", self.index), verbose=verbose, **kwargs
         )
-        self.es: ElasticHelper = ElasticHelper()
+        self.search_client: SearchClient = SearchClient()
         self.__name: str = re.sub(
             "[^0-9a-zA-Z_]+", "", f"{self.database.lower()}_{self.index}"
         )
@@ -247,8 +247,8 @@ class Sync(Base, metaclass=Singleton):
                 sys.stdout.flush()
 
     def create_setting(self) -> None:
-        """Create Elasticsearch setting and mapping if required."""
-        self.es._create_setting(
+        """Create Elasticsearch/Opensearch setting and mapping if required."""
+        self.search_client._create_setting(
             self.index,
             self.tree,
             setting=self.setting,
@@ -332,7 +332,9 @@ class Sync(Base, metaclass=Singleton):
         self.drop_replication_slot(self.__name)
 
     def get_doc_id(self, primary_keys: List[str], table: str) -> str:
-        """Get the Elasticsearch document id from the primary keys."""
+        """
+        Get the Elasticsearch/Opensearch document id from the primary keys.
+        """  # noqa D200
         if not primary_keys:
             raise PrimaryKeyNotFoundError(
                 f"No primary key found on table: {table}"
@@ -430,10 +432,14 @@ class Sync(Base, metaclass=Singleton):
                         payload.tg_op != payload2.tg_op
                         or payload.table != payload2.table
                     ):
-                        self.es.bulk(self.index, self._payloads(payloads))
+                        self.search_client.bulk(
+                            self.index, self._payloads(payloads)
+                        )
                         payloads: list = []
                 elif j == len(rows):
-                    self.es.bulk(self.index, self._payloads(payloads))
+                    self.search_client.bulk(
+                        self.index, self._payloads(payloads)
+                    )
                     payloads: list = []
             self.logical_slot_get_changes(
                 self.__name,
@@ -520,10 +526,10 @@ class Sync(Base, metaclass=Singleton):
 
             # Here, we are performing two operations:
             # 1) Build a filter to sync the updated record(s)
-            # 2) Delete the old record(s) in Elasticsearch if the
+            # 2) Delete the old record(s) in Elasticsearch/Opensearch if the
             #    primary key has changed
-            #   2.1) This is crucial otherwise we can have the old
-            #        and new document in Elasticsearch at the same time
+            #   2.1) This is crucial otherwise we can have the old and new
+            #        document in Elasticsearch/Opensearch at the same time
             docs: list = []
             for payload in payloads:
                 primary_values: list = [
@@ -559,12 +565,15 @@ class Sync(Base, metaclass=Singleton):
                     }
                     if self.routing:
                         doc["_routing"] = old_values[self.routing]
-                    if self.es.major_version < 7 and not self.es.is_opensearch:
+                    if (
+                        self.search_client.major_version < 7
+                        and not self.search_client.is_opensearch
+                    ):
                         doc["_type"] = "_doc"
                     docs.append(doc)
 
             if docs:
-                self.es.bulk(self.index, docs)
+                self.search_client.bulk(self.index, docs)
 
         else:
 
@@ -583,7 +592,9 @@ class Sync(Base, metaclass=Singleton):
                 for key, value in primary_fields.items():
                     fields[key].append(value)
 
-                for doc_id in self.es._search(self.index, node.table, fields):
+                for doc_id in self.search_client._search(
+                    self.index, node.table, fields
+                ):
                     where = {}
                     params = doc_id.split(PRIMARY_KEY_DELIMITER)
                     for i, key in enumerate(self.tree.root.model.primary_keys):
@@ -614,8 +625,8 @@ class Sync(Base, metaclass=Singleton):
                             if value:
                                 fields[key].append(value)
                     # TODO: we should combine this with the filter above
-                    # so we only hit Elasticsearch once
-                    for doc_id in self.es._search(
+                    # so we only hit Elasticsearch/Opensearch once
+                    for doc_id in self.search_client._search(
                         self.index,
                         node.parent.table,
                         fields,
@@ -637,7 +648,8 @@ class Sync(Base, metaclass=Singleton):
         self, node: Node, filters: dict, payloads: List[dict]
     ) -> dict:
 
-        # when deleting a root node, just delete the doc in Elasticsearch
+        # when deleting a root node, just delete the doc in
+        # Elasticsearch/Opensearch
         if node.is_root:
 
             docs: list = []
@@ -655,7 +667,10 @@ class Sync(Base, metaclass=Singleton):
                 }
                 if self.routing:
                     doc["_routing"] = payload.data[self.routing]
-                if self.es.major_version < 7 and not self.es.is_opensearch:
+                if (
+                    self.search_client.major_version < 7
+                    and not self.search_client.is_opensearch
+                ):
                     doc["_type"] = "_doc"
                 docs.append(doc)
             if docs:
@@ -665,7 +680,7 @@ class Sync(Base, metaclass=Singleton):
                 raise_on_error: Optional[bool] = (
                     False if settings.USE_ASYNC else None
                 )
-                self.es.bulk(
+                self.search_client.bulk(
                     self.index,
                     docs,
                     raise_on_exception=raise_on_exception,
@@ -690,7 +705,9 @@ class Sync(Base, metaclass=Singleton):
                 for key, value in primary_fields.items():
                     fields[key].append(value)
 
-                for doc_id in self.es._search(self.index, node.table, fields):
+                for doc_id in self.search_client._search(
+                    self.index, node.table, fields
+                ):
                     where = {}
                     params = doc_id.split(PRIMARY_KEY_DELIMITER)
                     for i, key in enumerate(self.tree.root.model.primary_keys):
@@ -708,22 +725,25 @@ class Sync(Base, metaclass=Singleton):
         if node.is_root:
 
             docs: list = []
-            for doc_id in self.es._search(self.index, node.table):
+            for doc_id in self.search_client._search(self.index, node.table):
                 doc: dict = {
                     "_id": doc_id,
                     "_index": self.index,
                     "_op_type": "delete",
                 }
-                if self.es.major_version < 7 and not self.es.is_opensearch:
+                if (
+                    self.search_client.major_version < 7
+                    and not self.search_client.is_opensearch
+                ):
                     doc["_type"] = "_doc"
                 docs.append(doc)
             if docs:
-                self.es.bulk(self.index, docs)
+                self.search_client.bulk(self.index, docs)
 
         else:
 
             _filters: list = []
-            for doc_id in self.es._search(self.index, node.table):
+            for doc_id in self.search_client._search(self.index, node.table):
                 where: dict = {}
                 params = doc_id.split(PRIMARY_KEY_DELIMITER)
                 for i, key in enumerate(self.tree.root.model.primary_keys):
@@ -946,7 +966,10 @@ class Sync(Base, metaclass=Singleton):
                 if self.routing:
                     doc["_routing"] = row[self.routing]
 
-                if self.es.major_version < 7 and not self.es.is_opensearch:
+                if (
+                    self.search_client.major_version < 7
+                    and not self.search_client.is_opensearch
+                ):
                     doc["_type"] = "_doc"
 
                 if self._plugins:
@@ -1104,7 +1127,7 @@ class Sync(Base, metaclass=Singleton):
 
         This is triggered by poll_redis.
         It is called when an event is received from Redis.
-        Deserialize the payload from Redis and sync to Elasticsearch.
+        Deserialize the payload from Redis and sync to Elasticsearch/Opensearch
         """
         # this is used for the views.
         # we substitute the views for the base table here
@@ -1126,7 +1149,7 @@ class Sync(Base, metaclass=Singleton):
                 _payloads[payload.table].append(payload)
 
             for _payload in _payloads.values():
-                self.es.bulk(self.index, self._payloads(_payload))
+                self.search_client.bulk(self.index, self._payloads(_payload))
 
         else:
 
@@ -1140,10 +1163,14 @@ class Sync(Base, metaclass=Singleton):
                         payload.tg_op != payload2.tg_op
                         or payload.table != payload2.table
                     ):
-                        self.es.bulk(self.index, self._payloads(_payloads))
+                        self.search_client.bulk(
+                            self.index, self._payloads(_payloads)
+                        )
                         _payloads = []
                 elif j == len(payloads):
-                    self.es.bulk(self.index, self._payloads(_payloads))
+                    self.search_client.bulk(
+                        self.index, self._payloads(_payloads)
+                    )
                     _payloads: list = []
 
         txids: Set = set(map(lambda x: x.xmin, payloads))
@@ -1157,7 +1184,9 @@ class Sync(Base, metaclass=Singleton):
         txmax: int = self.txid_current
         logger.debug(f"pull txmin: {txmin} - txmax: {txmax}")
         # forward pass sync
-        self.es.bulk(self.index, self.sync(txmin=txmin, txmax=txmax))
+        self.search_client.bulk(
+            self.index, self.sync(txmin=txmin, txmax=txmax)
+        )
         # now sync up to txmax to capture everything we may have missed
         self.logical_slot_changes(txmin=txmin, txmax=txmax, upto_nchanges=None)
         self.checkpoint: int = txmax or self.txid_current
@@ -1202,7 +1231,7 @@ class Sync(Base, metaclass=Singleton):
             f"Db: [{self.count['db']:,}] => "
             f"Redis: [total = {self.count['redis']:,} "
             f"pending = {self.redis.qsize:,}] => "
-            f"Elastic: [{self.es.doc_count:,}] ...\n"
+            f"Search: [{self.search_client.doc_count:,}] ...\n"
         )
         sys.stdout.flush()
 
@@ -1239,7 +1268,7 @@ class Sync(Base, metaclass=Singleton):
             # sync up to current transaction_id
             self.pull()
             # start a background worker consumer thread to
-            # poll Redis and populate Elasticsearch
+            # poll Redis and populate Elasticsearch/Opensearch
             self.poll_redis()
             # start a background worker thread to cleanup the replication slot
             self.truncate_slots()

@@ -37,7 +37,7 @@ class TestView(object):
         yield books
         session.connection().engine.connect().close()
         session.connection().engine.dispose()
-        sync.es.close()
+        sync.search_client.close()
 
     def test_create_materialized_view(self, connection):
         """Test create materialized view."""

@@ -31,13 +31,13 @@ def test_postgres_url(mocker):
     assert str(engine.engine.url) == url
 
 
-def test_elasticsearch_url(mocker):
-    """Test the elasticsearch url is configured."""
-    mock_get_elasticsearch_url = mocker.patch(
-        "pgsync.urls.get_elasticsearch_url",
+def test_search_url(mocker):
+    """Test the search url is configured."""
+    mock_get_search_url = mocker.patch(
+        "pgsync.urls.get_search_url",
         return_value="http://some-domain:33",
     )
     mocker.patch("logging.config.dictConfig")
     importlib.reload(settings)
-    assert mock_get_elasticsearch_url() == "http://some-domain:33"
-    mock_get_elasticsearch_url.assert_called_once()
+    assert mock_get_search_url() == "http://some-domain:33"
+    mock_get_search_url.assert_called_once()

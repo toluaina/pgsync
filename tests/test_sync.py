@@ -25,40 +25,42 @@ ROW = namedtuple("Row", ["data", "xid"])
 
 @pytest.fixture(scope="function")
 def sync():
-    _sync = Sync(
-        {
-            "index": "testdb",
-            "database": "testdb",
-            "nodes": {
-                "table": "book",
-                "columns": ["isbn", "title", "description"],
-                "children": [
-                    {
-                        "table": "publisher",
-                        "columns": ["id", "name"],
-                        "relationship": {
-                            "variant": "object",
-                            "type": "one_to_one",
-                            "foreign_key": {
-                                "child": ["id"],
-                                "parent": ["publisher_id"],
+    with override_env_var(ELASTICSEARCH="True", OPENSEARCH="False"):
+        importlib.reload(settings)
+        _sync = Sync(
+            {
+                "index": "testdb",
+                "database": "testdb",
+                "nodes": {
+                    "table": "book",
+                    "columns": ["isbn", "title", "description"],
+                    "children": [
+                        {
+                            "table": "publisher",
+                            "columns": ["id", "name"],
+                            "relationship": {
+                                "variant": "object",
+                                "type": "one_to_one",
+                                "foreign_key": {
+                                    "child": ["id"],
+                                    "parent": ["publisher_id"],
+                                },
                             },
                         },
-                    },
-                ],
+                    ],
+                },
             },
-        },
-    )
-    Singleton._instances = {}
-    yield _sync
-    _sync.logical_slot_get_changes(
-        f"{_sync.database}_testdb",
-        upto_nchanges=None,
-    )
-    _sync.engine.connect().close()
-    _sync.engine.dispose()
-    _sync.session.close()
-    _sync.es.close()
+        )
+        Singleton._instances = {}
+        yield _sync
+        _sync.logical_slot_get_changes(
+            f"{_sync.database}_testdb",
+            upto_nchanges=None,
+        )
+        _sync.engine.connect().close()
+        _sync.engine.dispose()
+        _sync.session.close()
+        _sync.search_client.close()
 
 
 @pytest.mark.usefixtures("table_creator")
@@ -165,7 +167,7 @@ class TestSync(object):
                             sync.logical_slot_changes()
             assert "Error parsing row" in str(excinfo.value)
 
-    @patch("pgsync.sync.ElasticHelper")
+    @patch("pgsync.sync.SearchClient")
     def test_sync_validate(self, mock_es):
 
         with pytest.raises(SchemaError) as excinfo:
@@ -332,7 +334,7 @@ class TestSync(object):
                 "Db: [0] => "
                 "Redis: [total = 0 "
                 "pending = 0] => "
-                "Elastic: [0] ...\n"
+                "Search: [0] ...\n"
             )
 
     @patch("pgsync.sync.logger")
@@ -347,7 +349,7 @@ class TestSync(object):
                 "Truncating replication slot: testdb_testdb"
             )
 
-    @patch("pgsync.sync.ElasticHelper.bulk")
+    @patch("pgsync.sync.SearchClient.bulk")
     @patch("pgsync.sync.logger")
     def test_pull(self, mock_logger, mock_es, sync):
         with patch("pgsync.sync.Sync.logical_slot_changes") as mock_get:
@@ -364,7 +366,7 @@ class TestSync(object):
             assert sync._truncate is True
             mock_es.assert_called_once_with("testdb", ANY)
 
-    @patch("pgsync.sync.ElasticHelper.bulk")
+    @patch("pgsync.sync.SearchClient.bulk")
     @patch("pgsync.sync.logger")
     def test__on_publish(self, mock_logger, mock_es, sync):
         payloads = [
@@ -398,7 +400,7 @@ class TestSync(object):
         assert sync.checkpoint is not None
         mock_es.assert_called_once_with("testdb", ANY)
 
-    @patch("pgsync.sync.ElasticHelper.bulk")
+    @patch("pgsync.sync.SearchClient.bulk")
     @patch("pgsync.sync.logger")
     def test__on_publish_mixed_ops(self, mock_logger, mock_es, sync):
         payloads = [
@@ -493,12 +495,14 @@ class TestSync(object):
                 new={"isbn": "aa1"},
             )
         ]
-        assert sync.es.doc_count == 0
+        assert sync.search_client.doc_count == 0
         _filters = sync._update_op(node, filters, payloads)
-        sync.es.refresh("testdb")
+        sync.search_client.refresh("testdb")
         assert _filters == {"book": [{"isbn": "aa1"}]}
-        assert sync.es.doc_count == 1
-        docs = sync.es.search("testdb", body={"query": {"match_all": {}}})
+        assert sync.search_client.doc_count == 1
+        docs = sync.search_client.search(
+            "testdb", body={"query": {"match_all": {}}}
+        )
         assert len(docs["hits"]["hits"]) == 0
 
     def test__insert_op(self, sync, connection):
@@ -518,9 +522,11 @@ class TestSync(object):
         ]
         _filters = sync._insert_op(node, filters, payloads)
         assert _filters == {"book": [{"isbn": "001"}]}
-        sync.es.refresh("testdb")
-        assert sync.es.doc_count == 0
-        docs = sync.es.search("testdb", body={"query": {"match_all": {}}})
+        sync.search_client.refresh("testdb")
+        assert sync.search_client.doc_count == 0
+        docs = sync.search_client.search(
+            "testdb", body={"query": {"match_all": {}}}
+        )
         assert len(docs["hits"]["hits"]) == 0
 
         node = Node(
@@ -543,7 +549,7 @@ class TestSync(object):
                 "Could not get parent from node: public.publisher"
             )
 
-    @patch("pgsync.elastichelper.ElasticHelper.bulk")
+    @patch("pgsync.search_client.SearchClient.bulk")
     def test__delete_op(self, mock_es, sync, connection):
         pg_base = Base(connection.engine.url.database)
         node = Node(
@@ -560,9 +566,10 @@ class TestSync(object):
                 old=None,
             )
         ]
+
         _filters = sync._delete_op(node, filters, payloads)
         assert _filters == {"book": []}
-        sync.es.refresh("testdb")
+        sync.search_client.refresh("testdb")
         mock_es.assert_called_once_with(
             "testdb",
             [{"_id": "001", "_index": "testdb", "_op_type": "delete"}],
@@ -570,7 +577,7 @@ class TestSync(object):
             raise_on_error=None,
         )
 
-    @patch("pgsync.sync.ElasticHelper")
+    @patch("pgsync.sync.SearchClient")
     def test__truncate_op(self, mock_es, sync, connection):
         pg_base = Base(connection.engine.url.database)
         node = Node(
@@ -754,7 +761,7 @@ class TestSync(object):
             sync.get_doc_id([], "book")
             assert "No primary key found on table: book" == str(excinfo.value)
 
-    @patch("pgsync.sync.ElasticHelper._create_setting")
+    @patch("pgsync.sync.SearchClient._create_setting")
     def test_create_setting(self, mock_es, sync):
         sync.create_setting()
         mock_es.assert_called_once_with(

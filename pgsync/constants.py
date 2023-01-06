@@ -147,8 +147,6 @@ ELASTICSEARCH_MAPPING_PARAMETERS = [
     "term_vector",
 ]
 
-ELASTICSEARCH_TAGLINE = "You Know, for Search"
-
 CONCAT_TRANSFORM = "concat"
 MAPPING_TRANSFORM = "mapping"
 MOVE_TRANSFORM = "move"

@@ -85,14 +85,14 @@ class TestRoot(object):
         )
 
         try:
-            sync.es.teardown(index="testdb")
+            sync.search_client.teardown(index="testdb")
         except Exception:
             raise
 
         sync.redis.delete()
         session.connection().engine.connect().close()
         session.connection().engine.dispose()
-        sync.es.close()
+        sync.search_client.close()
 
     def test_sync2(self, sync, data):
         """Test the sync with a root only node."""
@@ -420,10 +420,10 @@ class TestRoot(object):
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
-        sync.es.bulk(sync.index, sync.sync())
-        sync.es.refresh("testdb")
+        sync.search_client.bulk(sync.index, sync.sync())
+        sync.search_client.refresh("testdb")
 
-        docs = search(sync.es, "testdb")
+        docs = search(sync.search_client, "testdb")
 
         assert docs == [
             {"_meta": {}, "isbn": "abc", "title": "The Tiger Club"},
@@ -439,10 +439,10 @@ class TestRoot(object):
                 .values(isbn="cba")
             )
 
-        sync.es.bulk(sync.index, sync.sync())
-        sync.es.refresh("testdb")
+        sync.search_client.bulk(sync.index, sync.sync())
+        sync.search_client.refresh("testdb")
 
-        docs = search(sync.es, "testdb")
+        docs = search(sync.search_client, "testdb")
 
         assert docs == [
             {"_meta": {}, "isbn": "abc", "title": "The Tiger Club"},
@@ -451,7 +451,7 @@ class TestRoot(object):
             {"_meta": {}, "isbn": "ghi", "title": "The Rabbit Club"},
         ]
         assert_resync_empty(sync, document.get("node", {}))
-        sync.es.close()
+        sync.search_client.close()
 
     # TODO: Add another test like this and change
     # both primary key and non primary key column
@@ -463,10 +463,10 @@ class TestRoot(object):
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
-        sync.es.bulk(sync.index, sync.sync())
-        sync.es.refresh("testdb")
+        sync.search_client.bulk(sync.index, sync.sync())
+        sync.search_client.refresh("testdb")
 
-        docs = search(sync.es, "testdb")
+        docs = search(sync.search_client, "testdb")
 
         assert docs == [
             {"_meta": {}, "isbn": "abc", "title": "The Tiger Club"},
@@ -505,9 +505,9 @@ class TestRoot(object):
                             side_effect=noop,
                         ):
                             sync.receive(NTHREADS_POLLDB)
-                            sync.es.refresh("testdb")
+                            sync.search_client.refresh("testdb")
 
-        docs = search(sync.es, "testdb")
+        docs = search(sync.search_client, "testdb")
 
         assert len(docs) == 3
         assert "cba" in [doc["isbn"] for doc in docs]
@@ -519,7 +519,7 @@ class TestRoot(object):
             {"_meta": {}, "isbn": "ghi", "title": "The Rabbit Club"},
         ]
         assert_resync_empty(sync, document.get("node", {}))
-        sync.es.close()
+        sync.search_client.close()
 
     def test_insert_non_concurrent(self, data, book_cls):
         """Test sync insert and then sync in non-concurrent mode."""
@@ -529,12 +529,12 @@ class TestRoot(object):
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
-        sync.es.bulk(sync.index, sync.sync())
-        sync.es.refresh("testdb")
+        sync.search_client.bulk(sync.index, sync.sync())
+        sync.search_client.refresh("testdb")
 
         session = sync.session
 
-        docs = search(sync.es, "testdb")
+        docs = search(sync.search_client, "testdb")
 
         assert docs == [
             {"_meta": {}, "isbn": "abc", "title": "The Tiger Club"},
@@ -548,10 +548,10 @@ class TestRoot(object):
                 )
             )
 
-        sync.es.bulk(sync.index, sync.sync())
-        sync.es.refresh("testdb")
+        sync.search_client.bulk(sync.index, sync.sync())
+        sync.search_client.refresh("testdb")
 
-        docs = search(sync.es, "testdb")
+        docs = search(sync.search_client, "testdb")
 
         assert docs == [
             {"_meta": {}, "isbn": "abc", "title": "The Tiger Club"},
@@ -560,7 +560,7 @@ class TestRoot(object):
             {"_meta": {}, "isbn": "xyz", "title": "Encyclopedia"},
         ]
         assert_resync_empty(sync, document.get("node", {}))
-        sync.es.close()
+        sync.search_client.close()
 
     def test_update_non_concurrent(self, data, book_cls):
         """Test sync update and then sync in non-concurrent mode."""
@@ -570,12 +570,12 @@ class TestRoot(object):
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
-        sync.es.bulk(sync.index, sync.sync())
-        sync.es.refresh("testdb")
+        sync.search_client.bulk(sync.index, sync.sync())
+        sync.search_client.refresh("testdb")
 
         session = sync.session
 
-        docs = search(sync.es, "testdb")
+        docs = search(sync.search_client, "testdb")
 
         assert docs == [
             {"_meta": {}, "isbn": "abc", "title": "The Tiger Club"},
@@ -590,10 +590,10 @@ class TestRoot(object):
                 .values(title="Tiger Club")
             )
 
-        sync.es.bulk(sync.index, sync.sync())
-        sync.es.refresh("testdb")
+        sync.search_client.bulk(sync.index, sync.sync())
+        sync.search_client.refresh("testdb")
 
-        docs = search(sync.es, "testdb")
+        docs = search(sync.search_client, "testdb")
 
         assert docs == [
             {"_meta": {}, "isbn": "abc", "title": "Tiger Club"},
@@ -601,7 +601,7 @@ class TestRoot(object):
             {"_meta": {}, "isbn": "ghi", "title": "The Rabbit Club"},
         ]
         assert_resync_empty(sync, document.get("node", {}))
-        sync.es.close()
+        sync.search_client.close()
 
     def test_update_concurrent(self, data, book_cls):
         """Test sync update and then sync in concurrent mode."""
@@ -611,12 +611,12 @@ class TestRoot(object):
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
-        sync.es.bulk(sync.index, sync.sync())
-        sync.es.refresh("testdb")
+        sync.search_client.bulk(sync.index, sync.sync())
+        sync.search_client.refresh("testdb")
 
         session = sync.session
 
-        docs = search(sync.es, "testdb")
+        docs = search(sync.search_client, "testdb")
 
         assert docs == [
             {"_meta": {}, "isbn": "abc", "title": "The Tiger Club"},
@@ -653,9 +653,9 @@ class TestRoot(object):
                             side_effect=noop,
                         ):
                             sync.receive(NTHREADS_POLLDB)
-                            sync.es.refresh("testdb")
+                            sync.search_client.refresh("testdb")
 
-        docs = search(sync.es, "testdb")
+        docs = search(sync.search_client, "testdb")
 
         assert docs == [
             {"_meta": {}, "isbn": "abc", "title": "Tiger Club"},
@@ -663,7 +663,7 @@ class TestRoot(object):
             {"_meta": {}, "isbn": "ghi", "title": "The Rabbit Club"},
         ]
         assert_resync_empty(sync, document.get("node", {}))
-        sync.es.close()
+        sync.search_client.close()
 
     def test_delete_concurrent(self, data, book_cls):
         """Test sync delete and then sync in concurrent mode."""
@@ -673,10 +673,10 @@ class TestRoot(object):
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
-        sync.es.bulk(sync.index, sync.sync())
-        sync.es.refresh("testdb")
+        sync.search_client.bulk(sync.index, sync.sync())
+        sync.search_client.refresh("testdb")
         session = sync.session
-        docs = search(sync.es, "testdb")
+        docs = search(sync.search_client, "testdb")
 
         assert docs == [
             {"_meta": {}, "isbn": "abc", "title": "The Tiger Club"},
@@ -713,16 +713,16 @@ class TestRoot(object):
                             side_effect=noop,
                         ):
                             sync.receive(NTHREADS_POLLDB)
-                            sync.es.refresh("testdb")
+                            sync.search_client.refresh("testdb")
 
-        docs = search(sync.es, "testdb")
+        docs = search(sync.search_client, "testdb")
 
         assert docs == [
             {"_meta": {}, "isbn": "def", "title": "The Lion Club"},
             {"_meta": {}, "isbn": "ghi", "title": "The Rabbit Club"},
         ]
         assert_resync_empty(sync, document.get("node", {}))
-        sync.es.close()
+        sync.search_client.close()
 
     def test_truncate(self, data, book_cls):
         """Test truncate."""

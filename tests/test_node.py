@@ -142,7 +142,7 @@ class TestNode(object):
                 assert node.table == "country"
             if i == 8:
                 assert node.table == "continent"
-        sync.es.close()
+        sync.search_client.close()
 
     def test_traverse_post_order(self, sync, nodes):
         root = Tree(sync.models).build(nodes)
@@ -166,7 +166,7 @@ class TestNode(object):
                 assert node.table == "subject"
             if i == 8:
                 assert node.table == "book"
-        sync.es.close()
+        sync.search_client.close()
 
     def test_relationship(self, sync):
         nodes = {
@@ -184,7 +184,7 @@ class TestNode(object):
         with pytest.raises(RelationshipAttributeError) as excinfo:
             Tree(sync.models).build(nodes)
         assert "Relationship attribute " in str(excinfo.value)
-        sync.es.close()
+        sync.search_client.close()
 
     def test_get_node(self, sync):
         nodes = {
@@ -208,7 +208,7 @@ class TestNode(object):
             tree.get_node("xxx", "public")
         assert "Node for public.xxx not found" in str(excinfo.value)
 
-        sync.es.close()
+        sync.search_client.close()
 
     def test_tree_build(self, sync):
 
@@ -271,7 +271,7 @@ class TestNode(object):
             }
         )
 
-        sync.es.close()
+        sync.search_client.close()
 
 
 @pytest.mark.usefixtures("table_creator")

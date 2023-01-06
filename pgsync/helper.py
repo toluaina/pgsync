@@ -43,7 +43,7 @@ def teardown(
         if drop_db:
             drop_database(sync.database)
         if drop_index:
-            sync.es.teardown(sync.index)
+            sync.search_client.teardown(sync.index)
         if delete_redis:
             sync.redis.delete()
         if delete_checkpoint:

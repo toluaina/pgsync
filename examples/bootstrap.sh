@@ -13,7 +13,7 @@ if [ ! -d "$(pwd)/examples/$@" ]; then
   exit 1
 fi
 
-read -p "Are you sure you want to delete the '$@' Elasticsearch index? [y/N] " -n 1 -r
+read -p "Are you sure you want to delete the '$@' Search index? [y/N] " -n 1 -r
 echo 
 if [[ ! $REPLY =~ ^[Yy]$ ]]
 then

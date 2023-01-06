@@ -3,11 +3,12 @@ import pytest
 from mock import MagicMock, patch
 
 from pgsync.exc import SchemaError
+from pgsync.settings import ELASTICSEARCH_PORT
 from pgsync.urls import (
     _get_auth,
-    get_elasticsearch_url,
     get_postgres_url,
     get_redis_url,
+    get_search_url,
 )
 from pgsync.utils import get_config
 
@@ -17,21 +18,28 @@ class TestUrls(object):
     """URLS tests."""
 
     @patch("pgsync.urls.logger")
-    def test_get_elasticsearch_url(self, mock_logger):
-        assert get_elasticsearch_url() == "http://localhost:9200"
+    def test_get_search_url(self, mock_logger):
+        assert (
+            get_search_url(scheme="https")
+            == f"https://localhost:{ELASTICSEARCH_PORT}"
+        )
         mock_logger.debug.assert_called_once()
         assert (
-            get_elasticsearch_url(scheme="https") == "https://localhost:9200"
-        )
-        assert mock_logger.debug.call_count == 2
-        assert (
-            get_elasticsearch_url(
+            get_search_url(
+                scheme="http",
                 user="kermit",
                 password="1234",
             )
-            == "http://kermit:1234@localhost:9200"
+            == f"http://kermit:1234@localhost:{ELASTICSEARCH_PORT}"
         )
-        assert get_elasticsearch_url(port=9999) == "http://localhost:9999"
+        assert (
+            get_search_url(scheme="http", port=9999) == "http://localhost:9999"
+        )
+        assert (
+            get_search_url(scheme="http")
+            == f"http://localhost:{ELASTICSEARCH_PORT}"
+        )
+        assert mock_logger.debug.call_count == 3
 
     def test_get_postgres_url(self):
         url = get_postgres_url("mydb")

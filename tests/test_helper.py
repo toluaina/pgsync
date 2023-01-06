@@ -26,10 +26,9 @@ class TestHelper(object):
 
         mock_logger.warning.assert_not_called()
 
-    @patch("pgsync.sync.ElasticHelper")
     @patch("pgsync.helper.logger")
     @patch("pgsync.helper.get_config")
-    def test_teardown_without_drop_db(self, mock_config, mock_logger, mock_es):
+    def test_teardown_without_drop_db(self, mock_config, mock_logger):
         mock_config.return_value = "tests/fixtures/schema.json"
 
         with patch("pgsync.node.Tree.build", return_value=None):

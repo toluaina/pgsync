@@ -95,15 +95,15 @@ class TestUniqueBehaviour(object):
         )
 
         try:
-            sync.es.teardown(index="testdb")
-            sync.es.close()
+            sync.search_client.teardown(index="testdb")
+            sync.search_client.close()
         except Exception:
             raise
 
         sync.redis.delete()
         session.connection().engine.connect().close()
         session.connection().engine.dispose()
-        sync.es.close()
+        sync.search_client.close()
 
     @pytest.fixture(scope="function")
     def nodes(self):
