@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Sync module."""
 import asyncio
 import json

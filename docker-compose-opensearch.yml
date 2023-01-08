@@ -12,15 +12,16 @@ services:
   redis:
     image: redis
     command: redis-server --requirepass PLEASE_CHANGE_ME
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.8
+  opensearch:
+    image: opensearchproject/opensearch:latest
     ports:
-      - "9201:9200"
-      - "9301:9300"
+      - "9400:9200"
+      - "9600:9600"
     environment:
-      - xpack.security.enabled=false
-      - network.host=127.0.0.1
-      - http.host=0.0.0.0
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "DISABLE_INSTALL_DEMO_CONFIG=true"
+      - "DISABLE_SECURITY_PLUGIN=true"
   pgsync:
     build:
       context: .
@@ -32,12 +33,12 @@ services:
       - net.ipv4.tcp_keepalive_probes=5
     labels:
       org.label-schema.name: "pgsync"
-      org.label-schema.description: "Postgres to elasticsearch sync"
+      org.label-schema.description: "Postgres to opensearch sync"
       com.label-schema.service-type: "daemon"
     depends_on:
       - postgres
       - redis
-      - elasticsearch
+      - opensearch
     environment:
       - PG_USER=pgsync
       - PG_HOST=postgres
@@ -46,9 +47,9 @@ services:
       - LOG_LEVEL=INFO
       - ELASTICSEARCH_PORT=9200
       - ELASTICSEARCH_SCHEME=http
-      - ELASTICSEARCH_HOST=elasticsearch
+      - ELASTICSEARCH_HOST=opensearch
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_AUTH=PLEASE_CHANGE_ME
-      - ELASTICSEARCH=true
-      - OPENSEARCH=false
+      - ELASTICSEARCH=false
+      - OPENSEARCH=true

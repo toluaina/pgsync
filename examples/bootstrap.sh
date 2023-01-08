@@ -20,7 +20,7 @@ then
   exit 1
 fi
 
-curl -X DELETE http://localhost:9200/$@
+curl -X DELETE $ELASTICSEARCH_SCHEME://$ELASTICSEARCH_HOST:$ELASTICSEARCH_PORT/$@
 
 if [ -f "examples/$@/schema.py" ]; then
   python examples/$@/schema.py --config "$(pwd)/examples/$@/schema.json"
