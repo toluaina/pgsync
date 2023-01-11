@@ -32,7 +32,7 @@ services:
       - net.ipv4.tcp_keepalive_probes=5
     labels:
       org.label-schema.name: "pgsync"
-      org.label-schema.description: "Postgres to elasticsearch sync"
+      org.label-schema.description: "Postgres to Elasticsearch sync"
       com.label-schema.service-type: "daemon"
     depends_on:
       - postgres

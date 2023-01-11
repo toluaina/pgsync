@@ -245,7 +245,7 @@ class Sync(Base, metaclass=Singleton):
                 sys.stdout.flush()
 
     def create_setting(self) -> None:
-        """Create Elasticsearch/Opensearch setting and mapping if required."""
+        """Create Elasticsearch/OpenSearch setting and mapping if required."""
         self.search_client._create_setting(
             self.index,
             self.tree,
@@ -331,7 +331,7 @@ class Sync(Base, metaclass=Singleton):
 
     def get_doc_id(self, primary_keys: List[str], table: str) -> str:
         """
-        Get the Elasticsearch/Opensearch document id from the primary keys.
+        Get the Elasticsearch/OpenSearch document id from the primary keys.
         """  # noqa D200
         if not primary_keys:
             raise PrimaryKeyNotFoundError(
@@ -524,10 +524,10 @@ class Sync(Base, metaclass=Singleton):
 
             # Here, we are performing two operations:
             # 1) Build a filter to sync the updated record(s)
-            # 2) Delete the old record(s) in Elasticsearch/Opensearch if the
+            # 2) Delete the old record(s) in Elasticsearch/OpenSearch if the
             #    primary key has changed
             #   2.1) This is crucial otherwise we can have the old and new
-            #        document in Elasticsearch/Opensearch at the same time
+            #        document in Elasticsearch/OpenSearch at the same time
             docs: list = []
             for payload in payloads:
                 primary_values: list = [
@@ -623,7 +623,7 @@ class Sync(Base, metaclass=Singleton):
                             if value:
                                 fields[key].append(value)
                     # TODO: we should combine this with the filter above
-                    # so we only hit Elasticsearch/Opensearch once
+                    # so we only hit Elasticsearch/OpenSearch once
                     for doc_id in self.search_client._search(
                         self.index,
                         node.parent.table,
@@ -647,7 +647,7 @@ class Sync(Base, metaclass=Singleton):
     ) -> dict:
 
         # when deleting a root node, just delete the doc in
-        # Elasticsearch/Opensearch
+        # Elasticsearch/OpenSearch
         if node.is_root:
 
             docs: list = []
@@ -1125,7 +1125,7 @@ class Sync(Base, metaclass=Singleton):
 
         This is triggered by poll_redis.
         It is called when an event is received from Redis.
-        Deserialize the payload from Redis and sync to Elasticsearch/Opensearch
+        Deserialize the payload from Redis and sync to Elasticsearch/OpenSearch
         """
         # this is used for the views.
         # we substitute the views for the base table here
@@ -1266,7 +1266,7 @@ class Sync(Base, metaclass=Singleton):
             # sync up to current transaction_id
             self.pull()
             # start a background worker consumer thread to
-            # poll Redis and populate Elasticsearch/Opensearch
+            # poll Redis and populate Elasticsearch/OpenSearch
             self.poll_redis()
             # start a background worker thread to cleanup the replication slot
             self.truncate_slots()

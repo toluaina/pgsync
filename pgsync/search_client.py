@@ -27,7 +27,7 @@ class SearchClient(object):
 
     def __init__(self):
         """
-        Return an Elasticsearch/Opensearch client.
+        Return an Elasticsearch/OpenSearch client.
 
         The default connection parameters are:
         host = 'localhost', port = 9200
@@ -72,7 +72,7 @@ class SearchClient(object):
 
     def teardown(self, index: str) -> None:
         """
-        Teardown the Elasticsearch/Opensearch index.
+        Teardown the Elasticsearch/OpenSearch index.
 
         :arg index: index (or list of indices) to read documents from
         """
@@ -99,7 +99,7 @@ class SearchClient(object):
         raise_on_error: Optional[bool] = None,
         ignore_status: Tuple[int] = None,
     ) -> None:
-        """Pull sync data from generator to Elasticsearch/Opensearch."""
+        """Pull sync data from generator to Elasticsearch/OpenSearch."""
         chunk_size = chunk_size or settings.ELASTICSEARCH_CHUNK_SIZE
         max_chunk_bytes = (
             max_chunk_bytes or settings.ELASTICSEARCH_MAX_CHUNK_BYTES
@@ -158,7 +158,7 @@ class SearchClient(object):
         raise_on_error: bool,
         ignore_status: Tuple[int],
     ):
-        """Bulk index, update, delete docs to Elasticsearch/Opensearch."""
+        """Bulk index, update, delete docs to Elasticsearch/OpenSearch."""
         if settings.ELASTICSEARCH_STREAMING_BULK:
             for _ in self.streaming_bulk(
                 self.__client,
@@ -192,12 +192,12 @@ class SearchClient(object):
                 self.doc_count += 1
 
     def refresh(self, indices: List[str]) -> None:
-        """Refresh the Elasticsearch/Opensearch index."""
+        """Refresh the Elasticsearch/OpenSearch index."""
         self.__client.indices.refresh(index=indices)
 
     def _search(self, index: str, table: str, fields: Optional[dict] = None):
         """
-        Search private area for matching docs in Elasticsearch/Opensearch.
+        Search private area for matching docs in Elasticsearch/OpenSearch.
 
         only returns the _id of the matching document.
 
@@ -232,7 +232,7 @@ class SearchClient(object):
 
     def search(self, index: str, body: dict):
         """
-        Search in Elasticsearch/Opensearch.
+        Search in Elasticsearch/OpenSearch.
 
         NB: doc_type has been removed since Elasticsearch 7.x onwards
         """
@@ -246,7 +246,7 @@ class SearchClient(object):
         mapping: Optional[dict] = None,
         routing: Optional[str] = None,
     ) -> None:
-        """Create Elasticsearch/Opensearch setting and mapping if required."""
+        """Create Elasticsearch/OpenSearch setting and mapping if required."""
         body: dict = defaultdict(lambda: defaultdict(dict))
 
         if not self.__client.indices.exists(index):
@@ -284,7 +284,7 @@ class SearchClient(object):
         self, tree: Tree, routing: Optional[str] = None
     ) -> Optional[dict]:
         """
-        Get the Elasticsearch/Opensearch mapping from the schema transform.
+        Get the Elasticsearch/OpenSearch mapping from the schema transform.
         """  # noqa D200
         for node in tree.traverse_post_order():
 

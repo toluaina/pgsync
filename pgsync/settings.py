@@ -41,7 +41,7 @@ STREAM_RESULTS = env.bool("STREAM_RESULTS", default=True)
 # db polling interval
 POLL_INTERVAL = env.float("POLL_INTERVAL", default=0.1)
 
-# Elasticsearch/Opensearch:
+# Elasticsearch/OpenSearch:
 ELASTICSEARCH_API_KEY = env.str("ELASTICSEARCH_API_KEY", default=None)
 ELASTICSEARCH_API_KEY_ID = env.str("ELASTICSEARCH_API_KEY_ID", default=None)
 ELASTICSEARCH_AWS_HOSTED = env.bool("ELASTICSEARCH_AWS_HOSTED", default=False)

@@ -1,9 +1,9 @@
-# PostgreSQL to Elasticsearch/Opensearch sync
+# PostgreSQL to Elasticsearch/OpenSearch sync
 
 
-- [PGSync](https://pgsync.com) is a middleware for syncing data from [Postgres](https://www.postgresql.org) to [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[Opensearch](https://opensearch.org/) or [Opensearch](https://opensearch.org/).
+- [PGSync](https://pgsync.com) is a middleware for syncing data from [Postgres](https://www.postgresql.org) to [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/) or [OpenSearch](https://opensearch.org/).
 - It allows you to keep [Postgres](https://www.postgresql.org) as your source of truth data source and
-expose structured denormalized documents in [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[Opensearch](https://opensearch.org/).
+expose structured denormalized documents in [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/).
 
 
 ### Requirements
@@ -11,7 +11,7 @@ expose structured denormalized documents in [Elasticsearch](https://www.elastic.
 - [Python](https://www.python.org) 3.7+
 - [Postgres](https://www.postgresql.org) 9.6+
 - [Redis](https://redis.io) 3.1.0
-- [Elasticsearch](https://www.elastic.co/products/elastic-stack) 6.3.1+ or [Opensearch](https://opensearch.org/) 1.3.7+
+- [Elasticsearch](https://www.elastic.co/products/elastic-stack) 6.3.1+ or [OpenSearch](https://opensearch.org/) 1.3.7+
 - [SQlAlchemy](https://www.sqlalchemy.org) 1.3.4+
 
 ### Postgres setup
@@ -44,7 +44,7 @@ Example spec
     [
         {
             "database": "[database name]",
-            "index": "[elasticsearch or opensearch index]",
+            "index": "[Elasticsearch or OpenSearch index]",
             "nodes": {
                 "table": "[table A]",
                 "schema": "[table A schema]",

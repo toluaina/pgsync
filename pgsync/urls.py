@@ -41,7 +41,7 @@ def get_search_url(
     password: Optional[str] = None,
     port: Optional[int] = None,
 ) -> str:
-    """Return the URL to connect to Elasticsearch/Opensearch."""
+    """Return the URL to connect to Elasticsearch/OpenSearch."""
     scheme = scheme or ELASTICSEARCH_SCHEME
     host = host or ELASTICSEARCH_HOST
     port = port or ELASTICSEARCH_PORT

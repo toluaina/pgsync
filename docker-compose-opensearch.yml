@@ -33,7 +33,7 @@ services:
       - net.ipv4.tcp_keepalive_probes=5
     labels:
       org.label-schema.name: "pgsync"
-      org.label-schema.description: "Postgres to opensearch sync"
+      org.label-schema.description: "Postgres to OpenSearch sync"
       com.label-schema.service-type: "daemon"
     depends_on:
       - postgres

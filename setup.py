@@ -20,7 +20,7 @@ def get_version() -> str:
 
 # Package meta-data.
 NAME = "pgsync"
-DESCRIPTION = "Postgres to Elasticsearch/Opensearch sync"
+DESCRIPTION = "Postgres to Elasticsearch/OpenSearch sync"
 URL = "https://github.com/toluaina/pgsync"
 AUTHOR = MAINTAINER = "Tolu Aina"
 AUTHOR_EMAIL = MAINTAINER_EMAIL = "tolu@pgsync.com"
