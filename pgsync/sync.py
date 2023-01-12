@@ -479,22 +479,46 @@ class Sync(Base, metaclass=Singleton):
                     )
                     raise
 
-                # set the parent as the new entity that has changed
-                foreign_keys = self.query_builder._get_foreign_keys(
-                    node.parent,
-                    node,
-                )
+                if node in node.parent.relationship.throughs:
+                    foreign_keys = self.query_builder._get_foreign_keys(
+                        node.parent,
+                        node,
+                    )
+                    filters[node.parent.name] = []
+                    for payload in payloads:
+                        primary_values: list = [
+                            payload.data[key] for key in node.model.primary_keys
+                        ]
 
-                for payload in payloads:
-                    for i, key in enumerate(foreign_keys[node.name]):
-                        if key == foreign_keys[node.parent.name][i]:
-                            filters[node.parent.table].append(
-                                {
-                                    foreign_keys[node.parent.name][
-                                        i
-                                    ]: payload.data[key]
-                                }
-                            )
+                        for i, key in enumerate(foreign_keys[node.parent.name]):
+                            for val in primary_values:
+                                filters[node.parent.table].append(
+                                    {foreign_keys[node.parent.name][i]: val},
+                                )
+
+                        for pk in self.tree.root.model.primary_keys:
+                            for val in primary_values:
+                                filters[self.tree.root.table].append(
+                                    {pk: val}
+                                )
+
+                else:
+                    # set the parent as the new entity that has changed
+                    foreign_keys = self.query_builder._get_foreign_keys(
+                        node.parent,
+                        node,
+                    )
+
+                    for payload in payloads:
+                        for i, key in enumerate(foreign_keys[node.name]):
+                            if key == foreign_keys[node.parent.name][i]:
+                                filters[node.parent.table].append(
+                                    {
+                                        foreign_keys[node.parent.name][
+                                            i
+                                        ]: payload.data[key]
+                                    }
+                                )
 
         else:
 
