@@ -451,6 +451,67 @@ class Sync(Base, metaclass=Singleton):
             total += len(changes)
             self.count["xlog"] += len(rows)
 
+    def _primary_key_resolver(
+        self, node: Node, payload: Payload, filters: list
+    ) -> list:
+        fields: dict = defaultdict(list)
+        primary_values: list = [
+            payload.data[key] for key in node.model.primary_keys
+        ]
+        primary_fields: dict = dict(
+            zip(node.model.primary_keys, primary_values)
+        )
+        for key, value in primary_fields.items():
+            fields[key].append(value)
+        for doc_id in self.search_client._search(
+            self.index, node.table, fields
+        ):
+            where = {}
+            params = doc_id.split(PRIMARY_KEY_DELIMITER)
+            for i, key in enumerate(self.tree.root.model.primary_keys):
+                where[key] = params[i]
+            filters.append(where)
+
+        return filters
+
+    def _foreign_key_resolver(
+        self, node: Node, payload: Payload, foreign_keys: dict, filters: list
+    ) -> list:
+        """
+        Foreign key resolver logic:
+
+        This resolver handles n-tiers relationships (n > 3) where we
+        insert/update a new row to a leaf node.
+        For the node's parent, get the primary keys values from the
+        incoming payload.
+        Lookup this value in the meta section for Elasticsearch/OpenSearch
+        Then get the root node returned and re-sync that root record.
+        Essentially, we want to lookup the root node affected by
+        our insert/update operation and sync the tree branch for that root.
+        """
+        fields: dict = defaultdict(list)
+        foreign_values: list = [
+            payload.new.get(k) for k in foreign_keys[node.name]
+        ]
+        for key in [key.name for key in node.primary_keys]:
+            for value in foreign_values:
+                if value:
+                    fields[key].append(value)
+        # TODO: we should combine this with the filter above
+        # so we only hit Elasticsearch/OpenSearch once
+        for doc_id in self.search_client._search(
+            self.index,
+            node.parent.table,
+            fields,
+        ):
+            where: dict = {}
+            params = doc_id.split(PRIMARY_KEY_DELIMITER)
+            for i, key in enumerate(self.tree.root.model.primary_keys):
+                where[key] = params[i]
+            filters.append(where)
+
+        return filters
+
     def _insert_op(
         self, node: Node, filters: dict, payloads: List[Payload]
     ) -> dict:
@@ -485,6 +546,7 @@ class Sync(Base, metaclass=Singleton):
                     node,
                 )
 
+                _filters: list = []
                 for payload in payloads:
                     for i, key in enumerate(foreign_keys[node.name]):
                         if key == foreign_keys[node.parent.name][i]:
@@ -495,6 +557,13 @@ class Sync(Base, metaclass=Singleton):
                                     ]: payload.data[key]
                                 }
                             )
+
+                    _filters = self._foreign_key_resolver(
+                        node, payload, foreign_keys, _filters
+                    )
+
+                if _filters:
+                    filters[self.tree.root.table].extend(_filters)
 
         else:
 
@@ -578,31 +647,9 @@ class Sync(Base, metaclass=Singleton):
             # update the child tables
             for payload in payloads:
                 _filters: list = []
-                fields: dict = defaultdict(list)
-
-                primary_values: list = [
-                    payload.data[key] for key in node.model.primary_keys
-                ]
-                primary_fields: dict = dict(
-                    zip(node.model.primary_keys, primary_values)
-                )
-
-                for key, value in primary_fields.items():
-                    fields[key].append(value)
-
-                for doc_id in self.search_client._search(
-                    self.index, node.table, fields
-                ):
-                    where = {}
-                    params = doc_id.split(PRIMARY_KEY_DELIMITER)
-                    for i, key in enumerate(self.tree.root.model.primary_keys):
-                        where[key] = params[i]
-                    _filters.append(where)
-
+                _filters = self._primary_key_resolver(node, payload, _filters)
                 # also handle foreign_keys
                 if node.parent:
-                    fields = defaultdict(list)
-
                     try:
                         foreign_keys = self.query_builder.get_foreign_keys(
                             node.parent,
@@ -614,28 +661,9 @@ class Sync(Base, metaclass=Singleton):
                             node,
                         )
 
-                    foreign_values = [
-                        payload.new.get(k) for k in foreign_keys[node.name]
-                    ]
-
-                    for key in [key.name for key in node.primary_keys]:
-                        for value in foreign_values:
-                            if value:
-                                fields[key].append(value)
-                    # TODO: we should combine this with the filter above
-                    # so we only hit Elasticsearch/OpenSearch once
-                    for doc_id in self.search_client._search(
-                        self.index,
-                        node.parent.table,
-                        fields,
-                    ):
-                        where: dict = {}
-                        params = doc_id.split(PRIMARY_KEY_DELIMITER)
-                        for i, key in enumerate(
-                            self.tree.root.model.primary_keys
-                        ):
-                            where[key] = params[i]
-                        _filters.append(where)
+                    _filters = self._foreign_key_resolver(
+                        node, payload, foreign_keys, _filters
+                    )
 
                 if _filters:
                     filters[self.tree.root.table].extend(_filters)
@@ -691,28 +719,8 @@ class Sync(Base, metaclass=Singleton):
             # the child keys match in private, then get the root doc_id and
             # re-sync the child tables
             for payload in payloads:
-                primary_values: list = [
-                    payload.data[key] for key in node.model.primary_keys
-                ]
-                primary_fields = dict(
-                    zip(node.model.primary_keys, primary_values)
-                )
-                fields = defaultdict(list)
-
                 _filters: list = []
-                for key, value in primary_fields.items():
-                    fields[key].append(value)
-
-                for doc_id in self.search_client._search(
-                    self.index, node.table, fields
-                ):
-                    where = {}
-                    params = doc_id.split(PRIMARY_KEY_DELIMITER)
-                    for i, key in enumerate(self.tree.root.model.primary_keys):
-                        where[key] = params[i]
-
-                    _filters.append(where)
-
+                _filters = self._primary_key_resolver(node, payload, _filters)
                 if _filters:
                     filters[self.tree.root.table].extend(_filters)
 
