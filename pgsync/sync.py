@@ -451,7 +451,7 @@ class Sync(Base, metaclass=Singleton):
             total += len(changes)
             self.count["xlog"] += len(rows)
 
-    def _primary_key_resolver(
+    def _root_primary_key_resolver(
         self, node: Node, payload: Payload, filters: list
     ) -> list:
         fields: dict = defaultdict(list)
@@ -466,15 +466,15 @@ class Sync(Base, metaclass=Singleton):
         for doc_id in self.search_client._search(
             self.index, node.table, fields
         ):
-            where = {}
-            params = doc_id.split(PRIMARY_KEY_DELIMITER)
+            where: dict = {}
+            params: dict = doc_id.split(PRIMARY_KEY_DELIMITER)
             for i, key in enumerate(self.tree.root.model.primary_keys):
                 where[key] = params[i]
             filters.append(where)
 
         return filters
 
-    def _foreign_key_resolver(
+    def _root_foreign_key_resolver(
         self, node: Node, payload: Payload, foreign_keys: dict, filters: list
     ) -> list:
         """
@@ -484,7 +484,7 @@ class Sync(Base, metaclass=Singleton):
         insert/update a new row to a leaf node.
         For the node's parent, get the primary keys values from the
         incoming payload.
-        Lookup this value in the meta section for Elasticsearch/OpenSearch
+        Lookup this value in the meta section of Elasticsearch/OpenSearch
         Then get the root node returned and re-sync that root record.
         Essentially, we want to lookup the root node affected by
         our insert/update operation and sync the tree branch for that root.
@@ -505,7 +505,7 @@ class Sync(Base, metaclass=Singleton):
             fields,
         ):
             where: dict = {}
-            params = doc_id.split(PRIMARY_KEY_DELIMITER)
+            params: dict = doc_id.split(PRIMARY_KEY_DELIMITER)
             for i, key in enumerate(self.tree.root.model.primary_keys):
                 where[key] = params[i]
             filters.append(where)
@@ -558,7 +558,7 @@ class Sync(Base, metaclass=Singleton):
                                 }
                             )
 
-                    _filters = self._foreign_key_resolver(
+                    _filters = self._root_foreign_key_resolver(
                         node, payload, foreign_keys, _filters
                     )
 
@@ -647,7 +647,9 @@ class Sync(Base, metaclass=Singleton):
             # update the child tables
             for payload in payloads:
                 _filters: list = []
-                _filters = self._primary_key_resolver(node, payload, _filters)
+                _filters = self._root_primary_key_resolver(
+                    node, payload, _filters
+                )
                 # also handle foreign_keys
                 if node.parent:
                     try:
@@ -661,7 +663,7 @@ class Sync(Base, metaclass=Singleton):
                             node,
                         )
 
-                    _filters = self._foreign_key_resolver(
+                    _filters = self._root_foreign_key_resolver(
                         node, payload, foreign_keys, _filters
                     )
 
@@ -720,7 +722,9 @@ class Sync(Base, metaclass=Singleton):
             # re-sync the child tables
             for payload in payloads:
                 _filters: list = []
-                _filters = self._primary_key_resolver(node, payload, _filters)
+                _filters = self._root_primary_key_resolver(
+                    node, payload, _filters
+                )
                 if _filters:
                     filters[self.tree.root.table].extend(_filters)
 
@@ -862,7 +866,7 @@ class Sync(Base, metaclass=Singleton):
             """
             Filters are applied when an insert, update or delete operation
             occurs. For a large table update, this normally results
-            in a large sql query with multiple OR clauses
+            in a large SQL query with multiple OR clauses.
 
             Filters is a dict of tables where each key is a list of id's
             {
