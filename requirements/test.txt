@@ -10,9 +10,9 @@ attrs==22.2.0
     # via pytest
 black==22.12.0
     # via -r requirements/base.in
-boto3==1.26.49
+boto3==1.26.50
     # via -r requirements/base.in
-botocore==1.29.49
+botocore==1.29.50
     # via
     #   boto3
     #   s3transfer
@@ -119,7 +119,7 @@ pydocstyle==6.2.3
     # via flake8-docstrings
 pyflakes==2.5.0
     # via flake8
-pytest==7.2.0
+pytest==7.2.1
     # via
     #   -r requirements/test.in
     #   pytest-cov

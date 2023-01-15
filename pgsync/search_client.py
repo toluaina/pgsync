@@ -36,8 +36,10 @@ class SearchClient(object):
         self.is_opensearch: bool = False
         self.major_version: int = 0
         if settings.ELASTICSEARCH:
-            self.__client: elasticsearch.Elasticsearch = (
-                get_elasticsearch_client(url)
+            self.__client: elasticsearch.Elasticsearch = get_search_client(
+                url,
+                client=elasticsearch.Elasticsearch,
+                connection_class=elasticsearch.RequestsHttpConnection,
             )
             try:
                 self.major_version: int = int(
@@ -55,7 +57,11 @@ class SearchClient(object):
 
         elif settings.OPENSEARCH:
             self.is_opensearch = True
-            self.__client: opensearchpy.OpenSearch = get_opensearch_client(url)
+            self.__client: opensearchpy.OpenSearch = get_search_client(
+                url,
+                client=opensearchpy.OpenSearch,
+                connection_class=opensearchpy.RequestsHttpConnection,
+            )
             self.streaming_bulk: Callable = opensearchpy.helpers.streaming_bulk
             self.parallel_bulk: Callable = opensearchpy.helpers.parallel_bulk
             self.Searc: Callable = opensearch_dsl.Search
@@ -334,13 +340,18 @@ class SearchClient(object):
         return None
 
 
-def get_elasticsearch_client(
+def get_search_client(
     url: str,
-) -> elasticsearch.Elasticsearch:
-    if settings.ELASTICSEARCH_AWS_HOSTED:
+    client: Union[opensearchpy.OpenSearch, elasticsearch.Elasticsearch],
+    connection_class: Union[
+        opensearchpy.RequestsHttpConnection,
+        elasticsearch.RequestsHttpConnection,
+    ],
+) -> Union[opensearchpy.OpenSearch, elasticsearch.Elasticsearch]:
+    if settings.OPENSEARCH_AWS_HOSTED or settings.ELASTICSEARCH_AWS_HOSTED:
         credentials = boto3.Session().get_credentials()
         service: str = "es"
-        return elasticsearch.Elasticsearch(
+        return client(
             hosts=[url],
             http_auth=AWS4Auth(
                 credentials.access_key,
@@ -351,7 +362,7 @@ def get_elasticsearch_client(
             ),
             use_ssl=True,
             verify_certs=True,
-            connection_class=elasticsearch.RequestsHttpConnection,
+            connection_class=connection_class,
         )
     else:
         hosts: List[str] = [url]
@@ -390,88 +401,7 @@ def get_elasticsearch_client(
         # Transport
         use_ssl: bool = settings.ELASTICSEARCH_USE_SSL
         timeout: float = settings.ELASTICSEARCH_TIMEOUT
-
-        return elasticsearch.Elasticsearch(
-            hosts=hosts,
-            http_auth=http_auth,
-            cloud_id=cloud_id,
-            api_key=api_key,
-            basic_auth=basic_auth,
-            bearer_auth=bearer_auth,
-            opaque_id=opaque_id,
-            http_compress=http_compress,
-            verify_certs=verify_certs,
-            ca_certs=ca_certs,
-            client_cert=client_cert,
-            client_key=client_key,
-            ssl_assert_hostname=ssl_assert_hostname,
-            ssl_assert_fingerprint=ssl_assert_fingerprint,
-            ssl_version=ssl_version,
-            ssl_context=ssl_context,
-            ssl_show_warn=ssl_show_warn,
-            use_ssl=use_ssl,
-            timeout=timeout,
-        )
-
-
-def get_opensearch_client(
-    url: str,
-) -> opensearchpy.OpenSearch:
-    if settings.OPENSEARCH_AWS_HOSTED:
-        credentials = boto3.Session().get_credentials()
-        service: str = "es"
-        return opensearchpy.OpenSearch(
-            hosts=[url],
-            http_auth=AWS4Auth(
-                credentials.access_key,
-                credentials.secret_key,
-                settings.ELASTICSEARCH_AWS_REGION,
-                service,
-                session_token=credentials.token,
-            ),
-            use_ssl=True,
-            verify_certs=True,
-            connection_class=opensearchpy.RequestsHttpConnection,
-        )
-    else:
-        hosts: List[str] = [url]
-        # API
-        cloud_id: Optional[str] = settings.ELASTICSEARCH_CLOUD_ID
-        api_key: Optional[Union[str, Tuple[str, str]]] = None
-        http_auth: Optional[
-            Union[str, Tuple[str, str]]
-        ] = settings.ELASTICSEARCH_HTTP_AUTH
-        if (
-            settings.ELASTICSEARCH_API_KEY_ID
-            and settings.ELASTICSEARCH_API_KEY
-        ):
-            api_key = (
-                settings.ELASTICSEARCH_API_KEY_ID,
-                settings.ELASTICSEARCH_API_KEY,
-            )
-        basic_auth: Optional[str] = settings.ELASTICSEARCH_BASIC_AUTH
-        bearer_auth: Optional[str] = settings.ELASTICSEARCH_BEARER_AUTH
-        opaque_id: Optional[str] = settings.ELASTICSEARCH_OPAQUE_ID
-        # Node
-        http_compress: bool = settings.ELASTICSEARCH_HTTP_COMPRESS
-        verify_certs: bool = settings.ELASTICSEARCH_VERIFY_CERTS
-        ca_certs: Optional[str] = settings.ELASTICSEARCH_CA_CERTS
-        client_cert: Optional[str] = settings.ELASTICSEARCH_CLIENT_CERT
-        client_key: Optional[str] = settings.ELASTICSEARCH_CLIENT_KEY
-        ssl_assert_hostname: Optional[
-            str
-        ] = settings.ELASTICSEARCH_SSL_ASSERT_HOSTNAME
-        ssl_assert_fingerprint: Optional[
-            str
-        ] = settings.ELASTICSEARCH_SSL_ASSERT_FINGERPRINT
-        ssl_version: Optional[int] = settings.ELASTICSEARCH_SSL_VERSION
-        ssl_context: Optional[Any] = settings.ELASTICSEARCH_SSL_CONTEXT
-        ssl_show_warn: bool = settings.ELASTICSEARCH_SSL_SHOW_WARN
-        # Transport
-        use_ssl: bool = settings.ELASTICSEARCH_USE_SSL
-        timeout: float = settings.ELASTICSEARCH_TIMEOUT
-
-        return opensearchpy.OpenSearch(
+        return client(
             hosts=hosts,
             http_auth=http_auth,
             cloud_id=cloud_id,

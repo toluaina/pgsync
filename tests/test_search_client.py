@@ -2,19 +2,18 @@
 import importlib
 
 import mock
-from elasticsearch import RequestsHttpConnection
 from mock import ANY, MagicMock
 
-from pgsync.search_client import get_elasticsearch_client, SearchClient
+from pgsync.search_client import elasticsearch, get_search_client, SearchClient
 from pgsync.sync import settings
 
 from .testing_utils import override_env_var
 
 
 class TestSearchClient(object):
-    """SearchClient tests."""
+    """Search Client tests."""
 
-    def test_get_elasticsearch_init(self, mocker):
+    def test_get_search_init(self, mocker):
         url = "http://some-domain:33"
         with override_env_var(ELASTICSEARCH="True", OPENSEARCH="False"):
             importlib.reload(settings)
@@ -23,14 +22,18 @@ class TestSearchClient(object):
                 return_value=url,
             ) as mock_search_url:
                 with mock.patch(
-                    "pgsync.search_client.get_elasticsearch_client",
+                    "pgsync.search_client.get_search_client",
                     return_value=MagicMock(),
                 ) as mock_search_client:
                     SearchClient()
                     mock_search_url.assert_called_once()
-                    mock_search_client.assert_called_once_with(url)
+                    mock_search_client.assert_called_once_with(
+                        url,
+                        client=elasticsearch.Elasticsearch,
+                        connection_class=elasticsearch.RequestsHttpConnection,
+                    )
 
-    def test_get_elasticsearch_client(self, mocker):
+    def test_get_search_client(self, mocker):
         url = "http://some-domain:33"
 
         with override_env_var(
@@ -43,7 +46,11 @@ class TestSearchClient(object):
                 "pgsync.search_client.elasticsearch.Elasticsearch",
                 return_value=MagicMock(),
             ) as mock_search_client:
-                get_elasticsearch_client(url)
+                get_search_client(
+                    url,
+                    client=elasticsearch.Elasticsearch,
+                    connection_class=elasticsearch.RequestsHttpConnection,
+                )
                 ssl_assert_hostname = (
                     settings.ELASTICSEARCH_SSL_ASSERT_HOSTNAME
                 )
@@ -90,11 +97,19 @@ class TestSearchClient(object):
                             "pgsync.search_client.boto3",
                             return_value=MagicMock(),
                         ):
-                            get_elasticsearch_client(url)
+                            get_search_client(
+                                url,
+                                client=elasticsearch.Elasticsearch,
+                                connection_class=(
+                                    elasticsearch.RequestsHttpConnection
+                                ),
+                            )
                             mock_search_client.assert_called_once_with(
                                 hosts=[url],
                                 http_auth=ANY,
                                 use_ssl=True,
                                 verify_certs=True,
-                                connection_class=RequestsHttpConnection,
+                                connection_class=(
+                                    elasticsearch.RequestsHttpConnection
+                                ),
                             )
