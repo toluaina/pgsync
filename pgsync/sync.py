@@ -481,7 +481,7 @@ class Sync(Base, metaclass=Singleton):
         Foreign key resolver logic:
 
         This resolver handles n-tiers relationships (n > 3) where we
-        insert/update a new row to a leaf node.
+        insert/update a new leaf node.
         For the node's parent, get the primary keys values from the
         incoming payload.
         Lookup this value in the meta section of Elasticsearch/OpenSearch
@@ -491,7 +491,7 @@ class Sync(Base, metaclass=Singleton):
         """
         fields: dict = defaultdict(list)
         foreign_values: list = [
-            payload.new.get(k) for k in foreign_keys[node.name]
+            payload.new.get(key) for key in foreign_keys[node.name]
         ]
         for key in [key.name for key in node.primary_keys]:
             for value in foreign_values:

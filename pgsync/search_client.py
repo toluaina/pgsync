@@ -64,7 +64,7 @@ class SearchClient(object):
             )
             self.streaming_bulk: Callable = opensearchpy.helpers.streaming_bulk
             self.parallel_bulk: Callable = opensearchpy.helpers.parallel_bulk
-            self.Searc: Callable = opensearch_dsl.Search
+            self.Search: Callable = opensearch_dsl.Search
             self.Bool: Callable = opensearch_dsl.query.Bool
             self.Q: Callable = opensearch_dsl.Q
         else:
