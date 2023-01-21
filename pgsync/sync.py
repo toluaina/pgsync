@@ -1241,7 +1241,8 @@ class Sync(Base, metaclass=Singleton):
             f"Db: [{self.count['db']:,}] => "
             f"Redis: [total = {self.count['redis']:,} "
             f"pending = {self.redis.qsize:,}] => "
-            f"Search: [{self.search_client.doc_count:,}] ...\n"
+            f"{self.search_client.name}: [{self.search_client.doc_count:,}]"
+            f"...\n"
         )
         sys.stdout.flush()
 

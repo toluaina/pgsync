@@ -334,7 +334,7 @@ class TestSync(object):
                 "Db: [0] => "
                 "Redis: [total = 0 "
                 "pending = 0] => "
-                "Search: [0] ...\n"
+                "Elasticsearch: [0]...\n"
             )
 
     @patch("pgsync.sync.logger")

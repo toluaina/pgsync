@@ -36,6 +36,7 @@ class SearchClient(object):
         self.is_opensearch: bool = False
         self.major_version: int = 0
         if settings.ELASTICSEARCH:
+            self.name = "Elasticsearch"
             self.__client: elasticsearch.Elasticsearch = get_search_client(
                 url,
                 client=elasticsearch.Elasticsearch,
@@ -57,6 +58,7 @@ class SearchClient(object):
 
         elif settings.OPENSEARCH:
             self.is_opensearch = True
+            self.name = "OpenSearch"
             self.__client: opensearchpy.OpenSearch = get_search_client(
                 url,
                 client=opensearchpy.OpenSearch,
