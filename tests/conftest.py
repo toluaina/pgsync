@@ -355,6 +355,35 @@ def rating_cls(base, book_cls):
 
 
 @pytest.fixture(scope="session")
+def group_cls(base):
+    class Group(base):
+        __tablename__ = "group"
+        __table_args__ = (UniqueConstraint("group_name"),)
+        id = sa.Column(sa.Integer, primary_key=True)
+        group_name = sa.Column(sa.String, nullable=False)
+
+    return Group
+
+
+@pytest.fixture(scope="session")
+def book_group_cls(base, book_cls, group_cls):
+    class BookGroup(base):
+        __tablename__ = "book_group"
+        __table_args__ = (UniqueConstraint("book_isbn", "group_id"),)
+        id = sa.Column(sa.Integer, primary_key=True)
+        book_isbn = sa.Column(sa.String, sa.ForeignKey(book_cls.isbn))
+        book = sa.orm.relationship(
+            book_cls, backref=sa.orm.backref("book_book_group_books")
+        )
+        group_id = sa.Column(sa.Integer, sa.ForeignKey(group_cls.id))
+        group = sa.orm.relationship(
+            group_cls, backref=sa.orm.backref("groups"), cascade="all,delete"
+        )
+
+    return BookGroup
+
+
+@pytest.fixture(scope="session")
 def model_mapping(
     city_cls,
     country_cls,
@@ -373,6 +402,8 @@ def model_mapping(
     user_cls,
     contact_cls,
     contact_item_cls,
+    book_group_cls,
+    group_cls,
 ):
     return {
         "cities": city_cls,
@@ -392,6 +423,8 @@ def model_mapping(
         "users": user_cls,
         "contacts": contact_cls,
         "contact_items": contact_item_cls,
+        "book_groups": book_group_cls,
+        "groups": group_cls,
     }
 
 
@@ -432,6 +465,8 @@ def dataset(
     book_language_cls,
     book_shelf_cls,
     rating_cls,
+    book_group_cls,
+    group_cls,
 ):
 
     eu_continent = continent_cls(name="Europe")

@@ -1,0 +1,5 @@
+DELETE FROM customer_group;
+
+INSERT INTO customer_group (customer_id, group_id) VALUES ( 1, 2);
+
+INSERT INTO customer_group (customer_id, group_id) VALUES ( 1, 3);

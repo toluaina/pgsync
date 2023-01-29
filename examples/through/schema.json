@@ -1,0 +1,35 @@
+[
+    {
+        "database": "through",
+        "index": "through",
+        "nodes":
+        {
+            "table": "customer",
+            "columns":
+            [
+                "id",
+                "name"
+            ],
+            "children":
+            [
+                {
+                    "table": "group",
+                    "columns":
+                    [
+                        "id",
+                        "group_name"
+                    ],
+                    "relationship":
+                    {
+                        "variant": "object",
+                        "type": "one_to_many",
+                        "through_tables":
+                        [
+                            "customer_group"
+                        ]
+                    }
+                }
+            ]
+        }
+    }
+]

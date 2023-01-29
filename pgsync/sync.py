@@ -512,6 +512,23 @@ class Sync(Base, metaclass=Singleton):
 
         return filters
 
+    def _through_node_resolver(
+        self, node: Node, payload: Payload, filters: list
+    ) -> list:
+        """Handle where node is a through table with a direct references to
+        root
+        """
+        foreign_key_constraint = payload.foreign_key_constraint(node.model)
+        if self.tree.root.name in foreign_key_constraint:
+            filters.append(
+                {
+                    foreign_key_constraint[self.tree.root.name][
+                        "remote"
+                    ]: foreign_key_constraint[self.tree.root.name]["value"]
+                }
+            )
+        return filters
+
     def _insert_op(
         self, node: Node, filters: dict, payloads: List[Payload]
     ) -> dict:
@@ -540,27 +557,35 @@ class Sync(Base, metaclass=Singleton):
                     )
                     raise
 
-                # set the parent as the new entity that has changed
-                foreign_keys = self.query_builder._get_foreign_keys(
-                    node.parent,
-                    node,
-                )
+                try:
+                    foreign_keys = self.query_builder.get_foreign_keys(
+                        node.parent,
+                        node,
+                    )
+                except ForeignKeyError:
+                    foreign_keys = self.query_builder._get_foreign_keys(
+                        node.parent,
+                        node,
+                    )
 
                 _filters: list = []
                 for payload in payloads:
-                    for i, key in enumerate(foreign_keys[node.name]):
-                        if key == foreign_keys[node.parent.name][i]:
-                            filters[node.parent.table].append(
-                                {
-                                    foreign_keys[node.parent.name][
-                                        i
-                                    ]: payload.data[key]
-                                }
-                            )
+                    for node_key in foreign_keys[node.name]:
+                        for parent_key in foreign_keys[node.parent.name]:
+                            if node_key == parent_key:
+                                filters[node.parent.table].append(
+                                    {parent_key: payload.data[node_key]}
+                                )
 
                     _filters = self._root_foreign_key_resolver(
                         node, payload, foreign_keys, _filters
                     )
+
+                    # through table with a direct references to root
+                    if not _filters:
+                        _filters = self._through_node_resolver(
+                            node, payload, _filters
+                        )
 
                 if _filters:
                     filters[self.tree.root.table].extend(_filters)

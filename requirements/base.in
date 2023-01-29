@@ -11,7 +11,9 @@ faker
 psycopg2-binary
 redis
 requests-aws4auth
-sqlalchemy
+
+# pin sqlalchemy to latest 1.* until 2.0 support
+sqlalchemy==1.4.*
 sqlparse
 
 # pin these libs because latest flake8 does not allow newer versions of importlib-metadata https://github.com/PyCQA/flake8/issues/1522

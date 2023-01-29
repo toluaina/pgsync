@@ -2,6 +2,7 @@
 set -u
 # create database prior to running this bootstrap
 source .pythonpath
+source .env
 
 if [ $# -eq 0 ]; then
   echo "No arguments supplied"

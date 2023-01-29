@@ -10,9 +10,9 @@ attrs==22.2.0
     # via pytest
 black==22.12.0
     # via -r requirements/base.in
-boto3==1.26.54
+boto3==1.26.59
     # via -r requirements/base.in
-botocore==1.29.54
+botocore==1.29.59
     # via
     #   boto3
     #   s3transfer
@@ -31,7 +31,7 @@ click==8.1.3
     # via
     #   -r requirements/base.in
     #   black
-coverage[toml]==7.0.5
+coverage[toml]==7.1.0
     # via pytest-cov
 distlib==0.3.6
     # via virtualenv
@@ -45,7 +45,7 @@ environs==9.5.0
     # via -r requirements/base.in
 exceptiongroup==1.1.0
     # via pytest
-faker==16.6.0
+faker==16.6.1
     # via -r requirements/base.in
 filelock==3.9.0
     # via virtualenv
@@ -58,7 +58,7 @@ flake8==5.0.4
     #   flake8-print
 flake8-debugger==4.1.2
     # via -r requirements/test.in
-flake8-docstrings==1.6.0
+flake8-docstrings==1.7.0
     # via -r requirements/test.in
 flake8-isort==6.0.0
     # via -r requirements/test.in
@@ -68,7 +68,7 @@ flake8-todo==0.7
     # via -r requirements/test.in
 freezegun==1.2.2
     # via -r requirements/test.in
-greenlet==2.0.1
+greenlet==2.0.2
     # via sqlalchemy
 idna==3.4
     # via requests
@@ -76,7 +76,7 @@ importlib-metadata==4.2.0
     # via -r requirements/base.in
 iniconfig==2.0.0
     # via pytest
-isort==5.11.4
+isort==5.12.0
     # via flake8-isort
 jmespath==1.0.1
     # via
@@ -92,14 +92,14 @@ mypy-extensions==0.4.3
     # via black
 opensearch-dsl==2.0.1
     # via -r requirements/base.in
-opensearch-py==2.0.1
+opensearch-py==2.1.1
     # via opensearch-dsl
 packaging==23.0
     # via
     #   marshmallow
     #   pytest
     #   pytest-sugar
-pathspec==0.10.3
+pathspec==0.11.0
     # via black
 platformdirs==2.6.2
     # via
@@ -148,7 +148,7 @@ requests==2.28.2
     # via
     #   opensearch-py
     #   requests-aws4auth
-requests-aws4auth==1.2.0
+requests-aws4auth==1.2.1
     # via -r requirements/base.in
 s3transfer==0.6.0
     # via boto3
@@ -181,5 +181,5 @@ urllib3==1.26.14
     #   requests
 virtualenv==20.16.2
     # via -r requirements/base.in
-zipp==3.11.0
+zipp==3.12.0
     # via importlib-metadata

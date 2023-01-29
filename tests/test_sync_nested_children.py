@@ -33,6 +33,8 @@ class TestNestedChildren(object):
         subject_cls,
         book_shelf_cls,
         shelf_cls,
+        book_group_cls,
+        group_cls,
     ):
         session = sync.session
 
@@ -267,6 +269,8 @@ class TestNestedChildren(object):
                     subject_cls.__table__.name,
                     book_shelf_cls.__table__.name,
                     shelf_cls.__table__.name,
+                    book_group_cls.__table__.name,
+                    group_cls.__table__.name,
                 ]
             )
 
@@ -1128,9 +1132,155 @@ class TestNestedChildren(object):
         assert_resync_empty(sync, nodes)
         sync.search_client.close()
 
-    def test_insert_through_child_noop(self, sync, data):
-        # insert a new through child with noop
-        pass
+    def test_insert_through_child_op2(
+        self, book_cls, group_cls, book_group_cls, data
+    ):
+        # insert a new through child with op
+        nodes = {
+            "table": "book",
+            "columns": ["isbn", "title"],
+            "children": [
+                {
+                    "table": "group",
+                    "columns": ["id", "group_name"],
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_many",
+                        "through_tables": ["book_group"],
+                    },
+                }
+            ],
+        }
+        document = {
+            "index": "testdb",
+            "database": "testdb",
+            "nodes": nodes,
+        }
+
+        sync = Sync(document)
+        sync.tree.build(nodes)
+        session = sync.session
+
+        with subtransactions(session):
+            session.execute(book_group_cls.__table__.delete())
+            session.execute(
+                group_cls.__table__.insert().values(id=1, group_name="GroupA")
+            )
+            session.execute(
+                group_cls.__table__.insert().values(id=2, group_name="GroupB")
+            )
+
+        docs = [sort_list(doc) for doc in sync.sync()]
+        assert docs == [
+            {
+                "_id": "abc",
+                "_index": "testdb",
+                "_source": {
+                    "isbn": "abc",
+                    "group": None,
+                    "title": "The Tiger Club",
+                    "_meta": {},
+                },
+            },
+            {
+                "_id": "def",
+                "_index": "testdb",
+                "_source": {
+                    "isbn": "def",
+                    "group": None,
+                    "title": "The Lion Club",
+                    "_meta": {},
+                },
+            },
+            {
+                "_id": "ghi",
+                "_index": "testdb",
+                "_source": {
+                    "isbn": "ghi",
+                    "group": None,
+                    "title": "The Rabbit Club",
+                    "_meta": {},
+                },
+            },
+        ]
+        sync.checkpoint = sync.txid_current
+
+        def pull():
+            txmin = sync.checkpoint
+            txmax = sync.txid_current
+            sync.logical_slot_changes(txmin=txmin, txmax=txmax)
+
+        def poll_redis():
+            return []
+
+        def poll_db():
+            with subtransactions(session):
+                session.execute(
+                    book_group_cls.__table__.insert().values(
+                        book_isbn="abc", group_id=1
+                    )
+                )
+                session.execute(
+                    book_group_cls.__table__.insert().values(
+                        book_isbn="abc", group_id=2
+                    )
+                )
+
+        with mock.patch("pgsync.sync.Sync.poll_redis", side_effect=poll_redis):
+            with mock.patch("pgsync.sync.Sync.poll_db", side_effect=poll_db):
+                with mock.patch("pgsync.sync.Sync.pull", side_effect=pull):
+                    with mock.patch(
+                        "pgsync.sync.Sync.truncate_slots",
+                        side_effect=noop,
+                    ):
+                        with mock.patch(
+                            "pgsync.sync.Sync.status",
+                            side_effect=noop,
+                        ):
+                            sync.receive(NTHREADS_POLLDB)
+                            sync.search_client.refresh("testdb")
+
+        docs = [sort_list(doc) for doc in sync.sync()]
+        # all authors are none, also no book_authors
+        assert docs == [
+            {
+                "_id": "abc",
+                "_index": "testdb",
+                "_source": {
+                    "isbn": "abc",
+                    "group": [
+                        {"id": 1, "group_name": "GroupA"},
+                        {"id": 2, "group_name": "GroupB"},
+                    ],
+                    "title": "The Tiger Club",
+                    "_meta": {
+                        "group": {"id": [1, 2]},
+                        "book_group": {"id": [1, 2]},
+                    },
+                },
+            },
+            {
+                "_id": "def",
+                "_index": "testdb",
+                "_source": {
+                    "isbn": "def",
+                    "group": None,
+                    "title": "The Lion Club",
+                    "_meta": {},
+                },
+            },
+            {
+                "_id": "ghi",
+                "_index": "testdb",
+                "_source": {
+                    "isbn": "ghi",
+                    "group": None,
+                    "title": "The Rabbit Club",
+                    "_meta": {},
+                },
+            },
+        ]
+        sync.search_client.close()
 
     def test_update_through_child_noop(self, sync, data):
         # update a new through child with noop
@@ -1392,6 +1542,7 @@ class TestNestedChildren(object):
                     assert doc[key] == expected[i][key]
 
         assert_resync_empty(sync, nodes)
+
         sync.search_client.close()
 
     def test_update_through_child_op(
