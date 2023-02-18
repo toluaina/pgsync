@@ -72,8 +72,10 @@ importlib-metadata==4.2.0
     # via -r requirements/base.in
 iniconfig==2.0.0
     # via pytest
-isort==5.12.0
-    # via flake8-isort
+isort==5.11.5
+    # via
+    #   -r requirements/base.in
+    #   flake8-isort
 jmespath==1.0.1
     # via
     #   boto3

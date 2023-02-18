@@ -45,6 +45,8 @@ idna==3.4
     # via requests
 importlib-metadata==4.2.0
     # via -r requirements/base.in
+isort==5.11.5
+    # via -r requirements/base.in
 jmespath==1.0.1
     # via
     #   boto3
