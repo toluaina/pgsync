@@ -73,7 +73,6 @@ class GeometryPlugin(plugin.Plugin):
         doc_index: str = kwargs["_index"]
 
         if doc_index == "book":
-
             if doc and doc.get("point"):
                 if doc["point"]["type"] == "Point":
                     doc["coordinates"] = doc["point"]["coordinates"]

@@ -169,7 +169,6 @@ class TestSync(object):
 
     @patch("pgsync.sync.SearchClient")
     def test_sync_validate(self, mock_es):
-
         with pytest.raises(SchemaError) as excinfo:
             Sync(
                 document={

@@ -258,7 +258,6 @@ class SearchClient(object):
         body: dict = defaultdict(lambda: defaultdict(dict))
 
         if not self.__client.indices.exists(index):
-
             if setting:
                 body.update(**{"settings": {"index": setting}})
 
@@ -295,7 +294,6 @@ class SearchClient(object):
         Get the Elasticsearch/OpenSearch mapping from the schema transform.
         """  # noqa D200
         for node in tree.traverse_post_order():
-
             rename: dict = node.transform.get("rename", {})
             mapping: dict = node.transform.get("mapping", {})
 

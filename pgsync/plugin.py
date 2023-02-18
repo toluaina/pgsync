@@ -58,7 +58,6 @@ class Plugins(object):
             paths.extend([path for path in module.__path__])
 
         for pkg_path in paths:
-
             if pkg_path in self._paths:
                 continue
 

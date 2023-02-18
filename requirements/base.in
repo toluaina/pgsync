@@ -1,7 +1,6 @@
 # base libraries
 black
 boto3
-bumpversion
 click
 elasticsearch==7.13.4 # pin this to version 7.13.4 for compatibility with OpenSearch https://opensearch.org/docs/clients/index/
 elasticsearch-dsl>=6.0.0,<8.0.0
@@ -19,5 +18,3 @@ sqlparse
 # pin these libs because latest flake8 does not allow newer versions of importlib-metadata https://github.com/PyCQA/flake8/issues/1522
 importlib-metadata==4.2.0
 virtualenv==20.16.2
-
-isort==5.11.*

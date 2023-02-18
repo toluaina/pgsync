@@ -26,7 +26,6 @@ class TestParentSingleChildFkOnChild(object):
 
     @pytest.fixture(scope="function")
     def data(self, sync, book_cls, rating_cls):
-
         session = sync.session
 
         books = [

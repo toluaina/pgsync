@@ -34,7 +34,6 @@ def setup(config: str) -> None:
     type=click.Path(exists=True),
 )
 def main(config):
-
     config = get_config(config)
     teardown(config=config)
     setup(config)

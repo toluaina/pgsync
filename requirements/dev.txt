@@ -8,20 +8,16 @@ async-timeout==4.0.2
     # via redis
 attrs==22.2.0
     # via pytest
-black==22.12.0
+black==23.1.0
     # via -r requirements/base.in
-boto3==1.26.59
+boto3==1.26.74
     # via -r requirements/base.in
-botocore==1.29.59
+botocore==1.29.74
     # via
     #   boto3
     #   s3transfer
 build==0.10.0
     # via pip-tools
-bump2version==1.0.1
-    # via bumpversion
-bumpversion==0.6.0
-    # via -r requirements/base.in
 certifi==2022.12.7
     # via
     #   elasticsearch
@@ -52,7 +48,7 @@ environs==9.5.0
     # via -r requirements/base.in
 exceptiongroup==1.1.0
     # via pytest
-faker==16.6.1
+faker==17.0.0
     # via -r requirements/base.in
 filelock==3.9.0
     # via virtualenv
@@ -77,7 +73,7 @@ freezegun==1.2.2
     # via -r requirements/test.in
 greenlet==2.0.2
     # via sqlalchemy
-identify==2.5.16
+identify==2.5.18
     # via pre-commit
 idna==3.4
     # via requests
@@ -85,10 +81,8 @@ importlib-metadata==4.2.0
     # via -r requirements/base.in
 iniconfig==2.0.0
     # via pytest
-isort==5.11.4
-    # via
-    #   -r requirements/base.in
-    #   flake8-isort
+isort==5.12.0
+    # via flake8-isort
 jmespath==1.0.1
     # via
     #   boto3
@@ -99,7 +93,7 @@ mccabe==0.7.0
     # via flake8
 mock==5.0.1
     # via -r requirements/test.in
-mypy-extensions==0.4.3
+mypy-extensions==1.0.0
     # via black
 nodeenv==1.7.0
     # via pre-commit
@@ -109,13 +103,14 @@ opensearch-py==2.1.1
     # via opensearch-dsl
 packaging==23.0
     # via
+    #   black
     #   build
     #   marshmallow
     #   pytest
     #   pytest-sugar
 pathspec==0.11.0
     # via black
-pip-tools==6.12.1
+pip-tools==6.12.2
     # via -r requirements/dev.in
 platformdirs==2.6.2
     # via
@@ -123,7 +118,7 @@ platformdirs==2.6.2
     #   virtualenv
 pluggy==1.0.0
     # via pytest
-pre-commit==3.0.1
+pre-commit==3.0.4
     # via -r requirements/dev.in
 psycopg2-binary==2.9.5
     # via -r requirements/base.in
@@ -164,13 +159,13 @@ python-dotenv==0.21.1
     # via environs
 pyyaml==6.0
     # via pre-commit
-redis==4.4.2
+redis==4.5.1
     # via -r requirements/base.in
 requests==2.28.2
     # via
     #   opensearch-py
     #   requests-aws4auth
-requests-aws4auth==1.2.1
+requests-aws4auth==1.2.2
     # via -r requirements/base.in
 s3transfer==0.6.0
     # via boto3
@@ -194,7 +189,7 @@ tomli==2.0.1
     #   build
     #   coverage
     #   pytest
-typing-extensions==4.4.0
+typing-extensions==4.5.0
     # via black
 urllib3==1.26.14
     # via
@@ -208,7 +203,7 @@ virtualenv==20.16.2
     #   pre-commit
 wheel==0.38.4
     # via pip-tools
-zipp==3.12.0
+zipp==3.14.0
     # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:

@@ -468,7 +468,6 @@ def dataset(
     book_group_cls,
     group_cls,
 ):
-
     eu_continent = continent_cls(name="Europe")
     na_continent = continent_cls(name="North America")
     session.add(eu_continent)

@@ -100,7 +100,6 @@ class Relationship:
 
 @dataclass
 class Node(object):
-
     models: Callable
     table: str
     schema: str
@@ -160,11 +159,9 @@ class Node(object):
         return hash(self.name)
 
     def setup(self):
-
         self.columns = []
 
         for column_name in self.column_names:
-
             tokens: Optional[list] = None
             if any(op in column_name for op in JSONB_OPERATORS):
                 tokens = re.split(
@@ -258,7 +255,6 @@ class Node(object):
 
 @dataclass
 class Tree:
-
     models: Callable
 
     def __post_init__(self):

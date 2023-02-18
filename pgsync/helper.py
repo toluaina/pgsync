@@ -25,7 +25,6 @@ def teardown(
     config: str = get_config(config)
 
     for document in config_loader(config):
-
         if not database_exists(document["database"]):
             logger.warning(f'Database {document["database"]} does not exist')
             continue

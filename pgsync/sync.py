@@ -169,7 +169,6 @@ class Sync(Base, metaclass=Singleton):
         self.tree.display()
 
         for node in self.tree.traverse_breadth_first():
-
             # ensure internal materialized view compatibility
             if MATERIALIZED_VIEW in self._materialized_views(node.schema):
                 if MATERIALIZED_VIEW_COLUMNS != self.columns(
@@ -195,7 +194,6 @@ class Sync(Base, metaclass=Singleton):
 
     def analyze(self) -> None:
         for node in self.tree.traverse_breadth_first():
-
             if node.is_root:
                 continue
 
@@ -532,11 +530,8 @@ class Sync(Base, metaclass=Singleton):
     def _insert_op(
         self, node: Node, filters: dict, payloads: List[Payload]
     ) -> dict:
-
         if node.table in self.tree.tables:
-
             if node.is_root:
-
                 for payload in payloads:
                     primary_values = [
                         payload.data[key]
@@ -550,7 +545,6 @@ class Sync(Base, metaclass=Singleton):
                     )
 
             else:
-
                 if not node.parent:
                     logger.exception(
                         f"Could not get parent from node: {node.name}"
@@ -591,7 +585,6 @@ class Sync(Base, metaclass=Singleton):
                     filters[self.tree.root.table].extend(_filters)
 
         else:
-
             # handle case where we insert into a through table
             # set the parent as the new entity that has changed
             foreign_keys = self.query_builder.get_foreign_keys(
@@ -613,9 +606,7 @@ class Sync(Base, metaclass=Singleton):
         filters: dict,
         payloads: List[dict],
     ) -> dict:
-
         if node.is_root:
-
             # Here, we are performing two operations:
             # 1) Build a filter to sync the updated record(s)
             # 2) Delete the old record(s) in Elasticsearch/OpenSearch if the
@@ -668,7 +659,6 @@ class Sync(Base, metaclass=Singleton):
                 self.search_client.bulk(self.index, docs)
 
         else:
-
             # update the child tables
             for payload in payloads:
                 _filters: list = []
@@ -700,11 +690,9 @@ class Sync(Base, metaclass=Singleton):
     def _delete_op(
         self, node: Node, filters: dict, payloads: List[dict]
     ) -> dict:
-
         # when deleting a root node, just delete the doc in
         # Elasticsearch/OpenSearch
         if node.is_root:
-
             docs: list = []
             for payload in payloads:
                 primary_values: list = [
@@ -741,7 +729,6 @@ class Sync(Base, metaclass=Singleton):
                 )
 
         else:
-
             # when deleting the child node, find the doc _id where
             # the child keys match in private, then get the root doc_id and
             # re-sync the child tables
@@ -756,9 +743,7 @@ class Sync(Base, metaclass=Singleton):
         return filters
 
     def _truncate_op(self, node: Node, filters: dict) -> dict:
-
         if node.is_root:
-
             docs: list = []
             for doc_id in self.search_client._search(self.index, node.table):
                 doc: dict = {
@@ -776,7 +761,6 @@ class Sync(Base, metaclass=Singleton):
                 self.search_client.bulk(self.index, docs)
 
         else:
-
             _filters: list = []
             for doc_id in self.search_client._search(self.index, node.table):
                 where: dict = {}
@@ -858,7 +842,6 @@ class Sync(Base, metaclass=Singleton):
             filters[node.parent.table] = []
 
         if payload.tg_op == INSERT:
-
             filters = self._insert_op(
                 node,
                 filters,
@@ -873,7 +856,6 @@ class Sync(Base, metaclass=Singleton):
             )
 
         if payload.tg_op == DELETE:
-
             filters = self._delete_op(
                 node,
                 filters,
@@ -881,7 +863,6 @@ class Sync(Base, metaclass=Singleton):
             )
 
         if payload.tg_op == TRUNCATE:
-
             filters = self._truncate_op(node, filters)
 
         # If there are no filters, then don't execute the sync query
@@ -976,7 +957,6 @@ class Sync(Base, metaclass=Singleton):
             empty_char="-",
             width=50,
         ) as bar:
-
             for i, (keys, row, primary_keys) in enumerate(
                 self.fetchmany(node._subquery)
             ):
@@ -1177,7 +1157,6 @@ class Sync(Base, metaclass=Singleton):
         # TODO repeat this for the other place too
         # if all payload operations are INSERTS
         if set(map(lambda x: x.tg_op, payloads)) == set([INSERT]):
-
             _payloads: dict = defaultdict(list)
 
             for payload in payloads:
@@ -1187,7 +1166,6 @@ class Sync(Base, metaclass=Singleton):
                 self.search_client.bulk(self.index, self._payloads(_payload))
 
         else:
-
             _payloads: List[Payload] = []
             for i, payload in enumerate(payloads):
                 _payloads.append(payload)
@@ -1429,15 +1407,12 @@ def main(
     show_settings(config)
 
     with Timer():
-
         if analyze:
-
             for document in config_loader(config):
                 sync: Sync = Sync(document, verbose=verbose, **kwargs)
                 sync.analyze()
 
         elif polling:
-
             while True:
                 for document in config_loader(config):
                     sync: Sync = Sync(document, verbose=verbose, **kwargs)
@@ -1445,7 +1420,6 @@ def main(
                 time.sleep(settings.POLL_INTERVAL)
 
         else:
-
             for document in config_loader(config):
                 sync: Sync = Sync(document, verbose=verbose, **kwargs)
                 sync.pull()

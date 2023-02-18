@@ -50,7 +50,6 @@ logger = logging.getLogger(__name__)
 
 
 class Payload(object):
-
     __slots__ = ("tg_op", "table", "schema", "old", "new", "xmin", "indices")
 
     def __init__(
@@ -720,9 +719,7 @@ class Base(object):
 
     def parse_logical_slot(self, row: str) -> Payload:
         def _parse_logical_slot(data: str) -> Tuple[str, str]:
-
             while True:
-
                 match = LOGICAL_SLOT_SUFFIX.search(data)
                 if not match:
                     break

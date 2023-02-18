@@ -17,12 +17,10 @@ from pgsync.utils import config_loader, get_config
     type=click.Path(exists=True),
 )
 def main(config):
-
     config: str = get_config(config)
     teardown(drop_db=False, config=config)
 
     for document in config_loader(config):
-
         database: str = document.get("database", document["index"])
         with pg_engine(database) as engine:
             schema: str = document.get("schema", DEFAULT_SCHEMA)

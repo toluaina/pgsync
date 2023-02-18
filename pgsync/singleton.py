@@ -4,7 +4,6 @@ from typing import Tuple
 
 
 class Singleton(type):
-
     _instances: dict = {}
 
     def __call__(cls, *args, **kwargs):

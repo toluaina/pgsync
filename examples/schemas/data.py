@@ -15,7 +15,6 @@ from pgsync.utils import config_loader, get_config
     type=click.Path(exists=True),
 )
 def main(config):
-
     config: str = get_config(config)
     teardown(drop_db=False, config=config)
     document = next(config_loader(config))

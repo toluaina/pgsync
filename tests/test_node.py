@@ -211,7 +211,6 @@ class TestNode(object):
         sync.search_client.close()
 
     def test_tree_build(self, sync):
-
         with pytest.raises(TableNotInNodeError) as excinfo:
             Tree(sync.models).build(
                 {

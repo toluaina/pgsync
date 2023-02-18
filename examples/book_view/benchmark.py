@@ -128,7 +128,6 @@ def delete_op(session: sessionmaker, model, nsize: int) -> None:
     ),
 )
 def main(config, nsize, daemon, tg_op):
-
     show_settings()
 
     config: str = get_config(config)

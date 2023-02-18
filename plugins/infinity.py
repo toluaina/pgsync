@@ -4,7 +4,6 @@ from pgsync import plugin
 
 
 class InfinityPlugin(plugin.Plugin):
-
     name: str = "Infinity"
 
     def transform(self, doc: dict, **kwargs) -> dict:
