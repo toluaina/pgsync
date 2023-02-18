@@ -111,5 +111,7 @@ urllib3==1.26.14
     #   requests
 virtualenv==20.16.2
     # via -r requirements/base.in
-zipp==3.14.0
-    # via importlib-metadata
+zipp==3.13.0
+    # via
+    #   -r requirements/base.in
+    #   importlib-metadata

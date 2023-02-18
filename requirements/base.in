@@ -20,3 +20,4 @@ importlib-metadata==4.2.0
 virtualenv==20.16.2
 
 isort==5.11.*
+zipp==3.13.*
