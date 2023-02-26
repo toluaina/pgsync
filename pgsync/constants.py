@@ -73,6 +73,7 @@ ELASTICSEARCH_TYPES = [
     "binary",
     "boolean",
     "byte",
+    "completion",
     "constant_keyword",
     "date",
     "date_range",
