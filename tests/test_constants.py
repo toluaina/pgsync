@@ -94,6 +94,7 @@ class TestConstants(object):
                 "binary",
                 "boolean",
                 "byte",
+                "completion",
                 "constant_keyword",
                 "date",
                 "double",
