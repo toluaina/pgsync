@@ -158,8 +158,10 @@ python-dateutil==2.8.2
     #   freezegun
     #   opensearch-dsl
     #   opensearch-py
-python-dotenv==1.0.0
-    # via environs
+python-dotenv==0.21.1
+    # via
+    #   -r requirements/base.in
+    #   environs
 pyyaml==6.0
     # via pre-commit
 redis==4.5.1
