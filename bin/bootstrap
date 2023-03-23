@@ -54,9 +54,15 @@ def main(teardown, config, user, password, host, port, verbose):
 
     show_settings(config)
 
+    validate: bool = False if teardown else True
+
     for document in config_loader(config):
         sync: Sync = Sync(
-            document, verbose=verbose, repl_slots=False, **kwargs
+            document,
+            verbose=verbose,
+            validate=validate,
+            repl_slots=False,
+            **kwargs,
         )
         if teardown:
             sync.teardown()
