@@ -8,11 +8,11 @@ async-timeout==4.0.2
     # via redis
 attrs==22.2.0
     # via pytest
-black==23.1.0
+black==23.3.0
     # via -r requirements/base.in
-boto3==1.26.98
+boto3==1.26.103
     # via -r requirements/base.in
-botocore==1.29.98
+botocore==1.29.103
     # via
     #   boto3
     #   s3transfer
@@ -48,9 +48,9 @@ environs==9.5.0
     # via -r requirements/base.in
 exceptiongroup==1.1.1
     # via pytest
-faker==18.3.0
+faker==18.3.1
     # via -r requirements/base.in
-filelock==3.10.2
+filelock==3.10.7
     # via virtualenv
 flake8==5.0.4
     # via
@@ -73,7 +73,7 @@ freezegun==1.2.2
     # via -r requirements/test.in
 greenlet==2.0.2
     # via sqlalchemy
-identify==2.5.21
+identify==2.5.22
     # via pre-commit
 idna==3.4
     # via requests
@@ -120,7 +120,7 @@ platformdirs==2.6.2
     #   virtualenv
 pluggy==1.0.0
     # via pytest
-pre-commit==3.2.0
+pre-commit==3.2.1
     # via -r requirements/dev.in
 psycopg2-binary==2.9.5
     # via -r requirements/base.in
@@ -164,7 +164,7 @@ python-dotenv==0.21.1
     #   environs
 pyyaml==6.0
     # via pre-commit
-redis==4.5.3
+redis==4.5.4
     # via -r requirements/base.in
 requests==2.28.2
     # via
