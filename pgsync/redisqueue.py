@@ -30,18 +30,10 @@ class RedisQueue(object):
         self.ssl: bool = kwargs.get("ssl", REDIS_SSL)
 
         if self.ssl:
-            self.ssl_keyfile: str = kwargs.get(
-                "ssl_keyfile", REDIS_SSL_KEYFILE
-            )
-            self.ssl_cert_file: str = kwargs.get(
-                "ssl_cert_file", REDIS_SSL_CERTFILE
-            )
-            self.ssl_cert_reqs: str = kwargs.get(
-                "ssl_cert_reqs", REDIS_SSL_CERT_REQS
-            )
-            self.ssl_ca_certs: str = kwargs.get(
-                "ssl_ca_certs", REDIS_SSL_CA_CERT
-            )
+            self.ssl_keyfile: str = REDIS_SSL_KEYFILE
+            self.ssl_cert_file: str = REDIS_SSL_CERTFILE
+            self.ssl_cert_reqs: str = REDIS_SSL_CERT_REQS
+            self.ssl_ca_certs: str = REDIS_SSL_CA_CERT
 
         try:
             self.__db: Redis = Redis.from_url(
