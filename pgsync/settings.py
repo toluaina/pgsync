@@ -149,6 +149,12 @@ REDIS_PORT = env.int("REDIS_PORT", default=6379)
 # number of items to read from Redis at a time
 REDIS_READ_CHUNK_SIZE = env.int("REDIS_READ_CHUNK_SIZE", default=1000)
 REDIS_SCHEME = env.str("REDIS_SCHEME", default="redis")
+REDIS_SSL_SCHEME = env.str("REDIS_SSL_SCHEME", default="rediss")
+REDIS_SSL = env.bool("REDIS_SSL", default=False)
+REDIS_SSL_CA_CERT = env.str("REDIS_SSL_CA_CERT", default=None)
+REDIS_SSL_KEYFILE = env.str("REDIS_SSL_KEYFILE", default=None)
+REDIS_SSL_CERTFILE = env.str("REDIS_SSL_CERTFILE", default=None)
+REDIS_SSL_CERT_REQS = env.str("REDIS_SSL_CERT_REQS", default=None)
 # redis socket connection timeout
 REDIS_SOCKET_TIMEOUT = env.int("REDIS_SOCKET_TIMEOUT", default=5)
 # number of items to write to Redis at a time
