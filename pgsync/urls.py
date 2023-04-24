@@ -21,6 +21,8 @@ from .settings import (
     REDIS_HOST,
     REDIS_PORT,
     REDIS_SCHEME,
+    REDIS_SSL,
+    REDIS_SSL_SCHEME,
 )
 
 logger = logging.getLogger(__name__)
@@ -86,6 +88,7 @@ def get_redis_url(
     password: Optional[str] = None,
     port: Optional[int] = None,
     db: Optional[str] = None,
+    ssl: Optional[bool] = False,
 ) -> str:
     """Return the URL to connect to Redis."""
     host = host or REDIS_HOST
@@ -93,6 +96,11 @@ def get_redis_url(
     port = port or REDIS_PORT
     db = db or REDIS_DB
     scheme = scheme or REDIS_SCHEME
+    ssl = ssl or REDIS_SSL
+
+    if ssl:
+        scheme = REDIS_SSL_SCHEME
+        return f"{scheme}://:{quote_plus(password)}@{host}:{port}/{db}"
     if password:
         return f"{scheme}://:{quote_plus(password)}@{host}:{port}/{db}"
     logger.debug("Connecting to Redis without password.")
