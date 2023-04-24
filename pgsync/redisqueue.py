@@ -9,6 +9,7 @@ from redis.exceptions import ConnectionError
 from .settings import (
     REDIS_READ_CHUNK_SIZE,
     REDIS_SOCKET_TIMEOUT,
+    REDIS_SSL,
     REDIS_SSL_CA_CERT,
     REDIS_SSL_CERT_REQS,
     REDIS_SSL_CERTFILE,
@@ -26,14 +27,14 @@ class RedisQueue(object):
         """Init Simple Queue with Redis Backend."""
         url: str = get_redis_url(**kwargs)
         self.key: str = f"{namespace}:{name}"
-        self.ssl: bool = kwargs.get("ssl")
+        self.ssl: bool = kwargs.get("ssl", REDIS_SSL)
 
         if self.ssl:
             self.ssl_keyfile: str = kwargs.get(
                 "ssl_keyfile", REDIS_SSL_KEYFILE
             )
-            self.ssl_certfile: str = kwargs.get(
-                "ssl_certfile", REDIS_SSL_CERTFILE
+            self.ssl_cert_file: str = kwargs.get(
+                "ssl_cert_file", REDIS_SSL_CERTFILE
             )
             self.ssl_cert_reqs: str = kwargs.get(
                 "ssl_cert_reqs", REDIS_SSL_CERT_REQS
@@ -47,7 +48,7 @@ class RedisQueue(object):
                 url,
                 socket_timeout=REDIS_SOCKET_TIMEOUT,
                 ssl_keyfile=self.ssl_keyfile,
-                ssl_certfile=self.ssl_certfile,
+                ssl_certfile=self.ssl_cert_file,
                 ssl_cert_reqs=self.ssl_cert_reqs,
                 ssl_ca_certs=self.ssl_ca_certs,
             )
