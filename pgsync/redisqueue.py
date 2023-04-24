@@ -6,7 +6,14 @@ from typing import List, Optional
 from redis import Redis
 from redis.exceptions import ConnectionError
 
-from .settings import REDIS_READ_CHUNK_SIZE, REDIS_SOCKET_TIMEOUT
+from .settings import (
+    REDIS_READ_CHUNK_SIZE,
+    REDIS_SOCKET_TIMEOUT,
+    REDIS_SSL_CA_CERT,
+    REDIS_SSL_CERT_REQS,
+    REDIS_SSL_CERTFILE,
+    REDIS_SSL_KEYFILE,
+)
 from .urls import get_redis_url
 
 logger = logging.getLogger(__name__)
@@ -19,10 +26,30 @@ class RedisQueue(object):
         """Init Simple Queue with Redis Backend."""
         url: str = get_redis_url(**kwargs)
         self.key: str = f"{namespace}:{name}"
+        self.ssl: bool = kwargs.get("ssl")
+
+        if self.ssl:
+            self.ssl_keyfile: str = kwargs.get(
+                "ssl_keyfile", REDIS_SSL_KEYFILE
+            )
+            self.ssl_certfile: str = kwargs.get(
+                "ssl_certfile", REDIS_SSL_CERTFILE
+            )
+            self.ssl_cert_reqs: str = kwargs.get(
+                "ssl_cert_reqs", REDIS_SSL_CERT_REQS
+            )
+            self.ssl_ca_certs: str = kwargs.get(
+                "ssl_ca_certs", REDIS_SSL_CA_CERT
+            )
+
         try:
             self.__db: Redis = Redis.from_url(
                 url,
                 socket_timeout=REDIS_SOCKET_TIMEOUT,
+                ssl_keyfile=self.ssl_keyfile,
+                ssl_certfile=self.ssl_certfile,
+                ssl_cert_reqs=self.ssl_cert_reqs,
+                ssl_ca_certs=self.ssl_ca_certs,
             )
             self.__db.ping()
         except ConnectionError as e:
