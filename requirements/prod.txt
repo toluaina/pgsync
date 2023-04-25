@@ -69,7 +69,7 @@ platformdirs==2.6.2
     # via
     #   black
     #   virtualenv
-psycopg2-binary==2.9.5
+psycopg2-binary==2.9.6
     # via -r requirements/base.in
 python-dateutil==2.8.2
     # via
