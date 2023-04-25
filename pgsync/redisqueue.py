@@ -27,22 +27,22 @@ class RedisQueue(object):
         """Init Simple Queue with Redis Backend."""
         url: str = get_redis_url(**kwargs)
         self.key: str = f"{namespace}:{name}"
-        self.ssl: bool = kwargs.get("ssl", REDIS_SSL)
+        self.ssl: bool = REDIS_SSL
+        self.redis_ssl_args: dict = {}
 
         if self.ssl:
-            self.ssl_keyfile: str = REDIS_SSL_KEYFILE
-            self.ssl_cert_file: str = REDIS_SSL_CERTFILE
-            self.ssl_cert_reqs: str = REDIS_SSL_CERT_REQS
-            self.ssl_ca_certs: str = REDIS_SSL_CA_CERT
+            self.redis_ssl_args = dict(
+                ssl_keyfile=REDIS_SSL_KEYFILE,
+                ssl_certfile=REDIS_SSL_CERTFILE,
+                ssl_cert_reqs=REDIS_SSL_CERT_REQS,
+                ssl_ca_certs=REDIS_SSL_CA_CERT,
+            )
 
         try:
             self.__db: Redis = Redis.from_url(
                 url,
                 socket_timeout=REDIS_SOCKET_TIMEOUT,
-                ssl_keyfile=self.ssl_keyfile,
-                ssl_certfile=self.ssl_cert_file,
-                ssl_cert_reqs=self.ssl_cert_reqs,
-                ssl_ca_certs=self.ssl_ca_certs,
+                **self.redis_ssl_args,
             )
             self.__db.ping()
         except ConnectionError as e:
