@@ -100,7 +100,6 @@ def get_redis_url(
 
     if ssl:
         scheme = REDIS_SSL_SCHEME
-        return f"{scheme}://:{quote_plus(password)}@{host}:{port}/{db}"
     if password:
         return f"{scheme}://:{quote_plus(password)}@{host}:{port}/{db}"
     logger.debug("Connecting to Redis without password.")
