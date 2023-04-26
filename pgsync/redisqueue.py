@@ -38,6 +38,8 @@ class RedisQueue(object):
                 ssl_ca_certs=REDIS_SSL_CA_CERT,
             )
 
+        logger.debug(f"Redis SSL Arguments: {self.redis_ssl_args}")
+
         try:
             self.__db: Redis = Redis.from_url(
                 url,

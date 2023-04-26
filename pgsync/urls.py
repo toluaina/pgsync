@@ -100,6 +100,7 @@ def get_redis_url(
 
     if ssl:
         scheme = REDIS_SSL_SCHEME
+        logger.debug(f"SSL scheme: {scheme}")
         return f"{scheme}://:{quote_plus(password)}@{host}:{port}/{db}"
     if password:
         return f"{scheme}://:{quote_plus(password)}@{host}:{port}/{db}"

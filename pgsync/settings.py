@@ -149,6 +149,7 @@ REDIS_PORT = env.int("REDIS_PORT", default=6379)
 # number of items to read from Redis at a time
 REDIS_READ_CHUNK_SIZE = env.int("REDIS_READ_CHUNK_SIZE", default=1000)
 REDIS_SCHEME = env.str("REDIS_SCHEME", default="redis")
+# redis ssl configuration
 REDIS_SSL_SCHEME = env.str("REDIS_SSL_SCHEME", default="rediss")
 REDIS_SSL = env.bool("REDIS_SSL", default=False)
 REDIS_SSL_CA_CERT = env.str("REDIS_SSL_CA_CERT", default=None)
