@@ -73,6 +73,7 @@ class TestUrls(object):
             == "redis://:1234@localhost:9999/0"
         )
         assert get_redis_url(host="skynet") == "redis://skynet:6379/0"
+        assert get_redis_url(ssl=True) == "rediss://localhost:6379/0"
 
     @patch("pgsync.urls.logger")
     def test_get_config(self, mock_logger):
