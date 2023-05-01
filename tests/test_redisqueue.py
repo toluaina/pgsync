@@ -5,35 +5,42 @@ from mock import patch
 from redis.exceptions import ConnectionError
 
 from pgsync.redisqueue import RedisQueue
+from pgsync.settings import (
+    REDIS_SOCKET_TIMEOUT,
+    REDIS_SSL_CA_CERT,
+    REDIS_SSL_CERT_REQS,
+    REDIS_SSL_CERTFILE,
+    REDIS_SSL_KEYFILE,
+)
 
 
 class TestRedisQueue(object):
     """Redis Queue tests."""
 
+    @patch("redis.Redis.ping")
+    @patch("pgsync.redisqueue.get_redis_url")
     @patch("pgsync.redisqueue.logger")
-    def test_redis_conn(self, mock_logger, mocker):
+    def test_redis_conn(self, mock_logger, mock_get_redis_url, mock_ping):
         """Test the redis constructor."""
-        mock_get_redis_url = mocker.patch(
-            "pgsync.redisqueue.get_redis_url",
-            return_value="redis://kermit:frog@some-host:6379/0",
+        mock_get_redis_url.return_value = (
+            "redis://kermit:frog@some-host:6379/0"
         )
-        mock_ping = mocker.patch("redis.Redis.ping", return_value=True)
+        mock_ping.return_value = True
         queue = RedisQueue("something", namespace="foo")
         assert queue.key == "foo:something"
         mock_get_redis_url.assert_called_once()
         mock_ping.assert_called_once()
         mock_logger.exception.assert_not_called()
 
+    @patch("redis.Redis.ping")
+    @patch("pgsync.redisqueue.get_redis_url")
     @patch("pgsync.redisqueue.logger")
-    def test_redis_conn_fail(self, mock_logger, mocker):
+    def test_redis_conn_fail(self, mock_logger, mock_get_redis_url, mock_ping):
         """Test the redis constructor fails."""
-        mock_get_redis_url = mocker.patch(
-            "pgsync.redisqueue.get_redis_url",
-            return_value="redis://kermit:frog@some-host:6379/0",
+        mock_get_redis_url.return_value = (
+            "redis://kermit:frog@some-host:6379/0"
         )
-        mock_ping = mocker.patch(
-            "redis.Redis.ping", side_effect=ConnectionError("pong")
-        )
+        mock_ping.side_effect = ConnectionError("pong")
         with pytest.raises(ConnectionError):
             RedisQueue("something", namespace="foo")
         mock_get_redis_url.assert_called_once()
@@ -42,7 +49,29 @@ class TestRedisQueue(object):
             "Redis server is not running: pong"
         )
 
-    def test_qsize(self, mocker):
+    @patch("redis.Redis.from_url")
+    @patch("pgsync.redisqueue.get_redis_url")
+    @patch("pgsync.redisqueue.logger")
+    def test_redis_conn_ssl(
+        self, mock_logger, mock_get_redis_url, mock_redis_from_url
+    ):
+        """Test the redis ssl constructor."""
+        mock_redis_url = "rediss://tardis:doctor@some-host:6379/0"
+        mock_get_redis_url.return_value = mock_redis_url
+        queue = RedisQueue("something", namespace="foo", ssl=True)
+        assert queue.key == "foo:something"
+        mock_get_redis_url.assert_called_once()
+        mock_redis_from_url.assert_called_once_with(
+            mock_redis_url,
+            socket_timeout=REDIS_SOCKET_TIMEOUT,
+            ssl_keyfile=REDIS_SSL_KEYFILE,
+            ssl_certfile=REDIS_SSL_CERTFILE,
+            ssl_cert_reqs=REDIS_SSL_CERT_REQS,
+            ssl_ca_certs=REDIS_SSL_CA_CERT,
+        )
+        mock_logger.exception.assert_not_called()
+
+    def test_qsize(self):
         """Test the redis qsize."""
         queue = RedisQueue("something")
         queue.delete()

@@ -27,7 +27,7 @@ class RedisQueue(object):
         """Init Simple Queue with Redis Backend."""
         url: str = get_redis_url(**kwargs)
         self.key: str = f"{namespace}:{name}"
-        self.ssl: bool = REDIS_SSL
+        self.ssl: bool = kwargs.get("ssl", REDIS_SSL)
         self.redis_ssl_args: dict = {}
 
         if self.ssl:
@@ -37,8 +37,6 @@ class RedisQueue(object):
                 ssl_cert_reqs=REDIS_SSL_CERT_REQS,
                 ssl_ca_certs=REDIS_SSL_CA_CERT,
             )
-
-        logger.debug(f"Redis SSL Arguments: {self.redis_ssl_args}")
 
         try:
             self.__db: Redis = Redis.from_url(
