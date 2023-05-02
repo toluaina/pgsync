@@ -15,8 +15,8 @@ expose structured denormalized documents in [Elasticsearch](https://www.elastic.
 - [SQlAlchemy](https://www.sqlalchemy.org) 1.3.4+
 
 ### Postgres setup
-  
-  Enable [logical decoding](https://www.postgresql.org/docs/current/logicaldecoding.html) in your 
+
+  Enable [logical decoding](https://www.postgresql.org/docs/current/logicaldecoding.html) in your
   Postgres setting.
 
   - You also need to set up two parameters in your Postgres config postgresql.conf
@@ -76,7 +76,7 @@ Example spec
         }
     ]
 
-### Environment variables 
+### Environment variables
 
 Setup environment variables required for the application
 
@@ -94,6 +94,14 @@ Setup environment variables required for the application
     REDIS_PORT=6379
     REDIS_DB=0
     REDIS_AUTH=*****
+
+To use SSL/TLS with Redis enable and set these variables
+
+    - REDIS_SSL=True
+    - REDIS_SSL_KEYFILE=/path/to/keyfile
+    - REDIS_SSL_CERTFILE=/path/to/certfile
+    - REDIS_SSL_CERT_REQS="required"
+    - REDIS_SSL_CA_CERT=/path/to/ca_cert
 
 
 ### Running
