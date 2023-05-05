@@ -8,9 +8,9 @@ async-timeout==4.0.2
     # via redis
 black==23.3.0
     # via -r requirements/base.in
-boto3==1.26.103
+boto3==1.26.128
     # via -r requirements/base.in
-botocore==1.29.103
+botocore==1.29.128
     # via
     #   boto3
     #   s3transfer
@@ -35,9 +35,9 @@ elasticsearch-dsl==7.4.1
     # via -r requirements/base.in
 environs==9.5.0
     # via -r requirements/base.in
-faker==18.3.1
+faker==18.6.2
     # via -r requirements/base.in
-filelock==3.10.7
+filelock==3.12.0
     # via virtualenv
 greenlet==2.0.2
     # via sqlalchemy
@@ -59,7 +59,7 @@ opensearch-dsl==2.1.0
     # via -r requirements/base.in
 opensearch-py==2.2.0
     # via opensearch-dsl
-packaging==23.0
+packaging==23.1
     # via
     #   black
     #   marshmallow
@@ -69,7 +69,7 @@ platformdirs==2.6.2
     # via
     #   black
     #   virtualenv
-psycopg2-binary==2.9.5
+psycopg2-binary==2.9.6
     # via -r requirements/base.in
 python-dateutil==2.8.2
     # via
@@ -84,13 +84,13 @@ python-dotenv==0.21.1
     #   environs
 redis==4.5.4
     # via -r requirements/base.in
-requests==2.28.2
+requests==2.30.0
     # via
     #   opensearch-py
     #   requests-aws4auth
-requests-aws4auth==1.2.2
+requests-aws4auth==1.2.3
     # via -r requirements/base.in
-s3transfer==0.6.0
+s3transfer==0.6.1
     # via boto3
 six==1.16.0
     # via
@@ -99,9 +99,9 @@ six==1.16.0
     #   opensearch-py
     #   python-dateutil
     #   requests-aws4auth
-sqlalchemy==1.4.47
+sqlalchemy==1.4.48
     # via -r requirements/base.in
-sqlparse==0.4.3
+sqlparse==0.4.4
     # via -r requirements/base.in
 tomli==2.0.1
     # via black

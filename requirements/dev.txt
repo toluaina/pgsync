@@ -6,13 +6,11 @@
 #
 async-timeout==4.0.2
     # via redis
-attrs==22.2.0
-    # via pytest
 black==23.3.0
     # via -r requirements/base.in
-boto3==1.26.103
+boto3==1.26.128
     # via -r requirements/base.in
-botocore==1.29.103
+botocore==1.29.128
     # via
     #   boto3
     #   s3transfer
@@ -32,7 +30,7 @@ click==8.1.3
     #   -r requirements/base.in
     #   black
     #   pip-tools
-coverage[toml]==7.2.2
+coverage[toml]==7.2.5
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -48,9 +46,9 @@ environs==9.5.0
     # via -r requirements/base.in
 exceptiongroup==1.1.1
     # via pytest
-faker==18.3.1
+faker==18.6.2
     # via -r requirements/base.in
-filelock==3.10.7
+filelock==3.12.0
     # via virtualenv
 flake8==5.0.4
     # via
@@ -73,7 +71,7 @@ freezegun==1.2.2
     # via -r requirements/test.in
 greenlet==2.0.2
     # via sqlalchemy
-identify==2.5.22
+identify==2.5.24
     # via pre-commit
 idna==3.4
     # via requests
@@ -93,7 +91,7 @@ marshmallow==3.19.0
     # via environs
 mccabe==0.7.0
     # via flake8
-mock==5.0.1
+mock==5.0.2
     # via -r requirements/test.in
 mypy-extensions==1.0.0
     # via black
@@ -103,7 +101,7 @@ opensearch-dsl==2.1.0
     # via -r requirements/base.in
 opensearch-py==2.2.0
     # via opensearch-dsl
-packaging==23.0
+packaging==23.1
     # via
     #   black
     #   build
@@ -112,7 +110,7 @@ packaging==23.0
     #   pytest-sugar
 pathspec==0.11.1
     # via black
-pip-tools==6.12.3
+pip-tools==6.13.0
     # via -r requirements/dev.in
 platformdirs==2.6.2
     # via
@@ -120,9 +118,9 @@ platformdirs==2.6.2
     #   virtualenv
 pluggy==1.0.0
     # via pytest
-pre-commit==3.2.1
+pre-commit==3.3.1
     # via -r requirements/dev.in
-psycopg2-binary==2.9.5
+psycopg2-binary==2.9.6
     # via -r requirements/base.in
 pycodestyle==2.9.1
     # via
@@ -136,7 +134,7 @@ pyflakes==2.5.0
     # via flake8
 pyproject-hooks==1.0.0
     # via build
-pytest==7.2.2
+pytest==7.3.1
     # via
     #   -r requirements/test.in
     #   pytest-cov
@@ -148,7 +146,7 @@ pytest-mock==3.10.0
     # via -r requirements/test.in
 pytest-runner==6.0.0
     # via -r requirements/test.in
-pytest-sugar==0.9.6
+pytest-sugar==0.9.7
     # via -r requirements/test.in
 python-dateutil==2.8.2
     # via
@@ -166,13 +164,13 @@ pyyaml==6.0
     # via pre-commit
 redis==4.5.4
     # via -r requirements/base.in
-requests==2.28.2
+requests==2.30.0
     # via
     #   opensearch-py
     #   requests-aws4auth
-requests-aws4auth==1.2.2
+requests-aws4auth==1.2.3
     # via -r requirements/base.in
-s3transfer==0.6.0
+s3transfer==0.6.1
     # via boto3
 six==1.16.0
     # via
@@ -183,11 +181,11 @@ six==1.16.0
     #   requests-aws4auth
 snowballstemmer==2.2.0
     # via pydocstyle
-sqlalchemy==1.4.47
+sqlalchemy==1.4.48
     # via -r requirements/base.in
-sqlparse==0.4.3
+sqlparse==0.4.4
     # via -r requirements/base.in
-termcolor==2.2.0
+termcolor==2.3.0
     # via pytest-sugar
 tomli==2.0.1
     # via
