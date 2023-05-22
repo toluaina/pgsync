@@ -208,3 +208,5 @@ LOGGING = _get_logging_config(
 )
 
 logging.config.dictConfig(LOGGING)
+logging.getLogger("elasticsearch").setLevel(logging.WARNING)
+logging.getLogger("opensearch").setLevel(logging.WARNING)

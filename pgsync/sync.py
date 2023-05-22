@@ -948,7 +948,7 @@ class Sync(Base, metaclass=Singleton):
 
         count: int = self.fetchcount(node._subquery)
 
-        logger.info(f"Syncing {count} rows")
+        logger.info(f"Syncing {count} rows from {txmin} to {txmax}")
         for i, (keys, row, primary_keys) in enumerate(
             self.fetchmany(node._subquery)
         ):
