@@ -1216,8 +1216,7 @@ class Sync(Base, metaclass=Singleton):
     def _wait_for_in_flight_transactions(self, txmin: int, txmax: int) -> None:
         """Wait for in flight transactions to complete."""
         # could do fancier logic than this, but for now let's hardcode to 2, 4, and 8 seconds
-        waits = [2, 4, 8]
-        for wait in waits:
+        for wait in settings.TXN_IN_FLIGHT_WAITS:
             in_flight_transactions = self.get_in_flight_transactions(
                 txmin, txmax
             )
@@ -1227,6 +1226,10 @@ class Sync(Base, metaclass=Singleton):
                 f"Waiting for transactions: {in_flight_transactions} to complete"
             )
             time.sleep(wait)
+        logger.info(
+            f"Still have inflight txns after {sum(settings.TXN_IN_FLIGHT_WAITS)} seconds."
+            "Consider increasing the TXN_IN_FLIGHT_WAITS."
+        )
         return
 
     def get_in_flight_transactions(self, txmin: int, txmax: int) -> list[int]:
