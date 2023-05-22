@@ -1196,14 +1196,39 @@ class Sync(Base, metaclass=Singleton):
         txmin: int = self.checkpoint
         txmax: int = self.txid_current
         logger.debug(f"pull txmin: {txmin} - txmax: {txmax}")
-        # forward pass sync
+        # Wait for transactions in flight to complete
+        self._wait_for_in_flight_transactions(txmin, txmax)
         self.search_client.bulk(
             self.index, self.sync(txmin=txmin, txmax=txmax)
         )
         # now sync up to txmax to capture everything we may have missed
+        self._wait_for_in_flight_transactions(txmin, txmax)
         self.logical_slot_changes(txmin=txmin, txmax=txmax, upto_nchanges=None)
         self.checkpoint: int = txmax or self.txid_current
         self._truncate = True
+
+    def _wait_for_in_flight_transactions(self, txmin: int, txmax: int) -> None:
+        """Wait for in flight transactions to complete."""
+        waits = [1, 3, 5]
+        for wait in waits:
+            in_flight_transactions = self.get_in_flight_transactions(txmin, txmax)
+            if not in_flight_transactions:
+                return
+            logger.info(f"Waiting for transactions: {in_flight_transactions} to complete")
+            time.sleep(wait)  # exp backoff
+        return
+
+    def get_in_flight_transactions(self, txmin: int, txmax: int) -> list[int]:
+        """Return a list of transactions in flight between txmin and txmax."""
+        query = f"""
+            SELECT pid
+            FROM pg_stat_activity
+            WHERE state in ('active', 'idle in transaction')
+            AND (backend_xid::text::bigint) BETWEEN {txmin} AND {txmax}
+            AND usename <> 'pgsync_user'
+        """
+        with self.engine.connect() as conn:
+            return conn.execute(query).all()
 
     @threaded
     @exception
