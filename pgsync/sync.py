@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import pprint
+import random
 import re
 import select
 import sys
@@ -948,7 +949,19 @@ class Sync(Base, metaclass=Singleton):
 
         count: int = self.fetchcount(node._subquery)
 
-        logger.info(f"Syncing {count} rows from {txmin} to {txmax}")
+        if txmin is None and txmax is None:
+            logger.info(f"Incremental sync of leaf nodes {count}")
+        else:
+            logger.info(
+                f"Syncing {count} rows from transactions: {txmin} to {txmax}"
+            )
+        if random.random() < 0.1:
+            latest_sync = txmax or self._checkpoint
+            curr_txn = self.txid_current
+            num_behind = curr_txn - (txmax or self._checkpoint)
+            logger.info(
+                f"Current txn: {curr_txn:,}, Latest sync: {latest_sync:,}, Number txns behind: {num_behind:,}"
+            )
         for i, (keys, row, primary_keys) in enumerate(
             self.fetchmany(node._subquery)
         ):
@@ -980,6 +993,9 @@ class Sync(Base, metaclass=Singleton):
             if self._plugins:
                 doc = next(self._plugins.transform([doc]))
                 if not doc:
+                    logger.warning(
+                        f"Could not transform using plugins, skipping {doc['_id']}"
+                    )
                     continue
 
             if self.pipeline:
@@ -1199,13 +1215,18 @@ class Sync(Base, metaclass=Singleton):
 
     def _wait_for_in_flight_transactions(self, txmin: int, txmax: int) -> None:
         """Wait for in flight transactions to complete."""
-        waits = [1, 3, 5]
+        # could do fancier logic than this, but for now let's hardcode to 2, 4, and 8 seconds
+        waits = [2, 4, 8]
         for wait in waits:
-            in_flight_transactions = self.get_in_flight_transactions(txmin, txmax)
+            in_flight_transactions = self.get_in_flight_transactions(
+                txmin, txmax
+            )
             if not in_flight_transactions:
                 return
-            logger.info(f"Waiting for transactions: {in_flight_transactions} to complete")
-            time.sleep(wait)  # exp backoff
+            logger.info(
+                f"Waiting for transactions: {in_flight_transactions} to complete"
+            )
+            time.sleep(wait)
         return
 
     def get_in_flight_transactions(self, txmin: int, txmax: int) -> list[int]:
