@@ -41,7 +41,8 @@ STREAM_RESULTS = env.bool("STREAM_RESULTS", default=True)
 # db polling interval
 POLL_INTERVAL = env.float("POLL_INTERVAL", default=0.1)
 TXN_IN_FLIGHT_WAITS = [
-    float(val) for val in env.list("TXN_IN_FLIGHT_WAITS", default=[2, 4, 6])
+    float(val)
+    for val in env.list("TXN_IN_FLIGHT_WAITS", default=[1, 3, 7, 15, 30])
 ]
 
 

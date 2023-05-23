@@ -1238,7 +1238,7 @@ class Sync(Base, metaclass=Singleton):
             SELECT pid
             FROM pg_stat_activity
             WHERE state in ('active', 'idle in transaction')
-            AND (backend_xid::text::bigint) BETWEEN {txmin} AND {txmax}
+            AND (backend_xid::text::bigint) >= {txmin} AND  (backend_xid::text::bigint) < {txmax}
             AND usename <> 'pgsync_user'
         """
         with self.engine.connect() as conn:
