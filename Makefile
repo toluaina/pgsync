@@ -84,3 +84,13 @@ dist: clean ## builds source and wheel package
 
 install: clean ## install the package to the active Python's site-packages
 	python setup.py install
+
+compile:
+	pip-compile --output-file=requirements/dev.txt requirements/dev.in
+	pip-compile --output-file=requirements/dev.txt requirements/dev.in
+	pip-compile --output-file=requirements/dev.txt requirements/dev.in
+
+compile-upgrade:
+	pip-compile --output-file=requirements/dev.txt requirements/dev.in --upgrade
+	pip-compile --output-file=requirements/test.txt requirements/test.in --upgrade
+	pip-compile --output-file=requirements/prod.txt requirements/prod.in --upgrade
