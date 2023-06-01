@@ -80,16 +80,16 @@ class Payload(object):
     def foreign_key_constraint(self, model) -> dict:
         """
         {
-            'public.customer': {  referred table with a fully qualified name
+            'public.customer': [{  referred table with a fully qualified name
                 'local': 'customer_id',
                 'remote': 'id',
                 'value': 1
-            },
-            'public.group': {  referred table with a fully qualified name
+            }],
+            'public.group': [{  referred table with a fully qualified name
                 'local': 'group_id',
                 'remote': 'id',
                 'value': 1
-            }
+            }]
         }
         """
         constraints: dict = {}
