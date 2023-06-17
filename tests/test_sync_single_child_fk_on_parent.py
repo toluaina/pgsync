@@ -597,6 +597,7 @@ class TestParentSingleChildFkOnParent(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": {
                 "table": "book",
                 "columns": ["isbn", "title"],
@@ -693,6 +694,7 @@ class TestParentSingleChildFkOnParent(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": {
                 "table": "book",
                 "columns": ["isbn", "title"],
@@ -806,6 +808,7 @@ class TestParentSingleChildFkOnParent(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": {
                 "table": "book",
                 "columns": ["isbn", "title"],
@@ -906,6 +909,7 @@ class TestParentSingleChildFkOnParent(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": {
                 "table": "book",
                 "columns": ["isbn", "title"],
@@ -996,6 +1000,7 @@ class TestParentSingleChildFkOnParent(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": {
                 "table": "book",
                 "columns": ["isbn", "title"],
@@ -1101,6 +1106,7 @@ class TestParentSingleChildFkOnParent(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": {
                 "table": "book",
                 "columns": ["isbn", "title"],

@@ -417,6 +417,7 @@ class TestRoot(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
@@ -460,6 +461,7 @@ class TestRoot(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
@@ -526,6 +528,7 @@ class TestRoot(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
@@ -567,6 +570,7 @@ class TestRoot(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
@@ -608,6 +612,7 @@ class TestRoot(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
@@ -670,6 +675,7 @@ class TestRoot(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)

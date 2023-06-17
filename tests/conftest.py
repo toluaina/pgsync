@@ -57,6 +57,7 @@ def sync():
         {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": {"table": "book"},
         }
     )

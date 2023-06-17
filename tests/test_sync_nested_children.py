@@ -682,6 +682,7 @@ class TestNestedChildren(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": nodes,
         }
 
@@ -809,6 +810,7 @@ class TestNestedChildren(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": nodes,
         }
         # 1. sync first to add the initial document
@@ -932,6 +934,7 @@ class TestNestedChildren(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": nodes,
         }
         # 1. sync first to add the initial document
@@ -1154,6 +1157,7 @@ class TestNestedChildren(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": nodes,
         }
 
@@ -1327,6 +1331,7 @@ class TestNestedChildren(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": nodes,
         }
 
@@ -1560,6 +1565,7 @@ class TestNestedChildren(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": nodes,
         }
 
@@ -1792,6 +1798,7 @@ class TestNestedChildren(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": nodes,
         }
 
@@ -1993,6 +2000,7 @@ class TestNestedChildren(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": nodes,
         }
 
@@ -2025,6 +2033,7 @@ class TestNestedChildren(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": nodes,
         }
 
@@ -2059,6 +2068,7 @@ class TestNestedChildren(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": nodes,
         }
 
@@ -2213,6 +2223,7 @@ class TestNestedChildren(object):
         document = {
             "index": "testdb",
             "database": "testdb",
+            "schema": "public",
             "nodes": nodes,
         }
         # sync first to add the initial document

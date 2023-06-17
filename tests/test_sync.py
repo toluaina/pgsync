@@ -31,6 +31,7 @@ def sync():
             {
                 "index": "testdb",
                 "database": "testdb",
+                "schema": "public",
                 "nodes": {
                     "table": "book",
                     "columns": ["isbn", "title", "description"],
@@ -175,6 +176,7 @@ class TestSync(object):
                     "index": "testdb",
                     "database": "testdb",
                     "nodes": ["foo"],
+                    "schema": "public"
                 },
                 verbose=False,
                 validate=True,
@@ -188,6 +190,7 @@ class TestSync(object):
             document={
                 "index": "testdb",
                 "database": "testdb",
+                "schema": "public",
                 "nodes": {"table": "book"},
                 "plugins": ["Hero"],
             },
@@ -223,6 +226,7 @@ class TestSync(object):
                     document={
                         "index": "testdb",
                         "database": "testdb",
+                        "schema": "public",
                         "nodes": {"table": "book"},
                         "plugins": ["Hero"],
                     },
@@ -241,6 +245,7 @@ class TestSync(object):
                     document={
                         "index": "testdb",
                         "database": "testdb",
+                        "schema": "public",
                         "nodes": {"table": "book"},
                         "plugins": ["Hero"],
                     },
@@ -259,6 +264,7 @@ class TestSync(object):
                     document={
                         "index": "testdb",
                         "database": "testdb",
+                        "schema": "public",
                         "nodes": {"table": "book"},
                         "plugins": ["Hero"],
                     },
@@ -276,6 +282,7 @@ class TestSync(object):
                     document={
                         "index": "testdb",
                         "database": "testdb",
+                        "schema": "public",
                         "nodes": {"table": "book"},
                         "plugins": ["Hero"],
                     },
@@ -291,6 +298,7 @@ class TestSync(object):
                     document={
                         "index": "testdb",
                         "database": "testdb",
+                        "schema": "public",
                         "nodes": {"table": "book"},
                         "plugins": ["Hero"],
                     },
@@ -308,6 +316,7 @@ class TestSync(object):
                     document={
                         "index": "testdb",
                         "database": "testdb",
+                        "schema": "public",
                         "nodes": {"table": "book"},
                         "plugins": ["Hero"],
                     },
@@ -318,6 +327,7 @@ class TestSync(object):
             document={
                 "index": "testdb",
                 "database": "testdb",
+                "schema": "public",
                 "nodes": {"table": "book"},
                 "plugins": ["Hero"],
             },
