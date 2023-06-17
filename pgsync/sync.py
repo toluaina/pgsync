@@ -335,7 +335,7 @@ class Sync(Base, metaclass=Singleton):
 
         self.redis.delete()
 
-        for schema in self.fitler_schemas(self.schemas):
+        for schema in self.filter_schemas(self.schemas):
             tables: Set = set()
             for node in self.tree.traverse_breadth_first():
                 tables |= set(

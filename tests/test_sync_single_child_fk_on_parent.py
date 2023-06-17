@@ -597,8 +597,8 @@ class TestParentSingleChildFkOnParent(object):
         document = {
             "index": "testdb",
             "database": "testdb",
-            "schema": "public",
             "nodes": {
+                "schema": "public",
                 "table": "book",
                 "columns": ["isbn", "title"],
                 "children": [
@@ -694,8 +694,8 @@ class TestParentSingleChildFkOnParent(object):
         document = {
             "index": "testdb",
             "database": "testdb",
-            "schema": "public",
             "nodes": {
+                "schema": "public",
                 "table": "book",
                 "columns": ["isbn", "title"],
                 "children": [
@@ -808,8 +808,8 @@ class TestParentSingleChildFkOnParent(object):
         document = {
             "index": "testdb",
             "database": "testdb",
-            "schema": "public",
             "nodes": {
+                "schema": "public",
                 "table": "book",
                 "columns": ["isbn", "title"],
                 "children": [
@@ -909,9 +909,9 @@ class TestParentSingleChildFkOnParent(object):
         document = {
             "index": "testdb",
             "database": "testdb",
-            "schema": "public",
             "nodes": {
                 "table": "book",
+                "schema": "public",
                 "columns": ["isbn", "title"],
                 "children": [
                     {
@@ -1000,8 +1000,8 @@ class TestParentSingleChildFkOnParent(object):
         document = {
             "index": "testdb",
             "database": "testdb",
-            "schema": "public",
             "nodes": {
+                "schema": "public",
                 "table": "book",
                 "columns": ["isbn", "title"],
                 "children": [
@@ -1106,8 +1106,8 @@ class TestParentSingleChildFkOnParent(object):
         document = {
             "index": "testdb",
             "database": "testdb",
-            "schema": "public",
             "nodes": {
+                "schema": "public",
                 "table": "book",
                 "columns": ["isbn", "title"],
                 "children": [
