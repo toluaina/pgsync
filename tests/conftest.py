@@ -57,7 +57,10 @@ def sync():
         {
             "index": "testdb",
             "database": "testdb",
-            "nodes": {"table": "book"},
+            "nodes": {
+                "table": "book",
+                "schema": "public",
+            },
         }
     )
     yield _sync

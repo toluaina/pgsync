@@ -598,6 +598,7 @@ class TestParentSingleChildFkOnParent(object):
             "index": "testdb",
             "database": "testdb",
             "nodes": {
+                "schema": "public",
                 "table": "book",
                 "columns": ["isbn", "title"],
                 "children": [
@@ -694,6 +695,7 @@ class TestParentSingleChildFkOnParent(object):
             "index": "testdb",
             "database": "testdb",
             "nodes": {
+                "schema": "public",
                 "table": "book",
                 "columns": ["isbn", "title"],
                 "children": [
@@ -807,6 +809,7 @@ class TestParentSingleChildFkOnParent(object):
             "index": "testdb",
             "database": "testdb",
             "nodes": {
+                "schema": "public",
                 "table": "book",
                 "columns": ["isbn", "title"],
                 "children": [
@@ -908,6 +911,7 @@ class TestParentSingleChildFkOnParent(object):
             "database": "testdb",
             "nodes": {
                 "table": "book",
+                "schema": "public",
                 "columns": ["isbn", "title"],
                 "children": [
                     {
@@ -997,6 +1001,7 @@ class TestParentSingleChildFkOnParent(object):
             "index": "testdb",
             "database": "testdb",
             "nodes": {
+                "schema": "public",
                 "table": "book",
                 "columns": ["isbn", "title"],
                 "children": [
@@ -1102,6 +1107,7 @@ class TestParentSingleChildFkOnParent(object):
             "index": "testdb",
             "database": "testdb",
             "nodes": {
+                "schema": "public",
                 "table": "book",
                 "columns": ["isbn", "title"],
                 "children": [
