@@ -75,14 +75,10 @@ identify==2.5.24
     # via pre-commit
 idna==3.4
     # via requests
-importlib-metadata==4.2.0
-    # via -r requirements/base.in
 iniconfig==2.0.0
     # via pytest
-isort==5.11.5
-    # via
-    #   -r requirements/base.in
-    #   flake8-isort
+isort==5.12.0
+    # via flake8-isort
 jmespath==1.0.1
     # via
     #   boto3
@@ -112,7 +108,7 @@ pathspec==0.11.1
     # via black
 pip-tools==6.13.0
     # via -r requirements/dev.in
-platformdirs==2.6.2
+platformdirs==3.8.0
     # via
     #   black
     #   virtualenv
@@ -156,10 +152,8 @@ python-dateutil==2.8.2
     #   freezegun
     #   opensearch-dsl
     #   opensearch-py
-python-dotenv==0.21.1
-    # via
-    #   -r requirements/base.in
-    #   environs
+python-dotenv==1.0.0
+    # via environs
 pyyaml==6.0
     # via pre-commit
 redis==4.5.5
@@ -201,16 +195,10 @@ urllib3==1.26.16
     #   elasticsearch
     #   opensearch-py
     #   requests
-virtualenv==20.16.2
-    # via
-    #   -r requirements/base.in
-    #   pre-commit
+virtualenv==20.23.1
+    # via pre-commit
 wheel==0.40.0
     # via pip-tools
-zipp==3.13.0
-    # via
-    #   -r requirements/base.in
-    #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # pip

@@ -4,20 +4,14 @@ boto3
 click
 elasticsearch==7.13.4 # pin this to version 7.13.4 for compatibility with OpenSearch https://opensearch.org/docs/clients/index/
 elasticsearch-dsl>=6.0.0,<8.0.0
-opensearch-dsl>=2.0.1
 environs
 faker
+opensearch-dsl>=2.0.1
 psycopg2-binary
 redis
 requests-aws4auth
+sqlparse
 
 # Pinned dependencies
 # pin sqlalchemy to latest 1.4.* until 2.0 support
 sqlalchemy==1.4.*
-sqlparse
-# pin these libs because latest flake8 does not allow newer versions of importlib-metadata https://github.com/PyCQA/flake8/issues/1522
-importlib-metadata==4.2.0
-virtualenv==20.16.2
-isort==5.11.*
-zipp==3.13.*
-python-dotenv==0.21.*
