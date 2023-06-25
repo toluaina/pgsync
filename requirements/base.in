@@ -16,3 +16,4 @@ sqlparse
 # pin sqlalchemy to latest 1.4.* until 2.0 support
 sqlalchemy==1.4.*
 isort==5.11.*
+python-dotenv==0.21.*
