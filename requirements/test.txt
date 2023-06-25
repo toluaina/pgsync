@@ -64,8 +64,10 @@ idna==3.4
     # via requests
 iniconfig==2.0.0
     # via pytest
-isort==5.12.0
-    # via flake8-isort
+isort==5.11.5
+    # via
+    #   -r requirements/base.in
+    #   flake8-isort
 jmespath==1.0.1
     # via
     #   boto3
@@ -130,7 +132,7 @@ python-dateutil==2.8.2
     #   opensearch-py
 python-dotenv==1.0.0
     # via environs
-redis==4.5.5
+redis==4.6.0
     # via -r requirements/base.in
 requests==2.31.0
     # via

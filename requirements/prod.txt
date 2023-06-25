@@ -39,6 +39,8 @@ greenlet==2.0.2
     # via sqlalchemy
 idna==3.4
     # via requests
+isort==5.11.5
+    # via -r requirements/base.in
 jmespath==1.0.1
     # via
     #   boto3
@@ -70,7 +72,7 @@ python-dateutil==2.8.2
     #   opensearch-py
 python-dotenv==1.0.0
     # via environs
-redis==4.5.5
+redis==4.6.0
     # via -r requirements/base.in
 requests==2.31.0
     # via

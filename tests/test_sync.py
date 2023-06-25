@@ -928,7 +928,7 @@ class TestSync(object):
         self, mock_time, mock_on_publish, mock_refresh_views, mock_logger, sync
     ):
         items = [{"tg_op": "INSERT"}, {"tg_op": "UPDATE"}]
-        sync.redis.bulk_push(items)
+        sync.redis.push(items)
         sync._poll_redis()
         mock_on_publish.assert_called_once_with([ANY, ANY])
         mock_refresh_views.assert_called_once()
