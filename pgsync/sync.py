@@ -1042,7 +1042,7 @@ class Sync(Base, metaclass=Singleton):
         self._checkpoint: int = value
 
     def _poll_redis(self) -> None:
-        payloads: list = self.redis.bulk_pop()
+        payloads: list = self.redis.pop()
         if payloads:
             logger.debug(f"poll_redis: {payloads}")
             self.count["redis"] += len(payloads)
@@ -1060,7 +1060,7 @@ class Sync(Base, metaclass=Singleton):
             self._poll_redis()
 
     async def _async_poll_redis(self) -> None:
-        payloads: list = self.redis.bulk_pop()
+        payloads: list = self.redis.pop()
         if payloads:
             logger.debug(f"poll_redis: {payloads}")
             self.count["redis"] += len(payloads)
@@ -1102,7 +1102,7 @@ class Sync(Base, metaclass=Singleton):
             ):
                 # Catch any hanging items from the last poll
                 if payloads:
-                    self.redis.bulk_push(payloads)
+                    self.redis.push(payloads)
                     payloads = []
                 continue
 
@@ -1114,7 +1114,7 @@ class Sync(Base, metaclass=Singleton):
 
             while conn.notifies:
                 if len(payloads) >= settings.REDIS_WRITE_CHUNK_SIZE:
-                    self.redis.bulk_push(payloads)
+                    self.redis.push(payloads)
                     payloads = []
                 notification: AnyStr = conn.notifies.pop(0)
                 if notification.channel == self.database:
@@ -1142,7 +1142,7 @@ class Sync(Base, metaclass=Singleton):
             if notification.channel == self.database:
                 payload = json.loads(notification.payload)
                 if self.index in payload["indices"]:
-                    self.redis.bulk_push([payload])
+                    self.redis.push([payload])
                     logger.debug(f"on_notify: {payload}")
                     self.count["db"] += 1
 

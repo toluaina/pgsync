@@ -47,42 +47,42 @@ class TestRedisQueue(object):
         queue = RedisQueue("something")
         queue.delete()
         assert queue.qsize == 0
-        queue.bulk_push([1, 2])
+        queue.push([1, 2])
         assert queue.qsize == 2
         queue.delete()
         assert queue.qsize == 0
 
-    def test_bulk_push(self):
-        """Test the redis bulk_push."""
+    def test_push(self):
+        """Test the redis push."""
         queue = RedisQueue("something")
         queue.delete()
-        queue.bulk_push([1, 2])
+        queue.push([1, 2])
         assert queue.qsize == 2
-        queue.bulk_push([3, 4, 5])
+        queue.push([3, 4, 5])
         assert queue.qsize == 5
         queue.delete()
 
     @patch("pgsync.redisqueue.logger")
-    def test_bulk_pop(self, mock_logger):
-        """Test the redis bulk_pop."""
+    def test_pop(self, mock_logger):
+        """Test the redis pop."""
         queue = RedisQueue("something")
         queue.delete()
-        queue.bulk_push([1, 2])
-        items = queue.bulk_pop()
-        mock_logger.debug.assert_called_once_with("bulk_pop size: 2")
+        queue.push([1, 2])
+        items = queue.pop()
+        mock_logger.debug.assert_called_once_with("pop size: 2")
         assert items == [1, 2]
-        queue.bulk_push([3, 4, 5])
-        items = queue.bulk_pop()
-        mock_logger.debug.assert_any_call("bulk_pop size: 3")
+        queue.push([3, 4, 5])
+        items = queue.pop()
+        mock_logger.debug.assert_any_call("pop size: 3")
         assert items == [3, 4, 5]
         queue.delete()
 
     @patch("pgsync.redisqueue.logger")
     def test_delete(self, mock_logger):
         queue = RedisQueue("something")
-        queue.bulk_push([1])
-        queue.bulk_push([2, 3])
-        queue.bulk_push([4, 5, 6])
+        queue.push([1])
+        queue.push([2, 3])
+        queue.push([4, 5, 6])
         assert queue.qsize == 6
         queue.delete()
         mock_logger.info.assert_called_once_with(
