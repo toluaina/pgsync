@@ -28,7 +28,7 @@ from .settings import (
     PG_SSLMODE,
     PG_SSLROOTCERT,
     QUERY_CHUNK_SIZE,
-    STREAM_RESULTS,
+    STREAM_RESULTS, PG_SCHEMAS,
 )
 from .trigger import CREATE_TRIGGER_TEMPLATE
 from .urls import get_postgres_url
@@ -44,7 +44,6 @@ try:
     import geoalchemy2  # noqa
 except ImportError:
     pass
-
 
 logger = logging.getLogger(__name__)
 
@@ -250,7 +249,11 @@ class Base(object):
     def schemas(self) -> dict:
         """Get the database schema names."""
         if self.__schemas is None:
-            self.__schemas = sa.inspect(self.engine).get_schema_names()
+            self.__schemas = []
+            schemas = sa.inspect(self.engine).get_schema_names()
+            for schema in schemas:
+                if schema in PG_SCHEMAS:
+                    self.__schemas.append(schema)
             for schema in BUILTIN_SCHEMAS:
                 if schema in self.__schemas:
                     self.__schemas.remove(schema)
@@ -757,13 +760,13 @@ class Base(object):
             i: int = suffix.index("old-key:")
             if i > -1:
                 j: int = suffix.index("new-tuple:")
-                s: str = suffix[i + len("old-key:") : j]
+                s: str = suffix[i + len("old-key:"): j]
                 for key, value in _parse_logical_slot(s):
                     payload.old[key] = value
 
             i = suffix.index("new-tuple:")
             if i > -1:
-                s = suffix[i + len("new-tuple:") :]
+                s = suffix[i + len("new-tuple:"):]
                 for key, value in _parse_logical_slot(s):
                     payload.new[key] = value
         else:

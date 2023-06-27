@@ -6,6 +6,8 @@ from typing import Optional
 
 from environs import Env
 
+from pgsync.constants import DEFAULT_SCHEMA
+
 logger = logging.getLogger(__name__)
 
 env = Env()
@@ -138,6 +140,7 @@ PG_PORT = env.int("PG_PORT", default=5432)
 PG_SSLMODE = env.str("PG_SSLMODE", default=None)
 PG_SSLROOTCERT = env.str("PG_SSLROOTCERT", default=None)
 PG_USER = env.str("PG_USER")
+PG_SCHEMAS = env.list("PG_SCHEMAS", default=[DEFAULT_SCHEMA])
 
 # Redis:
 REDIS_AUTH = env.str("REDIS_AUTH", default=None)
