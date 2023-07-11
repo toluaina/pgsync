@@ -108,11 +108,22 @@ class QueryBuilder(object):
                         node_b.relationship.foreign_key.child
                     )
 
-            else:
-                fkeys: dict = defaultdict(list)
-                if node_a.model.foreign_keys:
-                    for key in node_a.model.original.foreign_keys:
-                        if key._table_key() == str(node_b.model.original):
+            fkeys: dict = defaultdict(list)
+            if node_a.model.foreign_keys:
+                for key in node_a.model.original.foreign_keys:
+                    if key._table_key() == str(node_b.model.original):
+                        fkeys[
+                            f"{key.parent.table.schema}."
+                            f"{key.parent.table.name}"
+                        ].append(str(key.parent.name))
+                        fkeys[
+                            f"{key.column.table.schema}."
+                            f"{key.column.table.name}"
+                        ].append(str(key.column.name))
+            if not fkeys:
+                if node_b.model.original.foreign_keys:
+                    for key in node_b.model.original.foreign_keys:
+                        if key._table_key() == str(node_a.model.original):
                             fkeys[
                                 f"{key.parent.table.schema}."
                                 f"{key.parent.table.name}"
@@ -121,26 +132,14 @@ class QueryBuilder(object):
                                 f"{key.column.table.schema}."
                                 f"{key.column.table.name}"
                             ].append(str(key.column.name))
-                if not fkeys:
-                    if node_b.model.original.foreign_keys:
-                        for key in node_b.model.original.foreign_keys:
-                            if key._table_key() == str(node_a.model.original):
-                                fkeys[
-                                    f"{key.parent.table.schema}."
-                                    f"{key.parent.table.name}"
-                                ].append(str(key.parent.name))
-                                fkeys[
-                                    f"{key.column.table.schema}."
-                                    f"{key.column.table.name}"
-                                ].append(str(key.column.name))
-                if not fkeys:
-                    raise ForeignKeyError(
-                        f"No foreign key relationship between "
-                        f"{node_a.model.original} and {node_b.model.original}"
-                    )
+            if not fkeys and not foreign_keys:
+                raise ForeignKeyError(
+                    f"No foreign key relationship between "
+                    f"{node_a.model.original} and {node_b.model.original}"
+                )
 
-                for table, columns in fkeys.items():
-                    foreign_keys[table] = columns
+            for table, columns in fkeys.items():
+                foreign_keys[table] = columns
 
             self._cache[(node_a, node_b)] = foreign_keys
 
