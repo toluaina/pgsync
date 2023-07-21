@@ -1,6 +1,7 @@
 """PGSync SearchClient helper."""
 import logging
 from collections import defaultdict
+import time
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import boto3
@@ -166,6 +167,7 @@ class SearchClient(object):
         raise_on_error: bool,
         ignore_status: Tuple[int],
     ):
+        pause_time: int = settings.ELASTICSEARCH_SYNC_PAUSE or 0
         """Bulk index, update, delete docs to Elasticsearch/OpenSearch."""
         if settings.ELASTICSEARCH_STREAMING_BULK:
             for _ in self.streaming_bulk(
@@ -198,6 +200,8 @@ class SearchClient(object):
                 ignore_status=ignore_status,
             ):
                 self.doc_count += 1
+        if pause_time > 0:
+            time.sleep(pause_time)
 
     def refresh(self, indices: List[str]) -> None:
         """Refresh the Elasticsearch/OpenSearch index."""
