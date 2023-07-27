@@ -350,7 +350,7 @@ def get_search_client(
 ) -> Union[opensearchpy.OpenSearch, elasticsearch.Elasticsearch]:
     if settings.OPENSEARCH_AWS_HOSTED or settings.ELASTICSEARCH_AWS_HOSTED:
         credentials = boto3.Session().get_credentials()
-        service: str = "es"
+        service: str = "aoss" if settings.OPENSEARCH_AWS_SERVERLESS else "es"
         return client(
             hosts=[url],
             http_auth=AWS4Auth(
