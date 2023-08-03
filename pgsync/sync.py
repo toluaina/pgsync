@@ -1269,8 +1269,12 @@ class Sync(Base, metaclass=Singleton):
             tasks: list = [
                 event_loop.create_task(self.async_poll_redis()),
                 event_loop.create_task(self.async_truncate_slots()),
-                event_loop.create_task(self.async_status()),
             ]
+
+            if logger.isEnabledFor(logging.INFO):
+                status_task = event_loop.create_task(self.async_status())
+                tasks.append(status_task)
+
             event_loop.run_until_complete(asyncio.wait(tasks))
             event_loop.close()
 
@@ -1286,8 +1290,10 @@ class Sync(Base, metaclass=Singleton):
             self.poll_redis()
             # start a background worker thread to cleanup the replication slot
             self.truncate_slots()
-            # start a background worker thread to show status
-            self.status()
+            
+            if logger.isEnabledFor(logging.INFO):
+                # start a background worker thread to show status
+                self.status()
 
 
 @click.command()
