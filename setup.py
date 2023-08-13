@@ -19,13 +19,13 @@ def get_version() -> str:
 
 
 # Package meta-data.
-NAME = "pgsync-fork"
+NAME = "retake-pgysnc"
 DESCRIPTION = "Postgres to Elasticsearch/OpenSearch sync"
 URL = "https://github.com/toluaina/pgsync"
 AUTHOR = MAINTAINER = "Tolu Aina"
 AUTHOR_EMAIL = MAINTAINER_EMAIL = "tolu@pgsync.com"
 PYTHON_REQUIRES = ">=3.7.0"
-VERSION = "2.7.2"
+VERSION = "2.5.3"
 INSTALL_REQUIRES = []
 KEYWORDS = [
     "pgsync",

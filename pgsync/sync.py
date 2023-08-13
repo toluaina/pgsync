@@ -1207,6 +1207,7 @@ class Sync(Base, metaclass=Singleton):
         sys.stdout.flush()
         
         # forward pass sync
+        # @rebasedming: Set should_stream to True, in my testing it seems to be faster
         self.search_client.bulk(
             self.index, self.sync(txmin=txmin, txmax=txmax), should_stream=True
         )
