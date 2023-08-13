@@ -19,7 +19,7 @@ JOIN_QUERIES = env.bool("JOIN_QUERIES", default=True)
 # batch size for LOGICAL_SLOT_CHANGES for minimizing tmp file disk usage
 LOGICAL_SLOT_CHUNK_SIZE = env.int("LOGICAL_SLOT_CHUNK_SIZE", default=5000)
 # stdout log interval (in secs)
-LOG_INTERVAL = env.float("LOG_INTERVAL", default=0.5)
+LOG_INTERVAL = env.float("LOG_INTERVAL", default=5)
 # number of threads to spawn for poll db
 NTHREADS_POLLDB = env.int("NTHREADS_POLLDB", default=1)
 PG_DRIVER = env.str("PG_DRIVER", default="psycopg2")
@@ -112,7 +112,7 @@ ELASTICSEARCH_STREAMING_BULK = env.bool(
 # the size of the threadpool to use for the bulk requests
 ELASTICSEARCH_THREAD_COUNT = env.int("ELASTICSEARCH_THREAD_COUNT", default=4)
 # increase this if you are getting read request timeouts
-ELASTICSEARCH_TIMEOUT = env.float("ELASTICSEARCH_TIMEOUT", default=10)
+ELASTICSEARCH_TIMEOUT = env.float("ELASTICSEARCH_TIMEOUT", default=60 * 30)
 ELASTICSEARCH_USER = env.str("ELASTICSEARCH_USER", default=None)
 # turn on SSL
 ELASTICSEARCH_USE_SSL = env.bool("ELASTICSEARCH_USE_SSL", default=False)

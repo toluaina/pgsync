@@ -972,6 +972,12 @@ class Sync(Base, metaclass=Singleton):
                     pprint.pprint(row)
                     print("-" * 10)
 
+                # @rebasedming: Do not index empty or null values
+                row = {k: v for k, v in row.items() if v != ""}
+
+                if set(row.keys()) == {"_meta"}:
+                    continue
+
                 doc: dict = {
                     "_id": self.get_doc_id(primary_keys, node.table),
                     "_index": self.index,
@@ -1195,10 +1201,14 @@ class Sync(Base, metaclass=Singleton):
         """Pull data from db."""
         txmin: int = self.checkpoint
         txmax: int = self.txid_current
+
         logger.debug(f"pull txmin: {txmin} - txmax: {txmax}")
+        sys.stdout.write(f"pull txmin: {txmin} - txmax: {txmax}")
+        sys.stdout.flush()
+        
         # forward pass sync
         self.search_client.bulk(
-            self.index, self.sync(txmin=txmin, txmax=txmax)
+            self.index, self.sync(txmin=txmin, txmax=txmax), should_stream=True
         )
         # now sync up to txmax to capture everything we may have missed
         self.logical_slot_changes(txmin=txmin, txmax=txmax, upto_nchanges=None)

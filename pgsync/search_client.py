@@ -106,6 +106,7 @@ class SearchClient(object):
         raise_on_exception: Optional[bool] = None,
         raise_on_error: Optional[bool] = None,
         ignore_status: Tuple[int] = None,
+        should_stream: Optional[bool] = False,
     ) -> None:
         """Pull sync data from generator to Elasticsearch/OpenSearch."""
         chunk_size = chunk_size or settings.ELASTICSEARCH_CHUNK_SIZE
@@ -144,6 +145,7 @@ class SearchClient(object):
                 raise_on_exception=raise_on_exception,
                 raise_on_error=raise_on_error,
                 ignore_status=ignore_status,
+                should_stream=should_stream
             )
         except Exception as e:
             logger.exception(f"Exception {e}")
@@ -165,9 +167,10 @@ class SearchClient(object):
         raise_on_exception: bool,
         raise_on_error: bool,
         ignore_status: Tuple[int],
+        should_stream: bool
     ):
         """Bulk index, update, delete docs to Elasticsearch/OpenSearch."""
-        if settings.ELASTICSEARCH_STREAMING_BULK:
+        if settings.ELASTICSEARCH_STREAMING_BULK or should_stream:
             for _ in self.streaming_bulk(
                 self.__client,
                 actions,
