@@ -973,7 +973,7 @@ class Sync(Base, metaclass=Singleton):
                     print("-" * 10)
 
                 # @rebasedming: Do not index empty or null values
-                row = {k: v for k, v in row.items() if v != ""}
+                row = {k: v for k, v in row.items() if v not in (None, "")}
 
                 if set(row.keys()) == {"_meta"}:
                     continue
