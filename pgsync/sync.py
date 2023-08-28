@@ -1235,7 +1235,7 @@ class Sync(Base, metaclass=Singleton):
     def get_in_flight_transactions(self, txmin: int, txmax: int) -> list[int]:
         """Return a list of transactions in flight between txmin and txmax."""
         query = f"""
-            SELECT pid
+            SELECT *
             FROM pg_stat_activity
             WHERE state in ('active', 'idle in transaction')
             AND (backend_xid::text::bigint) >= {txmin} AND  (backend_xid::text::bigint) < {txmax}
