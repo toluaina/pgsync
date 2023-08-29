@@ -404,6 +404,7 @@ class Base(object):
         func: sa.sql.functions._FunctionGenerator,
         txmin: Optional[int] = None,
         txmax: Optional[int] = None,
+        txn_ids: list[int] | None = None,
         upto_lsn: Optional[int] = None,
         upto_nchanges: Optional[int] = None,
         limit: Optional[int] = None,
@@ -435,6 +436,13 @@ class Base(object):
                 )
                 < txmax
             )
+        if txn_ids:
+            filters.append(
+                sa.cast(
+                    sa.cast(sa.column("xid"), sa.Text),
+                    sa.BigInteger,
+                ).in_(txn_ids)
+            )
         if filters:
             statement = statement.where(sa.and_(*filters))
         if limit is not None:
@@ -448,6 +456,7 @@ class Base(object):
         slot_name: str,
         txmin: Optional[int] = None,
         txmax: Optional[int] = None,
+        txn_ids: list[int] | None = None,
         upto_lsn: Optional[int] = None,
         upto_nchanges: Optional[int] = None,
         limit: Optional[int] = None,
@@ -466,6 +475,7 @@ class Base(object):
             sa.func.PG_LOGICAL_SLOT_GET_CHANGES,
             txmin=txmin,
             txmax=txmax,
+            txn_ids=txn_ids,
             upto_lsn=upto_lsn,
             upto_nchanges=upto_nchanges,
             limit=limit,
@@ -478,6 +488,7 @@ class Base(object):
         slot_name: str,
         txmin: Optional[int] = None,
         txmax: Optional[int] = None,
+        txn_ids: list[int] | None = None,
         upto_lsn: Optional[int] = None,
         upto_nchanges: Optional[int] = None,
         limit: Optional[int] = None,
@@ -492,6 +503,7 @@ class Base(object):
             sa.func.PG_LOGICAL_SLOT_PEEK_CHANGES,
             txmin=txmin,
             txmax=txmax,
+            txn_ids=txn_ids,
             upto_lsn=upto_lsn,
             upto_nchanges=upto_nchanges,
             limit=limit,
@@ -504,6 +516,7 @@ class Base(object):
         slot_name: str,
         txmin: Optional[int] = None,
         txmax: Optional[int] = None,
+        txn_ids: list[int] | None = None,
         upto_lsn: Optional[int] = None,
         upto_nchanges: Optional[int] = None,
     ) -> int:
@@ -512,6 +525,7 @@ class Base(object):
             sa.func.PG_LOGICAL_SLOT_PEEK_CHANGES,
             txmin=txmin,
             txmax=txmax,
+            txn_ids=txn_ids,
             upto_lsn=upto_lsn,
             upto_nchanges=upto_nchanges,
         )
@@ -666,7 +680,9 @@ class Base(object):
             label="txid_current",
         )[0]
 
-    def parse_value(self, type_: str, value: str) -> Optional[str]:
+    def parse_value(
+        self, type_: str, value: str
+    ) -> None | int | str | bool | float:
         """
         Parse datatypes from db.
 

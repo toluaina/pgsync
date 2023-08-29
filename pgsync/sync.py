@@ -10,6 +10,7 @@ import select
 import sys
 import time
 from collections import defaultdict
+from datetime import datetime
 from typing import AnyStr, Generator, List, Optional, Set
 
 import click
@@ -17,6 +18,7 @@ import sqlalchemy as sa
 import sqlparse
 from psycopg2 import OperationalError
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from redis import Redis
 
 from . import __version__, settings
 from .base import Base, Payload
@@ -44,8 +46,10 @@ from .plugin import Plugins
 from .querybuilder import QueryBuilder
 from .redisqueue import RedisQueue
 from .search_client import SearchClient
+from .settings import REDIS_SOCKET_TIMEOUT
 from .singleton import Singleton
 from .transform import Transform
+from .urls import get_redis_url
 from .utils import (
     chunks,
     compiled_query,
@@ -94,7 +98,15 @@ class Sync(Base, metaclass=Singleton):
             settings.CHECKPOINT_PATH, f".{self.__name}"
         )
         self.redis: RedisQueue = RedisQueue(self.__name)
+
+        self.redis_client = Redis.from_url(
+            get_redis_url(),
+            socket_timeout=REDIS_SOCKET_TIMEOUT,
+        )
         self.tree: Tree = Tree(self.models)
+        self.table_list: list = [
+            f"table public.{table}" for table in self.tree.tables
+        ]
         self.tree.build(self.nodes)
         if validate:
             self.validate(repl_slots=repl_slots)
@@ -342,6 +354,7 @@ class Sync(Base, metaclass=Singleton):
         self,
         txmin: Optional[int] = None,
         txmax: Optional[int] = None,
+        txn_ids: list[int] | None = None,
         upto_nchanges: Optional[int] = None,
     ) -> None:
         """
@@ -377,6 +390,7 @@ class Sync(Base, metaclass=Singleton):
             self.__name,
             txmin=txmin,
             txmax=txmax,
+            txn_ids=txn_ids,
             upto_nchanges=upto_nchanges,
         )
         while True:
@@ -384,6 +398,7 @@ class Sync(Base, metaclass=Singleton):
                 self.__name,
                 txmin=txmin,
                 txmax=txmax,
+                txn_ids=txn_ids,
                 upto_nchanges=upto_nchanges,
                 limit=limit,
                 offset=offset,
@@ -393,8 +408,14 @@ class Sync(Base, metaclass=Singleton):
 
             rows: list = []
             for row in changes:
-                if re.search(r"^BEGIN", row.data) or re.search(
-                    r"^COMMIT", row.data
+                if row.data.startswith("BEGIN") or row.data.startswith(
+                    "COMMIT"
+                ):
+                    continue
+
+                # ignore the tables we're not syncing
+                if not any(
+                    row.data.startswith(table) for table in self.table_list
                 ):
                     continue
                 rows.append(row)
@@ -442,6 +463,7 @@ class Sync(Base, metaclass=Singleton):
                 self.__name,
                 txmin=txmin,
                 txmax=txmax,
+                txn_ids=txn_ids,
                 upto_nchanges=upto_nchanges,
                 limit=limit,
                 offset=offset,
@@ -926,6 +948,7 @@ class Sync(Base, metaclass=Singleton):
         filters: Optional[dict] = None,
         txmin: Optional[int] = None,
         txmax: Optional[int] = None,
+        txn_ids: Optional[list] = None,
         ctid: Optional[dict] = None,
     ) -> Generator:
         self.query_builder.isouter = True
@@ -938,7 +961,12 @@ class Sync(Base, metaclass=Singleton):
 
             try:
                 self.query_builder.build_queries(
-                    node, filters=filters, txmin=txmin, txmax=txmax, ctid=ctid
+                    node,
+                    filters=filters,
+                    txmin=txmin,
+                    txmax=txmax,
+                    txn_ids=txn_ids,
+                    ctid=ctid,
                 )
             except Exception as e:
                 logger.exception(f"Exception {e}")
@@ -1201,46 +1229,131 @@ class Sync(Base, metaclass=Singleton):
         """Pull data from db."""
         txmin: int = self.checkpoint
         txmax: int = self.txid_current
+
         logger.debug(f"pull txmin: {txmin} - txmax: {txmax}")
         # Wait for transactions in flight to complete
-        self._wait_for_in_flight_transactions(txmin, txmax)
+
+        slow_txns = self._wait_for_in_flight_transactions(txmin, txmax)
+        all_slow_txns = self._set_slow_txns(slow_txns)
+
         self.search_client.bulk(
             self.index, self.sync(txmin=txmin, txmax=txmax)
         )
         # now sync up to txmax to capture everything we may have missed
-        self._wait_for_in_flight_transactions(txmin, txmax)
         self.logical_slot_changes(txmin=txmin, txmax=txmax, upto_nchanges=None)
+
+        # see if the slow ones finished yet
+        slow_txns_not_finished = self._wait_for_in_flight_transactions(
+            txmin=None, txmax=None, txn_ids=slow_txns
+        )
+
+        finished_txns = list(
+            set(all_slow_txns) - set(slow_txns_not_finished or [])
+        )
+
+        self.search_client.bulk(self.index, self.sync(txn_ids=finished_txns))
+        # now sync up to txmax to capture everything we may have missed
+        self.logical_slot_changes(txn_ids=finished_txns, upto_nchanges=None)
+
+        self._remove_slow_txns(finished_txns)
+
         self.checkpoint: int = txmax or self.txid_current
         self._truncate = True
 
-    def _wait_for_in_flight_transactions(self, txmin: int, txmax: int) -> None:
+    def _remove_slow_txns(self, slow_txns_to_remove: list[int]) -> list[int]:
+        return self._set_slow_txns(
+            list(set(self._get_slow_txns()) - set(slow_txns_to_remove))
+        )
+
+    def _set_slow_txns(self, slow_txns: list[int] | None = None) -> list[int]:
+        if not slow_txns:
+            return []
+
+        slow_txn_history = self.redis_client.get(f"{self.__name}:slow-txns")
+        if slow_txn_history is None:
+            slow_txn_history = []
+        if isinstance(slow_txn_history, (str, bytes)):
+            slow_txn_history = json.loads(slow_txn_history)
+
+        if not isinstance(slow_txn_history, list):
+            logger.warning("Slow txn history is not a list, resetting.")
+            slow_txn_history = []
+
+        # no duplicates
+        slow_txn_history = list(set(slow_txn_history) | set(slow_txns))
+
+        self.redis_client.set(
+            f"{self.__name}:slow-txns", json.dumps(slow_txn_history)
+        )
+        return slow_txn_history
+
+    def _get_slow_txns(self) -> list[int]:
+        slow_txn_history = self.redis_client.get(f"{self.__name}:slow-txns")
+        if slow_txn_history is None:
+            slow_txn_history = []
+        if isinstance(slow_txn_history, (str, bytes)):
+            slow_txn_history = json.loads(slow_txn_history)
+
+        if not isinstance(slow_txn_history, list):
+            logger.warning("Slow txn history is not a list, resetting.")
+            slow_txn_history = []
+        return slow_txn_history
+
+    def _wait_for_in_flight_transactions(
+        self,
+        txmin: int | None = None,
+        txmax: int | None = None,
+        txn_ids: list[int] | None = None,
+    ) -> None | list[int]:
         """Wait for in flight transactions to complete."""
         # could do fancier logic than this, but for now let's hardcode to 2, 4, and 8 seconds
         for wait in settings.TXN_IN_FLIGHT_WAITS:
             in_flight_transactions = self.get_in_flight_transactions(
-                txmin, txmax
+                txmin=txmin, txmax=txmax, txn_ids=txn_ids
             )
             if not in_flight_transactions:
-                return
+                return None
+
             logger.info(
                 f"Waiting for transactions: {in_flight_transactions} to complete"
             )
             time.sleep(wait)
+
         logger.info(
             f"Still have inflight txns after {sum(settings.TXN_IN_FLIGHT_WAITS)} seconds."
             "Consider increasing the TXN_IN_FLIGHT_WAITS."
         )
-        return
+        return in_flight_transactions
 
-    def get_in_flight_transactions(self, txmin: int, txmax: int) -> list[int]:
+    def get_in_flight_transactions(
+        self,
+        txmin: int | None = None,
+        txmax: int | None = None,
+        txn_ids: list[int] | None = None,
+    ) -> list[int]:
         """Return a list of transactions in flight between txmin and txmax."""
+
+        # TODO(jz) - double check this - i want all the queries that are in flight
+        # and will mutate the data
+        if not txn_ids:
+            txn_ids = []
+
         query = f"""
-            SELECT *
+            SELECT backend_xid::text::bigint
             FROM pg_stat_activity
             WHERE state in ('active', 'idle in transaction')
-            AND (backend_xid::text::bigint) >= {txmin} AND  (backend_xid::text::bigint) < {txmax}
-            AND usename <> 'pgsync_user'
+            AND ((backend_xid::text::bigint) >= {txmin} AND  (backend_xid::text::bigint) < {txmax}
+              OR (backend_xmin::text::bigint) in ({','.join(txn_ids)})
+            AND usename <> 'pgsync_user';
         """
+        if txmin is None and txmax is None and txn_ids:
+            query = f"""
+                SELECT backend_xid::text::bigint
+                FROM pg_stat_activity
+                WHERE state in ('active', 'idle in transaction')
+                AND backend_xmin::text::bigint in ({','.join(txn_ids)})
+                AND usename <> 'pgsync_user';
+            """
         with self.engine.connect() as conn:
             return conn.execute(query).all()
 

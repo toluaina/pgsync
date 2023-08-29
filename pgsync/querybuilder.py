@@ -247,6 +247,7 @@ class QueryBuilder(object):
         node: Node,
         txmin: Optional[int] = None,
         txmax: Optional[int] = None,
+        txn_ids: Optional[list] = None,
         ctid: Optional[dict] = None,
     ) -> None:
         columns = [
@@ -321,6 +322,17 @@ class QueryBuilder(object):
                     sa.BigInteger,
                 )
                 < txmax
+            )
+
+        if txn_ids:
+            node._filters.append(
+                sa.cast(
+                    sa.cast(
+                        node.model.c.xmin,
+                        sa.Text,
+                    ),
+                    sa.BigInteger,
+                ).in_(txn_ids)
             )
 
         if node._filters:
@@ -861,6 +873,7 @@ class QueryBuilder(object):
         txmin: Optional[int] = None,
         txmax: Optional[int] = None,
         ctid: Optional[dict] = None,
+        txn_ids: Optional[list] = None,
     ) -> None:
         """Build node query."""
         self.from_obj = None
@@ -872,7 +885,9 @@ class QueryBuilder(object):
         self._children(node)
 
         if node.is_root:
-            self._root(node, txmin=txmin, txmax=txmax, ctid=ctid)
+            self._root(
+                node, txmin=txmin, txmax=txmax, txn_ids=txn_ids, ctid=ctid
+            )
         else:
             # 2) subquery: these are for children creating their own columns
             if node.relationship.throughs:
