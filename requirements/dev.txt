@@ -99,6 +99,8 @@ opensearch-dsl==2.1.0
     # via -r requirements/base.in
 opensearch-py==2.3.1
     # via opensearch-dsl
+orjson==3.9.5
+    # via -r requirements/base.in
 packaging==23.1
     # via
     #   black

@@ -10,10 +10,10 @@ import select
 import sys
 import time
 from collections import defaultdict
-from datetime import datetime
 from typing import AnyStr, Generator, List, Optional, Set
 
 import click
+import orjson
 import sqlalchemy as sa
 import sqlparse
 from psycopg2 import OperationalError
@@ -1277,7 +1277,7 @@ class Sync(Base, metaclass=Singleton):
         if slow_txn_history is None:
             slow_txn_history = []
         if isinstance(slow_txn_history, (str, bytes)):
-            slow_txn_history = json.loads(slow_txn_history)
+            slow_txn_history = orjson.loads(slow_txn_history)
 
         if not isinstance(slow_txn_history, list):
             logger.warning("Slow txn history is not a list, resetting.")
@@ -1287,13 +1287,13 @@ class Sync(Base, metaclass=Singleton):
         slow_txn_history = list(set(slow_txn_history) | set(slow_txns))
 
         self.redis_client.set(
-            f"{self.__name}:slow-txns", json.dumps(slow_txns)
+            f"{self.__name}:slow-txns", orjson.dumps(slow_txns)
         )
         return slow_txn_history
 
     def _set_slow_txns(self, slow_txns: list[int] | None = None) -> list[int]:
         self.redis_client.set(
-            f"{self.__name}:slow-txns", json.dumps(slow_txns or [])
+            f"{self.__name}:slow-txns", orjson.dumps(slow_txns or [])
         )
         return slow_txns or []
 
@@ -1302,7 +1302,7 @@ class Sync(Base, metaclass=Singleton):
         if slow_txn_history is None:
             slow_txn_history = []
         if isinstance(slow_txn_history, (str, bytes)):
-            slow_txn_history = json.loads(slow_txn_history)
+            slow_txn_history = orjson.loads(slow_txn_history)
 
         if not isinstance(slow_txn_history, list):
             logger.warning("Slow txn history is not a list, resetting.")
@@ -1329,10 +1329,6 @@ class Sync(Base, metaclass=Singleton):
             )
             time.sleep(wait)
 
-        logger.info(
-            f"Still have inflight txns after {sum(settings.TXN_IN_FLIGHT_WAITS)} seconds."
-            "Consider increasing the TXN_IN_FLIGHT_WAITS."
-        )
         return in_flight_transactions
 
     def get_in_flight_transactions(

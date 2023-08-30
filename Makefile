@@ -87,8 +87,8 @@ install: clean ## install the package to the active Python's site-packages
 
 compile:
 	pip-compile --output-file=requirements/dev.txt requirements/dev.in
-	pip-compile --output-file=requirements/dev.txt requirements/dev.in
-	pip-compile --output-file=requirements/dev.txt requirements/dev.in
+	pip-compile --output-file=requirements/test.txt requirements/test.in
+	pip-compile --output-file=requirements/prod.txt requirements/prod.in
 
 compile-upgrade:
 	pip-compile --output-file=requirements/dev.txt requirements/dev.in --upgrade

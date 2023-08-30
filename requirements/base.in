@@ -10,6 +10,7 @@ faker
 psycopg2-binary
 redis
 requests-aws4auth
+orjson
 
 # Pinned dependencies
 # pin sqlalchemy to latest 1.4.* until 2.0 support
