@@ -975,14 +975,14 @@ class Sync(Base, metaclass=Singleton):
         if self.verbose:
             compiled_query(node._subquery, "Query")
 
-        count: int = self.fetchcount(node._subquery)
+        # count: int = self.fetchcount(node._subquery)
 
-        if txmin is None and txmax is None:
-            logger.info(f"Incremental sync of leaf nodes {count}")
-        else:
-            logger.info(
-                f"Syncing {count} rows from transactions: {txmin} to {txmax}"
-            )
+        # if txmin is None and txmax is None:
+        #     logger.info(f"Incremental sync of leaf nodes {count}")
+        # else:
+        #     logger.info(
+        #         f"Syncing {count} rows from transactions: {txmin} to {txmax}"
+        #     )
         if random.random() < 0.1:
             latest_sync = txmax or self._checkpoint
             curr_txn = self.txid_current
