@@ -1234,7 +1234,7 @@ class Sync(Base, metaclass=Singleton):
         # Wait for transactions in flight to complete
 
         slow_txns = self._wait_for_in_flight_transactions(txmin, txmax)
-        all_slow_txns = self._set_slow_txns(slow_txns)
+        all_slow_txns = self._add_slow_txns(slow_txns)
 
         self.search_client.bulk(
             self.index, self.sync(txmin=txmin, txmax=txmax)
@@ -1243,19 +1243,23 @@ class Sync(Base, metaclass=Singleton):
         self.logical_slot_changes(txmin=txmin, txmax=txmax, upto_nchanges=None)
 
         # see if the slow ones finished yet
-        slow_txns_not_finished = self._wait_for_in_flight_transactions(
-            txmin=None, txmax=None, txn_ids=slow_txns
-        )
+        if all_slow_txns:
+            slow_txns_not_finished = self._wait_for_in_flight_transactions(
+                txmin=None, txmax=None, txn_ids=all_slow_txns
+            )
 
-        finished_txns = list(
-            set(all_slow_txns) - set(slow_txns_not_finished or [])
-        )
-
-        self.search_client.bulk(self.index, self.sync(txn_ids=finished_txns))
-        # now sync up to txmax to capture everything we may have missed
-        self.logical_slot_changes(txn_ids=finished_txns, upto_nchanges=None)
-
-        self._remove_slow_txns(finished_txns)
+            finished_txns = list(
+                set(all_slow_txns) - set(slow_txns_not_finished or [])
+            )
+            if finished_txns:
+                self.search_client.bulk(
+                    self.index, self.sync(txn_ids=finished_txns)
+                )
+                # now sync up to txmax to capture everything we may have missed
+                self.logical_slot_changes(
+                    txn_ids=finished_txns, upto_nchanges=None
+                )
+                self._remove_slow_txns(finished_txns)
 
         self.checkpoint: int = txmax or self.txid_current
         self._truncate = True
@@ -1265,9 +1269,9 @@ class Sync(Base, metaclass=Singleton):
             list(set(self._get_slow_txns()) - set(slow_txns_to_remove))
         )
 
-    def _set_slow_txns(self, slow_txns: list[int] | None = None) -> list[int]:
+    def _add_slow_txns(self, slow_txns: list[int] | None = None) -> list[int]:
         if not slow_txns:
-            return []
+            return self._get_slow_txns()
 
         slow_txn_history = self.redis_client.get(f"{self.__name}:slow-txns")
         if slow_txn_history is None:
@@ -1283,9 +1287,15 @@ class Sync(Base, metaclass=Singleton):
         slow_txn_history = list(set(slow_txn_history) | set(slow_txns))
 
         self.redis_client.set(
-            f"{self.__name}:slow-txns", json.dumps(slow_txn_history)
+            f"{self.__name}:slow-txns", json.dumps(slow_txns)
         )
         return slow_txn_history
+
+    def _set_slow_txns(self, slow_txns: list[int] | None = None) -> list[int]:
+        self.redis_client.set(
+            f"{self.__name}:slow-txns", json.dumps(slow_txns or [])
+        )
+        return slow_txns or []
 
     def _get_slow_txns(self) -> list[int]:
         slow_txn_history = self.redis_client.get(f"{self.__name}:slow-txns")
@@ -1333,29 +1343,39 @@ class Sync(Base, metaclass=Singleton):
     ) -> list[int]:
         """Return a list of transactions in flight between txmin and txmax."""
 
-        # TODO(jz) - double check this - i want all the queries that are in flight
-        # and will mutate the data
         if not txn_ids:
             txn_ids = []
 
-        query = f"""
-            SELECT backend_xid::text::bigint
-            FROM pg_stat_activity
-            WHERE state in ('active', 'idle in transaction')
-            AND ((backend_xid::text::bigint) >= {txmin} AND  (backend_xid::text::bigint) < {txmax}
-              OR (backend_xmin::text::bigint) in ({','.join(txn_ids)})
-            AND usename <> 'pgsync_user';
-        """
+        if txmin is None and txmax is None and not txn_ids:
+            return []
+
+        if txn_ids:
+            query = f"""
+                SELECT backend_xid::text::bigint
+                FROM pg_stat_activity
+                WHERE state in ('active', 'idle in transaction')
+                AND ((backend_xid::text::bigint) >= {txmin} AND  (backend_xid::text::bigint) < {txmax}
+                OR (backend_xid::text::bigint) in ({','.join([str(txn) for txn in txn_ids])})
+                AND usename <> 'pgsync_user';
+            """
+        else:
+            query = f"""
+                SELECT backend_xid::text::bigint
+                FROM pg_stat_activity
+                WHERE state in ('active', 'idle in transaction')
+                AND backend_xid::text::bigint >= {txmin} AND backend_xid::text::bigint < {txmax}
+                AND usename <> 'pgsync_user';
+            """
         if txmin is None and txmax is None and txn_ids:
             query = f"""
                 SELECT backend_xid::text::bigint
                 FROM pg_stat_activity
                 WHERE state in ('active', 'idle in transaction')
-                AND backend_xmin::text::bigint in ({','.join(txn_ids)})
+                AND backend_xid::text::bigint in ({','.join([str(txn) for txn in txn_ids])})
                 AND usename <> 'pgsync_user';
             """
         with self.engine.connect() as conn:
-            return conn.execute(query).all()
+            return [txn[0] for txn in conn.execute(query).all()]
 
     @threaded
     @exception
