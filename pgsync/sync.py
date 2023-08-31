@@ -1285,11 +1285,7 @@ class Sync(Base, metaclass=Singleton):
 
         # no duplicates
         slow_txn_history = list(set(slow_txn_history) | set(slow_txns))
-
-        self.redis_client.set(
-            f"{self.__name}:slow-txns", orjson.dumps(slow_txns)
-        )
-        return slow_txn_history
+        return self._set_slow_txns(slow_txn_history)
 
     def _set_slow_txns(self, slow_txns: list[int] | None = None) -> list[int]:
         self.redis_client.set(
