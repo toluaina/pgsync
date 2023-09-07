@@ -104,9 +104,6 @@ class Sync(Base, metaclass=Singleton):
             socket_timeout=REDIS_SOCKET_TIMEOUT,
         )
         self.tree: Tree = Tree(self.models)
-        self.table_list: list = [
-            f"table public.{table}" for table in self.tree.tables
-        ]
         self.tree.build(self.nodes)
         if validate:
             self.validate(repl_slots=repl_slots)
@@ -115,6 +112,9 @@ class Sync(Base, metaclass=Singleton):
             self._plugins: Plugins = Plugins("plugins", self.plugins)
         self.query_builder: QueryBuilder = QueryBuilder(verbose=verbose)
         self.count: dict = dict(xlog=0, db=0, redis=0)
+        self.table_list: list = [
+            f"table public.{table}" for table in self.tree.tables
+        ]
 
     def validate(self, repl_slots: bool = True) -> None:
         """Perform all validation right away."""
