@@ -340,3 +340,44 @@ class TestRelationship(object):
                 }
             )
         assert "Multiple through tables" in str(excinfo.value)
+
+
+@pytest.mark.usefixtures("table_creator")
+class TestNodeTableCount(object):
+    """Node tests."""
+
+    @pytest.fixture(scope="function")
+    def nodes(self):
+        return {
+            "table": "book",
+            "columns": ["isbn", "title", "description"],
+            "children": [
+                {
+                    "table": "author",
+                    "columns": ["id", "name"],
+                    "label": "authors",
+                    "relationship": {
+                        "type": "one_to_many",
+                        "variant": "object",
+                        "through_tables": ["book_author"],
+                    },
+                    "children": [
+                        {
+                            "table": "book",
+                            "columns": ["isbn", "title", "description"],
+                            "label": "favorite_book",
+                            "relationship": {
+                                "type": "one_to_many",
+                                "variant": "object",
+                                "through_tables": ["author_favorite_book"],
+                            },
+                        }
+                    ],
+                },
+            ],
+        }
+
+    def test_tree_build_table_count(self, sync, nodes):
+        tree = Tree(sync.models).build(nodes)
+        assert tree.table_count == {"author": 1, "book": 2}
+        sync.search_client.close()

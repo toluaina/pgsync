@@ -396,9 +396,11 @@ class QueryBuilder(object):
                 self.from_obj = child.parent.model
 
             if child._filters:
-                self.isouter = False
+                if child.table_count <= 1:
+                    self.isouter = False
                 for _filter in child._filters:
                     if isinstance(_filter, sa.sql.elements.BinaryExpression):
+
                         for column in _filter._orig:
                             if hasattr(column, "value"):
                                 _column = child._subquery.c
@@ -546,8 +548,8 @@ class QueryBuilder(object):
                 from_obj = node.model
 
             if child._filters:
-                self.isouter = False
-
+                if child.table_count <= 1:
+                    self.isouter = False
                 for _filter in child._filters:
                     if isinstance(_filter, sa.sql.elements.BinaryExpression):
                         for column in _filter._orig:
@@ -667,7 +669,8 @@ class QueryBuilder(object):
             )
 
         if node._filters:
-            self.isouter = False
+            if node.table_count <= 1:
+                self.isouter = False
 
         op = sa.and_
         if node.table == node.parent.table:
@@ -723,7 +726,8 @@ class QueryBuilder(object):
                 from_obj = node.model
 
             if child._filters:
-                self.isouter = False
+                if child.table_count <= 1:
+                    self.isouter = False
 
                 for _filter in child._filters:
                     if isinstance(_filter, sa.sql.elements.BinaryExpression):
