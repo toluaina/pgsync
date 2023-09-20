@@ -130,7 +130,9 @@ ELASTICSEARCH_IGNORE_STATUS = tuple(map(int, ELASTICSEARCH_IGNORE_STATUS))
 ELASTICSEARCH = env.bool("ELASTICSEARCH", default=True)
 OPENSEARCH = env.bool("OPENSEARCH", default=(not ELASTICSEARCH))
 OPENSEARCH_AWS_HOSTED = env.bool("OPENSEARCH_AWS_HOSTED", default=False)
-OPENSEARCH_AWS_SERVERLESS = env.bool("OPENSEARCH_AWS_SERVERLESS", default=False) # noqa E501
+OPENSEARCH_AWS_SERVERLESS = env.bool(
+    "OPENSEARCH_AWS_SERVERLESS", default=False
+)  # noqa E501
 
 # Postgres:
 PG_HOST = env.str("PG_HOST", default="localhost")

@@ -11,7 +11,7 @@ jobs:
         python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
     services:
       postgres:
-        image: debezium/postgres:15
+        image: debezium/postgres:16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
