@@ -1,4 +1,9 @@
-"""PGSync settings."""
+"""PGSync settings
+
+This module contains the settings for PGSync.
+It reads environment variables from a .env file and sets default values for each variable.
+The variables are used to configure various parameters such as block size, checkpoint path, polling interval, etc.
+"""
 import logging
 import logging.config
 import os

@@ -90,6 +90,15 @@ def exception(func: Callable):
 
 
 def get_redacted_url(result: ParseResult) -> ParseResult:
+    """
+    Returns a redacted version of the input URL, with the password replaced by asterisks.
+
+    Args:
+        result (ParseResult): The parsed URL to redact.
+
+    Returns:
+        ParseResult: The redacted URL.
+    """
     if result.password:
         username: Optional[str] = result.username
         hostname: Optional[str] = result.hostname
@@ -136,6 +145,18 @@ def get_config(config: Optional[str] = None) -> str:
 
 
 def config_loader(config: str) -> Generator:
+    """
+    Loads a configuration file and yields each document in the file as a dictionary.
+    The values in the dictionary are processed as templates, with environment variables
+    substituted for placeholders. If a value cannot be processed as a template, it is
+    left unchanged.
+
+    Args:
+        config (str): The path to the configuration file.
+
+    Yields:
+        dict: A dictionary representing a document in the configuration file.
+    """
     with open(config, "r") as documents:
         for document in json.load(documents):
             for key, value in document.items():
@@ -170,6 +191,16 @@ def compiled_query(
 
 
 class MutuallyExclusiveOption(click.Option):
+    """
+    A custom Click option that allows for mutually exclusive arguments.
+
+    Args:
+        click.Option: The base class for Click options.
+
+    Attributes:
+        mutually_exclusive (set): A set of argument names that are mutually exclusive with this option.
+    """
+
     def __init__(self, *args, **kwargs):
         self.mutually_exclusive: Set = set(
             kwargs.pop("mutually_exclusive", [])
@@ -183,6 +214,17 @@ class MutuallyExclusiveOption(click.Option):
         super(MutuallyExclusiveOption, self).__init__(*args, **kwargs)
 
     def handle_parse_result(self, ctx, opts, args):
+        """
+        Handles the parsing of the command-line arguments.
+
+        Args:
+            ctx (click.Context): The Click context.
+            opts (dict): The dictionary of parsed options.
+            args (list): The list of parsed arguments.
+
+        Returns:
+            The result of the base class's `handle_parse_result` method.
+        """
         if self.mutually_exclusive.intersection(opts) and self.name in opts:
             raise click.UsageError(
                 f"Illegal usage: `{self.name}` is mutually exclusive with "

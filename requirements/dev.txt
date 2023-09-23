@@ -8,9 +8,9 @@ async-timeout==4.0.3
     # via redis
 black==23.9.1
     # via -r requirements/base.in
-boto3==1.28.51
+boto3==1.28.53
     # via -r requirements/base.in
-botocore==1.31.51
+botocore==1.31.53
     # via
     #   boto3
     #   s3transfer
@@ -50,7 +50,7 @@ faker==19.6.2
     # via -r requirements/base.in
 filelock==3.12.4
     # via virtualenv
-flake8==5.0.4
+flake8==6.1.0
     # via
     #   -r requirements/test.in
     #   flake8-debugger
@@ -79,7 +79,7 @@ importlib-metadata==6.8.0
     # via build
 iniconfig==2.0.0
     # via pytest
-isort==5.11.5
+isort==5.12.0
     # via
     #   -r requirements/base.in
     #   flake8-isort
@@ -122,7 +122,7 @@ pre-commit==3.4.0
     # via -r requirements/dev.in
 psycopg2-binary==2.9.7
     # via -r requirements/base.in
-pycodestyle==2.9.1
+pycodestyle==2.11.0
     # via
     #   flake8
     #   flake8-debugger
@@ -130,7 +130,7 @@ pycodestyle==2.9.1
     #   flake8-todo
 pydocstyle==6.3.0
     # via flake8-docstrings
-pyflakes==2.5.0
+pyflakes==3.1.0
     # via flake8
 pyproject-hooks==1.0.0
     # via build

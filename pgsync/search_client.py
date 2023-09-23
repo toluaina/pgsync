@@ -348,6 +348,20 @@ def get_search_client(
         elasticsearch.RequestsHttpConnection,
     ],
 ) -> Union[opensearchpy.OpenSearch, elasticsearch.Elasticsearch]:
+    """
+    Returns a search client based on the specified parameters.
+
+    Args:
+        url (str): The URL of the search client.
+        client (Union[opensearchpy.OpenSearch, elasticsearch.Elasticsearch]): The search client to use.
+        connection_class (Union[opensearchpy.RequestsHttpConnection, elasticsearch.RequestsHttpConnection]): The connection class to use.
+
+    Returns:
+        Union[opensearchpy.OpenSearch, elasticsearch.Elasticsearch]: The search client.
+
+    Raises:
+        None
+    """
     if settings.OPENSEARCH_AWS_HOSTED or settings.ELASTICSEARCH_AWS_HOSTED:
         credentials = boto3.Session().get_credentials()
         service: str = "aoss" if settings.OPENSEARCH_AWS_SERVERLESS else "es"

@@ -20,6 +20,18 @@ class Plugin(ABC):
 
 
 class Plugins(object):
+    """
+    A class representing a plugin.
+
+    Args:
+        package (str): The name of the package.
+        names (list, optional): A list of names. Defaults to None.
+
+    Attributes:
+        package (str): The name of the package.
+        names (list): A list of names.
+    """
+
     def __init__(self, package: str, names: Optional[list] = None):
         self.package: str = package
         self.names: list = names or []

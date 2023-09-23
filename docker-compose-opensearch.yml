@@ -2,16 +2,13 @@ version: '3.8'
 
 services:
   postgres:
-    image: debezium/postgres:16
-    ports:
-      - "15432:5432"
-    environment:
-      - POSTGRES_USER=pgsync
-      - POSTGRES_PASSWORD=PLEASE_CHANGE_ME
-      - POSTGRES_DB=postgres
+    extends:
+      file: docker-compose.yml
+      service: postgres
   redis:
-    image: redis
-    command: redis-server --requirepass PLEASE_CHANGE_ME
+    extends:
+      file: docker-compose.yml
+      service: redis
   opensearch:
     image: opensearchproject/opensearch:latest
     ports:
@@ -23,14 +20,9 @@ services:
       - "DISABLE_INSTALL_DEMO_CONFIG=true"
       - "DISABLE_SECURITY_PLUGIN=true"
   pgsync:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: ./runserver.sh
-    sysctls:
-      - net.ipv4.tcp_keepalive_time=200
-      - net.ipv4.tcp_keepalive_intvl=200
-      - net.ipv4.tcp_keepalive_probes=5
+    extends:
+      file: docker-compose.yml
+      service: pgsync
     labels:
       org.label-schema.name: "pgsync"
       org.label-schema.description: "Postgres to OpenSearch sync"
@@ -40,16 +32,5 @@ services:
       - redis
       - opensearch
     environment:
-      - PG_USER=pgsync
-      - PG_HOST=postgres
-      - PG_PORT=5432
-      - PG_PASSWORD=PLEASE_CHANGE_ME
-      - LOG_LEVEL=INFO
-      - ELASTICSEARCH_PORT=9200
-      - ELASTICSEARCH_SCHEME=http
-      - ELASTICSEARCH_HOST=opensearch
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_AUTH=PLEASE_CHANGE_ME
       - ELASTICSEARCH=false
       - OPENSEARCH=true

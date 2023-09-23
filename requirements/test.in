@@ -1,6 +1,6 @@
 -r base.in
 
-flake8==5.0.4
+flake8
 flake8_docstrings
 flake8-debugger
 flake8-print

@@ -28,11 +28,22 @@ class Transform(object):
     def _rename(
         cls, data: dict, nodes: dict, result: Optional[dict] = None
     ) -> dict:
-        """Rename keys in a nested dictionary based on transform_node.
-        "rename": {
-            "id": "publisher_id",
-            "name": "publisher_name"
-        },
+        """
+        Rename keys in a nested dictionary based on transform_node.
+
+        example:
+            "rename": {
+                "id": "publisher_id",
+                "name": "publisher_name"
+            }
+
+        Args:
+            data (dict): The dictionary to rename keys in.
+            nodes (dict): A dictionary containing the keys to rename and their new names.
+            result (dict, optional): The resulting dictionary after renaming the keys. Defaults to None.
+
+        Returns:
+            dict: The resulting dictionary after renaming the keys.
         """
         result = result or {}
         if isinstance(data, dict):

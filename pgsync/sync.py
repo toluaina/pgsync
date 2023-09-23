@@ -927,6 +927,18 @@ class Sync(Base, metaclass=Singleton):
         txmax: Optional[int] = None,
         ctid: Optional[dict] = None,
     ) -> Generator:
+        """
+        Synchronizes data from PostgreSQL to Elasticsearch.
+
+        Args:
+            filters (Optional[dict]): A dictionary of filters to apply to the data.
+            txmin (Optional[int]): The minimum transaction ID to include in the synchronization.
+            txmax (Optional[int]): The maximum transaction ID to include in the synchronization.
+            ctid (Optional[dict]): A dictionary of ctid values to include in the synchronization.
+
+        Yields:
+            dict: A dictionary representing a document to be indexed in Elasticsearch.
+        """
         self.query_builder.isouter = True
         self.query_builder.from_obj = None
 
@@ -999,7 +1011,12 @@ class Sync(Base, metaclass=Singleton):
 
     @property
     def checkpoint(self) -> int:
-        """Save the current txid as the checkpoint."""
+        """
+        Gets the current checkpoint value.
+
+        :return: The current checkpoint value.
+        :rtype: int
+        """
         if os.path.exists(self._checkpoint_file):
             with open(self._checkpoint_file, "r") as fp:
                 self._checkpoint: int = int(fp.read().split()[0])
@@ -1007,6 +1024,13 @@ class Sync(Base, metaclass=Singleton):
 
     @checkpoint.setter
     def checkpoint(self, value: Optional[str] = None) -> None:
+        """
+        Sets the checkpoint value.
+
+        :param value: The new checkpoint value.
+        :type value: Optional[str]
+        :raises ValueError: If the value is None.
+        """
         if value is None:
             raise ValueError("Cannot assign a None value to checkpoint")
         with open(self._checkpoint_file, "w+") as fp:

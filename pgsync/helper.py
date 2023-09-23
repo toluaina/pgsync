@@ -21,7 +21,18 @@ def teardown(
     config: Optional[str] = None,
     validate: bool = False,
 ) -> None:
-    """Teardown helper."""
+    """
+    Teardown helper.
+
+    Args:
+        drop_db (bool, optional): Whether to drop the database. Defaults to True.
+        truncate_db (bool, optional): Whether to truncate the database. Defaults to True.
+        delete_redis (bool, optional): Whether to delete Redis. Defaults to True.
+        drop_index (bool, optional): Whether to drop the index. Defaults to True.
+        delete_checkpoint (bool, optional): Whether to delete the checkpoint. Defaults to True.
+        config (Optional[str], optional): The configuration file path. Defaults to None.
+        validate (bool, optional): Whether to validate the configuration. Defaults to False.
+    """
     config: str = get_config(config)
 
     for document in config_loader(config):

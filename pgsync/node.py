@@ -32,10 +32,25 @@ from .exc import (
 
 @dataclass
 class ForeignKey:
+    """
+    A class representing a foreign key relationship between two tables.
+
+    Attributes:
+        foreign_key (Optional[dict]): A dictionary containing the parent and child table names.
+        parent (str): The name of the parent table.
+        child (str): The name of the child table.
+    """
+
     foreign_key: Optional[dict] = None
 
     def __post_init__(self):
-        """Foreignkey constructor."""
+        """Initialize the ForeignKey object.
+
+        Sets the parent and child attributes based on the values in the foreign_key dictionary.
+        If the foreign_key dictionary is not provided, it is set to an empty dictionary.
+        Raises a RelationshipForeignKeyError if the foreign_key dictionary does not contain
+        both a parent and child key.
+        """
         self.foreign_key: str = self.foreign_key or dict()
         self.parent: str = self.foreign_key.get("parent")
         self.child: str = self.foreign_key.get("child")

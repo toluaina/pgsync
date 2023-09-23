@@ -1,44 +1,43 @@
 #!/usr/bin/env python
 
 """
-Parallel sync is an experimental feature that leverages the available
-CPU's/Threads to increase throughput.
-This is can be useful for environments that have a high network latency.
+Parallel sync is an innovative, experimental feature designed to optimize 
+throughput by utilizing available CPUs/threads, particularly beneficial 
+in environments experiencing high network latency.
 
-In this scenario, your PG database, Elasticsearch/OpenSearch, and PGSync
-servers are on different networks with a delay between request/response time.
-The main bottleneck, in this case, is usually the roundtrip of the database
-query.
+Scenario & Challenge:
+In instances where your PG database, Elasticsearch/OpenSearch, and PGSync 
+servers operate on divergent networks, a delay in request/response time is 
+noticeable. The primary constraint emerges from the database query's roundtrip, 
+which even server-side cursors can address only to a limited extent by fetching 
+a certain number of records at a time. The consequent delay in fetching the 
+next cursor significantly hampers the overall synchronization speed.
 
-Even with server-side cursors, we are still only able to fetch
-a limited number of records at a time from the cursor.
-The delay in the next cursor fetch can slow down the overall sync
-considerably.
+Solution:
+To mitigate this, the strategy is to conduct an initial fast/parallel sync, 
+thereby populating Elasticsearch/OpenSearch in a single iteration. 
+Post this, the regular pgsync can continue running as a daemon.
 
-The solution here is to perform an initial fast/parallel sync 
-to populate Elasticsearch/OpenSearch in a single iteration.
-When this is complete, we can then continue to run the normal `pgsync`
-as a daemon.
+Approach and Technical Implementation:
+The approach centers around utilizing the Tuple identifier record of the table 
+columns. Every table incorporates a system column – "ctid" of type "tid," 
+which helps identify the page record and the row number in each block.
+This element facilitates the pagination of the sync process.
 
-This approach uses the Tuple identifier record of the table columns.
-Each table contains a system column - "ctid" of type "tid" that
-identifies the page record and row number in each block.
+Technically, pagination implies dividing each paged record amongst the 
+available CPUs/threads. This division enables the parallel execution of 
+Elasticsearch/OpenSearch bulk inserts. The "ctid" serves as a tuple 
+(for instance, (1, 5)), pinpointing the row in a disk page.
 
-We can use this to paginate the sync process.
-Pagination here technically implies that we are splitting each paged record
-between CPU's/Threads.
+By leveraging this method, all paged row records are retrieved upfront and 
+allocated as work units across the worker threads/CPUs. 
+Each work unit, defined by the BLOCK_SIZE, denotes the number of root node 
+records assigned for each worker to process.
 
-This allows us to perform Elasticserch/OpenSearch bulk inserts in parallel.
-The "ctid" is a tuple of (page, row-number) e.g (1, 5) that identifies the
-row in a disk page.
-
-This method allows us to fetch all paged row records upfront and split them
-into work units amongst the workers(threads/cpus).
-Each chunk of work is defined by the BLOCK_SIZE and corresponds to the number
-of root node records each worker needs to process.
-
-The worker's query for each chunk of work filtering by the page number
-and row numbers.
+Subsequently, the workers execute queries for each assigned chunk of work, 
+filtered based on the page number and row numbers. 
+This systematic and parallel approach optimizes the synchronization process, 
+especially in environments challenged by network latency.
 """
 
 import asyncio
@@ -67,12 +66,29 @@ from pgsync.utils import (
 
 
 def save_ctid(page: int, row: int, name: str) -> None:
+    """
+    Save the checkpoint for a given page and row in a file with the given name.
+
+    Args:
+        page (int): The page number to save.
+        row (int): The row number to save.
+        name (str): The name of the file to save the checkpoint in.
+    """
     checkpoint_file: str = os.path.join(CHECKPOINT_PATH, f".{name}.ctid")
     with open(checkpoint_file, "w+") as fp:
         fp.write(f"{page},{row}\n")
 
 
 def read_ctid(name: str) -> None:
+    """
+    Reads the checkpoint file for the given name and returns the page and row numbers.
+
+    Args:
+        name (str): The name of the checkpoint file.
+
+    Returns:
+        tuple: A tuple containing the page and row numbers. If the checkpoint file does not exist, returns (None, None).
+    """
     checkpoint_file: str = os.path.join(CHECKPOINT_PATH, f".{name}.ctid")
     if os.path.exists(checkpoint_file):
         with open(checkpoint_file, "r") as fp:
