@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 HIGHLIGHT_BEGIN = "\033[4m"
 HIGHLIGHT_END = "\033[0m:"
 
+import boto3
+
 
 def chunks(value: list, size: int) -> list:
     """Yield successive n-sized chunks from l"""
@@ -139,6 +141,14 @@ def get_config(config: Optional[str] = None) -> str:
             "Set env SCHEMA=/path/to/schema.json or "
             "provide args --config /path/to/schema.json"
         )
+    if config.startswith("s3://"):
+        s3_client = boto3.Session().client("s3")
+        config = config[len("s3://"):]
+        bucket, config_file = config.split("/")
+        with open(config_file, "wb") as f:
+            s3_client.download_fileobj(bucket, config_file, f)
+        config = config_file
+
     if not os.path.exists(config):
         raise FileNotFoundError(f'Schema config "{config}" not found')
     return config
