@@ -45,6 +45,7 @@ try:
 except ImportError:
     pass
 
+import boto3
 
 logger = logging.getLogger(__name__)
 
@@ -1009,7 +1010,21 @@ def _pg_engine(
         password=password,
         port=port,
     )
-    return sa.create_engine(url, echo=echo, connect_args=connect_args)
+    engine = sa.create_engine(url, echo=echo, connect_args=connect_args) 
+    if password is None:
+        logger.debug("registering listener")
+        sa.event.listen(engine, "do_connect", provide_token)
+    return engine
+
+
+def provide_token(dialect, conn_rec, cargs, cparams):
+    token = boto3.Session().client("rds").generate_db_auth_token(
+        DBHostname=cparams.get("host"),
+        Port=cparams.get("port"),
+        DBUsername=cparams.get("user"),
+    )
+    cparams["password"] = token
+    logger.debug(token)
 
 
 def pg_execute(
