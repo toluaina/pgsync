@@ -1,7 +1,9 @@
 FROM python:3.8
 ARG WORKDIR=/code
-RUN mkdir $WORKDIR
-ADD ./examples/ $WORKDIR/examples
+RUN mkdir ${WORKDIR}
+ADD ./examples/ ${WORKDIR}/examples
+ADD ./plugins/ ${WORKDIR}/plugins
+ENV PYTHONPATH="${PYTHONPATH}:${WORKDIR}/plugins"
 WORKDIR $WORKDIR
 ADD . ${WORKDIR}
 RUN pip install ${WORKDIR}
