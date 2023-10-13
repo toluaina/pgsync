@@ -29,6 +29,7 @@ from .settings import (
     PG_SSLROOTCERT,
     QUERY_CHUNK_SIZE,
     STREAM_RESULTS,
+    PG_PASSWORD_IAM_IF_NONE,
 )
 from .trigger import CREATE_TRIGGER_TEMPLATE
 from .urls import get_postgres_url
@@ -1011,7 +1012,7 @@ def _pg_engine(
         port=port,
     )
     engine = sa.create_engine(url, echo=echo, connect_args=connect_args) 
-    if password is None:
+    if password is None and PG_PASSWORD_IAM_IF_NONE:
         logger.debug("registering listener")
         sa.event.listen(engine, "do_connect", provide_token)
     return engine

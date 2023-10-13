@@ -142,6 +142,7 @@ OPENSEARCH_AWS_SERVERLESS = env.bool(
 # Postgres:
 PG_HOST = env.str("PG_HOST", default="localhost")
 PG_PASSWORD = env.str("PG_PASSWORD", default=None)
+PG_PASSWORD_IAM_IF_NONE = env.bool("PG_PASSWORD_IAM_IF_NONE", default=False)
 PG_PORT = env.int("PG_PORT", default=5432)
 PG_SSLMODE = env.str("PG_SSLMODE", default=None)
 PG_SSLROOTCERT = env.str("PG_SSLROOTCERT", default=None)
