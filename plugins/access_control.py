@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Literal, Optional, Set
 from pgsync import plugin
 
 
-class FullnamePlugin(plugin.Plugin):
+class AccessControlPlugin(plugin.Plugin):
     name = "AccessControl"
 
     def transform(self, doc:Dict[str, Any], **kwargs):
