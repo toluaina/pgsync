@@ -18,6 +18,9 @@ class Plugin(ABC):
         """This must be implemented by all derived classes."""
         pass
 
+    def get_id(self, doc: dict, **kwargs) -> str:
+        return kwargs["_id"]
+
 
 class Plugins(object):
     """
@@ -91,6 +94,14 @@ class Plugins(object):
                     _index=doc["_index"],
                 )
                 if not doc["_source"]:
+                    yield
+
+                doc["_id"] = plugin.get_id(
+                    doc["_source"],
+                    _id=doc["_id"],
+                    _index=doc["_index"],
+                )
+                if not doc["_id"]:
                     yield
             yield doc
 
