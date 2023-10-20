@@ -18,7 +18,7 @@ from psycopg2 import OperationalError
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 from . import __version__, settings
-from .base import Base, Payload
+from .base import Base, Payload, transform_insert_for_is_deleted_to_delete
 from .constants import (
     DELETE,
     INSERT,
@@ -1044,7 +1044,12 @@ class Sync(Base, metaclass=Singleton):
             self.count["redis"] += len(payloads)
             self.refresh_views()
             self.on_publish(
-                list(map(lambda payload: Payload(**payload), payloads))
+                list(
+                    map(
+                        transform_insert_for_is_deleted_to_delete,
+                        map(lambda payload: Payload(**payload), payloads),
+                    )
+                )
             )
         time.sleep(settings.REDIS_POLL_INTERVAL)
 

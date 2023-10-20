@@ -6,7 +6,6 @@ from typing import List, Optional, Set, Tuple
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql  # noqa
 from sqlalchemy.orm import sessionmaker
-
 from .constants import (
     BUILTIN_SCHEMAS,
     DEFAULT_SCHEMA,
@@ -18,6 +17,7 @@ from .constants import (
     TG_OP,
     TRIGGER_FUNC,
     UPDATE,
+    INSERT,
 )
 from .exc import (
     LogicalSlotParseError,
@@ -138,6 +138,28 @@ class TupleIdentifierType(sa.types.UserDefinedType):
             return value
 
         return process
+
+
+def transform_insert_for_is_deleted_to_delete(payload: Payload) -> Payload:
+    """
+    If the payload is an insert and the is_deleted field is set to True, then transform the payload to a delete.
+    Otherwise return the same payload.
+    """
+    if payload.tg_op == INSERT:
+        logger.info("Transforming insert for is_deleted to delete")
+        assert payload.new
+        new_payload = Payload(
+            tg_op=DELETE,
+            table=payload.table,
+            schema=payload.schema,
+            old=payload.new,
+            new={},
+            xmin=payload.xmin,
+            indices=payload.indices,
+        )
+        return new_payload
+    else:
+        return payload
 
 
 class Base(object):
@@ -805,6 +827,7 @@ class Base(object):
             for key, value in _parse_logical_slot(suffix):
                 payload.new[key] = value
 
+        payload = transform_insert_for_is_deleted_to_delete(payload)
         return payload
 
     # Querying...
