@@ -29,6 +29,7 @@ from .settings import (
     PG_SSLROOTCERT,
     QUERY_CHUNK_SIZE,
     STREAM_RESULTS,
+    MAX_ROW_BUFFER,
 )
 from .trigger import CREATE_TRIGGER_TEMPLATE
 from .urls import get_postgres_url
@@ -862,10 +863,12 @@ class Base(object):
         stream_results: Optional[bool] = None,
     ):
         chunk_size = chunk_size or QUERY_CHUNK_SIZE
+        max_row_buffer = MAX_ROW_BUFFER
         stream_results = stream_results or STREAM_RESULTS
         with self.engine.connect() as conn:
             result = conn.execution_options(
-                stream_results=stream_results
+                stream_results=stream_results,
+                max_row_buffer=max_row_buffer
             ).execute(statement.select())
             for partition in result.partitions(chunk_size):
                 for keys, row, *primary_keys in partition:

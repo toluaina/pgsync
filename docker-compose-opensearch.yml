@@ -1,36 +1,76 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  postgres:
-    extends:
-      file: docker-compose.yml
-      service: postgres
-  redis:
-    extends:
-      file: docker-compose.yml
-      service: redis
-  opensearch:
-    image: opensearchproject/opensearch:latest
-    ports:
-      - "9400:9200"
-      - "9600:9600"
-    environment:
-      - discovery.type=single-node
-      - bootstrap.memory_lock=true
-      - "DISABLE_INSTALL_DEMO_CONFIG=true"
-      - "DISABLE_SECURITY_PLUGIN=true"
-  pgsync:
-    extends:
-      file: docker-compose.yml
-      service: pgsync
-    labels:
-      org.label-schema.name: "pgsync"
-      org.label-schema.description: "Postgres to OpenSearch sync"
-      com.label-schema.service-type: "daemon"
-    depends_on:
-      - postgres
-      - redis
-      - opensearch
-    environment:
-      - ELASTICSEARCH=false
-      - OPENSEARCH=true
+    postgres:
+        build:
+            context: ./docker
+            dockerfile: Dockerfile
+        ports:
+            - "15432:5432"
+        environment:
+            - POSTGRES_USER=pgsync
+            - POSTGRES_PASSWORD=password
+            - POSTGRES_DB=transaction
+    redis:
+        image: redis
+        command: redis-server --requirepass password
+    opensearch:
+        image: opensearchproject/opensearch:latest
+        ports:
+            - "9400:9200"
+            - "9600:9600"
+        environment:
+            - discovery.type=single-node
+            - bootstrap.memory_lock=true
+            - "DISABLE_INSTALL_DEMO_CONFIG=true"
+            - "DISABLE_SECURITY_PLUGIN=true"
+    pgsync:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        # command: ./runserver_combined.sh
+        # For debugging on Docker container
+        command: bash -c "tail -f /dev/null"
+        # volumes:
+        #     - ./temp:/code/examples
+        volumes:
+            # chown 1000:1000 pgsync
+            - ./temp/pgsync:/usr/src/app
+        sysctls:
+            - net.ipv4.tcp_keepalive_time=200
+            - net.ipv4.tcp_keepalive_intvl=200
+            - net.ipv4.tcp_keepalive_probes=5
+        deploy:
+            replicas: 3
+        labels:
+            org.label-schema.name: "pgsync"
+            org.label-schema.description: "Postgres to OpenSearch sync"
+            com.label-schema.service-type: "daemon"
+        depends_on:
+            - postgres
+            - redis
+            - opensearch
+        environment:
+            - PG_USER=pgsync
+            - PG_HOST=postgres
+            - PG_PORT=5432
+            - PG_PASSWORD=password
+            - LOG_LEVEL=INFO
+            # - CONSOLE_LOGGING_HANDLER_MIN_LEVEL=DEBUG
+            # - GENERAL_LOGGING_LEVEL=DEBUG
+            - ELASTICSEARCH_PORT=9200
+            - ELASTICSEARCH_SCHEME=http
+            - ELASTICSEARCH_HOST=opensearch
+            - ELASTICSEARCH_STREAMING_BULK=True
+            - REDIS_HOST=redis
+            - REDIS_PORT=6379
+            - REDIS_AUTH=password
+            - ELASTICSEARCH=false
+            - OPENSEARCH=true
+            - ELASTICSEARCH_CHUNK_SIZE=100
+            - QUERY_CHUNK_SIZE=1000
+            # - USE_ASYNC=True
+            # - ELASTICSEARCH_RAISE_ON_EXCEPTION=False
+            # - ELASTICSEARCH_RAISE_ON_ERROR=False
+            - MAX_ROW_BUFFER=1000
+            - CHECKPOINT_PATH=/usr/src/app

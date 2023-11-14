@@ -12,3 +12,4 @@ Dockerfile
 **/coverage.xml
 
 .env
+**/*.sql
