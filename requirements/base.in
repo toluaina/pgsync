@@ -6,14 +6,13 @@ elasticsearch==7.13.4 # pin this to version 7.13.4 for compatibility with OpenSe
 elasticsearch-dsl>=6.0.0,<8.0.0
 environs
 faker
+isort
 opensearch-dsl>=2.0.1
 psycopg2-binary
+python-dotenv
 redis
 requests-aws4auth
 sqlparse
-
 # Pinned dependencies
 # pin sqlalchemy to latest 1.4.* until 2.0 support
 sqlalchemy==1.4.*
-isort==5.12.*
-python-dotenv==0.21.*

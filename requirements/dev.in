@@ -1,7 +1,20 @@
 -r base.in
--r test.in
 
 coverage
+flake8
+flake8_docstrings
+flake8-debugger
+flake8-print
+flake8-todo
+flake8-isort
+freezegun
+mock
 pip-tools
 pre-commit
+pytest
+pytest-cov
+pytest-runner
+pytest-mock
+pytest-sugar
+pytest-runner
 setuptools
