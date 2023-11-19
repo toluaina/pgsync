@@ -308,5 +308,5 @@ Contributions are very welcome! Check out the [Contribution](CONTRIBUTING.rst) G
 This project is licensed under the terms of the [MIT](https://opensource.org/license/mit/) license.
 Please see [LICENSE](LICENSE) for more details.
 
-You should have received a copy of the GNU Lesser General Public License along with PGSync.  
-If not, see https://www.gnu.org/licenses/.
+You should have received a copy of the MIT License along with PGSync.  
+If not, see https://opensource.org/license/mit/.
