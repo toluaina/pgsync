@@ -42,6 +42,7 @@ CLASSIFIERS = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
     "License :: OSI Approved :: MIT License",
@@ -61,7 +62,7 @@ PACKAGES = find_packages(include=["pgsync"])
 with open("README.rst") as fp:
     README = fp.read()
 
-with open("requirements/prod.txt") as fp:
+with open("requirements/base.txt") as fp:
     INSTALL_REQUIRES = fp.read()
 
 setup(

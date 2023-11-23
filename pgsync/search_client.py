@@ -4,6 +4,7 @@ from collections import defaultdict
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import boto3
+import elastic_transport
 import elasticsearch
 import elasticsearch_dsl
 import opensearch_dsl
@@ -40,7 +41,7 @@ class SearchClient(object):
             self.__client: elasticsearch.Elasticsearch = get_search_client(
                 url,
                 client=elasticsearch.Elasticsearch,
-                connection_class=elasticsearch.RequestsHttpConnection,
+                node_class=elastic_transport.RequestsHttpNode,
             )
             try:
                 self.major_version: int = int(
@@ -257,7 +258,7 @@ class SearchClient(object):
         """Create Elasticsearch/OpenSearch setting and mapping if required."""
         body: dict = defaultdict(lambda: defaultdict(dict))
 
-        if not self.__client.indices.exists(index):
+        if not self.__client.indices.exists(index=index):
             if setting:
                 body.update(**{"settings": {"index": setting}})
 
@@ -343,10 +344,8 @@ class SearchClient(object):
 def get_search_client(
     url: str,
     client: Union[opensearchpy.OpenSearch, elasticsearch.Elasticsearch],
-    connection_class: Union[
-        opensearchpy.RequestsHttpConnection,
-        elasticsearch.RequestsHttpConnection,
-    ],
+    connection_class: Optional[opensearchpy.RequestsHttpConnection] = None,
+    node_class: Optional[elastic_transport.RequestsHttpNode] = None,
 ) -> Union[opensearchpy.OpenSearch, elasticsearch.Elasticsearch]:
     """
     Returns a search client based on the specified parameters.
@@ -354,7 +353,8 @@ def get_search_client(
     Args:
         url (str): The URL of the search client.
         client (Union[opensearchpy.OpenSearch, elasticsearch.Elasticsearch]): The search client to use.
-        connection_class (Union[opensearchpy.RequestsHttpConnection, elasticsearch.RequestsHttpConnection]): The connection class to use.
+        connection_class (opensearchpy.RequestsHttpConnection): The connection class to use.
+        node_class (elastic_transport.RequestsHttpNode): The node class to use.
 
     Returns:
         Union[opensearchpy.OpenSearch, elasticsearch.Elasticsearch]: The search client.
@@ -365,19 +365,34 @@ def get_search_client(
     if settings.OPENSEARCH_AWS_HOSTED or settings.ELASTICSEARCH_AWS_HOSTED:
         credentials = boto3.Session().get_credentials()
         service: str = "aoss" if settings.OPENSEARCH_AWS_SERVERLESS else "es"
-        return client(
-            hosts=[url],
-            http_auth=AWS4Auth(
-                credentials.access_key,
-                credentials.secret_key,
-                settings.ELASTICSEARCH_AWS_REGION,
-                service,
-                session_token=credentials.token,
-            ),
-            use_ssl=True,
-            verify_certs=True,
-            connection_class=connection_class,
-        )
+        if settings.OPENSEARCH:
+            return client(
+                hosts=[url],
+                http_auth=AWS4Auth(
+                    credentials.access_key,
+                    credentials.secret_key,
+                    settings.ELASTICSEARCH_AWS_REGION,
+                    service,
+                    session_token=credentials.token,
+                ),
+                use_ssl=True,
+                verify_certs=True,
+                connection_class=connection_class,
+            )
+        elif settings.ELASTICSEARCH:
+            return client(
+                hosts=[url],
+                http_auth=AWS4Auth(
+                    credentials.access_key,
+                    credentials.secret_key,
+                    settings.ELASTICSEARCH_AWS_REGION,
+                    service,
+                    session_token=credentials.token,
+                ),
+                use_ssl=True,
+                verify_certs=True,
+                node_class=node_class,
+            )
     else:
         hosts: List[str] = [url]
         # API
@@ -413,7 +428,6 @@ def get_search_client(
         ssl_context: Optional[Any] = settings.ELASTICSEARCH_SSL_CONTEXT
         ssl_show_warn: bool = settings.ELASTICSEARCH_SSL_SHOW_WARN
         # Transport
-        use_ssl: bool = settings.ELASTICSEARCH_USE_SSL
         timeout: float = settings.ELASTICSEARCH_TIMEOUT
         return client(
             hosts=hosts,
@@ -433,6 +447,6 @@ def get_search_client(
             ssl_version=ssl_version,
             ssl_context=ssl_context,
             ssl_show_warn=ssl_show_warn,
-            use_ssl=use_ssl,
+            # use_ssl=use_ssl,
             timeout=timeout,
         )

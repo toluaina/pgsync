@@ -1313,6 +1313,13 @@ class Sync(Base, metaclass=Singleton):
             # start a background worker thread to show status
             self.status()
 
+    def join(self):
+        """Join all threads"""
+        self.poll_redis().join()
+        self.poll_db().join()
+        self.truncate_slots().join()
+        self.status().join()
+
 
 @click.command()
 @click.option(
@@ -1449,6 +1456,7 @@ def main(
                 sync.pull()
                 if daemon:
                     sync.receive(nthreads_polldb)
+                sync.join()
 
 
 if __name__ == "__main__":
