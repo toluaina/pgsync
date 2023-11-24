@@ -51,4 +51,3 @@ services:
       - REDIS_PORT=6379
       - REDIS_AUTH=PLEASE_CHANGE_ME
       - ELASTICSEARCH=true
-      - OPENSEARCH=false

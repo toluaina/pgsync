@@ -1456,7 +1456,7 @@ def main(
                 sync.pull()
                 if daemon:
                     sync.receive(nthreads_polldb)
-                sync.join()
+                    sync.join()
 
 
 if __name__ == "__main__":

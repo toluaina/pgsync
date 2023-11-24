@@ -57,7 +57,7 @@ greenlet==3.0.1
     # via sqlalchemy
 identify==2.5.32
     # via pre-commit
-idna==3.4
+idna==3.5
     # via requests
 iniconfig==2.0.0
     # via pytest
