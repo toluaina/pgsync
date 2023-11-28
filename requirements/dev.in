@@ -1,6 +1,8 @@
 -r base.in
 
+black
 coverage
+faker
 flake8
 freezegun
 mock

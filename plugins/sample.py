@@ -55,6 +55,7 @@ class HeroPlugin(plugin.Plugin):
         if doc_id == "x":
             # do something...
             pass
+
         if doc_index == "myindex":
             # do another thing...
             pass

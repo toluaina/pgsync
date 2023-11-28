@@ -4,8 +4,7 @@ import os
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from sqlalchemy.schema import UniqueConstraint
 
 from pgsync.base import Base, create_database, drop_database
@@ -19,7 +18,10 @@ logging.getLogger("faker").setLevel(logging.ERROR)
 
 @pytest.fixture(scope="session")
 def base():
-    return declarative_base()
+    class Base(DeclarativeBase):
+        pass
+
+    return Base
 
 
 @pytest.fixture(scope="session")
@@ -431,7 +433,7 @@ def model_mapping(
 @pytest.fixture(scope="session")
 def table_creator(base, connection, model_mapping):
     sa.orm.configure_mappers()
-    base.metadata.create_all(connection)
+    base.metadata.create_all(connection.engine)
     pg_base = Base(connection.engine.url.database)
     pg_base.create_triggers(
         connection.engine.url.database,
@@ -439,13 +441,36 @@ def table_creator(base, connection, model_mapping):
     )
     pg_base.drop_replication_slot(f"{connection.engine.url.database}_testdb")
     pg_base.create_replication_slot(f"{connection.engine.url.database}_testdb")
-    yield
-    pg_base.drop_replication_slot(f"{connection.engine.url.database}_testdb")
-    base.metadata.drop_all(connection)
+    try:
+        yield
+    finally:
+        pg_base.drop_replication_slot(
+            f"{connection.engine.url.database}_testdb"
+        )
+        base.metadata.drop_all(connection.engine)
+
     try:
         os.unlink(f".{connection.engine.url.database}_testdb")
     except (OSError, FileNotFoundError):
         pass
+
+    # sa.orm.configure_mappers()
+    # with connection.engine as engine:
+    #     base.metadata.create_all(engine)
+    # pg_base = Base(connection.engine.url.database)
+    # pg_base.create_triggers(
+    #     connection.engine.url.database,
+    #     DEFAULT_SCHEMA,
+    # )
+    # pg_base.drop_replication_slot(f"{connection.engine.url.database}_testdb")
+    # pg_base.create_replication_slot(f"{connection.engine.url.database}_testdb")
+    # yield
+    # pg_base.drop_replication_slot(f"{connection.engine.url.database}_testdb")
+    # base.metadata.drop_all(connection)
+    # try:
+    #     os.unlink(f".{connection.engine.url.database}_testdb")
+    # except (OSError, FileNotFoundError):
+    #     pass
 
 
 @pytest.fixture(scope="session")

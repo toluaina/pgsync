@@ -152,9 +152,9 @@ class TestBase(object):
 
     @patch("pgsync.base.logger")
     @patch("pgsync.sync.Base.execute")
-    @patch("pgsync.base.sa.DDL")
+    @patch("pgsync.base.sa.text")
     def test_truncate_table(
-        self, mock_ddl, mock_execute, mock_logger, connection
+        self, mock_text, mock_execute, mock_logger, connection
     ):
         pg_base = Base(connection.engine.url.database)
         pg_base.truncate_table("book")
@@ -162,7 +162,7 @@ class TestBase(object):
             "Truncating table: public.book"
         )
         mock_execute.assert_called_once()
-        mock_ddl.assert_called_once_with(
+        mock_text.assert_called_once_with(
             'TRUNCATE TABLE "public"."book" CASCADE'
         )
 
@@ -457,10 +457,11 @@ class TestBase(object):
     def test_fetchone(self, connection):
         pg_base = Base(connection.engine.url.database, verbose=True)
         with patch("pgsync.base.compiled_query") as mock_compiled_query:
-            row = pg_base.fetchone("SELECT 1", label="foo", literal_binds=True)
+            statement = sa.text("SELECT 1")
+            row = pg_base.fetchone(statement, label="foo", literal_binds=True)
             assert row == (1,)
             mock_compiled_query.assert_called_once_with(
-                "SELECT 1", label="foo", literal_binds=True
+                statement, label="foo", literal_binds=True
             )
 
         with pytest.raises(sa.exc.ProgrammingError):
@@ -471,10 +472,11 @@ class TestBase(object):
     def test_fetchall(self, connection):
         pg_base = Base(connection.engine.url.database, verbose=True)
         with patch("pgsync.base.compiled_query") as mock_compiled_query:
-            row = pg_base.fetchall("SELECT 1", label="foo", literal_binds=True)
+            statement = sa.text("SELECT 1")
+            row = pg_base.fetchall(statement, label="foo", literal_binds=True)
             assert row == [(1,)]
             mock_compiled_query.assert_called_once_with(
-                "SELECT 1", label="foo", literal_binds=True
+                statement, label="foo", literal_binds=True
             )
 
         with pytest.raises(sa.exc.ProgrammingError):
@@ -489,45 +491,59 @@ class TestBase(object):
 
     def test_views(self, connection):
         pg_base = Base(connection.engine.url.database)
-        connection.engine.execute(
-            CreateView(
-                DEFAULT_SCHEMA, "mymatview", sa.select(1), materialized=True
+        with connection.engine.connect() as conn:
+            conn.execute(
+                CreateView(
+                    DEFAULT_SCHEMA,
+                    "mymatview",
+                    sa.select(1),
+                    materialized=True,
+                )
             )
-        )
-        connection.engine.execute(
-            CreateView(
-                DEFAULT_SCHEMA, "myview", sa.select(1), materialized=False
+            conn.execute(
+                CreateView(
+                    DEFAULT_SCHEMA, "myview", sa.select(1), materialized=False
+                )
             )
-        )
+            conn.commit()
         views = pg_base._views(DEFAULT_SCHEMA)
         assert views == ["myview"]
-        connection.engine.execute(
-            DropView(DEFAULT_SCHEMA, "mymatview", materialized=True)
-        )
-        connection.engine.execute(
-            DropView(DEFAULT_SCHEMA, "myview", materialized=False)
-        )
+        with connection.engine.connect() as conn:
+            conn.execute(
+                DropView(DEFAULT_SCHEMA, "mymatview", materialized=True)
+            )
+            conn.execute(
+                DropView(DEFAULT_SCHEMA, "myview", materialized=False)
+            )
+            conn.commit()
 
     def test_materialized_views(self, connection):
         pg_base = Base(connection.engine.url.database)
-        connection.engine.execute(
-            CreateView(
-                DEFAULT_SCHEMA, "mymatview", sa.select(1), materialized=True
+        with connection.engine.connect() as conn:
+            conn.execute(
+                CreateView(
+                    DEFAULT_SCHEMA,
+                    "mymatview",
+                    sa.select(1),
+                    materialized=True,
+                )
             )
-        )
-        connection.engine.execute(
-            CreateView(
-                DEFAULT_SCHEMA, "myview", sa.select(1), materialized=False
+            conn.execute(
+                CreateView(
+                    DEFAULT_SCHEMA, "myview", sa.select(1), materialized=False
+                )
             )
-        )
+            conn.commit()
         views = pg_base._materialized_views(DEFAULT_SCHEMA)
         assert views == ["mymatview"]
-        connection.engine.execute(
-            DropView(DEFAULT_SCHEMA, "mymatview", materialized=True)
-        )
-        connection.engine.execute(
-            DropView(DEFAULT_SCHEMA, "myview", materialized=False)
-        )
+        with connection.engine.connect() as conn:
+            conn.execute(
+                DropView(DEFAULT_SCHEMA, "mymatview", materialized=True)
+            )
+            conn.execute(
+                DropView(DEFAULT_SCHEMA, "myview", materialized=False)
+            )
+            conn.commit()
 
     def test_pg_execute(self, connection):
         with patch("pgsync.base.logger") as mock_logger:
@@ -537,15 +553,14 @@ class TestBase(object):
                 options={"isolation_level": "AUTOCOMMIT"},
             )
             mock_logger.exception.assert_not_called()
-        with patch("pgsync.base.logger") as mock_logger:
-            with pytest.raises(Exception) as excinfo:
-                pg_execute(
-                    connection.engine,
-                    sa.select(1),
-                    options={None: "AUTOCOMMIT"},
-                )
-            mock_logger.exception.assert_called_once()
-            assert "must be strings" in str(excinfo.value)
+
+        with pytest.raises(Exception) as excinfo:
+            pg_execute(
+                connection.engine,
+                sa.select(1),
+                options={None: "AUTOCOMMIT"},
+            )
+        assert "must be strings" in str(excinfo.value)
 
     def test_pg_engine(self, connection):
         with pytest.raises(ValueError) as excinfo:

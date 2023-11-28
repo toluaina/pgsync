@@ -7,7 +7,7 @@
 async-timeout==4.0.3
     # via redis
 black==23.11.0
-    # via -r requirements/base.in
+    # via -r requirements/dev.in
 boto3==1.29.6
     # via -r requirements/base.in
 botocore==1.32.6
@@ -46,7 +46,7 @@ environs==9.5.0
 exceptiongroup==1.2.0
     # via pytest
 faker==20.1.0
-    # via -r requirements/base.in
+    # via -r requirements/dev.in
 filelock==3.13.1
     # via virtualenv
 flake8==6.1.0
@@ -57,7 +57,7 @@ greenlet==3.0.1
     # via sqlalchemy
 identify==2.5.32
     # via pre-commit
-idna==3.5
+idna==3.6
     # via requests
 iniconfig==2.0.0
     # via pytest
@@ -141,7 +141,7 @@ six==1.16.0
     #   opensearch-py
     #   python-dateutil
     #   requests-aws4auth
-sqlalchemy==1.4.50
+sqlalchemy==2.0.23
     # via -r requirements/base.in
 sqlparse==0.4.4
     # via -r requirements/base.in
@@ -151,7 +151,9 @@ tomli==2.0.1
     #   coverage
     #   pytest
 typing-extensions==4.8.0
-    # via black
+    # via
+    #   black
+    #   sqlalchemy
 urllib3==1.26.18
     # via
     #   botocore

@@ -1,20 +1,26 @@
 import click
 import sqlalchemy as sa
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from pgsync.base import create_database, pg_engine
 from pgsync.helper import teardown
 from pgsync.utils import config_loader, get_config
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
 class Node(Base):
     __tablename__ = "node"
-    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    name = sa.Column(sa.String)
-    node_id = sa.Column(sa.Integer, sa.ForeignKey("node.id"))
-    children = sa.orm.relationship("Node", lazy="joined", join_depth=2)
+    id: Mapped[int] = mapped_column(
+        sa.Integer, primary_key=True, autoincrement=True
+    )
+    name: Mapped[str] = mapped_column(sa.String)
+    node_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey("node.id"))
+    children: Mapped["Node"] = sa.orm.relationship(
+        "Node", lazy="joined", join_depth=2
+    )
 
 
 def setup(config: str) -> None:

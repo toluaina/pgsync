@@ -172,7 +172,9 @@ class Base(object):
     def pg_settings(self, column: str) -> Optional[str]:
         try:
             return self.fetchone(
-                sa.select([sa.column("setting")])
+                sa.select(
+                    sa.text("setting"),
+                )
                 .select_from(sa.text("pg_settings"))
                 .where(sa.column("name") == column),
                 label="pg_settings",
@@ -278,6 +280,8 @@ class Base(object):
         if schema not in self.__views:
             self.__views[schema] = []
             for table in sa.inspect(self.engine).get_view_names(schema):
+                # TODO: figure out why we need is_view here when sqlalchemy
+                # already reflects views
                 if is_view(self.engine, schema, table, materialized=False):
                     self.__views[schema].append(table)
         return self.__views[schema]
@@ -286,7 +290,11 @@ class Base(object):
         """Get all materialized views."""
         if schema not in self.__materialized_views:
             self.__materialized_views[schema] = []
-            for table in sa.inspect(self.engine).get_view_names(schema):
+            for table in sa.inspect(self.engine).get_materialized_view_names(
+                schema
+            ):
+                # TODO: figure out why we need is_view here when sqlalchemy
+                # already reflects views
                 if is_view(self.engine, schema, table, materialized=True):
                     self.__materialized_views[schema].append(table)
         return self.__materialized_views[schema]
@@ -330,7 +338,7 @@ class Base(object):
 
         """
         logger.debug(f"Truncating table: {schema}.{table}")
-        self.execute(sa.DDL(f'TRUNCATE TABLE "{schema}"."{table}" CASCADE'))
+        self.execute(sa.text(f'TRUNCATE TABLE "{schema}"."{table}" CASCADE'))
 
     def truncate_tables(
         self, tables: List[str], schema: str = DEFAULT_SCHEMA
@@ -362,7 +370,7 @@ class Base(object):
         SELECT * FROM PG_REPLICATION_SLOTS
         """
         return self.fetchall(
-            sa.select(["*"])
+            sa.select("*")
             .select_from(sa.text("PG_REPLICATION_SLOTS"))
             .where(
                 sa.and_(
@@ -387,7 +395,7 @@ class Base(object):
         """
         logger.debug(f"Creating replication slot: {slot_name}")
         return self.fetchone(
-            sa.select(["*"]).select_from(
+            sa.select("*").select_from(
                 sa.func.PG_CREATE_LOGICAL_REPLICATION_SLOT(
                     slot_name,
                     PLUGIN,
@@ -402,7 +410,7 @@ class Base(object):
         if self.replication_slots(slot_name):
             try:
                 return self.fetchone(
-                    sa.select(["*"]).select_from(
+                    sa.select("*").select_from(
                         sa.func.PG_DROP_REPLICATION_SLOT(slot_name),
                     ),
                     label="drop_replication_slot",
@@ -440,7 +448,8 @@ class Base(object):
         """
         filters: list = []
         statement: sa.sql.Select = sa.select(
-            [sa.column("xid"), sa.column("data")]
+            sa.text("xid"),
+            sa.text("data"),
         ).select_from(
             func(
                 slot_name,
@@ -546,7 +555,7 @@ class Base(object):
         )
         with self.engine.connect() as conn:
             return conn.execute(
-                statement.with_only_columns([sa.func.COUNT()])
+                statement.with_only_columns(*[sa.func.COUNT()])
             ).scalar()
 
     # Views...
@@ -612,10 +621,10 @@ class Base(object):
                 )
         if join_queries:
             if queries:
-                self.execute(sa.DDL("; ".join(queries)))
+                self.execute(sa.text("; ".join(queries)))
         else:
             for query in queries:
-                self.execute(sa.DDL(query))
+                self.execute(sa.text(query))
 
     def drop_triggers(
         self,
@@ -636,25 +645,27 @@ class Base(object):
                 )
         if join_queries:
             if queries:
-                self.execute(sa.DDL("; ".join(queries)))
+                self.execute(sa.text("; ".join(queries)))
         else:
             for query in queries:
-                self.execute(sa.DDL(query))
+                self.execute(sa.text(query))
 
     def create_function(self, schema: str) -> None:
         self.execute(
-            CREATE_TRIGGER_TEMPLATE.replace(
-                MATERIALIZED_VIEW,
-                f"{schema}.{MATERIALIZED_VIEW}",
-            ).replace(
-                TRIGGER_FUNC,
-                f"{schema}.{TRIGGER_FUNC}",
+            sa.text(
+                CREATE_TRIGGER_TEMPLATE.replace(
+                    MATERIALIZED_VIEW,
+                    f"{schema}.{MATERIALIZED_VIEW}",
+                ).replace(
+                    TRIGGER_FUNC,
+                    f"{schema}.{TRIGGER_FUNC}",
+                )
             )
         )
 
     def drop_function(self, schema: str) -> None:
         self.execute(
-            sa.DDL(
+            sa.text(
                 f'DROP FUNCTION IF EXISTS "{schema}".{TRIGGER_FUNC}() CASCADE'
             )
         )
@@ -665,7 +676,7 @@ class Base(object):
             logger.debug(f"Disabling trigger on table: {schema}.{table}")
             for name in ("notify", "truncate"):
                 self.execute(
-                    sa.DDL(
+                    sa.text(
                         f'ALTER TABLE "{schema}"."{table}" '
                         f"DISABLE TRIGGER {table}_{name}"
                     )
@@ -677,7 +688,7 @@ class Base(object):
             logger.debug(f"Enabling trigger on table: {schema}.{table}")
             for name in ("notify", "truncate"):
                 self.execute(
-                    sa.DDL(
+                    sa.text(
                         f'ALTER TABLE "{schema}"."{table}" '
                         f"ENABLE TRIGGER {table}_{name}"
                     )
@@ -691,7 +702,7 @@ class Base(object):
         SELECT txid_current()
         """
         return self.fetchone(
-            sa.select(["*"]).select_from(sa.func.TXID_CURRENT()),
+            sa.select("*").select_from(sa.func.TXID_CURRENT()),
             label="txid_current",
         )[0]
 
@@ -827,14 +838,17 @@ class Base(object):
         if self.verbose:
             compiled_query(statement, label=label, literal_binds=literal_binds)
 
-        conn = self.engine.connect()
-        try:
-            row = conn.execute(statement).fetchone()
-            conn.close()
-        except Exception as e:
-            logger.exception(f"Exception {e}")
-            raise
-        return row
+        with self.engine.connect() as conn:
+            return conn.execute(statement).fetchone()
+
+        # conn = self.engine.connect()
+        # try:
+        #     row = conn.execute(statement).fetchone()
+        #     conn.close()
+        # except Exception as e:
+        #     logger.exception(f"Exception {e}")
+        #     raise
+        # return row
 
     def fetchall(
         self,
@@ -846,14 +860,17 @@ class Base(object):
         if self.verbose:
             compiled_query(statement, label=label, literal_binds=literal_binds)
 
-        conn = self.engine.connect()
-        try:
-            rows = conn.execute(statement).fetchall()
-            conn.close()
-        except Exception as e:
-            logger.exception(f"Exception {e}")
-            raise
-        return rows
+        with self.engine.connect() as conn:
+            return conn.execute(statement).fetchall()
+
+        # conn = self.engine.connect()
+        # try:
+        #     rows = conn.execute(statement).fetchall()
+        #     conn.close()
+        # except Exception as e:
+        #     logger.exception(f"Exception {e}")
+        #     raise
+        # return rows
 
     def fetchmany(
         self,
@@ -877,7 +894,7 @@ class Base(object):
         with self.engine.connect() as conn:
             return conn.execute(
                 statement.original.with_only_columns(
-                    [sa.func.COUNT()]
+                    *[sa.func.COUNT()]
                 ).order_by(None)
             ).scalar()
 
@@ -1017,24 +1034,21 @@ def pg_execute(
     statement: sa.sql.Select,
     values: Optional[list] = None,
     options: Optional[dict] = None,
+    commit: bool = True,
 ) -> None:
-    options = options or {"isolation_level": "AUTOCOMMIT"}
-    conn = engine.connect()
-    try:
+    with engine.connect() as conn:
         if options:
             conn = conn.execution_options(**options)
         conn.execute(statement, values)
-        conn.close()
-    except Exception as e:
-        logger.exception(f"Exception {e}")
-        raise
+        if commit:
+            conn.commit()
 
 
 def create_schema(database: str, schema: str, echo: bool = False) -> None:
     """Create database schema."""
     logger.debug(f"Creating schema: {schema}")
     with pg_engine(database, echo=echo) as engine:
-        pg_execute(engine, sa.DDL(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+        pg_execute(engine, sa.text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
     logger.debug(f"Created schema: {schema}")
 
 
@@ -1042,7 +1056,12 @@ def create_database(database: str, echo: bool = False) -> None:
     """Create a database."""
     logger.debug(f"Creating database: {database}")
     with pg_engine("postgres", echo=echo) as engine:
-        pg_execute(engine, sa.DDL(f'CREATE DATABASE "{database}"'))
+        pg_execute(
+            engine,
+            sa.text(f'CREATE DATABASE "{database}"'),
+            options={"isolation_level": "AUTOCOMMIT"},
+            commit=False,
+        )
     logger.debug(f"Created database: {database}")
 
 
@@ -1050,24 +1069,27 @@ def drop_database(database: str, echo: bool = False) -> None:
     """Drop a database."""
     logger.debug(f"Dropping database: {database}")
     with pg_engine("postgres", echo=echo) as engine:
-        pg_execute(engine, sa.DDL(f'DROP DATABASE IF EXISTS "{database}"'))
+        pg_execute(
+            engine,
+            sa.text(f'DROP DATABASE IF EXISTS "{database}"'),
+            options={"isolation_level": "AUTOCOMMIT"},
+            commit=False,
+        )
+
     logger.debug(f"Dropped database: {database}")
 
 
 def database_exists(database: str, echo: bool = False) -> bool:
     """Check if database is present."""
     with pg_engine("postgres", echo=echo) as engine:
-        conn = engine.connect()
-        try:
+        with engine.connect() as conn:
             row = conn.execute(
-                sa.DDL(
-                    f"SELECT 1 FROM pg_database WHERE datname = '{database}'"
+                sa.select(
+                    sa.text("1"),
                 )
-            ).first()
-            conn.close()
-        except Exception as e:
-            logger.exception(f"Exception {e}")
-            raise
+                .select_from(sa.text("pg_database"))
+                .where(sa.column("datname") == database),
+            ).fetchone()
         return row is not None
 
 
@@ -1079,7 +1101,7 @@ def create_extension(
     with pg_engine(database, echo=echo) as engine:
         pg_execute(
             engine,
-            sa.DDL(f'CREATE EXTENSION IF NOT EXISTS "{extension}"'),
+            sa.text(f'CREATE EXTENSION IF NOT EXISTS "{extension}"'),
         )
     logger.debug(f"Created extension: {extension}")
 
@@ -1088,5 +1110,5 @@ def drop_extension(database: str, extension: str, echo: bool = False) -> None:
     """Drop a database extension."""
     logger.debug(f"Dropping extension: {extension}")
     with pg_engine(database, echo=echo) as engine:
-        pg_execute(engine, sa.DDL(f'DROP EXTENSION IF EXISTS "{extension}"'))
+        pg_execute(engine, sa.text(f'DROP EXTENSION IF EXISTS "{extension}"'))
     logger.debug(f"Dropped extension: {extension}")

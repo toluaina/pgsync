@@ -1,58 +1,60 @@
 import click
 import sqlalchemy as sa
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.schema import UniqueConstraint
 
 from pgsync.base import create_database, pg_engine
 from pgsync.helper import teardown
 from pgsync.utils import config_loader, get_config
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
 class User(Base):
     __tablename__ = "user"
     __table_args__ = (UniqueConstraint("name"),)
-    id = sa.Column(sa.Integer, primary_key=True)
-    name = sa.Column(sa.String, nullable=False)
-    age = sa.Column(sa.Integer, nullable=True)
-    gender = sa.Column(sa.String, nullable=True)
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(sa.String, nullable=False)
+    age: Mapped[int] = mapped_column(sa.Integer, nullable=True)
+    gender: Mapped[str] = mapped_column(sa.String, nullable=True)
 
 
 class Post(Base):
     __tablename__ = "post"
     __table_args__ = ()
-    id = sa.Column(sa.Integer, primary_key=True)
-    title = sa.Column(sa.String, nullable=False)
-    slug = sa.Column(sa.String, nullable=True)
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(sa.String, nullable=False)
+    slug: Mapped[str] = mapped_column(sa.String, nullable=True)
 
 
 class Comment(Base):
     __tablename__ = "comment"
     __table_args__ = ()
-    id = sa.Column(sa.Integer, primary_key=True)
-    title = sa.Column(sa.String, nullable=True)
-    content = sa.Column(sa.String, nullable=True)
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(sa.String, nullable=True)
+    content: Mapped[str] = mapped_column(sa.String, nullable=True)
 
 
 class Tag(Base):
     __tablename__ = "tag"
     __table_args__ = (UniqueConstraint("name"),)
-    id = sa.Column(sa.Integer, primary_key=True)
-    name = sa.Column(sa.String, nullable=False)
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(sa.String, nullable=False)
 
 
 class UserPost(Base):
     __tablename__ = "user_post"
     __table_args__ = ()
-    id = sa.Column(sa.Integer, primary_key=True)
-    user_id = sa.Column(sa.Integer, sa.ForeignKey(User.id))
-    user = sa.orm.relationship(
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey(User.id))
+    user: Mapped[User] = sa.orm.relationship(
         User,
         backref=sa.orm.backref("users"),
     )
-    post_id = sa.Column(sa.Integer, sa.ForeignKey(Post.id))
-    post = sa.orm.relationship(
+    post_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey(Post.id))
+    post: Mapped[Post] = sa.orm.relationship(
         Post,
         backref=sa.orm.backref("posts"),
     )
@@ -61,27 +63,31 @@ class UserPost(Base):
 class PostComment(Base):
     __tablename__ = "post_comment"
     __table_args__ = (UniqueConstraint("post_id", "comment_id"),)
-    id = sa.Column(sa.Integer, primary_key=True)
-    post_id = sa.Column(sa.Integer, sa.ForeignKey(Post.id))
-    post = sa.orm.relationship(
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    post_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey(Post.id))
+    post: Mapped[Post] = sa.orm.relationship(
         Post,
         backref=sa.orm.backref("post"),
     )
-    comment_id = sa.Column(sa.Integer, sa.ForeignKey(Comment.id))
-    comment = sa.orm.relationship(Comment, backref=sa.orm.backref("comments"))
+    comment_id: Mapped[int] = mapped_column(
+        sa.Integer, sa.ForeignKey(Comment.id)
+    )
+    comment: Mapped[Comment] = sa.orm.relationship(
+        Comment, backref=sa.orm.backref("comments")
+    )
 
 
 class UserTag(Base):
     __tablename__ = "user_tag"
     __table_args__ = (UniqueConstraint("user_id", "tag_id"),)
-    id = sa.Column(sa.Integer, primary_key=True)
-    user_id = sa.Column(sa.Integer, sa.ForeignKey(User.id))
-    user = sa.orm.relationship(
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey(User.id))
+    user: Mapped[User] = sa.orm.relationship(
         User,
         backref=sa.orm.backref("user"),
     )
-    tag_id = sa.Column(sa.Integer, sa.ForeignKey(Tag.id))
-    tag = sa.orm.relationship(
+    tag_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey(Tag.id))
+    tag: Mapped[Tag] = sa.orm.relationship(
         Tag,
         backref=sa.orm.backref("tags"),
     )
