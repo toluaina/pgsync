@@ -2,7 +2,7 @@
 
 import pytest
 import sqlalchemy as sa
-from mock import ANY, call, patch
+from mock import call, patch
 
 from pgsync.base import (
     _pg_engine,
@@ -374,28 +374,26 @@ class TestBase(object):
         mock_pg_execute.call_args_list == calls
 
     @patch("pgsync.base.logger")
-    @patch("pgsync.sync.Base.engine")
-    def test_drop_view(self, mock_engine, mock_logger, connection):
+    def test_drop_view(self, mock_logger, connection):
         pg_base = Base(connection.engine.url.database)
-        pg_base.drop_view("public")
-        calls = [
-            call("Dropping view: public._view"),
-            call("Dropped view: public._view"),
-        ]
-        assert mock_logger.debug.call_args_list == calls
-        mock_engine.execute.assert_called_once_with(ANY)
+        with patch("pgsync.sync.Base.engine"):
+            pg_base.drop_view("public")
+            calls = [
+                call("Dropping view: public._view"),
+                call("Dropped view: public._view"),
+            ]
+            assert mock_logger.debug.call_args_list == calls
 
     @patch("pgsync.base.logger")
-    @patch("pgsync.sync.Base.engine")
-    def test_refresh_view(self, mock_engine, mock_logger, connection):
+    def test_refresh_view(self, mock_logger, connection):
         pg_base = Base(connection.engine.url.database)
-        pg_base.refresh_view("foo", "public", concurrently=True)
-        calls = [
-            call("Refreshing view: public.foo"),
-            call("Refreshed view: public.foo"),
-        ]
-        assert mock_logger.debug.call_args_list == calls
-        mock_engine.execute.assert_called_once_with(ANY)
+        with patch("pgsync.sync.Base.engine"):
+            pg_base.refresh_view("foo", "public", concurrently=True)
+            calls = [
+                call("Refreshing view: public.foo"),
+                call("Refreshed view: public.foo"),
+            ]
+            assert mock_logger.debug.call_args_list == calls
 
     def test_parse_value(self, connection):
         pg_base = Base(connection.engine.url.database)

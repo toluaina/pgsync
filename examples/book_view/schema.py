@@ -50,9 +50,7 @@ def setup(config: str) -> None:
         create_database(database)
         create_schema(database, schema)
         with pg_engine(database) as engine:
-            engine = engine.connect().execution_options(
-                schema_translate_map={None: schema}
-            )
+            Base.metadata.schema = schema
             Base.metadata.drop_all(engine)
             Base.metadata.create_all(engine)
 
@@ -60,22 +58,28 @@ def setup(config: str) -> None:
             metadata.reflect(engine, views=True)
 
             book_model = metadata.tables[f"{schema}.book"]
-            engine.execute(
-                CreateView(
-                    schema,
-                    "book_view",
-                    book_model.select(),
+
+            with engine.connect() as conn:
+                conn.execute(
+                    CreateView(
+                        schema,
+                        "book_view",
+                        book_model.select(),
+                    )
                 )
-            )
+                conn.commit()
 
             publisher_model = metadata.tables[f"{schema}.publisher"]
-            engine.execute(
-                CreateView(
-                    schema,
-                    "publisher_view",
-                    publisher_model.select(),
+
+            with engine.connect() as conn:
+                conn.execute(
+                    CreateView(
+                        schema,
+                        "publisher_view",
+                        publisher_model.select(),
+                    )
                 )
-            )
+                conn.commit()
 
 
 @click.command()

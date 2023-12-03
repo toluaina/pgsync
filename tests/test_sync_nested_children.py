@@ -213,9 +213,6 @@ class TestNestedChildren(object):
 
         with subtransactions(session):
             conn = session.connection().engine.connect().connection
-            conn.set_isolation_level(
-                psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT
-            )
             cursor = conn.cursor()
             channel = sync.database
             cursor.execute(f"UNLISTEN {channel}")

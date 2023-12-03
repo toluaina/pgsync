@@ -35,6 +35,10 @@ class TestView(object):
         with subtransactions(session):
             session.add_all(books)
         yield books
+
+        with subtransactions(session):
+            session.query(book_cls).delete()
+
         session.connection().engine.connect().close()
         session.connection().engine.dispose()
         sync.search_client.close()
@@ -149,54 +153,51 @@ class TestView(object):
     def test_refresh_view(self, connection, sync, book_cls, data):
         """Test refresh materialized view."""
         view = "test_view_refresh"
-        # pg_base = Base(connection.engine.url.database)
+        pg_base = Base(connection.engine.url.database)
 
-    #     model = pg_base.models("book", "public")
-    #     statement = sa.select([model.c.isbn]).select_from(model)
-    #     with connection.engine.connect() as conn:
-    #         conn.execute(
-    #             CreateView(DEFAULT_SCHEMA, view, statement, materialized=True)
-    #         )
-    #         conn.commit()
-    #     assert [
-    #         result.isbn
-    #         for result in connection.engine.execute(
-    #             sa.text(f"SELECT * FROM {view}")
-    #         )
-    #     ][0] == "abc"
+        model = pg_base.models("book", "public")
+        statement = sa.select(*[model.c.isbn]).select_from(model)
+        with connection.engine.connect() as conn:
+            conn.execute(
+                CreateView(DEFAULT_SCHEMA, view, statement, materialized=True)
+            )
+            conn.commit()
 
-    #     session = sync.session
-    #     with subtransactions(session):
-    #         session.execute(
-    #             book_cls.__table__.update()
-    #             .where(book_cls.__table__.c.isbn == "abc")
-    #             .values(isbn="xyz")
-    #         )
+        with connection.engine.connect() as conn:
+            assert [
+                result.isbn
+                for result in conn.execute(sa.text(f"SELECT * FROM {view}"))
+            ][0] == "abc"
 
-    #     # the value should still be abc
-    #     assert [
-    #         result.isbn
-    #         for result in connection.engine.execute(
-    #             sa.text(f"SELECT * FROM {view}")
-    #         )
-    #     ][0] == "abc"
+        session = sync.session
+        with subtransactions(session):
+            session.execute(
+                book_cls.__table__.update()
+                .where(book_cls.__table__.c.isbn == "abc")
+                .values(isbn="xyz")
+            )
 
-    #     with connection.engine.connect() as conn:
-    #         conn.execute(RefreshView(DEFAULT_SCHEMA, view))
-    #         conn.commit()
+        with connection.engine.connect() as conn:
+            # the value should still be abc
+            assert [
+                result.isbn
+                for result in conn.execute(sa.text(f"SELECT * FROM {view}"))
+            ][0] == "abc"
 
-    #     # the value should now be xyz
-    #     assert [
-    #         result.isbn
-    #         for result in connection.engine.execute(
-    #             sa.text(f"SELECT * FROM {view}")
-    #         )
-    #     ][0] == "xyz"
-    #     with connection.engine.connect() as conn:
-    #         conn.execute(
-    #             DropView(DEFAULT_SCHEMA, view, materialized=True)
-    #         )
-    #         conn.commit()
+        with connection.engine.connect() as conn:
+            conn.execute(RefreshView(DEFAULT_SCHEMA, view))
+            conn.commit()
+
+        with connection.engine.connect() as conn:
+            # the value should now be xyz
+            assert [
+                result.isbn
+                for result in conn.execute(sa.text(f"SELECT * FROM {view}"))
+            ][0] == "xyz"
+
+        with connection.engine.connect() as conn:
+            conn.execute(DropView(DEFAULT_SCHEMA, view, materialized=True))
+            conn.commit()
 
     @pytest.mark.usefixtures("table_creator")
     def test_index(self, connection, sync, book_cls, data):

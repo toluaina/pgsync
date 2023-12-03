@@ -8,9 +8,9 @@ async-timeout==4.0.3
     # via redis
 black==23.11.0
     # via -r requirements/dev.in
-boto3==1.29.6
+boto3==1.33.6
     # via -r requirements/base.in
-botocore==1.32.6
+botocore==1.33.6
     # via
     #   boto3
     #   s3transfer
@@ -51,7 +51,7 @@ filelock==3.13.1
     # via virtualenv
 flake8==6.1.0
     # via -r requirements/dev.in
-freezegun==1.2.2
+freezegun==1.3.0
     # via -r requirements/dev.in
 greenlet==3.0.1
     # via sqlalchemy
@@ -133,7 +133,7 @@ requests==2.31.0
     #   requests-aws4auth
 requests-aws4auth==1.2.3
     # via -r requirements/base.in
-s3transfer==0.7.0
+s3transfer==0.8.2
     # via boto3
 six==1.16.0
     # via
@@ -160,7 +160,7 @@ urllib3==1.26.18
     #   elastic-transport
     #   opensearch-py
     #   requests
-virtualenv==20.24.7
+virtualenv==20.25.0
     # via pre-commit
 
 # The following packages are considered to be unsafe in a requirements file:

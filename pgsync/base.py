@@ -580,7 +580,8 @@ class Base(object):
     def drop_view(self, schema: str) -> None:
         """Drop a view."""
         logger.debug(f"Dropping view: {schema}.{MATERIALIZED_VIEW}")
-        self.engine.execute(DropView(schema, MATERIALIZED_VIEW))
+        with self.engine.connect() as conn:
+            conn.execute(DropView(schema, MATERIALIZED_VIEW))
         logger.debug(f"Dropped view: {schema}.{MATERIALIZED_VIEW}")
 
     def refresh_view(
@@ -588,9 +589,8 @@ class Base(object):
     ) -> None:
         """Refresh a materialized view."""
         logger.debug(f"Refreshing view: {schema}.{name}")
-        self.engine.execute(
-            RefreshView(schema, name, concurrently=concurrently)
-        )
+        with self.engine.connect() as conn:
+            conn.execute(RefreshView(schema, name, concurrently=concurrently))
         logger.debug(f"Refreshed view: {schema}.{name}")
 
     # Triggers...
@@ -1034,14 +1034,12 @@ def pg_execute(
     statement: sa.sql.Select,
     values: Optional[list] = None,
     options: Optional[dict] = None,
-    commit: bool = True,
 ) -> None:
     with engine.connect() as conn:
         if options:
             conn = conn.execution_options(**options)
         conn.execute(statement, values)
-        if commit:
-            conn.commit()
+        conn.commit()
 
 
 def create_schema(database: str, schema: str, echo: bool = False) -> None:
@@ -1060,7 +1058,6 @@ def create_database(database: str, echo: bool = False) -> None:
             engine,
             sa.text(f'CREATE DATABASE "{database}"'),
             options={"isolation_level": "AUTOCOMMIT"},
-            commit=False,
         )
     logger.debug(f"Created database: {database}")
 
@@ -1073,7 +1070,6 @@ def drop_database(database: str, echo: bool = False) -> None:
             engine,
             sa.text(f'DROP DATABASE IF EXISTS "{database}"'),
             options={"isolation_level": "AUTOCOMMIT"},
-            commit=False,
         )
 
     logger.debug(f"Dropped database: {database}")

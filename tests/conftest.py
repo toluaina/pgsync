@@ -433,7 +433,9 @@ def model_mapping(
 @pytest.fixture(scope="session")
 def table_creator(base, connection, model_mapping):
     sa.orm.configure_mappers()
-    base.metadata.create_all(connection.engine)
+    with connection.engine.connect() as conn:
+        base.metadata.create_all(connection.engine)
+        conn.commit()
     pg_base = Base(connection.engine.url.database)
     pg_base.create_triggers(
         connection.engine.url.database,
@@ -441,36 +443,15 @@ def table_creator(base, connection, model_mapping):
     )
     pg_base.drop_replication_slot(f"{connection.engine.url.database}_testdb")
     pg_base.create_replication_slot(f"{connection.engine.url.database}_testdb")
-    try:
-        yield
-    finally:
-        pg_base.drop_replication_slot(
-            f"{connection.engine.url.database}_testdb"
-        )
+    yield
+    pg_base.drop_replication_slot(f"{connection.engine.url.database}_testdb")
+    with connection.engine.connect() as conn:
         base.metadata.drop_all(connection.engine)
-
+        conn.commit()
     try:
         os.unlink(f".{connection.engine.url.database}_testdb")
     except (OSError, FileNotFoundError):
         pass
-
-    # sa.orm.configure_mappers()
-    # with connection.engine as engine:
-    #     base.metadata.create_all(engine)
-    # pg_base = Base(connection.engine.url.database)
-    # pg_base.create_triggers(
-    #     connection.engine.url.database,
-    #     DEFAULT_SCHEMA,
-    # )
-    # pg_base.drop_replication_slot(f"{connection.engine.url.database}_testdb")
-    # pg_base.create_replication_slot(f"{connection.engine.url.database}_testdb")
-    # yield
-    # pg_base.drop_replication_slot(f"{connection.engine.url.database}_testdb")
-    # base.metadata.drop_all(connection)
-    # try:
-    #     os.unlink(f".{connection.engine.url.database}_testdb")
-    # except (OSError, FileNotFoundError):
-    #     pass
 
 
 @pytest.fixture(scope="session")
