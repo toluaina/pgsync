@@ -8,9 +8,9 @@ async-timeout==4.0.3
     # via redis
 black==23.11.0
     # via -r requirements/dev.in
-boto3==1.33.6
+boto3==1.33.8
     # via -r requirements/base.in
-botocore==1.33.6
+botocore==1.33.8
     # via
     #   boto3
     #   s3transfer
@@ -51,7 +51,7 @@ filelock==3.13.1
     # via virtualenv
 flake8==6.1.0
     # via -r requirements/dev.in
-freezegun==1.3.0
+freezegun==1.3.1
     # via -r requirements/dev.in
 greenlet==3.0.1
     # via sqlalchemy
@@ -88,7 +88,7 @@ packaging==23.2
     #   pytest
 pathspec==0.11.2
     # via black
-platformdirs==4.0.0
+platformdirs==4.1.0
     # via
     #   black
     #   virtualenv

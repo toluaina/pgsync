@@ -232,9 +232,7 @@ class TestBase(object):
     @patch("pgsync.base.logger")
     def test_create_replication_slot(self, mock_logger, connection):
         pg_base = Base(connection.engine.url.database)
-        row = pg_base.create_replication_slot("slot_name")
-        assert row[0] == "slot_name"
-        assert row[1] is not None
+        pg_base.create_replication_slot("slot_name")
         pg_base.drop_replication_slot("slot_name")
         calls = [
             call("Creating replication slot: slot_name"),

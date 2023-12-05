@@ -190,12 +190,13 @@ class Base(object):
 
         try:
             self.create_replication_slot(slot_name)
+
         except Exception as e:
             logger.exception(f"{e}")
             raise ReplicationSlotError(
                 f'PG_USER "{self.engine.url.username}" needs to be '
                 f"superuser or have permission to read, create and destroy "
-                f"replication slots to perform this action."
+                f"replication slots to perform this action.\n{e}"
             )
         else:
             self.drop_replication_slot(slot_name)
@@ -394,26 +395,28 @@ class Base(object):
         SELECT * FROM PG_REPLICATION_SLOTS
         """
         logger.debug(f"Creating replication slot: {slot_name}")
-        return self.fetchone(
-            sa.select("*").select_from(
-                sa.func.PG_CREATE_LOGICAL_REPLICATION_SLOT(
-                    slot_name,
-                    PLUGIN,
+        try:
+            self.execute(
+                sa.select("*").select_from(
+                    sa.func.PG_CREATE_LOGICAL_REPLICATION_SLOT(
+                        slot_name,
+                        PLUGIN,
+                    )
                 )
-            ),
-            label="create_replication_slot",
-        )
+            )
+        except Exception as e:
+            logger.exception(f"{e}")
+            raise
 
     def drop_replication_slot(self, slot_name: str) -> None:
         """Drop a replication slot."""
         logger.debug(f"Dropping replication slot: {slot_name}")
         if self.replication_slots(slot_name):
             try:
-                return self.fetchone(
+                self.execute(
                     sa.select("*").select_from(
                         sa.func.PG_DROP_REPLICATION_SLOT(slot_name),
-                    ),
-                    label="drop_replication_slot",
+                    )
                 )
             except Exception as e:
                 logger.exception(f"{e}")
@@ -841,15 +844,6 @@ class Base(object):
         with self.engine.connect() as conn:
             return conn.execute(statement).fetchone()
 
-        # conn = self.engine.connect()
-        # try:
-        #     row = conn.execute(statement).fetchone()
-        #     conn.close()
-        # except Exception as e:
-        #     logger.exception(f"Exception {e}")
-        #     raise
-        # return row
-
     def fetchall(
         self,
         statement: sa.sql.Select,
@@ -862,15 +856,6 @@ class Base(object):
 
         with self.engine.connect() as conn:
             return conn.execute(statement).fetchall()
-
-        # conn = self.engine.connect()
-        # try:
-        #     rows = conn.execute(statement).fetchall()
-        #     conn.close()
-        # except Exception as e:
-        #     logger.exception(f"Exception {e}")
-        #     raise
-        # return rows
 
     def fetchmany(
         self,
