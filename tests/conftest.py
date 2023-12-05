@@ -4,8 +4,7 @@ import os
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from sqlalchemy.schema import UniqueConstraint
 
 from pgsync.base import Base, create_database, drop_database
@@ -19,7 +18,10 @@ logging.getLogger("faker").setLevel(logging.ERROR)
 
 @pytest.fixture(scope="session")
 def base():
-    return declarative_base()
+    class Base(DeclarativeBase):
+        pass
+
+    return Base
 
 
 @pytest.fixture(scope="session")
@@ -431,7 +433,9 @@ def model_mapping(
 @pytest.fixture(scope="session")
 def table_creator(base, connection, model_mapping):
     sa.orm.configure_mappers()
-    base.metadata.create_all(connection)
+    with connection.engine.connect() as conn:
+        base.metadata.create_all(connection.engine)
+        conn.commit()
     pg_base = Base(connection.engine.url.database)
     pg_base.create_triggers(
         connection.engine.url.database,
@@ -441,7 +445,9 @@ def table_creator(base, connection, model_mapping):
     pg_base.create_replication_slot(f"{connection.engine.url.database}_testdb")
     yield
     pg_base.drop_replication_slot(f"{connection.engine.url.database}_testdb")
-    base.metadata.drop_all(connection)
+    with connection.engine.connect() as conn:
+        base.metadata.drop_all(connection.engine)
+        conn.commit()
     try:
         os.unlink(f".{connection.engine.url.database}_testdb")
     except (OSError, FileNotFoundError):

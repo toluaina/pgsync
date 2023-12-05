@@ -1,21 +1,23 @@
 import click
 import sqlalchemy as sa
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.schema import ForeignKeyConstraint, UniqueConstraint
 
 from pgsync.base import create_database, pg_engine
 from pgsync.helper import teardown
 from pgsync.utils import config_loader, get_config
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
 class Category(Base):
     __tablename__ = "category"
     __table_args__ = (UniqueConstraint("text"),)
-    id = sa.Column(sa.Integer, primary_key=True)
-    uid = sa.Column(sa.String, primary_key=True)
-    text = sa.Column(sa.String, nullable=False)
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    uid: Mapped[str] = mapped_column(sa.String, primary_key=True)
+    text: Mapped[str] = mapped_column(sa.String, nullable=False)
 
 
 class Question(Base):
@@ -26,19 +28,19 @@ class Question(Base):
             ["category_id", "category_uid"], ["category.id", "category.uid"]
         ),
     )
-    id = sa.Column(sa.Integer, primary_key=True)
-    uid = sa.Column(sa.String, primary_key=True)
-    category_id = sa.Column(sa.Integer)
-    category_uid = sa.Column(sa.String)
-    text = sa.Column(sa.String, nullable=False)
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    uid: Mapped[str] = mapped_column(sa.String, primary_key=True)
+    category_id: Mapped[int] = mapped_column(sa.Integer)
+    category_uid: Mapped[str] = mapped_column(sa.String)
+    text: Mapped[str] = mapped_column(sa.String, nullable=False)
 
 
 class Answer(Base):
     __tablename__ = "answer"
     __table_args__ = (UniqueConstraint("text"),)
-    id = sa.Column(sa.Integer, primary_key=True)
-    uid = sa.Column(sa.String, primary_key=True)
-    text = sa.Column(sa.String, nullable=False)
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    uid: Mapped[str] = mapped_column(sa.String, primary_key=True)
+    text: Mapped[str] = mapped_column(sa.String, nullable=False)
 
 
 class PossibleAnswer(Base):
@@ -59,11 +61,13 @@ class PossibleAnswer(Base):
             ["question.id", "question.uid"],
         ),
     )
-    question_id = sa.Column(sa.Integer, primary_key=True)
-    question_uid = sa.Column(sa.String, primary_key=True)
-    answer_id = sa.Column(sa.Integer, primary_key=True)
-    answer_uid = sa.Column(sa.String, primary_key=True)
-    answer = sa.orm.relationship(Answer, backref=sa.orm.backref("answer"))
+    question_id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    question_uid: Mapped[str] = mapped_column(sa.String, primary_key=True)
+    answer_id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+    answer_uid: Mapped[str] = mapped_column(sa.String, primary_key=True)
+    answer: Mapped[Answer] = sa.orm.relationship(
+        Answer, backref=sa.orm.backref("answer")
+    )
 
 
 class RealAnswer(Base):
@@ -84,19 +88,19 @@ class RealAnswer(Base):
             ["question.id", "question.uid"],
         ),
     )
-    question_id = sa.Column(
+    question_id: Mapped[int] = mapped_column(
         sa.Integer,
         primary_key=True,
     )
-    question_uid = sa.Column(
+    question_uid: Mapped[str] = mapped_column(
         sa.String,
         primary_key=True,
     )
-    answer_id = sa.Column(
+    answer_id: Mapped[int] = mapped_column(
         sa.Integer,
         primary_key=True,
     )
-    answer_uid = sa.Column(
+    answer_uid: Mapped[str] = mapped_column(
         sa.String,
         primary_key=True,
     )

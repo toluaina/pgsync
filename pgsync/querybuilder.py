@@ -263,7 +263,7 @@ class QueryBuilder(object):
             self._json_build_object(node.columns),
             *node.primary_keys,
         ]
-        node._subquery = sa.select(columns)
+        node._subquery = sa.select(*columns)
 
         if self.from_obj is not None:
             node._subquery = node._subquery.select_from(self.from_obj)
@@ -273,7 +273,7 @@ class QueryBuilder(object):
             for page, rows in ctid.items():
                 subquery.append(
                     sa.select(
-                        [
+                        *[
                             sa.cast(
                                 sa.literal_column(f"'({page},'")
                                 .concat(sa.column("s"))
@@ -585,7 +585,7 @@ class QueryBuilder(object):
                 isouter=self.isouter,
             )
 
-        outer_subquery = sa.select(columns)
+        outer_subquery = sa.select(*columns)
 
         parent_foreign_key_columns: list = self._get_column_foreign_keys(
             through.columns,
@@ -654,7 +654,7 @@ class QueryBuilder(object):
         for column in foreign_keys[through.name]:
             columns.append(through.model.c[str(column)])
 
-        inner_subquery = sa.select(columns)
+        inner_subquery = sa.select(*columns)
 
         if self.verbose:
             compiled_query(inner_subquery, "Inner subquery")
@@ -823,7 +823,7 @@ class QueryBuilder(object):
         for column in foreign_key_columns:
             columns.append(node.model.c[column])
 
-        node._subquery = sa.select(columns)
+        node._subquery = sa.select(*columns)
 
         if from_obj is not None:
             node._subquery = node._subquery.select_from(from_obj)

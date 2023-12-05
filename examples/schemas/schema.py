@@ -1,27 +1,35 @@
 import click
 import sqlalchemy as sa
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from pgsync.base import create_database, create_schema, pg_engine
 from pgsync.helper import teardown
 from pgsync.utils import config_loader, get_config
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
 class Parent(Base):
     __tablename__ = "parent"
     __table_args__ = {"schema": "parent"}
-    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    name = sa.Column(sa.String)
+    id: Mapped[int] = mapped_column(
+        sa.Integer, primary_key=True, autoincrement=True
+    )
+    name: Mapped[str] = mapped_column(sa.String)
 
 
 class Child(Base):
     __tablename__ = "child"
     __table_args__ = {"schema": "child"}
-    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    name = sa.Column(sa.String)
-    parent_id = sa.Column(sa.Integer, sa.ForeignKey(Parent.id))
+    id: Mapped[int] = mapped_column(
+        sa.Integer, primary_key=True, autoincrement=True
+    )
+    name: Mapped[str] = mapped_column(sa.String)
+    parent_id: Mapped[int] = mapped_column(
+        sa.Integer, sa.ForeignKey(Parent.id)
+    )
 
 
 def setup(config: str) -> None:
@@ -32,16 +40,12 @@ def setup(config: str) -> None:
             create_schema(database, schema)
 
         with pg_engine(database) as engine:
-            engine: sa.engine.Engine = engine.connect().execution_options(
-                schema_translate_map={None: "parent"}
-            )
+            Base.metadata.schema = "parent"
             Base.metadata.drop_all(engine)
             Base.metadata.create_all(engine)
 
         with pg_engine(database) as engine:
-            engine: sa.engine.Engine = engine.connect().execution_options(
-                schema_translate_map={None: "child"}
-            )
+            Base.metadata.schema = "child"
             Base.metadata.drop_all(engine)
             Base.metadata.create_all(engine)
 

@@ -254,7 +254,7 @@ def _get_constraints(
         key_column_usage = models("key_column_usage", "information_schema")
     return (
         sa.select(
-            [
+            *[
                 table_constraints.c.table_name,
                 sa.func.ARRAY_AGG(
                     sa.cast(
@@ -383,7 +383,7 @@ def create_view(
     rows: dict = {}
     if MATERIALIZED_VIEW in views:
         for table_name, primary_keys, foreign_keys, indices in fetchall(
-            sa.select(["*"]).select_from(
+            sa.select("*").select_from(
                 sa.text(f"{schema}.{MATERIALIZED_VIEW}")
             )
         ):
@@ -401,8 +401,9 @@ def create_view(
                 rows[table_name]["foreign_keys"] = set(foreign_keys)
             if indices:
                 rows[table_name]["indices"] = set(indices)
-
-        engine.execute(DropView(schema, MATERIALIZED_VIEW))
+        with engine.connect() as conn:
+            conn.execute(DropView(schema, MATERIALIZED_VIEW))
+            conn.commit()
 
     if schema != DEFAULT_SCHEMA:
         for table in set(tables):
@@ -473,16 +474,18 @@ def create_view(
         .alias("t")
     )
     logger.debug(f"Creating view: {schema}.{MATERIALIZED_VIEW}")
-    engine.execute(CreateView(schema, MATERIALIZED_VIEW, statement))
-    engine.execute(DropIndex("_idx"))
-    engine.execute(
-        CreateIndex(
-            "_idx",
-            schema,
-            MATERIALIZED_VIEW,
-            ["table_name"],
+    with engine.connect() as conn:
+        conn.execute(CreateView(schema, MATERIALIZED_VIEW, statement))
+        conn.execute(DropIndex("_idx"))
+        conn.execute(
+            CreateIndex(
+                "_idx",
+                schema,
+                MATERIALIZED_VIEW,
+                ["table_name"],
+            )
         )
-    )
+        conn.commit()
     logger.debug(f"Created view: {schema}.{MATERIALIZED_VIEW}")
 
 
@@ -509,7 +512,7 @@ def is_view(
     with engine.connect() as conn:
         return (
             conn.execute(
-                sa.select([sa.column(column)])
+                sa.select(*[sa.column(column)])
                 .select_from(sa.text(pg_table))
                 .where(
                     sa.and_(
@@ -519,7 +522,7 @@ def is_view(
                         ]
                     )
                 )
-                .with_only_columns([sa.func.COUNT()])
+                .with_only_columns(*[sa.func.COUNT()])
                 .order_by(None)
             ).scalar()
             > 0

@@ -27,7 +27,7 @@ def test_postgres_url(mocker):
     mocker.patch("logging.config.dictConfig")
     engine = _pg_engine("wheel")
     mock_get_postgres_url.assert_called_once()
-    url = "postgresql://kermit:frog@some-host:5432/wheel"
+    url = "postgresql://kermit:***@some-host:5432/wheel"
     assert str(engine.engine.url) == url
 
 
