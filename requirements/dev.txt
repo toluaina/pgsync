@@ -8,12 +8,14 @@ async-timeout==4.0.3
     # via redis
 black==23.11.0
     # via -r requirements/dev.in
-boto3==1.33.8
+boto3==1.33.11
     # via -r requirements/base.in
-botocore==1.33.8
+botocore==1.33.11
     # via
     #   boto3
     #   s3transfer
+cerberus==1.3.5
+    # via plette
 certifi==2023.11.17
     # via
     #   elastic-transport
@@ -32,10 +34,14 @@ coverage[toml]==7.3.2
     #   -r requirements/dev.in
     #   pytest-cov
 distlib==0.3.7
-    # via virtualenv
+    # via
+    #   requirementslib
+    #   virtualenv
+docopt==0.6.2
+    # via pipreqs
 elastic-transport==8.10.0
     # via elasticsearch
-elasticsearch==8.11.0
+elasticsearch==8.11.1
     # via
     #   -r requirements/base.in
     #   elasticsearch-dsl
@@ -53,15 +59,15 @@ flake8==6.1.0
     # via -r requirements/dev.in
 freezegun==1.3.1
     # via -r requirements/dev.in
-greenlet==3.0.1
+greenlet==3.0.2
     # via sqlalchemy
-identify==2.5.32
+identify==2.5.33
     # via pre-commit
 idna==3.6
     # via requests
 iniconfig==2.0.0
     # via pytest
-isort==5.12.0
+isort==5.13.0
     # via -r requirements/base.in
 jmespath==1.0.1
     # via
@@ -88,18 +94,29 @@ packaging==23.2
     #   pytest
 pathspec==0.11.2
     # via black
+pep517==0.13.1
+    # via requirementslib
+pip-api==0.0.30
+    # via isort
+pipreqs==0.4.13
+    # via isort
 platformdirs==4.1.0
     # via
     #   black
+    #   requirementslib
     #   virtualenv
+plette[validation]==0.4.4
+    # via requirementslib
 pluggy==1.3.0
     # via pytest
-pre-commit==3.5.0
+pre-commit==3.6.0
     # via -r requirements/dev.in
 psycopg2-binary==2.9.9
     # via -r requirements/base.in
 pycodestyle==2.11.1
     # via flake8
+pydantic==1.10.13
+    # via requirementslib
 pyflakes==3.1.0
     # via flake8
 pytest==7.4.3
@@ -131,8 +148,12 @@ requests==2.31.0
     # via
     #   opensearch-py
     #   requests-aws4auth
+    #   requirementslib
+    #   yarg
 requests-aws4auth==1.2.3
     # via -r requirements/base.in
+requirementslib==3.0.0
+    # via isort
 s3transfer==0.8.2
     # via boto3
 six==1.16.0
@@ -149,10 +170,16 @@ tomli==2.0.1
     # via
     #   black
     #   coverage
+    #   pep517
     #   pytest
+tomlkit==0.12.3
+    # via
+    #   plette
+    #   requirementslib
 typing-extensions==4.8.0
     # via
     #   black
+    #   pydantic
     #   sqlalchemy
 urllib3==1.26.18
     # via
@@ -162,6 +189,9 @@ urllib3==1.26.18
     #   requests
 virtualenv==20.25.0
     # via pre-commit
+yarg==0.1.9
+    # via pipreqs
 
 # The following packages are considered to be unsafe in a requirements file:
+# pip
 # setuptools

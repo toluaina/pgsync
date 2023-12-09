@@ -13,9 +13,9 @@ jobs:
       postgres:
         image: debezium/postgres:16
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
           POSTGRES_DB: testdb
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
         ports:
           - 5432:5432
         # needed because the postgres container does not provide a healthcheck
@@ -58,16 +58,16 @@ jobs:
       env:
         # use postgres for the host here because we have specified a container for the job.
         # If we were running the job on the VM this would be localhost
-        PYTHONPATH: $PYTHONPATH:./pgsync
-        PATH: $PATH:./bin
-        PG_HOST: localhost
-        PG_USER: postgres
-        PG_PASSWORD: postgres
+        ELASTICSEARCH_HOST: localhost
         ELASTICSEARCH_PORT: 9200
         ELASTICSEARCH_SCHEME: http
-        ELASTICSEARCH_HOST: localhost
-        LOGSTASH_HOST: localhost
+        PATH: $PATH:./bin
+        PG_HOST: localhost
         PG_PORT: ${{ job.services.postgres.ports['5432'] }}
+        PG_PASSWORD: postgres
+        PG_USER: postgres
+        PYTHONPATH: $PYTHONPATH:./pgsync
+        LOGSTASH_HOST: localhost
     - name: Upload coverage to Codecov  
       uses: codecov/codecov-action@v1
       with:

@@ -281,7 +281,7 @@ class Base(object):
         if schema not in self.__views:
             self.__views[schema] = []
             for table in sa.inspect(self.engine).get_view_names(schema):
-                # TODO: figure out why we need is_view here when sqlalchemy
+                # TODO: figure out why we need is_view here when SQLAlchemy
                 # already reflects views
                 if is_view(self.engine, schema, table, materialized=False):
                     self.__views[schema].append(table)
@@ -340,6 +340,7 @@ class Base(object):
         """
         logger.debug(f"Truncating table: {schema}.{table}")
         self.execute(sa.text(f'TRUNCATE TABLE "{schema}"."{table}" CASCADE'))
+        logger.debug(f"Truncated table: {schema}.{table}")
 
     def truncate_tables(
         self, tables: List[str], schema: str = DEFAULT_SCHEMA
@@ -348,11 +349,13 @@ class Base(object):
         logger.debug(f"Truncating tables: {tables}")
         for table in tables:
             self.truncate_table(table, schema=schema)
+        logger.debug(f"Truncated tables: {tables}")
 
     def truncate_schema(self, schema: str) -> None:
         """Truncate all tables in a schema."""
         logger.debug(f"Truncating schema: {schema}")
         self.truncate_tables(self.tables(schema), schema=schema)
+        logger.debug(f"Truncated schema: {schema}")
 
     def truncate_schemas(self) -> None:
         """Truncate all tables in a database."""
@@ -407,6 +410,7 @@ class Base(object):
         except Exception as e:
             logger.exception(f"{e}")
             raise
+        logger.debug(f"Created replication slot: {slot_name}")
 
     def drop_replication_slot(self, slot_name: str) -> None:
         """Drop a replication slot."""
@@ -421,6 +425,7 @@ class Base(object):
             except Exception as e:
                 logger.exception(f"{e}")
                 raise
+        logger.debug(f"Dropped replication slot: {slot_name}")
 
     def _logical_slot_changes(
         self,
@@ -673,29 +678,39 @@ class Base(object):
             )
         )
 
+    def disable_trigger(self, schema: str, table: str) -> None:
+        """Disable a pgsync defined trigger."""
+        for name in ("notify", "truncate"):
+            self.execute(
+                sa.text(
+                    f'ALTER TABLE "{schema}"."{table}" '
+                    f"DISABLE TRIGGER {table}_{name}"
+                )
+            )
+
     def disable_triggers(self, schema: str) -> None:
         """Disable all pgsync defined triggers in database."""
         for table in self.tables(schema):
             logger.debug(f"Disabling trigger on table: {schema}.{table}")
-            for name in ("notify", "truncate"):
-                self.execute(
-                    sa.text(
-                        f'ALTER TABLE "{schema}"."{table}" '
-                        f"DISABLE TRIGGER {table}_{name}"
-                    )
+            self.disable_trigger(schema, table)
+            logger.debug(f"Disabled trigger on table: {schema}.{table}")
+
+    def enable_trigger(self, schema: str, table, str) -> None:
+        """Enable a pgsync defined trigger."""
+        for name in ("notify", "truncate"):
+            self.execute(
+                sa.text(
+                    f'ALTER TABLE "{schema}"."{table}" '
+                    f"ENABLE TRIGGER {table}_{name}"
                 )
+            )
 
     def enable_triggers(self, schema: str) -> None:
         """Enable all pgsync defined triggers in database."""
         for table in self.tables(schema):
             logger.debug(f"Enabling trigger on table: {schema}.{table}")
-            for name in ("notify", "truncate"):
-                self.execute(
-                    sa.text(
-                        f'ALTER TABLE "{schema}"."{table}" '
-                        f"ENABLE TRIGGER {table}_{name}"
-                    )
-                )
+            self.enable_trigger(schema, table)
+            logger.debug(f"Enabled trigger on table: {schema}.{table}")
 
     @property
     def txid_current(self) -> int:

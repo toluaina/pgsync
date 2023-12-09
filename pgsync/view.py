@@ -360,7 +360,6 @@ def create_view(
     Raises:
         None
 
-
         This is only called once on bootstrap.
         It is used within the trigger function to determine what payload
         values to send to pg_notify.

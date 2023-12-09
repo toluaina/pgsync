@@ -339,7 +339,7 @@ async def run_tasks(
         # threads can share a common Sync object
         sync = Sync(doc, verbose=verbose, validate=validate)
     event_loop = asyncio.get_event_loop()
-    completed, pending = await asyncio.wait(
+    completed, _ = await asyncio.wait(
         [
             event_loop.run_in_executor(
                 executor, run_task, task, sync, doc, verbose, validate

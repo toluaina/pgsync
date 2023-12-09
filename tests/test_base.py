@@ -158,9 +158,11 @@ class TestBase(object):
     ):
         pg_base = Base(connection.engine.url.database)
         pg_base.truncate_table("book")
-        mock_logger.debug.assert_called_once_with(
-            "Truncating table: public.book"
-        )
+        calls = [
+            call("Truncating table: public.book"),
+            call("Truncated table: public.book"),
+        ]
+        assert mock_logger.debug.call_args_list == calls
         mock_execute.assert_called_once()
         mock_text.assert_called_once_with(
             'TRUNCATE TABLE "public"."book" CASCADE'
@@ -173,9 +175,11 @@ class TestBase(object):
     ):
         pg_base = Base(connection.engine.url.database)
         pg_base.truncate_tables(["book", "user"])
-        mock_logger.debug.assert_called_once_with(
-            "Truncating tables: ['book', 'user']"
-        )
+        calls = [
+            call("Truncating tables: ['book', 'user']"),
+            call("Truncated tables: ['book', 'user']"),
+        ]
+        assert mock_logger.debug.call_args_list == calls
         calls = [
             call("book", schema="public"),
             call("user", schema="public"),
@@ -189,7 +193,11 @@ class TestBase(object):
     ):
         pg_base = Base(connection.engine.url.database)
         pg_base.truncate_schema("public")
-        mock_logger.debug.assert_called_once_with("Truncating schema: public")
+        calls = [
+            call("Truncating schema: public"),
+            call("Truncated schema: public"),
+        ]
+        assert mock_logger.debug.call_args_list == calls
         mock_truncate_tables.assert_called_once_with(
             [
                 "author",
@@ -236,7 +244,9 @@ class TestBase(object):
         pg_base.drop_replication_slot("slot_name")
         calls = [
             call("Creating replication slot: slot_name"),
+            call("Created replication slot: slot_name"),
             call("Dropping replication slot: slot_name"),
+            call("Dropped replication slot: slot_name"),
         ]
         assert mock_logger.debug.call_args_list == calls
 
@@ -250,7 +260,9 @@ class TestBase(object):
         pg_base.drop_replication_slot("slot_name")
         calls = [
             call("Creating replication slot: slot_name"),
+            call("Created replication slot: slot_name"),
             call("Dropping replication slot: slot_name"),
+            call("Dropped replication slot: slot_name"),
         ]
         assert mock_logger.debug.call_args_list == calls
 
