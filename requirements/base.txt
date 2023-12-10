@@ -113,7 +113,7 @@ tomlkit==0.12.3
     # via
     #   plette
     #   requirementslib
-typing-extensions==4.8.0
+typing-extensions==4.9.0
     # via
     #   pydantic
     #   pydantic-core
