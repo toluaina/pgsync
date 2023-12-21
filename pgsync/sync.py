@@ -179,7 +179,7 @@ class Sync(Base, metaclass=Singleton):
                         f"{MATERIALIZED_VIEW}. Please re-run bootstrap."
                     )
 
-            if node.schema not in self.schemas:
+            if node.schema not in self.filter_schemas(self.schemas):
                 raise InvalidSchemaError(
                     f"Unknown schema name(s): {node.schema}"
                 )
@@ -191,6 +191,32 @@ class Sync(Base, metaclass=Singleton):
                     raise PrimaryKeyNotFoundError(
                         f"No primary key(s) for base table: {table}"
                     )
+
+    def filter_schemas(self, schemas: list) -> list:
+        if (schemas is None) or (len(schemas) == 0):
+            return schemas
+        extracted_schemas = self.extract_schemas(self.nodes)
+        updated_schemas = []
+        for schema in schemas:
+            if schema in extracted_schemas:
+                updated_schemas.append(schema)
+        return updated_schemas
+
+    def extract_schemas(self, nodes: dict) -> list:
+        if nodes is None:
+            return nodes
+        flat_schemas = []
+        queue = []
+        queue.append(nodes)
+        while len(queue) != 0:
+            tempNode = queue.pop()
+            if tempNode is not None:
+                if "schema" in tempNode and len(tempNode["schema"]):
+                    flat_schemas.append(tempNode["schema"])
+                if "children" in tempNode and len(tempNode["children"]):
+                    for node in tempNode["children"]:
+                        queue.append(node)
+        return list(set(flat_schemas))
 
     def analyze(self) -> None:
         for node in self.tree.traverse_breadth_first():
@@ -258,7 +284,7 @@ class Sync(Base, metaclass=Singleton):
         join_queries: bool = settings.JOIN_QUERIES
         self.teardown(drop_view=False)
 
-        for schema in self.schemas:
+        for schema in self.filter_schemas(self.schemas):
             self.create_function(schema)
             tables: Set = set()
             # tables with user defined foreign keys
@@ -309,7 +335,7 @@ class Sync(Base, metaclass=Singleton):
 
         self.redis.delete()
 
-        for schema in self.schemas:
+        for schema in self.filter_schemas(self.schemas):
             tables: Set = set()
             for node in self.tree.traverse_breadth_first():
                 tables |= set(
@@ -817,6 +843,8 @@ class Sync(Base, metaclass=Singleton):
         if payload.table not in self.tree.tables:
             return
 
+        if payload.schema not in self.filter_schemas(self.schemas):
+            return
         node: Node = self.tree.get_node(payload.table, payload.schema)
 
         for payload in payloads:

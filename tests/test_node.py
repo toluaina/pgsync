@@ -21,10 +21,12 @@ class TestNode(object):
     @pytest.fixture(scope="function")
     def nodes(self):
         return {
+            "schema": "public",
             "table": "book",
             "columns": ["isbn", "title", "description"],
             "children": [
                 {
+                    "schema": "public",
                     "table": "publisher",
                     "columns": ["name", "id"],
                     "label": "publisher_label",
@@ -36,6 +38,7 @@ class TestNode(object):
                     "transform": {},
                 },
                 {
+                    "schema": "public",
                     "table": "book_language",
                     "columns": ["book_isbn", "language_id"],
                     "label": "book_languages",
@@ -45,6 +48,7 @@ class TestNode(object):
                     },
                 },
                 {
+                    "schema": "public",
                     "table": "author",
                     "columns": ["id", "name"],
                     "label": "authors",
@@ -55,6 +59,7 @@ class TestNode(object):
                     },
                     "children": [
                         {
+                            "schema": "public",
                             "table": "city",
                             "columns": ["name", "id"],
                             "label": "city_label",
@@ -64,6 +69,7 @@ class TestNode(object):
                             },
                             "children": [
                                 {
+                                    "schema": "public",
                                     "table": "country",
                                     "columns": ["name", "id"],
                                     "label": "country_label",
@@ -73,6 +79,7 @@ class TestNode(object):
                                     },
                                     "children": [
                                         {
+                                            "schema": "public",
                                             "table": "continent",
                                             "columns": ["name"],
                                             "label": "continent_label",
@@ -88,6 +95,7 @@ class TestNode(object):
                     ],
                 },
                 {
+                    "schema": "public",
                     "table": "language",
                     "label": "languages",
                     "columns": ["code"],
@@ -98,6 +106,7 @@ class TestNode(object):
                     },
                 },
                 {
+                    "schema": "public",
                     "table": "subject",
                     "label": "subjects",
                     "columns": ["name"],

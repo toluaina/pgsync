@@ -410,7 +410,7 @@ class TestRoot(object):
         document = {
             "index": "testdb",
             "database": "testdb",
-            "nodes": {"table": "book", "columns": ["isbn", "title"]},
+            "nodes": {"table": "book", "schema": "public", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
         sync.search_client.bulk(sync.index, sync.sync())
@@ -453,7 +453,7 @@ class TestRoot(object):
         document = {
             "index": "testdb",
             "database": "testdb",
-            "nodes": {"table": "book", "columns": ["isbn", "title"]},
+            "nodes": {"table": "book", "schema": "public", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
         sync.search_client.bulk(sync.index, sync.sync())
@@ -519,7 +519,7 @@ class TestRoot(object):
         document = {
             "index": "testdb",
             "database": "testdb",
-            "nodes": {"table": "book", "columns": ["isbn", "title"]},
+            "nodes": {"table": "book", "schema": "public", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
         sync.search_client.bulk(sync.index, sync.sync())
@@ -560,7 +560,7 @@ class TestRoot(object):
         document = {
             "index": "testdb",
             "database": "testdb",
-            "nodes": {"table": "book", "columns": ["isbn", "title"]},
+            "nodes": {"table": "book", "schema": "public", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
         sync.search_client.bulk(sync.index, sync.sync())
@@ -601,7 +601,7 @@ class TestRoot(object):
         document = {
             "index": "testdb",
             "database": "testdb",
-            "nodes": {"table": "book", "columns": ["isbn", "title"]},
+            "nodes": {"table": "book", "schema": "public", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
         sync.search_client.bulk(sync.index, sync.sync())
@@ -663,7 +663,7 @@ class TestRoot(object):
         document = {
             "index": "testdb",
             "database": "testdb",
-            "nodes": {"table": "book", "columns": ["isbn", "title"]},
+            "nodes": {"table": "book", "schema": "public", "columns": ["isbn", "title"]},
         }
         sync = Sync(document)
         sync.search_client.bulk(sync.index, sync.sync())

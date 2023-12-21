@@ -290,11 +290,13 @@ class TestNestedChildren(object):
     @pytest.fixture(scope="function")
     def nodes(self):
         return {
+            "schema": "public",
             "table": "book",
             "columns": ["isbn", "title", "description"],
             "children": [
                 {
                     "table": "publisher",
+                    "schema": "public",
                     "columns": ["name", "id"],
                     "label": "publisher_label",
                     "relationship": {
@@ -306,6 +308,7 @@ class TestNestedChildren(object):
                 },
                 {
                     "table": "book_language",
+                    "schema": "public",
                     "columns": ["book_isbn", "language_id"],
                     "label": "book_languages",
                     "relationship": {
@@ -315,6 +318,7 @@ class TestNestedChildren(object):
                 },
                 {
                     "table": "author",
+                    "schema": "public",
                     "columns": ["id", "name"],
                     "label": "authors",
                     "relationship": {
@@ -325,6 +329,7 @@ class TestNestedChildren(object):
                     "children": [
                         {
                             "table": "city",
+                            "schema": "public",
                             "columns": ["name", "id"],
                             "label": "city_label",
                             "relationship": {
@@ -333,6 +338,7 @@ class TestNestedChildren(object):
                             },
                             "children": [
                                 {
+                                    "schema": "public",
                                     "table": "country",
                                     "columns": ["name", "id"],
                                     "label": "country_label",
@@ -342,6 +348,7 @@ class TestNestedChildren(object):
                                     },
                                     "children": [
                                         {
+                                            "schema": "public",
                                             "table": "continent",
                                             "columns": ["name"],
                                             "label": "continent_label",
@@ -357,6 +364,7 @@ class TestNestedChildren(object):
                     ],
                 },
                 {
+                    "schema": "public",
                     "table": "language",
                     "label": "languages",
                     "columns": ["code"],
@@ -367,6 +375,7 @@ class TestNestedChildren(object):
                     },
                 },
                 {
+                    "schema": "public",
                     "table": "subject",
                     "label": "subjects",
                     "columns": ["name"],
@@ -1135,9 +1144,11 @@ class TestNestedChildren(object):
         # insert a new through child with op
         nodes = {
             "table": "book",
+            "schema": "public",
             "columns": ["isbn", "title"],
             "children": [
                 {
+                    "schema": "public",
                     "table": "group",
                     "columns": ["id", "group_name"],
                     "relationship": {
@@ -2102,10 +2113,12 @@ class TestNestedChildren(object):
     def node2(self):
         return [
             {
+                "schema": "public",
                 "table": "book",
                 "columns": ["isbn", "title", "description"],
                 "children": [
                     {
+                        "schema": "public",
                         "table": "publisher",
                         "columns": ["name", "id"],
                         "label": "publisher_label",
@@ -2117,6 +2130,7 @@ class TestNestedChildren(object):
                         "transform": {},
                     },
                     {
+                        "schema": "public",
                         "table": "book_language",
                         "columns": ["book_isbn", "language_id"],
                         "label": "book_languages",
@@ -2126,6 +2140,7 @@ class TestNestedChildren(object):
                         },
                     },
                     {
+                        "schema": "public",
                         "table": "author",
                         "columns": ["id", "name"],
                         "label": "authors",
@@ -2136,6 +2151,7 @@ class TestNestedChildren(object):
                         },
                         "children": [
                             {
+                                "schema": "public",
                                 "table": "city",
                                 "columns": ["name", "id"],
                                 "label": "city_label",
@@ -2145,6 +2161,7 @@ class TestNestedChildren(object):
                                 },
                                 "children": [
                                     {
+                                        "schema": "public",
                                         "table": "country",
                                         "columns": ["name", "id"],
                                         "label": "country_label",
@@ -2154,6 +2171,7 @@ class TestNestedChildren(object):
                                         },
                                         "children": [
                                             {
+                                                "schema": "public",
                                                 "table": "continent",
                                                 "columns": ["name"],
                                                 "label": "continent_label",
@@ -2169,6 +2187,7 @@ class TestNestedChildren(object):
                         ],
                     },
                     {
+                        "schema": "public",
                         "table": "language",
                         "label": "languages",
                         "columns": ["code"],
@@ -2179,6 +2198,7 @@ class TestNestedChildren(object):
                         },
                     },
                     {
+                        "schema": "public",
                         "table": "subject",
                         "label": "subjects",
                         "columns": ["name"],
