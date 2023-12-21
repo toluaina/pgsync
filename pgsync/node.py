@@ -118,6 +118,7 @@ class Node(object):
     models: Callable
     table: str
     schema: str
+    table_count: Optional[int] = None
     primary_key: Optional[list] = None
     label: Optional[str] = None
     transform: Optional[dict] = None
@@ -274,6 +275,7 @@ class Tree:
 
     def __post_init__(self):
         self.tables: Set[str] = set()
+        self.table_counts: Dict[str, int] = {}
         self.__nodes: Dict[Node] = {}
         self.root: Optional[Node] = None
 
@@ -286,7 +288,7 @@ class Tree:
     def traverse_post_order(self) -> Generator:
         return self.root.traverse_post_order()
 
-    def build(self, data: dict) -> Node:
+    def build(self, data: dict, is_root: bool = True) -> Node:
         if not isinstance(data, dict):
             raise SchemaError(
                 "Incompatible schema. Please run v2 schema migration"
@@ -317,13 +319,19 @@ class Tree:
             self.root = node
 
         self.tables.add(node.table)
+        if node.table not in self.table_counts:
+            self.table_counts[node.table] = 0
+        self.table_counts[node.table] += 1
         for through in node.relationship.throughs:
             self.tables.add(through.table)
 
         for child in data.get("children", []):
-            node.add_child(self.build(child))
+            node.add_child(self.build(child, is_root=False))
 
         self.__nodes[key] = node
+        if is_root:
+            for child_node in self.traverse_post_order():
+                child_node.table_count = self.table_counts[child_node.table]
         return node
 
     def get_node(self, table: str, schema: str) -> Node:
