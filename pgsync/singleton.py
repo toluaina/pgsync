@@ -1,6 +1,6 @@
 """PGSync Singleton."""
 
-from typing import Tuple
+import typing as t
 
 
 class Singleton(type):
@@ -31,7 +31,7 @@ class Singleton(type):
             return super(Singleton, cls).__call__(*args, **kwargs)
         database: str = args[0]["database"]
         index: str = args[0].get("index", database)
-        key: Tuple[str, str] = (database, index)
+        key: t.Tuple[str, str] = (database, index)
         if key not in cls._instances:
             cls._instances[key] = super(Singleton, cls).__call__(
                 *args, **kwargs

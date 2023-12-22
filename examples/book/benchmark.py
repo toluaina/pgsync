@@ -1,5 +1,5 @@
+import typing as t
 from random import choice
-from typing import Set
 
 import click
 import sqlalchemy as sa
@@ -24,7 +24,7 @@ FIELDS = {
 
 def insert_op(session: sessionmaker, model, nsize: int) -> None:
     faker: Faker = Faker()
-    rows: Set = set()
+    rows: t.Set = set()
     for _ in range(nsize):
         kwargs = {}
         for column in model.__table__.columns:

@@ -1,7 +1,7 @@
 """PGSync views."""
 import logging
+import typing as t
 import warnings
-from typing import Callable, List, Set
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import array
@@ -229,9 +229,9 @@ def compile_drop_index(
 
 
 def _get_constraints(
-    models: Callable,
+    models: t.Callable,
     schema: str,
-    tables: Set[str],
+    tables: t.Set[str],
     label: str,
     constraint_type: str,
 ) -> sa.sql.Select:
@@ -285,7 +285,7 @@ def _get_constraints(
 
 
 def _primary_keys(
-    models: Callable, schema: str, tables: Set[str]
+    models: t.Callable, schema: str, tables: t.Set[str]
 ) -> sa.sql.Select:
     """
     Returns a SQLAlchemy Select object that represents the primary keys of the specified tables in the given schema.
@@ -308,7 +308,7 @@ def _primary_keys(
 
 
 def _foreign_keys(
-    models: Callable, schema: str, tables: Set[str]
+    models: t.Callable, schema: str, tables: t.Set[str]
 ) -> sa.sql.Select:
     """
     Returns a SQLAlchemy SELECT statement that retrieves foreign key constraints for the specified tables in the given schema.
@@ -332,13 +332,13 @@ def _foreign_keys(
 
 def create_view(
     engine: sa.engine.Engine,
-    models: Callable,
-    fetchall: Callable,
+    models: t.Callable,
+    fetchall: t.Callable,
     index: str,
     schema: str,
-    tables: Set,
+    tables: t.Set,
     user_defined_fkey_tables: dict,
-    views: List[str],
+    views: t.List[str],
 ) -> None:
     """
     This module defines a function `create_view` that creates a view describing primary_keys and foreign_keys for each table

@@ -1,4 +1,4 @@
-from typing import Optional
+import typing as t
 
 from pgsync import plugin
 
@@ -11,7 +11,7 @@ class Auth(plugin.Plugin):
     def transform(self, doc: dict, **kwargs) -> dict:
         pass
 
-    def auth(self, key: str) -> Optional[str]:
+    def auth(self, key: str) -> t.Optional[str]:
         """Sample auth."""
         if key == "PG_PASSWORD":
             return None

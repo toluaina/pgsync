@@ -1,7 +1,7 @@
 """PGSync urls."""
 
 import logging
-from typing import Optional
+import typing as t
 from urllib.parse import quote_plus
 
 from .plugin import Plugins
@@ -26,7 +26,7 @@ from .settings import (
 logger = logging.getLogger(__name__)
 
 
-def _get_auth(key: str) -> Optional[str]:
+def _get_auth(key: str) -> t.Optional[str]:
     """
     Get authentication key from plugins.
 
@@ -44,11 +44,11 @@ def _get_auth(key: str) -> Optional[str]:
 
 
 def get_search_url(
-    scheme: Optional[str] = None,
-    user: Optional[str] = None,
-    host: Optional[str] = None,
-    password: Optional[str] = None,
-    port: Optional[int] = None,
+    scheme: t.Optional[str] = None,
+    user: t.Optional[str] = None,
+    host: t.Optional[str] = None,
+    password: t.Optional[str] = None,
+    port: t.Optional[int] = None,
 ) -> str:
     """
     Return the URL to connect to Elasticsearch/OpenSearch.
@@ -80,11 +80,11 @@ def get_search_url(
 
 def get_postgres_url(
     database: str,
-    user: Optional[str] = None,
-    host: Optional[str] = None,
-    password: Optional[str] = None,
-    port: Optional[int] = None,
-    driver: Optional[str] = None,
+    user: t.Optional[str] = None,
+    host: t.Optional[str] = None,
+    password: t.Optional[str] = None,
+    port: t.Optional[int] = None,
+    driver: t.Optional[str] = None,
 ) -> str:
     """
     Return the URL to connect to Postgres.
@@ -115,11 +115,11 @@ def get_postgres_url(
 
 
 def get_redis_url(
-    scheme: Optional[str] = None,
-    host: Optional[str] = None,
-    password: Optional[str] = None,
-    port: Optional[int] = None,
-    db: Optional[str] = None,
+    scheme: t.Optional[str] = None,
+    host: t.Optional[str] = None,
+    password: t.Optional[str] = None,
+    port: t.Optional[int] = None,
+    db: t.Optional[str] = None,
 ) -> str:
     """
     Return the URL to connect to Redis.

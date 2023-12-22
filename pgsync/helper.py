@@ -1,7 +1,7 @@
 """PGSync helpers."""
 import logging
 import os
-from typing import Optional
+import typing as t
 
 import sqlalchemy as sa
 
@@ -18,7 +18,7 @@ def teardown(
     delete_redis: bool = True,
     drop_index: bool = True,
     delete_checkpoint: bool = True,
-    config: Optional[str] = None,
+    config: t.Optional[str] = None,
     validate: bool = False,
 ) -> None:
     """

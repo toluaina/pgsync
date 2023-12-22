@@ -45,11 +45,11 @@ import multiprocessing
 import os
 import re
 import sys
+import typing as t
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import dataclass
 from queue import Queue
 from threading import Thread
-from typing import Generator, Optional, Union
 
 import click
 import sqlalchemy as sa
@@ -134,13 +134,13 @@ class Task:
 @timeit
 def fetch_tasks(
     doc: dict,
-    block_size: Optional[int] = None,
-) -> Generator:
+    block_size: t.Optional[int] = None,
+) -> t.Generator:
     block_size = block_size or BLOCK_SIZE
     pages: dict = {}
     sync: Sync = Sync(doc)
-    page: Optional[int] = None
-    row: Optional[int] = None
+    page: t.Optional[int] = None
+    row: t.Optional[int] = None
     name: str = re.sub(
         "[^0-9a-zA-Z_]+", "", f"{sync.database.lower()}_{sync.index}"
     )
@@ -213,7 +213,10 @@ def fetch_tasks(
 
 @timeit
 def synchronous(
-    tasks: Generator, doc: dict, verbose: bool = False, validate: bool = False
+    tasks: t.Generator,
+    doc: dict,
+    verbose: bool = False,
+    validate: bool = False,
 ) -> None:
     sys.stdout.write("Synchronous\n")
     sync: Sync = Sync(doc, verbose=verbose, validate=validate)
@@ -231,9 +234,9 @@ def synchronous(
 
 @timeit
 def multithreaded(
-    tasks: Generator,
+    tasks: t.Generator,
     doc: dict,
-    nprocs: Optional[int] = None,
+    nprocs: t.Optional[int] = None,
     verbose: bool = False,
     validate: bool = False,
 ) -> None:
@@ -274,9 +277,9 @@ def multithreaded(
 
 @timeit
 def multiprocess(
-    tasks: Generator,
+    tasks: t.Generator,
     doc: dict,
-    nprocs: Optional[int] = None,
+    nprocs: t.Optional[int] = None,
     verbose: bool = False,
     validate: bool = False,
 ) -> None:
@@ -292,9 +295,9 @@ def multiprocess(
 
 @timeit
 def multithreaded_async(
-    tasks: Generator,
+    tasks: t.Generator,
     doc: dict,
-    nprocs: Optional[int] = None,
+    nprocs: t.Optional[int] = None,
     verbose: bool = False,
     validate: bool = False,
 ) -> None:
@@ -309,9 +312,9 @@ def multithreaded_async(
 
 @timeit
 def multiprocess_async(
-    tasks: Generator,
+    tasks: t.Generator,
     doc: dict,
-    nprocs: Optional[int] = None,
+    nprocs: t.Optional[int] = None,
     verbose: bool = False,
     validate: bool = False,
 ) -> None:
@@ -328,13 +331,13 @@ def multiprocess_async(
 
 
 async def run_tasks(
-    executor: Union[ThreadPoolExecutor, ProcessPoolExecutor],
-    tasks: Generator,
+    executor: t.Union[ThreadPoolExecutor, ProcessPoolExecutor],
+    tasks: t.Generator,
     doc: dict,
     verbose: bool = False,
     validate: bool = False,
 ) -> None:
-    sync: Optional[Sync] = None
+    sync: t.Optional[Sync] = None
     if isinstance(executor, ThreadPoolExecutor):
         # threads can share a common Sync object
         sync = Sync(doc, verbose=verbose, validate=validate)
@@ -354,8 +357,8 @@ async def run_tasks(
 
 def run_task(
     task: dict,
-    sync: Optional[Sync] = None,
-    doc: Optional[dict] = None,
+    sync: t.Optional[Sync] = None,
+    doc: t.Optional[dict] = None,
     verbose: bool = False,
     validate: bool = False,
 ) -> int:
@@ -427,7 +430,7 @@ def main(config, nprocs, mode, verbose):
     config: str = get_config(config)
 
     for document in config_loader(config):
-        tasks: Generator = fetch_tasks(document)
+        tasks: t.Generator = fetch_tasks(document)
         if mode == "synchronous":
             synchronous(tasks, document, verbose=verbose)
         elif mode == "multithreaded":

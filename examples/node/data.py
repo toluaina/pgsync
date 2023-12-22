@@ -1,4 +1,4 @@
-from typing import List
+import typing as t
 
 import click
 from schema import Node
@@ -24,7 +24,7 @@ def main(config):
     with pg_engine(database) as engine:
         Session = sessionmaker(bind=engine, autoflush=True)
         session = Session()
-        nodes: List[Node] = [
+        nodes: t.List[Node] = [
             Node(id=1, name="Node A"),
             Node(id=2, name="Node B"),
             Node(id=3, name="Node C"),

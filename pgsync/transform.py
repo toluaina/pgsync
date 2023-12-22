@@ -1,6 +1,6 @@
 """PGSync Transform."""
 import logging
-from typing import Any, Dict, Optional
+import typing as t
 
 from .constants import (  # noqa
     CONCAT_TRANSFORM,
@@ -26,7 +26,7 @@ class Transform(object):
 
     @classmethod
     def _rename(
-        cls, data: dict, nodes: dict, result: Optional[dict] = None
+        cls, data: dict, nodes: dict, result: t.Optional[dict] = None
     ) -> dict:
         """
         Rename keys in a nested dictionary based on transform_node.
@@ -75,7 +75,7 @@ class Transform(object):
 
     @classmethod
     def _concat(
-        cls, data: dict, nodes: dict, result: Optional[dict] = None
+        cls, data: dict, nodes: dict, result: t.Optional[dict] = None
     ) -> dict:
         """Concatenate column values into a new field
         {
@@ -214,7 +214,7 @@ class Transform(object):
                 if isinstance(value, dict):
                     target3.append({key: value})
                 elif isinstance(value, list):
-                    _value: Dict[Any, Any] = {}
+                    _value: t.Dict[t.Any, t.Any] = {}
                     for v in value:
                         for _k, _v in v.items():
                             _value.setdefault(_k, [])

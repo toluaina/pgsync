@@ -1,9 +1,4 @@
-import datetime
-import random
-from typing import Dict, List
-
 import click
-from faker import Faker
 from schema import Customer, CustomerGroup, Group
 from sqlalchemy.orm import sessionmaker
 

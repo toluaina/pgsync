@@ -5,7 +5,6 @@ click
 elasticsearch
 elasticsearch-dsl
 environs
-isort
 opensearch-dsl
 psycopg2-binary
 python-dotenv

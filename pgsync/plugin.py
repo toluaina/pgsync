@@ -1,11 +1,11 @@
 """PGSync Plugin."""
 import logging
 import os
+import typing as t
 from abc import ABC, abstractmethod
 from importlib import import_module
 from inspect import getmembers, isclass
 from pkgutil import iter_modules
-from typing import Generator, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class Plugins(object):
         names (list): A list of names.
     """
 
-    def __init__(self, package: str, names: Optional[list] = None):
+    def __init__(self, package: str, names: t.Optional[list] = None):
         self.package: str = package
         self.names: list = names or []
         self.reload()
@@ -81,7 +81,7 @@ class Plugins(object):
             ]:
                 self.walk(f"{package}.{pkg}")
 
-    def transform(self, docs: list) -> Generator:
+    def transform(self, docs: list) -> t.Generator:
         """Applies all plugins to each doc."""
         for doc in docs:
             for plugin in self.plugins:
@@ -94,7 +94,7 @@ class Plugins(object):
                     yield
             yield doc
 
-    def auth(self, key: str) -> Optional[str]:
+    def auth(self, key: str) -> t.Optional[str]:
         """Get an auth value from a key."""
         for plugin in self.plugins:
             if hasattr(plugin, "auth"):

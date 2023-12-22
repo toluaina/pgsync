@@ -1,7 +1,7 @@
 """PGSync Base."""
 import logging
 import os
-from typing import List, Optional, Set, Tuple
+import typing as t
 
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql  # noqa
@@ -67,13 +67,13 @@ class Payload(object):
 
     def __init__(
         self,
-        tg_op: str = Optional[None],
-        table: str = Optional[None],
-        schema: str = Optional[None],
-        old: dict = Optional[None],
-        new: dict = Optional[None],
-        xmin: int = Optional[None],
-        indices: List[str] = Optional[None],
+        tg_op: str = t.Optional[None],
+        table: str = t.Optional[None],
+        schema: str = t.Optional[None],
+        old: dict = t.Optional[None],
+        new: dict = t.Optional[None],
+        xmin: int = t.Optional[None],
+        indices: t.List[str] = t.Optional[None],
     ):
         self.tg_op: str = tg_op
         self.table: str = table
@@ -81,7 +81,7 @@ class Payload(object):
         self.old: dict = old or {}
         self.new: dict = new or {}
         self.xmin: str = xmin
-        self.indices: List[str] = indices
+        self.indices: t.List[str] = indices
 
     @property
     def data(self) -> dict:
@@ -148,7 +148,7 @@ class Base(object):
         self.__engine: sa.engine.Engine = _pg_engine(
             database, echo=False, **kwargs
         )
-        self.__schemas: Optional[dict] = None
+        self.__schemas: t.Optional[dict] = None
         # models is a dict of f'{schema}.{table}'
         self.__models: dict = {}
         self.__metadata: dict = {}
@@ -169,7 +169,7 @@ class Base(object):
             logger.exception(f"Cannot connect to database: {e}")
             raise
 
-    def pg_settings(self, column: str) -> Optional[str]:
+    def pg_settings(self, column: str) -> t.Optional[str]:
         try:
             return self.fetchone(
                 sa.select(
@@ -343,7 +343,7 @@ class Base(object):
         logger.debug(f"Truncated table: {schema}.{table}")
 
     def truncate_tables(
-        self, tables: List[str], schema: str = DEFAULT_SCHEMA
+        self, tables: t.List[str], schema: str = DEFAULT_SCHEMA
     ) -> None:
         """Truncate all tables."""
         logger.debug(f"Truncating tables: {tables}")
@@ -368,7 +368,7 @@ class Base(object):
         slot_name: str,
         plugin: str = PLUGIN,
         slot_type: str = "logical",
-    ) -> List[str]:
+    ) -> t.List[str]:
         """List replication slots.
 
         SELECT * FROM PG_REPLICATION_SLOTS
@@ -431,12 +431,12 @@ class Base(object):
         self,
         slot_name: str,
         func: sa.sql.functions._FunctionGenerator,
-        txmin: Optional[int] = None,
-        txmax: Optional[int] = None,
-        upto_lsn: Optional[int] = None,
-        upto_nchanges: Optional[int] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
+        txmin: t.Optional[int] = None,
+        txmax: t.Optional[int] = None,
+        upto_lsn: t.Optional[int] = None,
+        upto_nchanges: t.Optional[int] = None,
+        limit: t.Optional[int] = None,
+        offset: t.Optional[int] = None,
     ) -> sa.sql.Select:
         """
         Returns a SQLAlchemy Select statement that selects changes from a logical replication slot.
@@ -492,12 +492,12 @@ class Base(object):
     def logical_slot_get_changes(
         self,
         slot_name: str,
-        txmin: Optional[int] = None,
-        txmax: Optional[int] = None,
-        upto_lsn: Optional[int] = None,
-        upto_nchanges: Optional[int] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
+        txmin: t.Optional[int] = None,
+        txmax: t.Optional[int] = None,
+        upto_lsn: t.Optional[int] = None,
+        upto_nchanges: t.Optional[int] = None,
+        limit: t.Optional[int] = None,
+        offset: t.Optional[int] = None,
     ) -> None:
         """Get/Consume changes from a logical replication slot.
 
@@ -522,13 +522,13 @@ class Base(object):
     def logical_slot_peek_changes(
         self,
         slot_name: str,
-        txmin: Optional[int] = None,
-        txmax: Optional[int] = None,
-        upto_lsn: Optional[int] = None,
-        upto_nchanges: Optional[int] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
-    ) -> List[sa.engine.row.Row]:
+        txmin: t.Optional[int] = None,
+        txmax: t.Optional[int] = None,
+        upto_lsn: t.Optional[int] = None,
+        upto_nchanges: t.Optional[int] = None,
+        limit: t.Optional[int] = None,
+        offset: t.Optional[int] = None,
+    ) -> t.List[sa.engine.row.Row]:
         """Peek a logical replication slot without consuming changes.
 
         SELECT * FROM PG_LOGICAL_SLOT_PEEK_CHANGES('testdb', NULL, 1)
@@ -548,10 +548,10 @@ class Base(object):
     def logical_slot_count_changes(
         self,
         slot_name: str,
-        txmin: Optional[int] = None,
-        txmax: Optional[int] = None,
-        upto_lsn: Optional[int] = None,
-        upto_nchanges: Optional[int] = None,
+        txmin: t.Optional[int] = None,
+        txmax: t.Optional[int] = None,
+        upto_lsn: t.Optional[int] = None,
+        upto_nchanges: t.Optional[int] = None,
     ) -> int:
         statement: sa.sql.Select = self._logical_slot_changes(
             slot_name,
@@ -571,7 +571,7 @@ class Base(object):
         self,
         index: str,
         schema: str,
-        tables: Set,
+        tables: t.Set,
         user_defined_fkey_tables: dict,
     ) -> None:
         create_view(
@@ -605,11 +605,11 @@ class Base(object):
     def create_triggers(
         self,
         schema: str,
-        tables: Optional[List[str]] = None,
+        tables: t.Optional[t.List[str]] = None,
         join_queries: bool = False,
     ) -> None:
         """Create a database triggers."""
-        queries: List[str] = []
+        queries: t.List[str] = []
         for table in self.tables(schema):
             if (tables and table not in tables) or (
                 table in self.views(schema)
@@ -637,11 +637,11 @@ class Base(object):
     def drop_triggers(
         self,
         schema: str,
-        tables: Optional[List[str]] = None,
+        tables: t.Optional[t.List[str]] = None,
         join_queries: bool = False,
     ) -> None:
         """Drop all pgsync defined triggers in database."""
-        queries: List[str] = []
+        queries: t.List[str] = []
         for table in self.tables(schema):
             if tables and table not in tables:
                 continue
@@ -724,7 +724,7 @@ class Base(object):
             label="txid_current",
         )[0]
 
-    def parse_value(self, type_: str, value: str) -> Optional[str]:
+    def parse_value(self, type_: str, value: str) -> t.Optional[str]:
         """
         Parse datatypes from db.
 
@@ -776,7 +776,7 @@ class Base(object):
         return value
 
     def parse_logical_slot(self, row: str) -> Payload:
-        def _parse_logical_slot(data: str) -> Tuple[str, str]:
+        def _parse_logical_slot(data: str) -> t.Tuple[str, str]:
             while True:
                 match = LOGICAL_SLOT_SUFFIX.search(data)
                 if not match:
@@ -840,8 +840,8 @@ class Base(object):
     def execute(
         self,
         statement: sa.sql.Select,
-        values: Optional[list] = None,
-        options: Optional[dict] = None,
+        values: t.Optional[list] = None,
+        options: t.Optional[dict] = None,
     ) -> None:
         """Execute a query statement."""
         pg_execute(self.engine, statement, values=values, options=options)
@@ -849,7 +849,7 @@ class Base(object):
     def fetchone(
         self,
         statement: sa.sql.Select,
-        label: Optional[str] = None,
+        label: t.Optional[str] = None,
         literal_binds: bool = False,
     ) -> sa.engine.Row:
         """Fetch one row query."""
@@ -862,9 +862,9 @@ class Base(object):
     def fetchall(
         self,
         statement: sa.sql.Select,
-        label: Optional[str] = None,
+        label: t.Optional[str] = None,
         literal_binds: bool = False,
-    ) -> List[sa.engine.Row]:
+    ) -> t.List[sa.engine.Row]:
         """Fetch all rows from a query statement."""
         if self.verbose:
             compiled_query(statement, label=label, literal_binds=literal_binds)
@@ -875,8 +875,8 @@ class Base(object):
     def fetchmany(
         self,
         statement: sa.sql.Select,
-        chunk_size: Optional[int] = None,
-        stream_results: Optional[bool] = None,
+        chunk_size: t.Optional[int] = None,
+        stream_results: t.Optional[bool] = None,
     ):
         chunk_size = chunk_size or QUERY_CHUNK_SIZE
         stream_results = stream_results or STREAM_RESULTS
@@ -924,13 +924,13 @@ def subtransactions(session):
 
 def pg_engine(
     database: str,
-    user: Optional[str] = None,
-    host: Optional[str] = None,
-    password: Optional[str] = None,
-    port: Optional[int] = None,
+    user: t.Optional[str] = None,
+    host: t.Optional[str] = None,
+    password: t.Optional[str] = None,
+    port: t.Optional[int] = None,
     echo: bool = False,
-    sslmode: Optional[str] = None,
-    sslrootcert: Optional[str] = None,
+    sslmode: t.Optional[str] = None,
+    sslrootcert: t.Optional[str] = None,
 ):
     """Context manager for managing engines."""
 
@@ -938,13 +938,13 @@ def pg_engine(
         def __init__(
             self,
             database: str,
-            user: Optional[str] = None,
-            host: Optional[str] = None,
-            password: Optional[str] = None,
-            port: Optional[int] = None,
+            user: t.Optional[str] = None,
+            host: t.Optional[str] = None,
+            password: t.Optional[str] = None,
+            port: t.Optional[int] = None,
             echo: bool = False,
-            sslmode: Optional[str] = None,
-            sslrootcert: Optional[str] = None,
+            sslmode: t.Optional[str] = None,
+            sslrootcert: t.Optional[str] = None,
         ):
             self.database = database
             self.user = user
@@ -986,13 +986,13 @@ def pg_engine(
 
 def _pg_engine(
     database: str,
-    user: Optional[str] = None,
-    host: Optional[str] = None,
-    password: Optional[str] = None,
-    port: Optional[int] = None,
+    user: t.Optional[str] = None,
+    host: t.Optional[str] = None,
+    password: t.Optional[str] = None,
+    port: t.Optional[int] = None,
     echo: bool = False,
-    sslmode: Optional[str] = None,
-    sslrootcert: Optional[str] = None,
+    sslmode: t.Optional[str] = None,
+    sslrootcert: t.Optional[str] = None,
 ) -> sa.engine.Engine:
     connect_args: dict = {}
     sslmode = sslmode or PG_SSLMODE
@@ -1032,8 +1032,8 @@ def _pg_engine(
 def pg_execute(
     engine: sa.engine.Engine,
     statement: sa.sql.Select,
-    values: Optional[list] = None,
-    options: Optional[dict] = None,
+    values: t.Optional[list] = None,
+    options: t.Optional[dict] = None,
 ) -> None:
     with engine.connect() as conn:
         if options:

@@ -1,5 +1,4 @@
 import click
-import sqlalchemy as sa
 from schema import Comment, Post, PostComment, Tag, User, UserPost, UserTag
 from sqlalchemy.orm import sessionmaker
 

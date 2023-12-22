@@ -4,10 +4,10 @@ import logging
 import os
 import sys
 import threading
+import typing as t
 from datetime import timedelta
 from string import Template
 from time import time
-from typing import Callable, Generator, Optional, Set
 from urllib.parse import ParseResult, urlparse
 
 import click
@@ -30,7 +30,7 @@ def chunks(value: list, size: int) -> list:
         yield value[i : i + size]
 
 
-def timeit(func: Callable):
+def timeit(func: t.Callable):
     def timed(*args, **kwargs):
         since: float = time()
         fn = func(*args, **kwargs)
@@ -42,7 +42,7 @@ def timeit(func: Callable):
 
 
 class Timer:
-    def __init__(self, message: Optional[str] = None):
+    def __init__(self, message: t.Optional[str] = None):
         self.message: str = message or ""
 
     def __enter__(self):
@@ -57,7 +57,7 @@ class Timer:
         )
 
 
-def threaded(func: Callable):
+def threaded(func: t.Callable):
     """Decorator for threaded code execution."""
 
     def wrapper(*args, **kwargs) -> threading.Thread:
@@ -70,10 +70,10 @@ def threaded(func: Callable):
     return wrapper
 
 
-def exception(func: Callable):
+def exception(func: t.Callable):
     """Decorator for threaded exception handling."""
 
-    def wrapper(*args, **kwargs) -> Callable:
+    def wrapper(*args, **kwargs) -> t.Callable:
         try:
             fn = func(*args, **kwargs)
         except Exception as e:
@@ -100,8 +100,8 @@ def get_redacted_url(result: ParseResult) -> ParseResult:
         ParseResult: The redacted URL.
     """
     if result.password:
-        username: Optional[str] = result.username
-        hostname: Optional[str] = result.hostname
+        username: t.Optional[str] = result.username
+        hostname: t.Optional[str] = result.hostname
         if username and hostname:
             result = result._replace(
                 netloc=f"{username}:{'*' * len(result.password)}@{hostname}"
@@ -109,7 +109,7 @@ def get_redacted_url(result: ParseResult) -> ParseResult:
     return result
 
 
-def show_settings(schema: Optional[str] = None) -> None:
+def show_settings(schema: t.Optional[str] = None) -> None:
     """Show settings."""
     logger.info(f"{HIGHLIGHT_BEGIN}Settings{HIGHLIGHT_END}")
     logger.info(f'{"Schema":<10s}: {schema or SCHEMA}')
@@ -130,7 +130,7 @@ def show_settings(schema: Optional[str] = None) -> None:
     logger.info("-" * 65)
 
 
-def get_config(config: Optional[str] = None) -> str:
+def get_config(config: t.Optional[str] = None) -> str:
     """Return the schema config for PGSync."""
     config = config or SCHEMA
     if not config:
@@ -144,7 +144,7 @@ def get_config(config: Optional[str] = None) -> str:
     return config
 
 
-def config_loader(config: str) -> Generator:
+def config_loader(config: str) -> t.Generator:
     """
     Loads a configuration file and yields each document in the file as a dictionary.
     The values in the dictionary are processed as templates, with environment variables
@@ -169,7 +169,7 @@ def config_loader(config: str) -> Generator:
 
 def compiled_query(
     query: sa.sql.Select,
-    label: Optional[str] = None,
+    label: t.Optional[str] = None,
     literal_binds: bool = QUERY_LITERAL_BINDS,
 ) -> None:
     """Compile an SQLAlchemy query with an optional label."""
@@ -202,7 +202,7 @@ class MutuallyExclusiveOption(click.Option):
     """
 
     def __init__(self, *args, **kwargs):
-        self.mutually_exclusive: Set = set(
+        self.mutually_exclusive: t.Set = set(
             kwargs.pop("mutually_exclusive", [])
         )
         help: str = kwargs.get("help", "")
@@ -213,7 +213,12 @@ class MutuallyExclusiveOption(click.Option):
             )
         super(MutuallyExclusiveOption, self).__init__(*args, **kwargs)
 
-    def handle_parse_result(self, ctx, opts, args):
+    def handle_parse_result(
+        self,
+        ctx: click.Context,
+        opts: t.Mapping[str, t.Any],
+        args: t.List[str],
+    ) -> t.Tuple[t.Any, t.List[str]]:
         """
         Handles the parsing of the command-line arguments.
 

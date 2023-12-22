@@ -8,8 +8,8 @@ import re
 import select
 import sys
 import time
+import typing as t
 from collections import defaultdict
-from typing import AnyStr, Generator, List, Optional, Set
 
 import click
 import sqlalchemy as sa
@@ -114,7 +114,7 @@ class Sync(Base, metaclass=Singleton):
 
         self.connect()
 
-        max_replication_slots: Optional[str] = self.pg_settings(
+        max_replication_slots: t.Optional[str] = self.pg_settings(
             "max_replication_slots"
         )
         try:
@@ -126,7 +126,7 @@ class Sync(Base, metaclass=Singleton):
                 "by setting max_replication_slots = 1"
             )
 
-        wal_level: Optional[str] = self.pg_settings("wal_level")
+        wal_level: t.Optional[str] = self.pg_settings("wal_level")
         if not wal_level or wal_level.lower() != "logical":
             raise RuntimeError(
                 "Enable logical decoding by setting wal_level = logical"
@@ -134,7 +134,7 @@ class Sync(Base, metaclass=Singleton):
 
         self._can_create_replication_slot("_tmp_")
 
-        rds_logical_replication: Optional[str] = self.pg_settings(
+        rds_logical_replication: t.Optional[str] = self.pg_settings(
             "rds.logical_replication"
         )
         if (
@@ -260,7 +260,7 @@ class Sync(Base, metaclass=Singleton):
 
         for schema in self.schemas:
             self.create_function(schema)
-            tables: Set = set()
+            tables: t.Set = set()
             # tables with user defined foreign keys
             user_defined_fkey_tables: dict = {}
 
@@ -310,7 +310,7 @@ class Sync(Base, metaclass=Singleton):
         self.redis.delete()
 
         for schema in self.schemas:
-            tables: Set = set()
+            tables: t.Set = set()
             for node in self.tree.traverse_breadth_first():
                 tables |= set(
                     [through.table for through in node.relationship.throughs]
@@ -327,7 +327,7 @@ class Sync(Base, metaclass=Singleton):
 
         self.drop_replication_slot(self.__name)
 
-    def get_doc_id(self, primary_keys: List[str], table: str) -> str:
+    def get_doc_id(self, primary_keys: t.List[str], table: str) -> str:
         """
         Get the Elasticsearch/OpenSearch document id from the primary keys.
         """  # noqa D200
@@ -339,9 +339,9 @@ class Sync(Base, metaclass=Singleton):
 
     def logical_slot_changes(
         self,
-        txmin: Optional[int] = None,
-        txmax: Optional[int] = None,
-        upto_nchanges: Optional[int] = None,
+        txmin: t.Optional[int] = None,
+        txmax: t.Optional[int] = None,
+        upto_nchanges: t.Optional[int] = None,
     ) -> None:
         """
         Process changes from the db logical replication logs.
@@ -398,7 +398,7 @@ class Sync(Base, metaclass=Singleton):
                     continue
                 rows.append(row)
 
-            payloads: List[Payload] = []
+            payloads: t.List[Payload] = []
             for i, row in enumerate(rows):
                 logger.debug(f"txid: {row.xid}")
                 logger.debug(f"data: {row.data}")
@@ -528,7 +528,7 @@ class Sync(Base, metaclass=Singleton):
         return filters
 
     def _insert_op(
-        self, node: Node, filters: dict, payloads: List[Payload]
+        self, node: Node, filters: dict, payloads: t.List[Payload]
     ) -> dict:
         if node.table in self.tree.tables:
             if node.is_root:
@@ -604,7 +604,7 @@ class Sync(Base, metaclass=Singleton):
         self,
         node: Node,
         filters: dict,
-        payloads: List[dict],
+        payloads: t.List[dict],
     ) -> dict:
         if node.is_root:
             # Here, we are performing two operations:
@@ -688,7 +688,7 @@ class Sync(Base, metaclass=Singleton):
         return filters
 
     def _delete_op(
-        self, node: Node, filters: dict, payloads: List[dict]
+        self, node: Node, filters: dict, payloads: t.List[dict]
     ) -> dict:
         # when deleting a root node, just delete the doc in
         # Elasticsearch/OpenSearch
@@ -715,10 +715,10 @@ class Sync(Base, metaclass=Singleton):
                     doc["_type"] = "_doc"
                 docs.append(doc)
             if docs:
-                raise_on_exception: Optional[bool] = (
+                raise_on_exception: t.Optional[bool] = (
                     False if settings.USE_ASYNC else None
                 )
-                raise_on_error: Optional[bool] = (
+                raise_on_error: t.Optional[bool] = (
                     False if settings.USE_ASYNC else None
                 )
                 self.search_client.bulk(
@@ -773,7 +773,7 @@ class Sync(Base, metaclass=Singleton):
 
         return filters
 
-    def _payloads(self, payloads: List[Payload]) -> None:
+    def _payloads(self, payloads: t.List[Payload]) -> None:
         """
         The "payloads" is a list of payload operations to process together.
 
@@ -922,11 +922,11 @@ class Sync(Base, metaclass=Singleton):
 
     def sync(
         self,
-        filters: Optional[dict] = None,
-        txmin: Optional[int] = None,
-        txmax: Optional[int] = None,
-        ctid: Optional[dict] = None,
-    ) -> Generator:
+        filters: t.Optional[dict] = None,
+        txmin: t.Optional[int] = None,
+        txmax: t.Optional[int] = None,
+        ctid: t.Optional[dict] = None,
+    ) -> t.Generator:
         """
         Synchronizes data from PostgreSQL to Elasticsearch.
 
@@ -1023,7 +1023,7 @@ class Sync(Base, metaclass=Singleton):
         return self._checkpoint
 
     @checkpoint.setter
-    def checkpoint(self, value: Optional[str] = None) -> None:
+    def checkpoint(self, value: t.Optional[str] = None) -> None:
         """
         Sets the checkpoint value.
 
@@ -1112,7 +1112,7 @@ class Sync(Base, metaclass=Singleton):
                 if len(payloads) >= settings.REDIS_WRITE_CHUNK_SIZE:
                     self.redis.push(payloads)
                     payloads = []
-                notification: AnyStr = conn.notifies.pop(0)
+                notification: t.AnyStr = conn.notifies.pop(0)
                 if notification.channel == self.database:
                     payload = json.loads(notification.payload)
                     if self.index in payload["indices"]:
@@ -1134,7 +1134,7 @@ class Sync(Base, metaclass=Singleton):
             os._exit(-1)
 
         while self.conn.notifies:
-            notification: AnyStr = self.conn.notifies.pop(0)
+            notification: t.AnyStr = self.conn.notifies.pop(0)
             if notification.channel == self.database:
                 payload = json.loads(notification.payload)
                 if self.index in payload["indices"]:
@@ -1154,13 +1154,13 @@ class Sync(Base, metaclass=Singleton):
                 if node.table in self._materialized_views(node.schema):
                     self.refresh_view(node.table, node.schema)
 
-    def on_publish(self, payloads: List[Payload]) -> None:
+    def on_publish(self, payloads: t.List[Payload]) -> None:
         self._on_publish(payloads)
 
-    async def async_on_publish(self, payloads: List[Payload]) -> None:
+    async def async_on_publish(self, payloads: t.List[Payload]) -> None:
         self._on_publish(payloads)
 
-    def _on_publish(self, payloads: List[Payload]) -> None:
+    def _on_publish(self, payloads: t.List[Payload]) -> None:
         """
         Redis publish event handler.
 
@@ -1190,7 +1190,7 @@ class Sync(Base, metaclass=Singleton):
                 self.search_client.bulk(self.index, self._payloads(_payload))
 
         else:
-            _payloads: List[Payload] = []
+            _payloads: t.List[Payload] = []
             for i, payload in enumerate(payloads):
                 _payloads.append(payload)
                 j: int = i + 1
@@ -1210,7 +1210,7 @@ class Sync(Base, metaclass=Singleton):
                     )
                     _payloads: list = []
 
-        txids: Set = set(map(lambda x: x.xmin, payloads))
+        txids: t.Set = set(map(lambda x: x.xmin, payloads))
         # for truncate, tg_op txids is None so skip setting the checkpoint
         if txids != set([None]):
             self.checkpoint: int = min(min(txids), self.txid_current) - 1

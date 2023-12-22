@@ -1,8 +1,8 @@
 """Sync tests."""
 import importlib
 import os
+import typing as t
 from collections import namedtuple
-from typing import List
 
 import pytest
 from mock import ANY, call, patch
@@ -486,7 +486,7 @@ class TestSync(object):
             schema="public",
         )
         filters: dict = {"book": []}
-        payloads: List[Payload] = [
+        payloads: t.List[Payload] = [
             Payload(
                 tg_op="UPDATE",
                 table="book",
@@ -512,7 +512,7 @@ class TestSync(object):
             schema="public",
         )
         filters: dict = {"book": []}
-        payloads: List[Payload] = [
+        payloads: t.List[Payload] = [
             Payload(
                 tg_op="INSERT",
                 table="book",
@@ -533,7 +533,7 @@ class TestSync(object):
             table="publisher",
             schema="public",
         )
-        payloads: List[Payload] = [
+        payloads: t.List[Payload] = [
             Payload(
                 tg_op="INSERT",
                 table="publisher",
@@ -557,7 +557,7 @@ class TestSync(object):
             schema="public",
         )
         filters: dict = {"book": []}
-        payloads: List[Payload] = [
+        payloads: t.List[Payload] = [
             Payload(
                 tg_op="DELETE",
                 table="book",
@@ -833,7 +833,7 @@ class TestSync(object):
         assert str(root) == "Node: public.book"
 
     def test_payloads(self, sync):
-        payloads: List[Payload] = [
+        payloads: t.List[Payload] = [
             Payload(
                 tg_op="INSERT",
                 table="book",
@@ -845,7 +845,7 @@ class TestSync(object):
             pass
 
     def test_payloads_invalid_tg_op(self, mocker, sync):
-        payloads: List[Payload] = [
+        payloads: t.List[Payload] = [
             Payload(
                 tg_op="FOO",
                 table="book",
@@ -862,7 +862,7 @@ class TestSync(object):
 
     def test_payloads_in_batches(self, mocker, sync):
         # inserting a root node
-        payloads: List[Payload] = [
+        payloads: t.List[Payload] = [
             Payload(
                 tg_op="INSERT",
                 table="book",
@@ -888,7 +888,7 @@ class TestSync(object):
         )
 
         # updating a child table
-        payloads: List[Payload] = [
+        payloads: t.List[Payload] = [
             Payload(
                 tg_op="UPDATE",
                 table="publisher",
