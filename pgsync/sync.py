@@ -69,6 +69,7 @@ class Sync(Base, metaclass=Singleton):
         verbose: bool = False,
         validate: bool = True,
         repl_slots: bool = True,
+        nthreads_polldb: int = 1,
         **kwargs,
     ) -> None:
         """Constructor."""
@@ -89,6 +90,7 @@ class Sync(Base, metaclass=Singleton):
         self._checkpoint: int = None
         self._plugins: Plugins = None
         self._truncate: bool = False
+        self.nthreads_polldb: int = nthreads_polldb
         self._checkpoint_file: str = os.path.join(
             settings.CHECKPOINT_PATH, f".{self.__name}"
         )
@@ -1273,7 +1275,7 @@ class Sync(Base, metaclass=Singleton):
         )
         sys.stdout.flush()
 
-    def receive(self, nthreads_polldb: int) -> None:
+    def receive(self) -> None:
         """
         Receive events from db.
 
@@ -1301,7 +1303,7 @@ class Sync(Base, metaclass=Singleton):
         else:
             # start a background worker producer thread to poll the db and
             # populate the Redis cache
-            for _ in range(nthreads_polldb):
+            for _ in range(self.nthreads_polldb):
                 self.poll_db()
             # sync up to current transaction_id
             self.pull()
@@ -1452,10 +1454,15 @@ def main(
 
         else:
             for document in config_loader(config):
-                sync: Sync = Sync(document, verbose=verbose, **kwargs)
+                sync: Sync = Sync(
+                    document,
+                    verbose=verbose,
+                    nthreads_polldb=nthreads_polldb,
+                    **kwargs,
+                )
                 sync.pull()
                 if daemon:
-                    sync.receive(nthreads_polldb)
+                    sync.receive()
                     sync.join()
 
 

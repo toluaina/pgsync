@@ -13,7 +13,6 @@ from pgsync.exc import (
     RelationshipVariantError,
 )
 from pgsync.node import Tree
-from pgsync.settings import NTHREADS_POLLDB
 from pgsync.singleton import Singleton
 from pgsync.sync import Sync
 
@@ -773,7 +772,7 @@ class TestParentSingleChildFkOnParent(object):
                             "pgsync.sync.Sync.status",
                             side_effect=noop,
                         ):
-                            sync.receive(NTHREADS_POLLDB)
+                            sync.receive()
                             sync.search_client.refresh("testdb")
 
         docs = search(sync.search_client, "testdb")
@@ -1068,7 +1067,7 @@ class TestParentSingleChildFkOnParent(object):
                             "pgsync.sync.Sync.status",
                             side_effect=noop,
                         ):
-                            sync.receive(NTHREADS_POLLDB)
+                            sync.receive()
                             sync.search_client.refresh("testdb")
 
         docs = search(sync.search_client, "testdb")
@@ -1187,7 +1186,7 @@ class TestParentSingleChildFkOnParent(object):
                             "pgsync.sync.Sync.status",
                             side_effect=noop,
                         ):
-                            sync.receive(NTHREADS_POLLDB)
+                            sync.receive()
                             sync.search_client.refresh("testdb")
 
         docs = search(sync.search_client, "testdb")

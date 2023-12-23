@@ -8,7 +8,6 @@ from pgsync.exc import (
     NodeAttributeError,
     TableNotInNodeError,
 )
-from pgsync.settings import NTHREADS_POLLDB
 from pgsync.singleton import Singleton
 from pgsync.sync import Sync
 
@@ -497,7 +496,7 @@ class TestRoot(object):
                             "pgsync.sync.Sync.status",
                             side_effect=noop,
                         ):
-                            sync.receive(NTHREADS_POLLDB)
+                            sync.receive()
                             sync.search_client.refresh("testdb")
 
         docs = search(sync.search_client, "testdb")
@@ -645,7 +644,7 @@ class TestRoot(object):
                             "pgsync.sync.Sync.status",
                             side_effect=noop,
                         ):
-                            sync.receive(NTHREADS_POLLDB)
+                            sync.receive()
                             sync.search_client.refresh("testdb")
 
         docs = search(sync.search_client, "testdb")
@@ -705,7 +704,7 @@ class TestRoot(object):
                             "pgsync.sync.Sync.status",
                             side_effect=noop,
                         ):
-                            sync.receive(NTHREADS_POLLDB)
+                            sync.receive()
                             sync.search_client.refresh("testdb")
 
         docs = search(sync.search_client, "testdb")

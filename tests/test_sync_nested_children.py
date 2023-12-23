@@ -5,7 +5,6 @@ import psycopg2
 import pytest
 
 from pgsync.base import subtransactions
-from pgsync.settings import NTHREADS_POLLDB
 from pgsync.singleton import Singleton
 from pgsync.sync import Sync
 
@@ -988,7 +987,7 @@ class TestNestedChildren(object):
                             "pgsync.sync.Sync.status",
                             side_effect=noop,
                         ):
-                            sync.receive(NTHREADS_POLLDB)
+                            sync.receive()
                             sync.search_client.refresh("testdb")
 
         txmin = sync.checkpoint
@@ -1234,7 +1233,7 @@ class TestNestedChildren(object):
                             "pgsync.sync.Sync.status",
                             side_effect=noop,
                         ):
-                            sync.receive(NTHREADS_POLLDB)
+                            sync.receive()
                             sync.search_client.refresh("testdb")
 
         docs = [sort_list(doc) for doc in sync.sync()]
@@ -2244,7 +2243,7 @@ class TestNestedChildren(object):
                             "pgsync.sync.Sync.status",
                             side_effect=noop,
                         ):
-                            sync.receive(NTHREADS_POLLDB)
+                            sync.receive()
                             sync.search_client.refresh("testdb")
 
         txmin = sync.checkpoint

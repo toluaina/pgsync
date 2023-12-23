@@ -4,7 +4,6 @@ import mock
 import psycopg2
 import pytest
 
-from pgsync import settings
 from pgsync.base import subtransactions
 from pgsync.exc import (
     ForeignKeyError,
@@ -770,7 +769,7 @@ class TestParentSingleChildFkOnChild(object):
                             "pgsync.sync.Sync.status",
                             side_effect=noop,
                         ):
-                            sync.receive(settings.NTHREADS_POLLDB)
+                            sync.receive()
                             sync.search_client.refresh("testdb")
 
         docs = search(sync.search_client, "testdb")
@@ -1073,7 +1072,7 @@ class TestParentSingleChildFkOnChild(object):
                             "pgsync.sync.Sync.status",
                             side_effect=noop,
                         ):
-                            sync.receive(settings.NTHREADS_POLLDB)
+                            sync.receive()
                             sync.search_client.refresh("testdb")
 
         docs = search(sync.search_client, "testdb")
@@ -1193,7 +1192,7 @@ class TestParentSingleChildFkOnChild(object):
                             "pgsync.sync.Sync.status",
                             side_effect=noop,
                         ):
-                            sync.receive(settings.NTHREADS_POLLDB)
+                            sync.receive()
                             sync.search_client.refresh("testdb")
 
         docs = search(sync.search_client, "testdb")
