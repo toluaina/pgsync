@@ -173,7 +173,7 @@ class SearchClient(object):
     ):
         """Bulk index, update, delete docs to Elasticsearch/OpenSearch."""
         if settings.ELASTICSEARCH_STREAMING_BULK:
-            for _ in self.streaming_bulk(
+            for ok, _ in self.streaming_bulk(
                 self.__client,
                 actions,
                 index=index,
@@ -186,11 +186,12 @@ class SearchClient(object):
                 raise_on_exception=raise_on_exception,
                 raise_on_error=raise_on_error,
             ):
-                self.doc_count += 1
+                if ok:
+                    self.doc_count += 1
         else:
             # parallel bulk consumes more memory and is also more likely
             # to result in 429 errors.
-            for _ in self.parallel_bulk(
+            for ok, _ in self.parallel_bulk(
                 self.__client,
                 actions,
                 thread_count=thread_count,
@@ -202,7 +203,8 @@ class SearchClient(object):
                 raise_on_error=raise_on_error,
                 ignore_status=ignore_status,
             ):
-                self.doc_count += 1
+                if ok:
+                    self.doc_count += 1
 
     def refresh(self, indices: t.List[str]) -> None:
         """Refresh the Elasticsearch/OpenSearch index."""
