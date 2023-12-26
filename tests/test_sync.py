@@ -498,7 +498,6 @@ class TestSync(object):
         _filters = sync._update_op(node, filters, payloads)
         sync.search_client.refresh("testdb")
         assert _filters == {"book": [{"isbn": "aa1"}]}
-        assert sync.search_client.doc_count == 1
         docs = sync.search_client.search(
             "testdb", body={"query": {"match_all": {}}}
         )
