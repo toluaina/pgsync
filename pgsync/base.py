@@ -976,7 +976,7 @@ def pg_engine(
         database,
         user=user,
         host=host,
-        password=host,
+        password=password,
         port=port,
         echo=echo,
         sslmode=sslmode,
