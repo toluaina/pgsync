@@ -1339,14 +1339,18 @@ class Sync(Base, metaclass=Singleton):
 @click.option(
     "--producer",
     is_flag=True,
-    default=True,
+    default=None,
     help="Run as a producer only",
+    cls=MutuallyExclusiveOption,
+    mutually_exclusive=["consumer"],
 )
 @click.option(
     "--consumer",
     is_flag=True,
     help="Run as a consumer only",
-    default=True,
+    default=None,
+    cls=MutuallyExclusiveOption,
+    mutually_exclusive=["producer"],
 )
 @click.option(
     "--polling",
@@ -1450,6 +1454,13 @@ def main(
     config: str = get_config(config)
 
     show_settings(config)
+
+    if producer:
+        consumer = False
+    elif consumer:
+        producer = False
+    else:
+        consumer = producer = True
 
     with Timer():
         if analyze:
