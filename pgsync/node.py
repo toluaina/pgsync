@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+import threading
 import typing as t
 from dataclasses import dataclass
 
@@ -269,13 +270,15 @@ class Node(object):
 
 
 @dataclass
-class Tree:
+class Tree(threading.local):
     models: t.Callable
+    nodes: dict
 
     def __post_init__(self):
         self.tables: t.Set[str] = set()
         self.__nodes: t.Dict[Node] = {}
         self.root: t.Optional[Node] = None
+        self.build(self.nodes)
 
     def display(self) -> None:
         self.root.display()
@@ -286,32 +289,32 @@ class Tree:
     def traverse_post_order(self) -> t.Generator:
         return self.root.traverse_post_order()
 
-    def build(self, data: dict) -> Node:
-        if not isinstance(data, dict):
+    def build(self, nodes: dict) -> Node:
+        if not isinstance(nodes, dict):
             raise SchemaError(
                 "Incompatible schema. Please run v2 schema migration"
             )
-        table: str = data.get("table")
-        schema: str = data.get("schema", DEFAULT_SCHEMA)
+        table: str = nodes.get("table")
+        schema: str = nodes.get("schema", DEFAULT_SCHEMA)
         key: t.Tuple[str, str] = (schema, table)
 
         if table is None:
-            raise TableNotInNodeError(f"Table not specified in node: {data}")
+            raise TableNotInNodeError(f"Table not specified in node: {nodes}")
 
-        if not set(data.keys()).issubset(set(NODE_ATTRIBUTES)):
-            attrs = set(data.keys()).difference(set(NODE_ATTRIBUTES))
+        if not set(nodes.keys()).issubset(set(NODE_ATTRIBUTES)):
+            attrs = set(nodes.keys()).difference(set(NODE_ATTRIBUTES))
             raise NodeAttributeError(f"Unknown node attribute(s): {attrs}")
 
         node: Node = Node(
             models=self.models,
             table=table,
             schema=schema,
-            primary_key=data.get("primary_key", []),
-            label=data.get("label", table),
-            transform=data.get("transform", {}),
-            columns=data.get("columns", []),
-            relationship=data.get("relationship", {}),
-            base_tables=data.get("base_tables", []),
+            primary_key=nodes.get("primary_key", []),
+            label=nodes.get("label", table),
+            transform=nodes.get("transform", {}),
+            columns=nodes.get("columns", []),
+            relationship=nodes.get("relationship", {}),
+            base_tables=nodes.get("base_tables", []),
         )
         if self.root is None:
             self.root = node
@@ -320,7 +323,7 @@ class Tree:
         for through in node.relationship.throughs:
             self.tables.add(through.table)
 
-        for child in data.get("children", []):
+        for child in nodes.get("children", []):
             node.add_child(self.build(child))
 
         self.__nodes[key] = node

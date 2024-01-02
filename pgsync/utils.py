@@ -14,8 +14,8 @@ import click
 import sqlalchemy as sa
 import sqlparse
 
+from . import settings
 from .exc import SchemaError
-from .settings import CHECKPOINT_PATH, QUERY_LITERAL_BINDS, SCHEMA
 from .urls import get_postgres_url, get_redis_url, get_search_url
 
 logger = logging.getLogger(__name__)
@@ -78,8 +78,9 @@ def exception(func: t.Callable):
             fn = func(*args, **kwargs)
         except Exception as e:
             name: str = threading.current_thread().name
+            err = e.args[0] if len(e.args) > 0 else e.args
             sys.stdout.write(
-                f"Exception in {func.__name__}() for thread {name}: {e}\n"
+                f"Exception in {func.__name__}() for thread {name}: {err}\n"
                 f"Exiting...\n"
             )
             os._exit(-1)
@@ -112,17 +113,20 @@ def get_redacted_url(result: ParseResult) -> ParseResult:
 def show_settings(schema: t.Optional[str] = None) -> None:
     """Show settings."""
     logger.info(f"{HIGHLIGHT_BEGIN}Settings{HIGHLIGHT_END}")
-    logger.info(f'{"Schema":<10s}: {schema or SCHEMA}')
+    logger.info(f'{"Schema":<10s}: {schema or settings.SCHEMA}')
     logger.info("-" * 65)
     logger.info(f"{HIGHLIGHT_BEGIN}Checkpoint{HIGHLIGHT_END}")
-    logger.info(f"Path: {CHECKPOINT_PATH}")
+    logger.info(f"Path: {settings.CHECKPOINT_PATH}")
     logger.info(f"{HIGHLIGHT_BEGIN}Postgres{HIGHLIGHT_END}")
     result: ParseResult = get_redacted_url(
         urlparse(get_postgres_url("postgres"))
     )
     logger.info(f"URL: {result.geturl()}")
     result = get_redacted_url(urlparse(get_search_url()))
-    logger.info(f"{HIGHLIGHT_BEGIN}Search{HIGHLIGHT_END}")
+    if settings.ELASTICSEARCH:
+        logger.info(f"{HIGHLIGHT_BEGIN}Elasticsearch{HIGHLIGHT_END}")
+    else:
+        logger.info(f"{HIGHLIGHT_BEGIN}OpenSearch{HIGHLIGHT_END}")
     logger.info(f"URL: {result.geturl()}")
     logger.info(f"{HIGHLIGHT_BEGIN}Redis{HIGHLIGHT_END}")
     result = get_redacted_url(urlparse(get_redis_url()))
@@ -132,7 +136,7 @@ def show_settings(schema: t.Optional[str] = None) -> None:
 
 def get_config(config: t.Optional[str] = None) -> str:
     """Return the schema config for PGSync."""
-    config = config or SCHEMA
+    config = config or settings.SCHEMA
     if not config:
         raise SchemaError(
             "Schema config not set\n. "
@@ -157,20 +161,20 @@ def config_loader(config: str) -> t.Generator:
     Yields:
         dict: A dictionary representing a document in the configuration file.
     """
-    with open(config, "r") as documents:
-        for document in json.load(documents):
-            for key, value in document.items():
+    with open(config, "r") as docs:
+        for doc in json.load(docs):
+            for key, value in doc.items():
                 try:
-                    document[key] = Template(value).safe_substitute(os.environ)
+                    doc[key] = Template(value).safe_substitute(os.environ)
                 except TypeError:
                     pass
-            yield document
+            yield doc
 
 
 def compiled_query(
     query: sa.sql.Select,
     label: t.Optional[str] = None,
-    literal_binds: bool = QUERY_LITERAL_BINDS,
+    literal_binds: bool = settings.QUERY_LITERAL_BINDS,
 ) -> None:
     """Compile an SQLAlchemy query with an optional label."""
     query = str(

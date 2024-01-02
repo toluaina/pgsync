@@ -8,9 +8,9 @@ async-timeout==4.0.3
     # via redis
 black==23.12.1
     # via -r requirements/dev.in
-boto3==1.34.8
+boto3==1.34.11
     # via -r requirements/base.in
-botocore==1.34.8
+botocore==1.34.11
     # via
     #   boto3
     #   s3transfer
@@ -27,7 +27,7 @@ click==8.1.7
     # via
     #   -r requirements/base.in
     #   black
-coverage[toml]==7.3.4
+coverage[toml]==7.4.0
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -45,7 +45,7 @@ environs==10.0.0
     # via -r requirements/base.in
 exceptiongroup==1.2.0
     # via pytest
-faker==21.0.0
+faker==22.0.0
     # via -r requirements/dev.in
 filelock==3.13.1
     # via virtualenv
@@ -102,7 +102,7 @@ pycodestyle==2.11.1
     # via flake8
 pyflakes==3.1.0
     # via flake8
-pytest==7.4.3
+pytest==7.4.4
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -141,7 +141,7 @@ six==1.16.0
     #   opensearch-py
     #   python-dateutil
     #   requests-aws4auth
-sqlalchemy==2.0.23
+sqlalchemy==2.0.24
     # via -r requirements/base.in
 sqlparse==0.4.4
     # via -r requirements/base.in

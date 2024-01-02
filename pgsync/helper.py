@@ -35,12 +35,12 @@ def teardown(
     """
     config: str = get_config(config)
 
-    for document in config_loader(config):
-        if not database_exists(document["database"]):
-            logger.warning(f'Database {document["database"]} does not exist')
+    for doc in config_loader(config):
+        if not database_exists(doc["database"]):
+            logger.warning(f'Database {doc["database"]} does not exist')
             continue
 
-        sync: Sync = Sync(document, validate=validate)
+        sync: Sync = Sync(doc, validate=validate)
         if truncate_db:
             try:
                 sync.truncate_schemas()

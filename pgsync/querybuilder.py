@@ -1,4 +1,5 @@
 """PGSync QueryBuilder."""
+import threading
 import typing as t
 from collections import defaultdict
 
@@ -10,7 +11,7 @@ from .exc import ForeignKeyError
 from .node import Node
 
 
-class QueryBuilder(object):
+class QueryBuilder(threading.local):
     """Query builder."""
 
     def __init__(self, verbose: bool = False):

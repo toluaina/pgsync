@@ -112,8 +112,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
@@ -158,8 +157,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         docs = sorted(docs, key=lambda k: k["_id"])
 
@@ -206,8 +204,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
@@ -252,8 +249,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         docs = sorted(docs, key=lambda k: k["_id"])
         assert docs[0]["_id"] == "abc"
@@ -300,8 +296,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
@@ -348,8 +343,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
@@ -383,8 +377,7 @@ class TestParentSingleChildFkOnChild(object):
             ],
         }
         sync.nodes = nodes
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
 
@@ -429,8 +422,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
 
         fields = ["_meta", "description", "isbn", "rating", "title"]
@@ -457,8 +449,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[2]["_source"] == {
             "_meta": {"rating": {"id": [3]}},
@@ -486,7 +477,7 @@ class TestParentSingleChildFkOnChild(object):
         }
         sync.search_client.close()
         with pytest.raises(RelationshipTypeError) as excinfo:
-            Tree(sync.models).build(nodes)
+            Tree(sync.models, nodes)
         assert 'Relationship type "qwerty" is invalid' in str(excinfo.value)
 
     def test_invalid_relationship_variant(self, sync):
@@ -504,7 +495,7 @@ class TestParentSingleChildFkOnChild(object):
         }
         sync.search_client.close()
         with pytest.raises(RelationshipVariantError) as excinfo:
-            Tree(sync.models).build(nodes)
+            Tree(sync.models, nodes)
         assert 'Relationship variant "abcdefg" is invalid' in str(
             excinfo.value
         )
@@ -521,7 +512,7 @@ class TestParentSingleChildFkOnChild(object):
         }
         sync.search_client.close()
         with pytest.raises(RelationshipAttributeError) as excinfo:
-            Tree(sync.models).build(nodes)
+            Tree(sync.models, nodes)
         assert f"Relationship attribute {set(['foo'])} is invalid" in str(
             excinfo.value
         )
@@ -540,8 +531,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
         assert sources["abc"]["_meta"] == {"rating": {"id": [1]}}
@@ -563,8 +553,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         with pytest.raises(ForeignKeyError) as excinfo:
             [sort_list(doc) for doc in sync.sync()]
         msg = (
@@ -587,7 +576,7 @@ class TestParentSingleChildFkOnChild(object):
         self, data, book_cls, rating_cls, engine
     ):
         """Test sync updates primary_key then sync in non-concurrent mode."""
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": {
@@ -605,7 +594,7 @@ class TestParentSingleChildFkOnChild(object):
                 ],
             },
         }
-        sync = Sync(document)
+        sync = Sync(doc)
         sync.search_client.bulk(sync.index, sync.sync())
         sync.search_client.refresh("testdb")
 
@@ -679,14 +668,14 @@ class TestParentSingleChildFkOnChild(object):
                 "title": "Milli and the Ants",
             },
         ]
-        assert_resync_empty(sync, document.get("node", {}))
+        assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
 
     # TODO: Add another test like this and change
     # both primary key and non pkey column
     def test_update_primary_key_concurrent(self, data, book_cls, rating_cls):
         """Test sync updates primary_key and then sync in concurrent mode."""
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": {
@@ -704,7 +693,7 @@ class TestParentSingleChildFkOnChild(object):
                 ],
             },
         }
-        sync = Sync(document)
+        sync = Sync(doc)
         sync.search_client.bulk(sync.index, sync.sync())
         sync.search_client.refresh("testdb")
         docs = search(sync.search_client, "testdb")
@@ -799,12 +788,12 @@ class TestParentSingleChildFkOnChild(object):
                 "title": "Milli and the Ants",
             },
         ]
-        assert_resync_empty(sync, document.get("node", {}))
+        assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
 
     def test_insert_non_concurrent(self, data, book_cls, rating_cls):
         """Test sync insert and then sync in non-concurrent mode."""
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": {
@@ -822,7 +811,7 @@ class TestParentSingleChildFkOnChild(object):
                 ],
             },
         }
-        sync = Sync(document)
+        sync = Sync(doc)
         sync.search_client.bulk(sync.index, sync.sync())
         sync.search_client.refresh("testdb")
 
@@ -900,14 +889,14 @@ class TestParentSingleChildFkOnChild(object):
                 "title": "Encyclopedia",
             },
         ]
-        assert_resync_empty(sync, document.get("node", {}))
+        assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
 
     def test_update_non_primary_key_non_concurrent(
         self, data, book_cls, rating_cls
     ):
         """Test sync update and then sync in non-concurrent mode."""
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": {
@@ -925,7 +914,7 @@ class TestParentSingleChildFkOnChild(object):
                 ],
             },
         }
-        sync = Sync(document)
+        sync = Sync(doc)
         sync.search_client.bulk(sync.index, sync.sync())
         sync.search_client.refresh("testdb")
 
@@ -990,14 +979,14 @@ class TestParentSingleChildFkOnChild(object):
                 "title": "The Rabbit Club",
             },
         ]
-        assert_resync_empty(sync, document.get("node", {}))
+        assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
 
     def test_update_non_primary_key_concurrent(
         self, data, book_cls, rating_cls
     ):
         """Test sync update and then sync in concurrent mode."""
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": {
@@ -1015,7 +1004,7 @@ class TestParentSingleChildFkOnChild(object):
                 ],
             },
         }
-        sync = Sync(document)
+        sync = Sync(doc)
         sync.search_client.bulk(sync.index, sync.sync())
         sync.search_client.refresh("testdb")
 
@@ -1097,12 +1086,12 @@ class TestParentSingleChildFkOnChild(object):
                 "title": "The Rabbit Club",
             },
         ]
-        assert_resync_empty(sync, document.get("node", {}))
+        assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
 
     def test_delete_concurrent(self, data, book_cls, rating_cls):
         """Test sync delete and then sync in concurrent mode."""
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": {
@@ -1121,7 +1110,7 @@ class TestParentSingleChildFkOnChild(object):
             },
         }
 
-        sync = Sync(document)
+        sync = Sync(doc)
         sync.search_client.bulk(sync.index, sync.sync())
         sync.search_client.refresh("testdb")
 
@@ -1216,5 +1205,5 @@ class TestParentSingleChildFkOnChild(object):
                 "title": "The End of time",
             },
         ]
-        assert_resync_empty(sync, document.get("node", {}))
+        assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()

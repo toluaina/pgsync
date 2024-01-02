@@ -25,8 +25,8 @@ JOIN_QUERIES = env.bool("JOIN_QUERIES", default=True)
 LOGICAL_SLOT_CHUNK_SIZE = env.int("LOGICAL_SLOT_CHUNK_SIZE", default=5000)
 # stdout log interval (in secs)
 LOG_INTERVAL = env.float("LOG_INTERVAL", default=0.5)
-# number of threads to spawn for poll db
-NTHREADS_POLLDB = env.int("NTHREADS_POLLDB", default=1)
+# number of workers to spawn for handling events
+NUM_WORKERS = env.int("NUM_WORKERS", default=2)
 PG_DRIVER = env.str("PG_DRIVER", default="psycopg2")
 # poll db interval (consider reducing this duration to increase throughput)
 POLL_TIMEOUT = env.float("POLL_TIMEOUT", default=0.1)
@@ -171,7 +171,7 @@ REDIS_SCHEME = env.str("REDIS_SCHEME", default="redis")
 # redis socket connection timeout
 REDIS_SOCKET_TIMEOUT = env.int("REDIS_SOCKET_TIMEOUT", default=5)
 # number of items to write to Redis at a time
-REDIS_WRITE_CHUNK_SIZE = env.int("REDIS_WRITE_CHUNK_SIZE", default=1000)
+REDIS_WRITE_CHUNK_SIZE = env.int("REDIS_WRITE_CHUNK_SIZE", default=500)
 
 
 # Logging:

@@ -5,6 +5,7 @@ import psycopg2
 import pytest
 
 from pgsync.base import subtransactions
+from pgsync.node import Tree
 from pgsync.singleton import Singleton
 from pgsync.sync import Sync
 
@@ -380,9 +381,7 @@ class TestNestedChildren(object):
 
     def test_sync(self, sync, nodes, data):
         """Test regular sync produces the correct result."""
-        sync.tree.__post_init__()
-        sync.nodes = nodes
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert len(docs) == 3
         docs = sorted(docs, key=lambda k: k["_id"])
@@ -675,14 +674,14 @@ class TestNestedChildren(object):
             book_shelf_cls(id=7, book=books[0], shelf=shelves[1]),
         ]
 
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": nodes,
         }
 
-        # 1. sync first to add the initial document
-        sync = Sync(document)
+        # 1. sync first to add the initial doc
+        sync = Sync(doc)
         sync.search_client.bulk(
             sync.index, [sort_list(doc) for doc in sync.sync()]
         )
@@ -802,13 +801,13 @@ class TestNestedChildren(object):
         sync.search_client.close()
 
     def test_update_root(self, data, nodes, book_cls):
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": nodes,
         }
-        # 1. sync first to add the initial document
-        sync = Sync(document)
+        # 1. sync first to add the initial doc
+        sync = Sync(doc)
         sync.search_client.bulk(
             sync.index, [sort_list(doc) for doc in sync.sync()]
         )
@@ -925,13 +924,13 @@ class TestNestedChildren(object):
         book_subject_cls,
         book_author_cls,
     ):
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": nodes,
         }
-        # 1. sync first to add the initial document
-        sync = Sync(document)
+        # 1. sync first to add the initial doc
+        sync = Sync(doc)
         sync.search_client.bulk(
             sync.index, [sort_list(doc) for doc in sync.sync()]
         )
@@ -991,7 +990,7 @@ class TestNestedChildren(object):
                             sync.search_client.refresh("testdb")
 
         txmin = sync.checkpoint
-        sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync(txmin=txmin)]
         assert len(docs) == 0
 
@@ -1147,14 +1146,14 @@ class TestNestedChildren(object):
                 }
             ],
         }
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": nodes,
         }
 
-        sync = Sync(document)
-        sync.tree.build(nodes)
+        sync = Sync(doc)
+        sync.tree = Tree(sync.models, nodes)
         session = sync.session
 
         with subtransactions(session):
@@ -1320,14 +1319,14 @@ class TestNestedChildren(object):
             ),
         )
 
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": nodes,
         }
 
-        # 1. sync first to add the initial document
-        sync = Sync(document)
+        # 1. sync first to add the initial doc
+        sync = Sync(doc)
 
         session = sync.session
 
@@ -1553,14 +1552,14 @@ class TestNestedChildren(object):
         continent_cls,
     ):
         # update a new through child with op
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": nodes,
         }
 
-        # 1. sync first to add the initial document
-        sync = Sync(document)
+        # 1. sync first to add the initial doc
+        sync = Sync(doc)
         sync.search_client.bulk(
             sync.index, [sort_list(doc) for doc in sync.sync()]
         )
@@ -1785,14 +1784,14 @@ class TestNestedChildren(object):
 
     def test_delete_through_child_op(self, sync, data, nodes, book_author_cls):
         # delete a new through child with op
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": nodes,
         }
 
-        # 1. sync first to add the initial document
-        sync = Sync(document)
+        # 1. sync first to add the initial doc
+        sync = Sync(doc)
         sync.search_client.bulk(
             sync.index, [sort_list(doc) for doc in sync.sync()]
         )
@@ -1986,14 +1985,14 @@ class TestNestedChildren(object):
             ),
         )
 
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": nodes,
         }
 
-        # 1. sync first to add the initial document
-        sync = Sync(document)
+        # 1. sync first to add the initial doc
+        sync = Sync(doc)
         sync.search_client.bulk(
             sync.index, [sort_list(doc) for doc in sync.sync()]
         )
@@ -2018,14 +2017,14 @@ class TestNestedChildren(object):
 
     def test_update_nonthrough_child_noop(self, data, nodes, shelf_cls):
         # update a new non-through child with noop
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": nodes,
         }
 
-        # 1. sync first to add the initial document
-        sync = Sync(document)
+        # 1. sync first to add the initial doc
+        sync = Sync(doc)
         sync.search_client.bulk(sync.index, sync.sync())
         sync.checkpoint = sync.txid_current
         sync.search_client.refresh("testdb")
@@ -2052,14 +2051,14 @@ class TestNestedChildren(object):
 
     def test_delete_nonthrough_child_noop(self, data, nodes, shelf_cls):
         # delete a new non-through child with noop
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": nodes,
         }
 
-        # 1. sync first to add the initial document
-        sync = Sync(document)
+        # 1. sync first to add the initial doc
+        sync = Sync(doc)
         sync.search_client.bulk(sync.index, sync.sync())
         sync.checkpoint = sync.txid_current
         sync.checkpoint = sync.txid_current
@@ -2206,13 +2205,13 @@ class TestNestedChildren(object):
             continent=continent_cls(id=6, name="Bowser Land"),
         )
 
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": nodes,
         }
-        # sync first to add the initial document
-        sync = Sync(document)
+        # sync first to add the initial doc
+        sync = Sync(doc)
         sync.search_client.bulk(
             sync.index, [sort_list(doc) for doc in sync.sync()]
         )

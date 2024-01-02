@@ -3,6 +3,7 @@
 import pytest
 
 from pgsync.base import subtransactions
+from pgsync.node import Tree
 
 from .testing_utils import assert_resync_empty, sort_list
 
@@ -210,9 +211,7 @@ class TestUniqueBehaviour(object):
         Test regular sync produces the correct result
         """
         sync.tree.__nodes = {}
-        sync.tree.__post_init__()
-        sync.nodes = nodes
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         docs = sorted(docs, key=lambda k: k["_id"])
         assert docs == [
