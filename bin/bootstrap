@@ -56,9 +56,9 @@ def main(teardown, config, user, password, host, port, verbose):
 
     validate: bool = False if teardown else True
 
-    for document in config_loader(config):
+    for doc in config_loader(config):
         sync: Sync = Sync(
-            document,
+            doc,
             verbose=verbose,
             validate=validate,
             repl_slots=False,

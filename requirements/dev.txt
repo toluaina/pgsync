@@ -141,7 +141,7 @@ six==1.16.0
     #   opensearch-py
     #   python-dateutil
     #   requests-aws4auth
-sqlalchemy==2.0.24
+sqlalchemy==2.0.25
     # via -r requirements/base.in
 sqlparse==0.4.4
     # via -r requirements/base.in

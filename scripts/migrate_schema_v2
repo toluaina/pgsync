@@ -30,20 +30,20 @@ def main(config):
 
     changed: bool = False
 
-    documents: list = []
-    for document in json.load(open(config)):
+    docs: list = []
+    for doc in json.load(open(config)):
         new_doc: dict = {}
-        for key, value in document.items():
+        for key, value in doc.items():
             if key == "nodes" and isinstance(value, list):
                 new_doc["nodes"] = value[0]
                 changed = True
                 continue
             new_doc[key] = value
-        documents.append(new_doc)
+        docs.append(new_doc)
 
     if changed:
         with open(config, "w") as fp:
-            fp.write(json.dumps(documents, indent=4))
+            fp.write(json.dumps(docs, indent=4))
     else:
         os.unlink(backup)
 

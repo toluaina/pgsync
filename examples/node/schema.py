@@ -24,8 +24,8 @@ class Node(Base):
 
 
 def setup(config: str) -> None:
-    for document in config_loader(config):
-        database: str = document.get("database", document["index"])
+    for doc in config_loader(config):
+        database: str = doc.get("database", doc["index"])
         create_database(database)
         with pg_engine(database) as engine:
             Base.metadata.drop_all(engine)

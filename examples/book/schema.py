@@ -241,9 +241,9 @@ class BookShelf(Base):
 
 
 def setup(config: str) -> None:
-    for document in config_loader(config):
-        database: str = document.get("database", document["index"])
-        schema: str = document.get("schema", DEFAULT_SCHEMA)
+    for doc in config_loader(config):
+        database: str = doc.get("database", doc["index"])
+        schema: str = doc.get("schema", DEFAULT_SCHEMA)
         create_database(database)
         create_schema(database, schema)
         with pg_engine(database) as engine:

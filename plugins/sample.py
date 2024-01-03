@@ -27,7 +27,7 @@ class VillainPlugin(plugin.Plugin):
     name: str = "Villain"
 
     def transform(self, doc: dict, **kwargs) -> dict:
-        """Demonstrates how to modify a document."""
+        """Demonstrates how to modify a doc."""
         doc_id: str = kwargs["_id"]
         doc_index: str = kwargs["_index"]
 
@@ -48,7 +48,7 @@ class HeroPlugin(plugin.Plugin):
     name: str = "Hero"
 
     def transform(self, doc: dict, **kwargs) -> dict:
-        """Demonstrates how to modify a document."""
+        """Demonstrates how to modify a doc."""
         doc_id: str = kwargs["_id"]
         doc_index: str = kwargs["_index"]
 
@@ -70,7 +70,7 @@ class GeometryPlugin(plugin.Plugin):
     name: str = "Geometry"
 
     def transform(self, doc: dict, **kwargs) -> dict:
-        """Demonstrates how to modify a document."""
+        """Demonstrates how to modify a doc."""
         doc_index: str = kwargs["_index"]
 
         if doc_index == "book":

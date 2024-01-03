@@ -582,7 +582,7 @@ class TestParentSingleChildFkOnParent(object):
         self, data, book_cls, publisher_cls, engine
     ):
         """Test sync updates primary_key then sync in non-concurrent mode."""
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": {
@@ -600,7 +600,7 @@ class TestParentSingleChildFkOnParent(object):
                 ],
             },
         }
-        sync = Sync(document)
+        sync = Sync(doc)
         sync.search_client.bulk(sync.index, sync.sync())
         sync.search_client.refresh("testdb")
 
@@ -669,7 +669,7 @@ class TestParentSingleChildFkOnParent(object):
                 "title": "The Rabbit Club",
             },
         ]
-        assert_resync_empty(sync, document.get("node", {}))
+        assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
 
     # TODO: Add another test like this and change
@@ -678,7 +678,7 @@ class TestParentSingleChildFkOnParent(object):
         self, data, book_cls, publisher_cls
     ):
         """Test sync updates primary_key and then sync in concurrent mode."""
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": {
@@ -696,7 +696,7 @@ class TestParentSingleChildFkOnParent(object):
                 ],
             },
         }
-        sync = Sync(document)
+        sync = Sync(doc)
         sync.search_client.bulk(sync.index, sync.sync())
         sync.search_client.refresh("testdb")
 
@@ -786,12 +786,12 @@ class TestParentSingleChildFkOnParent(object):
                 "title": "The Rabbit Club",
             },
         ]
-        assert_resync_empty(sync, document.get("node", {}))
+        assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
 
     def test_insert_non_concurrent(self, data, book_cls, publisher_cls):
         """Test sync insert and then sync in non-concurrent mode."""
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": {
@@ -809,7 +809,7 @@ class TestParentSingleChildFkOnParent(object):
                 ],
             },
         }
-        sync = Sync(document)
+        sync = Sync(doc)
         sync.search_client.bulk(sync.index, sync.sync())
         sync.search_client.refresh("testdb")
 
@@ -884,14 +884,14 @@ class TestParentSingleChildFkOnParent(object):
                 "title": "Encyclopedia",
             },
         ]
-        assert_resync_empty(sync, document.get("node", {}))
+        assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
 
     def test_update_non_primary_key_non_concurrent(
         self, data, book_cls, publisher_cls
     ):
         """Test sync update and then sync in non-concurrent mode."""
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": {
@@ -909,7 +909,7 @@ class TestParentSingleChildFkOnParent(object):
                 ],
             },
         }
-        sync = Sync(document)
+        sync = Sync(doc)
         sync.search_client.bulk(sync.index, sync.sync())
         sync.search_client.refresh("testdb")
 
@@ -974,14 +974,14 @@ class TestParentSingleChildFkOnParent(object):
                 "title": "The Rabbit Club",
             },
         ]
-        assert_resync_empty(sync, document.get("node", {}))
+        assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
 
     def test_update_non_primary_key_concurrent(
         self, data, book_cls, publisher_cls
     ):
         """Test sync update and then sync in concurrent mode."""
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": {
@@ -999,7 +999,7 @@ class TestParentSingleChildFkOnParent(object):
                 ],
             },
         }
-        sync = Sync(document)
+        sync = Sync(doc)
         sync.search_client.bulk(sync.index, sync.sync())
         sync.search_client.refresh("testdb")
 
@@ -1081,12 +1081,12 @@ class TestParentSingleChildFkOnParent(object):
                 "title": "The Rabbit Club",
             },
         ]
-        assert_resync_empty(sync, document.get("node", {}))
+        assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
 
     def test_delete_concurrent(self, data, book_cls, publisher_cls):
         """Test sync delete and then sync in concurrent mode."""
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": {
@@ -1105,7 +1105,7 @@ class TestParentSingleChildFkOnParent(object):
             },
         }
 
-        sync = Sync(document)
+        sync = Sync(doc)
         sync.search_client.bulk(sync.index, sync.sync())
         sync.search_client.refresh("testdb")
 
@@ -1200,5 +1200,5 @@ class TestParentSingleChildFkOnParent(object):
                 "title": "The Rabbit Club",
             },
         ]
-        assert_resync_empty(sync, document.get("node", {}))
+        assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()

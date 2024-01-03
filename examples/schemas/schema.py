@@ -33,8 +33,8 @@ class Child(Base):
 
 
 def setup(config: str) -> None:
-    for document in config_loader(config):
-        database: str = document.get("database", document["index"])
+    for doc in config_loader(config):
+        database: str = doc.get("database", doc["index"])
         create_database(database)
         for schema in ("parent", "child"):
             create_schema(database, schema)

@@ -17,8 +17,8 @@ from pgsync.utils import config_loader, get_config
 def main(config):
     config: str = get_config(config)
     teardown(drop_db=False, config=config)
-    document: dict = next(config_loader(config))
-    database: str = document.get("database", document["index"])
+    doc: dict = next(config_loader(config))
+    database: str = doc.get("database", doc["index"])
     with pg_engine(database) as engine:
         Session = sessionmaker(bind=engine, autoflush=True)
         session = Session()

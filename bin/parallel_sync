@@ -114,7 +114,6 @@ class Task:
         sync: Sync = Sync(
             self.doc, verbose=self.verbose, validate=self.validate
         )
-        sync.tree.build(sync.nodes)
         txmin: int = sync.checkpoint
         txmax: int = sync.txid_current
         sync.search_client.bulk(
@@ -214,7 +213,6 @@ def synchronous(
 ) -> None:
     sys.stdout.write("Synchronous\n")
     sync: Sync = Sync(doc, verbose=verbose, validate=validate)
-    sync.tree.build(sync.nodes)
     txmin: int = sync.checkpoint
     txmax: int = sync.txid_current
     index: str = sync.index
@@ -250,7 +248,6 @@ def multithreaded(
     nthreads: int = nthreads or 1
     queue: Queue = Queue()
     sync: Sync = Sync(doc, verbose=verbose, validate=validate)
-    sync.tree.build(sync.nodes)
 
     for _ in range(nthreads):
         thread: Thread = Thread(
@@ -358,7 +355,6 @@ def run_task(
 ) -> int:
     if sync is None:
         sync: Sync = Sync(doc, verbose=verbose, validate=validate)
-    sync.tree.build(sync.nodes)
     txmin: int = sync.checkpoint
     txmax: int = sync.txid_current
     sync.search_client.bulk(
@@ -423,20 +419,18 @@ def main(config, nprocs, mode, verbose):
     show_settings()
     config: str = get_config(config)
 
-    for document in config_loader(config):
-        tasks: t.Generator = fetch_tasks(document)
+    for doc in config_loader(config):
+        tasks: t.Generator = fetch_tasks(doc)
         if mode == "synchronous":
-            synchronous(tasks, document, verbose=verbose)
+            synchronous(tasks, doc, verbose=verbose)
         elif mode == "multithreaded":
-            multithreaded(tasks, document, nthreads=nprocs, verbose=verbose)
+            multithreaded(tasks, doc, nthreads=nprocs, verbose=verbose)
         elif mode == "multiprocess":
-            multiprocess(tasks, document, ncpus=nprocs, verbose=verbose)
+            multiprocess(tasks, doc, ncpus=nprocs, verbose=verbose)
         elif mode == "multithreaded_async":
-            multithreaded_async(
-                tasks, document, nthreads=nprocs, verbose=verbose
-            )
+            multithreaded_async(tasks, doc, nthreads=nprocs, verbose=verbose)
         elif mode == "multiprocess_async":
-            multiprocess_async(tasks, document, ncpus=nprocs, verbose=verbose)
+            multiprocess_async(tasks, doc, ncpus=nprocs, verbose=verbose)
 
 
 if __name__ == "__main__":

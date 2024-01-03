@@ -1071,7 +1071,6 @@ def drop_database(database: str, echo: bool = False) -> None:
             sa.text(f'DROP DATABASE IF EXISTS "{database}"'),
             options={"isolation_level": "AUTOCOMMIT"},
         )
-
     logger.debug(f"Dropped database: {database}")
 
 
