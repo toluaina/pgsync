@@ -1,8 +1,8 @@
 """Sync tests."""
 import importlib
 import os
+import typing as t
 from collections import namedtuple
-from typing import List
 
 import pytest
 from mock import ANY, call, patch
@@ -171,7 +171,7 @@ class TestSync(object):
     def test_sync_validate(self, mock_es):
         with pytest.raises(SchemaError) as excinfo:
             Sync(
-                document={
+                doc={
                     "index": "testdb",
                     "database": "testdb",
                     "nodes": ["foo"],
@@ -185,7 +185,7 @@ class TestSync(object):
         )
 
         Sync(
-            document={
+            doc={
                 "index": "testdb",
                 "database": "testdb",
                 "nodes": {"table": "book"},
@@ -220,7 +220,7 @@ class TestSync(object):
                 side_effects=_side_effect("max_replication_slots"),
             ):
                 Sync(
-                    document={
+                    doc={
                         "index": "testdb",
                         "database": "testdb",
                         "nodes": {"table": "book"},
@@ -238,7 +238,7 @@ class TestSync(object):
                 return_value=-1,
             ):
                 Sync(
-                    document={
+                    doc={
                         "index": "testdb",
                         "database": "testdb",
                         "nodes": {"table": "book"},
@@ -256,7 +256,7 @@ class TestSync(object):
                 side_effects=_side_effect("wal_level"),
             ):
                 Sync(
-                    document={
+                    doc={
                         "index": "testdb",
                         "database": "testdb",
                         "nodes": {"table": "book"},
@@ -273,7 +273,7 @@ class TestSync(object):
                 side_effects=_side_effect("rds_logical_replication"),
             ):
                 Sync(
-                    document={
+                    doc={
                         "index": "testdb",
                         "database": "testdb",
                         "nodes": {"table": "book"},
@@ -288,7 +288,7 @@ class TestSync(object):
                 return_value=None,
             ):
                 Sync(
-                    document={
+                    doc={
                         "index": "testdb",
                         "database": "testdb",
                         "nodes": {"table": "book"},
@@ -305,7 +305,7 @@ class TestSync(object):
         ):
             with pytest.raises(RuntimeError) as excinfo:
                 Sync(
-                    document={
+                    doc={
                         "index": "testdb",
                         "database": "testdb",
                         "nodes": {"table": "book"},
@@ -315,7 +315,7 @@ class TestSync(object):
                 assert "hey there" in str(excinfo.value)
 
         Sync(
-            document={
+            doc={
                 "index": "testdb",
                 "database": "testdb",
                 "nodes": {"table": "book"},
@@ -331,8 +331,7 @@ class TestSync(object):
                 "mydb testdb:testdb "
                 "Xlog: [0] => "
                 "Db: [0] => "
-                "Redis: [total = 0 "
-                "pending = 0] => "
+                "Redis: [0] => "
                 "Elasticsearch: [0]...\n"
             )
 
@@ -486,7 +485,7 @@ class TestSync(object):
             schema="public",
         )
         filters: dict = {"book": []}
-        payloads: List[Payload] = [
+        payloads: t.List[Payload] = [
             Payload(
                 tg_op="UPDATE",
                 table="book",
@@ -498,7 +497,6 @@ class TestSync(object):
         _filters = sync._update_op(node, filters, payloads)
         sync.search_client.refresh("testdb")
         assert _filters == {"book": [{"isbn": "aa1"}]}
-        assert sync.search_client.doc_count == 1
         docs = sync.search_client.search(
             "testdb", body={"query": {"match_all": {}}}
         )
@@ -512,7 +510,7 @@ class TestSync(object):
             schema="public",
         )
         filters: dict = {"book": []}
-        payloads: List[Payload] = [
+        payloads: t.List[Payload] = [
             Payload(
                 tg_op="INSERT",
                 table="book",
@@ -533,7 +531,7 @@ class TestSync(object):
             table="publisher",
             schema="public",
         )
-        payloads: List[Payload] = [
+        payloads: t.List[Payload] = [
             Payload(
                 tg_op="INSERT",
                 table="publisher",
@@ -557,7 +555,7 @@ class TestSync(object):
             schema="public",
         )
         filters: dict = {"book": []}
-        payloads: List[Payload] = [
+        payloads: t.List[Payload] = [
             Payload(
                 tg_op="DELETE",
                 table="book",
@@ -579,7 +577,7 @@ class TestSync(object):
     @patch("pgsync.sync.SearchClient")
     def test__truncate_op(self, mock_es, sync, connection):
         pg_base = Base(connection.engine.url.database)
-        node = Node(
+        node: Node = Node(
             models=pg_base.models,
             table="book",
             schema="public",
@@ -589,7 +587,7 @@ class TestSync(object):
         assert _filters == {"book": []}
 
         # truncate a non root table
-        node = Node(
+        node: Node = Node(
             models=pg_base.models,
             table="publisher",
             schema="public",
@@ -833,7 +831,7 @@ class TestSync(object):
         assert str(root) == "Node: public.book"
 
     def test_payloads(self, sync):
-        payloads: List[Payload] = [
+        payloads: t.List[Payload] = [
             Payload(
                 tg_op="INSERT",
                 table="book",
@@ -845,7 +843,7 @@ class TestSync(object):
             pass
 
     def test_payloads_invalid_tg_op(self, mocker, sync):
-        payloads: List[Payload] = [
+        payloads: t.List[Payload] = [
             Payload(
                 tg_op="FOO",
                 table="book",
@@ -862,7 +860,7 @@ class TestSync(object):
 
     def test_payloads_in_batches(self, mocker, sync):
         # inserting a root node
-        payloads: List[Payload] = [
+        payloads: t.List[Payload] = [
             Payload(
                 tg_op="INSERT",
                 table="book",
@@ -888,7 +886,7 @@ class TestSync(object):
         )
 
         # updating a child table
-        payloads: List[Payload] = [
+        payloads: t.List[Payload] = [
             Payload(
                 tg_op="UPDATE",
                 table="publisher",
@@ -932,6 +930,6 @@ class TestSync(object):
         sync._poll_redis()
         mock_on_publish.assert_called_once_with([ANY, ANY])
         mock_refresh_views.assert_called_once()
-        mock_logger.debug.assert_called_once_with(f"poll_redis: {items}")
+        mock_logger.debug.assert_called_once_with(f"_poll_redis: {items}")
         mock_time.sleep.assert_called_once_with(settings.REDIS_POLL_INTERVAL)
         assert sync.count["redis"] == 2

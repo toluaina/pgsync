@@ -1,6 +1,6 @@
 import click
 import sqlalchemy as sa
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.schema import UniqueConstraint
 
 from pgsync.base import create_database, create_schema, pg_engine
@@ -8,14 +8,18 @@ from pgsync.constants import DEFAULT_SCHEMA
 from pgsync.helper import teardown
 from pgsync.utils import config_loader, get_config
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
 class Customer(Base):
     __tablename__ = "customer"
     __table_args__ = (UniqueConstraint("name"),)
-    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    name = sa.Column(sa.String, nullable=False)
+    id: Mapped[int] = mapped_column(
+        sa.Integer, primary_key=True, autoincrement=True
+    )
+    name: Mapped[str] = mapped_column(sa.String, nullable=False)
 
 
 class Group(Base):
@@ -25,8 +29,10 @@ class Group(Base):
             "group_name",
         ),
     )
-    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    group_name = sa.Column(sa.String, nullable=False)
+    id: Mapped[int] = mapped_column(
+        sa.Integer, primary_key=True, autoincrement=True
+    )
+    group_name: Mapped[str] = mapped_column(sa.String, nullable=False)
 
 
 class CustomerGroup(Base):
@@ -37,35 +43,35 @@ class CustomerGroup(Base):
             "group_id",
         ),
     )
-    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    customer_id = sa.Column(
+    id: Mapped[int] = mapped_column(
+        sa.Integer, primary_key=True, autoincrement=True
+    )
+    customer_id: Mapped[int] = mapped_column(
         sa.Integer,
         sa.ForeignKey(Customer.id, ondelete="CASCADE"),
     )
-    customer = sa.orm.relationship(
+    customer: Mapped[Customer] = sa.orm.relationship(
         Customer,
         backref=sa.orm.backref("customers"),
     )
-    group_id = sa.Column(
+    group_id: Mapped[int] = mapped_column(
         sa.Integer,
         sa.ForeignKey(Group.id, ondelete="CASCADE"),
     )
-    group = sa.orm.relationship(
+    group: Mapped[Group] = sa.orm.relationship(
         Group,
         backref=sa.orm.backref("groups"),
     )
 
 
 def setup(config: str) -> None:
-    for document in config_loader(config):
-        database: str = document.get("database", document["index"])
-        schema: str = document.get("schema", DEFAULT_SCHEMA)
+    for doc in config_loader(config):
+        database: str = doc.get("database", doc["index"])
+        schema: str = doc.get("schema", DEFAULT_SCHEMA)
         create_database(database)
         create_schema(database, schema)
         with pg_engine(database) as engine:
-            engine = engine.connect().execution_options(
-                schema_translate_map={None: schema}
-            )
+            Base.metadata.schema = schema
             Base.metadata.drop_all(engine)
             Base.metadata.create_all(engine)
 

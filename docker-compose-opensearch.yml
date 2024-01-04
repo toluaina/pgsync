@@ -2,16 +2,13 @@ version: '3.8'
 
 services:
   postgres:
-    image: debezium/postgres:15
-    ports:
-      - "15432:5432"
-    environment:
-      - POSTGRES_USER=pgsync
-      - POSTGRES_PASSWORD=PLEASE_CHANGE_ME
-      - POSTGRES_DB=postgres
+    extends:
+      file: docker-compose.yml
+      service: postgres
   redis:
-    image: redis
-    command: redis-server --requirepass PLEASE_CHANGE_ME
+    extends:
+      file: docker-compose.yml
+      service: redis
   opensearch:
     image: opensearchproject/opensearch:latest
     ports:
@@ -51,5 +48,4 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_AUTH=PLEASE_CHANGE_ME
-      - ELASTICSEARCH=false
       - OPENSEARCH=true

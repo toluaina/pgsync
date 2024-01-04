@@ -8,8 +8,8 @@ import re
 import select
 import sys
 import time
+import typing as t
 from collections import defaultdict
-from typing import AnyStr, Generator, List, Optional, Set
 
 import click
 import sqlalchemy as sa
@@ -65,22 +65,25 @@ class Sync(Base, metaclass=Singleton):
 
     def __init__(
         self,
-        document: dict,
+        doc: dict,
         verbose: bool = False,
         validate: bool = True,
         repl_slots: bool = True,
+        num_workers: int = 1,
+        producer: bool = True,
+        consumer: bool = True,
         **kwargs,
     ) -> None:
         """Constructor."""
-        self.index: str = document.get("index") or document["database"]
-        self.pipeline: str = document.get("pipeline")
-        self.plugins: list = document.get("plugins", [])
-        self.nodes: dict = document.get("nodes", {})
-        self.setting: dict = document.get("setting")
-        self.mapping: dict = document.get("mapping")
-        self.routing: str = document.get("routing")
+        self.index: str = doc.get("index") or doc["database"]
+        self.pipeline: str = doc.get("pipeline")
+        self.plugins: list = doc.get("plugins", [])
+        self.nodes: dict = doc.get("nodes", {})
+        self.setting: dict = doc.get("setting")
+        self.mapping: dict = doc.get("mapping")
+        self.routing: str = doc.get("routing")
         super().__init__(
-            document.get("database", self.index), verbose=verbose, **kwargs
+            doc.get("database", self.index), verbose=verbose, **kwargs
         )
         self.search_client: SearchClient = SearchClient()
         self.__name: str = re.sub(
@@ -89,12 +92,14 @@ class Sync(Base, metaclass=Singleton):
         self._checkpoint: int = None
         self._plugins: Plugins = None
         self._truncate: bool = False
+        self.producer = producer
+        self.consumer = consumer
+        self.num_workers: int = num_workers
         self._checkpoint_file: str = os.path.join(
             settings.CHECKPOINT_PATH, f".{self.__name}"
         )
         self.redis: RedisQueue = RedisQueue(self.__name)
-        self.tree: Tree = Tree(self.models)
-        self.tree.build(self.nodes)
+        self.tree: Tree = Tree(self.models, nodes=self.nodes)
         if validate:
             self.validate(repl_slots=repl_slots)
             self.create_setting()
@@ -114,7 +119,7 @@ class Sync(Base, metaclass=Singleton):
 
         self.connect()
 
-        max_replication_slots: Optional[str] = self.pg_settings(
+        max_replication_slots: t.Optional[str] = self.pg_settings(
             "max_replication_slots"
         )
         try:
@@ -126,7 +131,7 @@ class Sync(Base, metaclass=Singleton):
                 "by setting max_replication_slots = 1"
             )
 
-        wal_level: Optional[str] = self.pg_settings("wal_level")
+        wal_level: t.Optional[str] = self.pg_settings("wal_level")
         if not wal_level or wal_level.lower() != "logical":
             raise RuntimeError(
                 "Enable logical decoding by setting wal_level = logical"
@@ -134,7 +139,7 @@ class Sync(Base, metaclass=Singleton):
 
         self._can_create_replication_slot("_tmp_")
 
-        rds_logical_replication: Optional[str] = self.pg_settings(
+        rds_logical_replication: t.Optional[str] = self.pg_settings(
             "rds.logical_replication"
         )
         if (
@@ -144,7 +149,7 @@ class Sync(Base, metaclass=Singleton):
             raise RDSError("rds.logical_replication is not enabled")
 
         if self.index is None:
-            raise ValueError("Index is missing for document")
+            raise ValueError("Index is missing for doc")
 
         # ensure we have run bootstrap and the replication slot exists
         if repl_slots and not self.replication_slots(self.__name):
@@ -260,7 +265,7 @@ class Sync(Base, metaclass=Singleton):
 
         for schema in self.schemas:
             self.create_function(schema)
-            tables: Set = set()
+            tables: t.Set = set()
             # tables with user defined foreign keys
             user_defined_fkey_tables: dict = {}
 
@@ -310,7 +315,7 @@ class Sync(Base, metaclass=Singleton):
         self.redis.delete()
 
         for schema in self.schemas:
-            tables: Set = set()
+            tables: t.Set = set()
             for node in self.tree.traverse_breadth_first():
                 tables |= set(
                     [through.table for through in node.relationship.throughs]
@@ -327,9 +332,9 @@ class Sync(Base, metaclass=Singleton):
 
         self.drop_replication_slot(self.__name)
 
-    def get_doc_id(self, primary_keys: List[str], table: str) -> str:
+    def get_doc_id(self, primary_keys: t.List[str], table: str) -> str:
         """
-        Get the Elasticsearch/OpenSearch document id from the primary keys.
+        Get the Elasticsearch/OpenSearch doc id from the primary keys.
         """  # noqa D200
         if not primary_keys:
             raise PrimaryKeyNotFoundError(
@@ -339,9 +344,9 @@ class Sync(Base, metaclass=Singleton):
 
     def logical_slot_changes(
         self,
-        txmin: Optional[int] = None,
-        txmax: Optional[int] = None,
-        upto_nchanges: Optional[int] = None,
+        txmin: t.Optional[int] = None,
+        txmax: t.Optional[int] = None,
+        upto_nchanges: t.Optional[int] = None,
     ) -> None:
         """
         Process changes from the db logical replication logs.
@@ -398,7 +403,7 @@ class Sync(Base, metaclass=Singleton):
                     continue
                 rows.append(row)
 
-            payloads: List[Payload] = []
+            payloads: t.List[Payload] = []
             for i, row in enumerate(rows):
                 logger.debug(f"txid: {row.xid}")
                 logger.debug(f"data: {row.data}")
@@ -528,7 +533,7 @@ class Sync(Base, metaclass=Singleton):
         return filters
 
     def _insert_op(
-        self, node: Node, filters: dict, payloads: List[Payload]
+        self, node: Node, filters: dict, payloads: t.List[Payload]
     ) -> dict:
         if node.table in self.tree.tables:
             if node.is_root:
@@ -604,7 +609,7 @@ class Sync(Base, metaclass=Singleton):
         self,
         node: Node,
         filters: dict,
-        payloads: List[dict],
+        payloads: t.List[dict],
     ) -> dict:
         if node.is_root:
             # Here, we are performing two operations:
@@ -612,7 +617,7 @@ class Sync(Base, metaclass=Singleton):
             # 2) Delete the old record(s) in Elasticsearch/OpenSearch if the
             #    primary key has changed
             #   2.1) This is crucial otherwise we can have the old and new
-            #        document in Elasticsearch/OpenSearch at the same time
+            #        doc in Elasticsearch/OpenSearch at the same time
             docs: list = []
             for payload in payloads:
                 primary_values: list = [
@@ -688,7 +693,7 @@ class Sync(Base, metaclass=Singleton):
         return filters
 
     def _delete_op(
-        self, node: Node, filters: dict, payloads: List[dict]
+        self, node: Node, filters: dict, payloads: t.List[dict]
     ) -> dict:
         # when deleting a root node, just delete the doc in
         # Elasticsearch/OpenSearch
@@ -715,10 +720,10 @@ class Sync(Base, metaclass=Singleton):
                     doc["_type"] = "_doc"
                 docs.append(doc)
             if docs:
-                raise_on_exception: Optional[bool] = (
+                raise_on_exception: t.Optional[bool] = (
                     False if settings.USE_ASYNC else None
                 )
-                raise_on_error: Optional[bool] = (
+                raise_on_error: t.Optional[bool] = (
                     False if settings.USE_ASYNC else None
                 )
                 self.search_client.bulk(
@@ -773,7 +778,7 @@ class Sync(Base, metaclass=Singleton):
 
         return filters
 
-    def _payloads(self, payloads: List[Payload]) -> None:
+    def _payloads(self, payloads: t.List[Payload]) -> None:
         """
         The "payloads" is a list of payload operations to process together.
 
@@ -922,11 +927,23 @@ class Sync(Base, metaclass=Singleton):
 
     def sync(
         self,
-        filters: Optional[dict] = None,
-        txmin: Optional[int] = None,
-        txmax: Optional[int] = None,
-        ctid: Optional[dict] = None,
-    ) -> Generator:
+        filters: t.Optional[dict] = None,
+        txmin: t.Optional[int] = None,
+        txmax: t.Optional[int] = None,
+        ctid: t.Optional[dict] = None,
+    ) -> t.Generator:
+        """
+        Synchronizes data from PostgreSQL to Elasticsearch.
+
+        Args:
+            filters (Optional[dict]): A dictionary of filters to apply to the data.
+            txmin (Optional[int]): The minimum transaction ID to include in the synchronization.
+            txmax (Optional[int]): The maximum transaction ID to include in the synchronization.
+            ctid (Optional[dict]): A dictionary of ctid values to include in the synchronization.
+
+        Yields:
+            dict: A dictionary representing a doc to be indexed in Elasticsearch.
+        """
         self.query_builder.isouter = True
         self.query_builder.from_obj = None
 
@@ -999,14 +1016,26 @@ class Sync(Base, metaclass=Singleton):
 
     @property
     def checkpoint(self) -> int:
-        """Save the current txid as the checkpoint."""
+        """
+        Gets the current checkpoint value.
+
+        :return: The current checkpoint value.
+        :rtype: int
+        """
         if os.path.exists(self._checkpoint_file):
             with open(self._checkpoint_file, "r") as fp:
                 self._checkpoint: int = int(fp.read().split()[0])
         return self._checkpoint
 
     @checkpoint.setter
-    def checkpoint(self, value: Optional[str] = None) -> None:
+    def checkpoint(self, value: t.Optional[str] = None) -> None:
+        """
+        Sets the checkpoint value.
+
+        :param value: The new checkpoint value.
+        :type value: Optional[str]
+        :raises ValueError: If the value is None.
+        """
         if value is None:
             raise ValueError("Cannot assign a None value to checkpoint")
         with open(self._checkpoint_file, "w+") as fp:
@@ -1016,7 +1045,7 @@ class Sync(Base, metaclass=Singleton):
     def _poll_redis(self) -> None:
         payloads: list = self.redis.pop()
         if payloads:
-            logger.debug(f"poll_redis: {payloads}")
+            logger.debug(f"_poll_redis: {payloads}")
             self.count["redis"] += len(payloads)
             self.refresh_views()
             self.on_publish(
@@ -1034,7 +1063,7 @@ class Sync(Base, metaclass=Singleton):
     async def _async_poll_redis(self) -> None:
         payloads: list = self.redis.pop()
         if payloads:
-            logger.debug(f"poll_redis: {payloads}")
+            logger.debug(f"_async_poll_redis: {payloads}")
             self.count["redis"] += len(payloads)
             await self.async_refresh_views()
             await self.async_on_publish(
@@ -1088,12 +1117,12 @@ class Sync(Base, metaclass=Singleton):
                 if len(payloads) >= settings.REDIS_WRITE_CHUNK_SIZE:
                     self.redis.push(payloads)
                     payloads = []
-                notification: AnyStr = conn.notifies.pop(0)
+                notification: t.AnyStr = conn.notifies.pop(0)
                 if notification.channel == self.database:
                     payload = json.loads(notification.payload)
                     if self.index in payload["indices"]:
                         payloads.append(payload)
-                        logger.debug(f"on_notify: {payload}")
+                        logger.debug(f"poll_db: {payload}")
                         self.count["db"] += 1
 
     @exception
@@ -1110,12 +1139,12 @@ class Sync(Base, metaclass=Singleton):
             os._exit(-1)
 
         while self.conn.notifies:
-            notification: AnyStr = self.conn.notifies.pop(0)
+            notification: t.AnyStr = self.conn.notifies.pop(0)
             if notification.channel == self.database:
                 payload = json.loads(notification.payload)
                 if self.index in payload["indices"]:
                     self.redis.push([payload])
-                    logger.debug(f"on_notify: {payload}")
+                    logger.debug(f"async_poll: {payload}")
                     self.count["db"] += 1
 
     def refresh_views(self) -> None:
@@ -1130,13 +1159,13 @@ class Sync(Base, metaclass=Singleton):
                 if node.table in self._materialized_views(node.schema):
                     self.refresh_view(node.table, node.schema)
 
-    def on_publish(self, payloads: List[Payload]) -> None:
+    def on_publish(self, payloads: t.List[Payload]) -> None:
         self._on_publish(payloads)
 
-    async def async_on_publish(self, payloads: List[Payload]) -> None:
+    async def async_on_publish(self, payloads: t.List[Payload]) -> None:
         self._on_publish(payloads)
 
-    def _on_publish(self, payloads: List[Payload]) -> None:
+    def _on_publish(self, payloads: t.List[Payload]) -> None:
         """
         Redis publish event handler.
 
@@ -1166,7 +1195,7 @@ class Sync(Base, metaclass=Singleton):
                 self.search_client.bulk(self.index, self._payloads(_payload))
 
         else:
-            _payloads: List[Payload] = []
+            _payloads: t.List[Payload] = []
             for i, payload in enumerate(payloads):
                 _payloads.append(payload)
                 j: int = i + 1
@@ -1186,7 +1215,7 @@ class Sync(Base, metaclass=Singleton):
                     )
                     _payloads: list = []
 
-        txids: Set = set(map(lambda x: x.xmin, payloads))
+        txids: t.Set = set(map(lambda x: x.xmin, payloads))
         # for truncate, tg_op txids is None so skip setting the checkpoint
         if txids != set([None]):
             self.checkpoint: int = min(min(txids), self.txid_current) - 1
@@ -1242,14 +1271,13 @@ class Sync(Base, metaclass=Singleton):
             f"{label} {self.database}:{self.index} "
             f"Xlog: [{self.count['xlog']:,}] => "
             f"Db: [{self.count['db']:,}] => "
-            f"Redis: [total = {self.count['redis']:,} "
-            f"pending = {self.redis.qsize:,}] => "
+            f"Redis: [{self.redis.qsize:,}] => "
             f"{self.search_client.name}: [{self.search_client.doc_count:,}]"
             f"...\n"
         )
         sys.stdout.flush()
 
-    def receive(self, nthreads_polldb: int) -> None:
+    def receive(self) -> None:
         """
         Receive events from db.
 
@@ -1275,15 +1303,18 @@ class Sync(Base, metaclass=Singleton):
             event_loop.close()
 
         else:
-            # start a background worker producer thread to poll the db and
-            # populate the Redis cache
-            for _ in range(nthreads_polldb):
+            # sync up to and produce items in the Redis cache
+            if self.producer:
                 self.poll_db()
-            # sync up to current transaction_id
-            self.pull()
+                # sync up to current transaction_id
+                self.pull()
+
             # start a background worker consumer thread to
             # poll Redis and populate Elasticsearch/OpenSearch
-            self.poll_redis()
+            if self.consumer:
+                for _ in range(self.num_workers):
+                    self.poll_redis()
+
             # start a background worker thread to cleanup the replication slot
             self.truncate_slots()
             # start a background worker thread to show status
@@ -1304,6 +1335,22 @@ class Sync(Base, metaclass=Singleton):
     help="Run as a daemon (Incompatible with --polling)",
     cls=MutuallyExclusiveOption,
     mutually_exclusive=["polling"],
+)
+@click.option(
+    "--producer",
+    is_flag=True,
+    default=None,
+    help="Run as a producer only",
+    cls=MutuallyExclusiveOption,
+    mutually_exclusive=["consumer"],
+)
+@click.option(
+    "--consumer",
+    is_flag=True,
+    help="Run as a consumer only",
+    default=None,
+    cls=MutuallyExclusiveOption,
+    mutually_exclusive=["producer"],
 )
 @click.option(
     "--polling",
@@ -1359,11 +1406,11 @@ class Sync(Base, metaclass=Singleton):
     mutually_exclusive=["daemon", "polling"],
 )
 @click.option(
-    "--nthreads_polldb",
+    "--num_workers",
     "-n",
-    help="Number of threads to spawn for poll db",
+    help="Number of workers to spawn for handling events",
     type=int,
-    default=settings.NTHREADS_POLLDB,
+    default=settings.NUM_WORKERS,
 )
 def main(
     config,
@@ -1377,8 +1424,10 @@ def main(
     verbose,
     version,
     analyze,
-    nthreads_polldb,
+    num_workers,
     polling,
+    producer,
+    consumer,
 ):
     """Main application syncer."""
     if version:
@@ -1406,25 +1455,39 @@ def main(
 
     show_settings(config)
 
+    if producer:
+        consumer = False
+    elif consumer:
+        producer = False
+    else:
+        consumer = producer = True
+
     with Timer():
         if analyze:
-            for document in config_loader(config):
-                sync: Sync = Sync(document, verbose=verbose, **kwargs)
+            for doc in config_loader(config):
+                sync: Sync = Sync(doc, verbose=verbose, **kwargs)
                 sync.analyze()
 
         elif polling:
             while True:
-                for document in config_loader(config):
-                    sync: Sync = Sync(document, verbose=verbose, **kwargs)
+                for doc in config_loader(config):
+                    sync: Sync = Sync(doc, verbose=verbose, **kwargs)
                     sync.pull()
                 time.sleep(settings.POLL_INTERVAL)
 
         else:
-            for document in config_loader(config):
-                sync: Sync = Sync(document, verbose=verbose, **kwargs)
+            for doc in config_loader(config):
+                sync: Sync = Sync(
+                    doc,
+                    verbose=verbose,
+                    num_workers=num_workers,
+                    producer=producer,
+                    consumer=consumer,
+                    **kwargs,
+                )
                 sync.pull()
                 if daemon:
-                    sync.receive(nthreads_polldb)
+                    sync.receive()
 
 
 if __name__ == "__main__":

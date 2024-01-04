@@ -1,9 +1,10 @@
 """PGSync SearchClient helper."""
 import logging
+import typing as t
 from collections import defaultdict
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import boto3
+import elastic_transport
 import elasticsearch
 import elasticsearch_dsl
 import opensearch_dsl
@@ -40,7 +41,7 @@ class SearchClient(object):
             self.__client: elasticsearch.Elasticsearch = get_search_client(
                 url,
                 client=elasticsearch.Elasticsearch,
-                connection_class=elasticsearch.RequestsHttpConnection,
+                node_class=elastic_transport.RequestsHttpNode,
             )
             try:
                 self.major_version: int = int(
@@ -48,13 +49,15 @@ class SearchClient(object):
                 )
             except (IndexError, KeyError, ValueError):
                 pass
-            self.streaming_bulk: Callable = (
+            self.streaming_bulk: t.Callable = (
                 elasticsearch.helpers.streaming_bulk
             )
-            self.parallel_bulk: Callable = elasticsearch.helpers.parallel_bulk
-            self.Search: Callable = elasticsearch_dsl.Search
-            self.Bool: Callable = elasticsearch_dsl.query.Bool
-            self.Q: Callable = elasticsearch_dsl.Q
+            self.parallel_bulk: t.Callable = (
+                elasticsearch.helpers.parallel_bulk
+            )
+            self.Search: t.Callable = elasticsearch_dsl.Search
+            self.Bool: t.Callable = elasticsearch_dsl.query.Bool
+            self.Q: t.Callable = elasticsearch_dsl.Q
 
         elif settings.OPENSEARCH:
             self.is_opensearch = True
@@ -64,11 +67,13 @@ class SearchClient(object):
                 client=opensearchpy.OpenSearch,
                 connection_class=opensearchpy.RequestsHttpConnection,
             )
-            self.streaming_bulk: Callable = opensearchpy.helpers.streaming_bulk
-            self.parallel_bulk: Callable = opensearchpy.helpers.parallel_bulk
-            self.Search: Callable = opensearch_dsl.Search
-            self.Bool: Callable = opensearch_dsl.query.Bool
-            self.Q: Callable = opensearch_dsl.Q
+            self.streaming_bulk: t.Callable = (
+                opensearchpy.helpers.streaming_bulk
+            )
+            self.parallel_bulk: t.Callable = opensearchpy.helpers.parallel_bulk
+            self.Search: t.Callable = opensearch_dsl.Search
+            self.Bool: t.Callable = opensearch_dsl.query.Bool
+            self.Q: t.Callable = opensearch_dsl.Q
         else:
             raise RuntimeError("Unknown search client")
 
@@ -94,18 +99,18 @@ class SearchClient(object):
     def bulk(
         self,
         index: str,
-        actions: Iterable[Union[bytes, str, Dict[str, Any]]],
-        chunk_size: Optional[int] = None,
-        max_chunk_bytes: Optional[int] = None,
-        queue_size: Optional[int] = None,
-        thread_count: Optional[int] = None,
+        actions: t.Iterable[t.Union[bytes, str, t.Dict[str, t.Any]]],
+        chunk_size: t.Optional[int] = None,
+        max_chunk_bytes: t.Optional[int] = None,
+        queue_size: t.Optional[int] = None,
+        thread_count: t.Optional[int] = None,
         refresh: bool = False,
-        max_retries: Optional[int] = None,
-        initial_backoff: Optional[float] = None,
-        max_backoff: Optional[float] = None,
-        raise_on_exception: Optional[bool] = None,
-        raise_on_error: Optional[bool] = None,
-        ignore_status: Tuple[int] = None,
+        max_retries: t.Optional[int] = None,
+        initial_backoff: t.Optional[float] = None,
+        max_backoff: t.Optional[float] = None,
+        raise_on_exception: t.Optional[bool] = None,
+        raise_on_error: t.Optional[bool] = None,
+        ignore_status: t.Tuple[int] = None,
     ) -> None:
         """Pull sync data from generator to Elasticsearch/OpenSearch."""
         chunk_size = chunk_size or settings.ELASTICSEARCH_CHUNK_SIZE
@@ -153,7 +158,7 @@ class SearchClient(object):
     def _bulk(
         self,
         index: str,
-        actions: Iterable[Union[bytes, str, Dict[str, Any]]],
+        actions: t.Iterable[t.Union[bytes, str, t.Dict[str, t.Any]]],
         chunk_size: int,
         max_chunk_bytes: int,
         queue_size: int,
@@ -164,11 +169,11 @@ class SearchClient(object):
         max_backoff: float,
         raise_on_exception: bool,
         raise_on_error: bool,
-        ignore_status: Tuple[int],
+        ignore_status: t.Tuple[int],
     ):
         """Bulk index, update, delete docs to Elasticsearch/OpenSearch."""
         if settings.ELASTICSEARCH_STREAMING_BULK:
-            for _ in self.streaming_bulk(
+            for ok, _ in self.streaming_bulk(
                 self.__client,
                 actions,
                 index=index,
@@ -181,11 +186,12 @@ class SearchClient(object):
                 raise_on_exception=raise_on_exception,
                 raise_on_error=raise_on_error,
             ):
-                self.doc_count += 1
+                if ok:
+                    self.doc_count += 1
         else:
             # parallel bulk consumes more memory and is also more likely
             # to result in 429 errors.
-            for _ in self.parallel_bulk(
+            for ok, _ in self.parallel_bulk(
                 self.__client,
                 actions,
                 thread_count=thread_count,
@@ -197,13 +203,14 @@ class SearchClient(object):
                 raise_on_error=raise_on_error,
                 ignore_status=ignore_status,
             ):
-                self.doc_count += 1
+                if ok:
+                    self.doc_count += 1
 
-    def refresh(self, indices: List[str]) -> None:
+    def refresh(self, indices: t.List[str]) -> None:
         """Refresh the Elasticsearch/OpenSearch index."""
         self.__client.indices.refresh(index=indices)
 
-    def _search(self, index: str, table: str, fields: Optional[dict] = None):
+    def _search(self, index: str, table: str, fields: t.Optional[dict] = None):
         """
         Search private area for matching docs in Elasticsearch/OpenSearch.
 
@@ -250,14 +257,14 @@ class SearchClient(object):
         self,
         index: str,
         tree: Tree,
-        setting: Optional[dict] = None,
-        mapping: Optional[dict] = None,
-        routing: Optional[str] = None,
+        setting: t.Optional[dict] = None,
+        mapping: t.Optional[dict] = None,
+        routing: t.Optional[str] = None,
     ) -> None:
         """Create Elasticsearch/OpenSearch setting and mapping if required."""
         body: dict = defaultdict(lambda: defaultdict(dict))
 
-        if not self.__client.indices.exists(index):
+        if not self.__client.indices.exists(index=index):
             if setting:
                 body.update(**{"settings": {"index": setting}})
 
@@ -288,8 +295,8 @@ class SearchClient(object):
             )
 
     def _build_mapping(
-        self, tree: Tree, routing: Optional[str] = None
-    ) -> Optional[dict]:
+        self, tree: Tree, routing: t.Optional[str] = None
+    ) -> t.Optional[dict]:
         """
         Get the Elasticsearch/OpenSearch mapping from the schema transform.
         """  # noqa D200
@@ -342,35 +349,63 @@ class SearchClient(object):
 
 def get_search_client(
     url: str,
-    client: Union[opensearchpy.OpenSearch, elasticsearch.Elasticsearch],
-    connection_class: Union[
-        opensearchpy.RequestsHttpConnection,
-        elasticsearch.RequestsHttpConnection,
-    ],
-) -> Union[opensearchpy.OpenSearch, elasticsearch.Elasticsearch]:
+    client: t.Union[opensearchpy.OpenSearch, elasticsearch.Elasticsearch],
+    connection_class: t.Optional[opensearchpy.RequestsHttpConnection] = None,
+    node_class: t.Optional[elastic_transport.RequestsHttpNode] = None,
+) -> t.Union[opensearchpy.OpenSearch, elasticsearch.Elasticsearch]:
+    """
+    Returns a search client based on the specified parameters.
+
+    Args:
+        url (str): The URL of the search client.
+        client (Union[opensearchpy.OpenSearch, elasticsearch.Elasticsearch]): The search client to use.
+        connection_class (opensearchpy.RequestsHttpConnection): The connection class to use.
+        node_class (elastic_transport.RequestsHttpNode): The node class to use.
+
+    Returns:
+        Union[opensearchpy.OpenSearch, elasticsearch.Elasticsearch]: The search client.
+
+    Raises:
+        None
+    """
     if settings.OPENSEARCH_AWS_HOSTED or settings.ELASTICSEARCH_AWS_HOSTED:
         credentials = boto3.Session().get_credentials()
-        service: str = "es"
-        return client(
-            hosts=[url],
-            http_auth=AWS4Auth(
-                credentials.access_key,
-                credentials.secret_key,
-                settings.ELASTICSEARCH_AWS_REGION,
-                service,
-                session_token=credentials.token,
-            ),
-            use_ssl=True,
-            verify_certs=True,
-            connection_class=connection_class,
-        )
+        service: str = "aoss" if settings.OPENSEARCH_AWS_SERVERLESS else "es"
+        if settings.OPENSEARCH:
+            return client(
+                hosts=[url],
+                http_auth=AWS4Auth(
+                    credentials.access_key,
+                    credentials.secret_key,
+                    settings.ELASTICSEARCH_AWS_REGION,
+                    service,
+                    session_token=credentials.token,
+                ),
+                use_ssl=True,
+                verify_certs=True,
+                connection_class=connection_class,
+            )
+        elif settings.ELASTICSEARCH:
+            return client(
+                hosts=[url],
+                http_auth=AWS4Auth(
+                    credentials.access_key,
+                    credentials.secret_key,
+                    settings.ELASTICSEARCH_AWS_REGION,
+                    service,
+                    session_token=credentials.token,
+                ),
+                use_ssl=True,
+                verify_certs=True,
+                node_class=node_class,
+            )
     else:
-        hosts: List[str] = [url]
+        hosts: t.List[str] = [url]
         # API
-        cloud_id: Optional[str] = settings.ELASTICSEARCH_CLOUD_ID
-        api_key: Optional[Union[str, Tuple[str, str]]] = None
-        http_auth: Optional[
-            Union[str, Tuple[str, str]]
+        cloud_id: t.Optional[str] = settings.ELASTICSEARCH_CLOUD_ID
+        api_key: t.Optional[t.Union[str, t.Tuple[str, str]]] = None
+        http_auth: t.Optional[
+            t.Union[str, t.Tuple[str, str]]
         ] = settings.ELASTICSEARCH_HTTP_AUTH
         if (
             settings.ELASTICSEARCH_API_KEY_ID
@@ -380,26 +415,25 @@ def get_search_client(
                 settings.ELASTICSEARCH_API_KEY_ID,
                 settings.ELASTICSEARCH_API_KEY,
             )
-        basic_auth: Optional[str] = settings.ELASTICSEARCH_BASIC_AUTH
-        bearer_auth: Optional[str] = settings.ELASTICSEARCH_BEARER_AUTH
-        opaque_id: Optional[str] = settings.ELASTICSEARCH_OPAQUE_ID
+        basic_auth: t.Optional[str] = settings.ELASTICSEARCH_BASIC_AUTH
+        bearer_auth: t.Optional[str] = settings.ELASTICSEARCH_BEARER_AUTH
+        opaque_id: t.Optional[str] = settings.ELASTICSEARCH_OPAQUE_ID
         # Node
         http_compress: bool = settings.ELASTICSEARCH_HTTP_COMPRESS
         verify_certs: bool = settings.ELASTICSEARCH_VERIFY_CERTS
-        ca_certs: Optional[str] = settings.ELASTICSEARCH_CA_CERTS
-        client_cert: Optional[str] = settings.ELASTICSEARCH_CLIENT_CERT
-        client_key: Optional[str] = settings.ELASTICSEARCH_CLIENT_KEY
-        ssl_assert_hostname: Optional[
+        ca_certs: t.Optional[str] = settings.ELASTICSEARCH_CA_CERTS
+        client_cert: t.Optional[str] = settings.ELASTICSEARCH_CLIENT_CERT
+        client_key: t.Optional[str] = settings.ELASTICSEARCH_CLIENT_KEY
+        ssl_assert_hostname: t.Optional[
             str
         ] = settings.ELASTICSEARCH_SSL_ASSERT_HOSTNAME
-        ssl_assert_fingerprint: Optional[
+        ssl_assert_fingerprint: t.Optional[
             str
         ] = settings.ELASTICSEARCH_SSL_ASSERT_FINGERPRINT
-        ssl_version: Optional[int] = settings.ELASTICSEARCH_SSL_VERSION
-        ssl_context: Optional[Any] = settings.ELASTICSEARCH_SSL_CONTEXT
+        ssl_version: t.Optional[int] = settings.ELASTICSEARCH_SSL_VERSION
+        ssl_context: t.Optional[t.Any] = settings.ELASTICSEARCH_SSL_CONTEXT
         ssl_show_warn: bool = settings.ELASTICSEARCH_SSL_SHOW_WARN
         # Transport
-        use_ssl: bool = settings.ELASTICSEARCH_USE_SSL
         timeout: float = settings.ELASTICSEARCH_TIMEOUT
         return client(
             hosts=hosts,
@@ -419,6 +453,6 @@ def get_search_client(
             ssl_version=ssl_version,
             ssl_context=ssl_context,
             ssl_show_warn=ssl_show_warn,
-            use_ssl=use_ssl,
+            # use_ssl=use_ssl,
             timeout=timeout,
         )

@@ -1,7 +1,7 @@
 """PGSync RedisQueue."""
 import json
 import logging
-from typing import List, Optional
+import typing as t
 
 from redis import Redis
 from redis.exceptions import ConnectionError
@@ -34,18 +34,18 @@ class RedisQueue(object):
         """Return the approximate size of the queue."""
         return self.__db.llen(self.key)
 
-    def pop(self, chunk_size: Optional[int] = None) -> List[dict]:
+    def pop(self, chunk_size: t.Optional[int] = None) -> t.List[dict]:
         """Remove and return multiple items from the queue."""
         chunk_size = chunk_size or REDIS_READ_CHUNK_SIZE
         if self.qsize > 0:
             pipeline = self.__db.pipeline()
             pipeline.lrange(self.key, 0, chunk_size - 1)
             pipeline.ltrim(self.key, chunk_size, -1)
-            items: List = pipeline.execute()
+            items: t.List = pipeline.execute()
             logger.debug(f"pop size: {len(items[0])}")
             return list(map(lambda value: json.loads(value), items[0]))
 
-    def push(self, items: List) -> None:
+    def push(self, items: t.List) -> None:
         """Push multiple items onto the queue."""
         self.__db.rpush(self.key, *map(json.dumps, items))
 

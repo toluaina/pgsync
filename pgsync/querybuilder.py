@@ -1,6 +1,7 @@
 """PGSync QueryBuilder."""
+import threading
+import typing as t
 from collections import defaultdict
-from typing import Dict, List, Optional
 
 import sqlalchemy as sa
 
@@ -10,7 +11,7 @@ from .exc import ForeignKeyError
 from .node import Node
 
 
-class QueryBuilder(object):
+class QueryBuilder(threading.local):
     """Query builder."""
 
     def __init__(self, verbose: bool = False):
@@ -20,8 +21,8 @@ class QueryBuilder(object):
         self._cache: dict = {}
 
     def _build_filters(
-        self, filters: Dict[str, List[dict]], node: Node
-    ) -> Optional[sa.sql.elements.BooleanClauseList]:
+        self, filters: t.Dict[str, t.List[dict]], node: Node
+    ) -> t.Optional[sa.sql.elements.BooleanClauseList]:
         """
         Build SQLAlchemy filters.
 
@@ -40,9 +41,9 @@ class QueryBuilder(object):
         """
         if filters is not None:
             if filters.get(node.table):
-                clause: list = []
+                clause: t.List = []
                 for values in filters.get(node.table):
-                    where: list = []
+                    where: t.List = []
                     for column, value in values.items():
                         where.append(node.model.c[column] == value)
                     # and clause is applied for composite primary keys
@@ -50,7 +51,7 @@ class QueryBuilder(object):
                 return sa.or_(*clause)
 
     def _json_build_object(
-        self, columns: list, chunk_size: int = 100
+        self, columns: t.List, chunk_size: int = 100
     ) -> sa.sql.elements.BinaryExpression:
         """
         Tries to get aroud the limitation of JSON_BUILD_OBJECT which
@@ -64,7 +65,7 @@ class QueryBuilder(object):
         i: int = 0
         expression: sa.sql.elements.BinaryExpression = None
         while i < len(columns):
-            chunk: list = columns[i : i + chunk_size]
+            chunk: t.List = columns[i : i + chunk_size]
             if i == 0:
                 expression = sa.cast(
                     sa.func.JSON_BUILD_OBJECT(*chunk),
@@ -183,7 +184,7 @@ class QueryBuilder(object):
 
     def _get_column_foreign_keys(
         self,
-        columns: List[str],
+        columns: t.List[str],
         foreign_keys: dict,
         table: str = None,
         schema: str = None,
@@ -202,9 +203,9 @@ class QueryBuilder(object):
         """
         # TODO: normalize this elsewhere
         try:
-            column_names: List[str] = [column.name for column in columns]
+            column_names: t.List[str] = [column.name for column in columns]
         except AttributeError:
-            column_names: List[str] = [column for column in columns]
+            column_names: t.List[str] = [column for column in columns]
 
         if table is None:
             for table, cols in foreign_keys.items():
@@ -252,9 +253,9 @@ class QueryBuilder(object):
     def _root(
         self,
         node: Node,
-        txmin: Optional[int] = None,
-        txmax: Optional[int] = None,
-        ctid: Optional[dict] = None,
+        txmin: t.Optional[int] = None,
+        txmax: t.Optional[int] = None,
+        ctid: t.Optional[dict] = None,
     ) -> None:
         columns = [
             sa.func.JSON_BUILD_ARRAY(
@@ -270,7 +271,7 @@ class QueryBuilder(object):
             self._json_build_object(node.columns),
             *node.primary_keys,
         ]
-        node._subquery = sa.select(columns)
+        node._subquery = sa.select(*columns)
 
         if self.from_obj is not None:
             node._subquery = node._subquery.select_from(self.from_obj)
@@ -280,7 +281,7 @@ class QueryBuilder(object):
             for page, rows in ctid.items():
                 subquery.append(
                     sa.select(
-                        [
+                        *[
                             sa.cast(
                                 sa.literal_column(f"'({page},'")
                                 .concat(sa.column("s"))
@@ -339,7 +340,7 @@ class QueryBuilder(object):
 
     def _children(self, node: Node) -> None:
         for child in node.children:
-            onclause: List = []
+            onclause: t.List = []
 
             if child.relationship.throughs:
                 child.parent.columns.extend(
@@ -592,7 +593,7 @@ class QueryBuilder(object):
                 isouter=self.isouter,
             )
 
-        outer_subquery = sa.select(columns)
+        outer_subquery = sa.select(*columns)
 
         parent_foreign_key_columns: list = self._get_column_foreign_keys(
             through.columns,
@@ -661,7 +662,7 @@ class QueryBuilder(object):
         for column in foreign_keys[through.name]:
             columns.append(through.model.c[str(column)])
 
-        inner_subquery = sa.select(columns)
+        inner_subquery = sa.select(*columns)
 
         if self.verbose:
             compiled_query(inner_subquery, "Inner subquery")
@@ -705,10 +706,10 @@ class QueryBuilder(object):
         from_obj = None
 
         for child in node.children:
-            onclause: list = []
+            onclause: t.List = []
 
             foreign_keys: dict = self._get_foreign_keys(node, child)
-            table: Optional[str] = (
+            table: t.Optional[str] = (
                 child.relationship.throughs[0].table
                 if child.relationship.throughs
                 else None
@@ -803,7 +804,7 @@ class QueryBuilder(object):
                 node, sa.func.JSON_AGG(self._json_build_object(params))
             )
 
-        columns: List = [_keys]
+        columns: t.List = [_keys]
 
         if node.relationship.variant == SCALAR:
             # TODO: Raise exception here if the number of columns > 1
@@ -830,7 +831,7 @@ class QueryBuilder(object):
         for column in foreign_key_columns:
             columns.append(node.model.c[column])
 
-        node._subquery = sa.select(columns)
+        node._subquery = sa.select(*columns)
 
         if from_obj is not None:
             node._subquery = node._subquery.select_from(from_obj)
@@ -864,10 +865,10 @@ class QueryBuilder(object):
     def build_queries(
         self,
         node: Node,
-        filters: Optional[dict] = None,
-        txmin: Optional[int] = None,
-        txmax: Optional[int] = None,
-        ctid: Optional[dict] = None,
+        filters: t.Optional[dict] = None,
+        txmin: t.Optional[int] = None,
+        txmax: t.Optional[int] = None,
+        ctid: t.Optional[dict] = None,
     ) -> None:
         """Build node query."""
         self.from_obj = None

@@ -1,7 +1,7 @@
 """PGSync urls."""
 
 import logging
-from typing import Optional
+import typing as t
 from urllib.parse import quote_plus
 
 from .plugin import Plugins
@@ -26,7 +26,16 @@ from .settings import (
 logger = logging.getLogger(__name__)
 
 
-def _get_auth(key: str) -> Optional[str]:
+def _get_auth(key: str) -> t.Optional[str]:
+    """
+    Get authentication key from plugins.
+
+    Args:
+        key (str): The authentication key.
+
+    Returns:
+        Optional[str]: The authentication key if found, otherwise None.
+    """
     try:
         plugins: Plugins = Plugins("plugins", ["Auth"])
         return plugins.auth(key)
@@ -35,13 +44,25 @@ def _get_auth(key: str) -> Optional[str]:
 
 
 def get_search_url(
-    scheme: Optional[str] = None,
-    user: Optional[str] = None,
-    host: Optional[str] = None,
-    password: Optional[str] = None,
-    port: Optional[int] = None,
+    scheme: t.Optional[str] = None,
+    user: t.Optional[str] = None,
+    host: t.Optional[str] = None,
+    password: t.Optional[str] = None,
+    port: t.Optional[int] = None,
 ) -> str:
-    """Return the URL to connect to Elasticsearch/OpenSearch."""
+    """
+    Return the URL to connect to Elasticsearch/OpenSearch.
+
+    Args:
+        scheme (Optional[str]): The scheme to use for the connection. Defaults to None.
+        user (Optional[str]): The username to use for the connection. Defaults to None.
+        host (Optional[str]): The host to connect to. Defaults to None.
+        password (Optional[str]): The password to use for the connection. Defaults to None.
+        port (Optional[int]): The port to use for the connection. Defaults to None.
+
+    Returns:
+        str: The URL to connect to Elasticsearch/OpenSearch.
+    """
     scheme = scheme or ELASTICSEARCH_SCHEME
     host = host or ELASTICSEARCH_HOST
     port = port or ELASTICSEARCH_PORT
@@ -59,13 +80,26 @@ def get_search_url(
 
 def get_postgres_url(
     database: str,
-    user: Optional[str] = None,
-    host: Optional[str] = None,
-    password: Optional[str] = None,
-    port: Optional[int] = None,
-    driver: Optional[str] = None,
+    user: t.Optional[str] = None,
+    host: t.Optional[str] = None,
+    password: t.Optional[str] = None,
+    port: t.Optional[int] = None,
+    driver: t.Optional[str] = None,
 ) -> str:
-    """Return the URL to connect to Postgres."""
+    """
+    Return the URL to connect to Postgres.
+
+    Args:
+        database (str): The name of the database to connect to.
+        user (str, optional): The username to use for authentication. Defaults to None.
+        host (str, optional): The hostname of the database server. Defaults to None.
+        password (str, optional): The password to use for authentication. Defaults to None.
+        port (int, optional): The port number to use for the database connection. Defaults to None.
+        driver (str, optional): The name of the driver to use for the connection. Defaults to None.
+
+    Returns:
+        str: The URL to connect to the Postgres database.
+    """
     user = user or PG_USER
     host = host or PG_HOST
     password = _get_auth("PG_PASSWORD") or password or PG_PASSWORD
@@ -81,13 +115,25 @@ def get_postgres_url(
 
 
 def get_redis_url(
-    scheme: Optional[str] = None,
-    host: Optional[str] = None,
-    password: Optional[str] = None,
-    port: Optional[int] = None,
-    db: Optional[str] = None,
+    scheme: t.Optional[str] = None,
+    host: t.Optional[str] = None,
+    password: t.Optional[str] = None,
+    port: t.Optional[int] = None,
+    db: t.Optional[str] = None,
 ) -> str:
-    """Return the URL to connect to Redis."""
+    """
+    Return the URL to connect to Redis.
+
+    Args:
+        scheme (Optional[str]): The scheme to use for the Redis connection. Defaults to None.
+        host (Optional[str]): The Redis host to connect to. Defaults to None.
+        password (Optional[str]): The Redis password to use for authentication. Defaults to None.
+        port (Optional[int]): The Redis port to connect to. Defaults to None.
+        db (Optional[str]): The Redis database to connect to. Defaults to None.
+
+    Returns:
+        str: The Redis connection URL.
+    """
     host = host or REDIS_HOST
     password = _get_auth("REDIS_AUTH") or password or REDIS_AUTH
     port = port or REDIS_PORT

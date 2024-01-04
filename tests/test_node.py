@@ -121,7 +121,7 @@ class TestNode(object):
         assert str(node) == "Node: public.book_label"
 
     def test_traverse_breadth_first(self, sync, nodes):
-        root = Tree(sync.models).build(nodes)
+        root = Tree(sync.models, nodes=nodes)
         root.display()
         for i, node in enumerate(root.traverse_breadth_first()):
             if i == 0:
@@ -145,7 +145,7 @@ class TestNode(object):
         sync.search_client.close()
 
     def test_traverse_post_order(self, sync, nodes):
-        root = Tree(sync.models).build(nodes)
+        root: Tree = Tree(sync.models, nodes=nodes)
         root.display()
         for i, node in enumerate(root.traverse_post_order()):
             if i == 0:
@@ -182,7 +182,7 @@ class TestNode(object):
             ],
         }
         with pytest.raises(RelationshipAttributeError) as excinfo:
-            Tree(sync.models).build(nodes)
+            Tree(sync.models, nodes=nodes)
         assert "Relationship attribute " in str(excinfo.value)
         sync.search_client.close()
 
@@ -199,8 +199,7 @@ class TestNode(object):
                 },
             ],
         }
-        tree = Tree(sync.models)
-        tree.build(nodes)
+        tree: Tree = Tree(sync.models, nodes=nodes)
         node = tree.get_node("book", "public")
         assert str(node) == "Node: public.book"
 
@@ -212,24 +211,27 @@ class TestNode(object):
 
     def test_tree_build(self, sync):
         with pytest.raises(TableNotInNodeError) as excinfo:
-            Tree(sync.models).build(
-                {
+            Tree(
+                sync.models,
+                nodes={
                     "table": None,
-                }
+                },
             )
 
         with pytest.raises(NodeAttributeError) as excinfo:
-            Tree(sync.models).build(
-                {
+            Tree(
+                sync.models,
+                nodes={
                     "table": "book",
                     "foo": "bar",
-                }
+                },
             )
         assert "Unknown node attribute(s):" in str(excinfo.value)
 
         with pytest.raises(NodeAttributeError) as excinfo:
-            Tree(sync.models).build(
-                {
+            Tree(
+                sync.models,
+                nodes={
                     "table": "book",
                     "children": [
                         {
@@ -242,13 +244,14 @@ class TestNode(object):
                             "foo": "bar",
                         },
                     ],
-                }
+                },
             )
         assert "Unknown node attribute(s):" in str(excinfo.value)
 
         with pytest.raises(TableNotInNodeError) as excinfo:
-            Tree(sync.models).build(
-                {
+            Tree(
+                sync.models,
+                nodes={
                     "table": "book",
                     "children": [
                         {
@@ -259,15 +262,16 @@ class TestNode(object):
                             },
                         },
                     ],
-                }
+                },
             )
         assert "Table not specified in node" in str(excinfo.value)
 
-        Tree(sync.models).build(
-            {
+        Tree(
+            sync.models,
+            nodes={
                 "table": "book",
                 "columns": ["tags->0"],
-            }
+            },
         )
 
         sync.search_client.close()

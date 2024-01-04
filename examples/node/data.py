@@ -1,4 +1,4 @@
-from typing import List
+import typing as t
 
 import click
 from schema import Node
@@ -19,12 +19,12 @@ from pgsync.utils import config_loader, get_config
 def main(config):
     config: str = get_config(config)
     teardown(drop_db=False, config=config)
-    document = next(config_loader(config))
-    database: str = document.get("database", document["index"])
+    doc = next(config_loader(config))
+    database: str = doc.get("database", doc["index"])
     with pg_engine(database) as engine:
         Session = sessionmaker(bind=engine, autoflush=True)
         session = Session()
-        nodes: List[Node] = [
+        nodes: t.List[Node] = [
             Node(id=1, name="Node A"),
             Node(id=2, name="Node B"),
             Node(id=3, name="Node C"),

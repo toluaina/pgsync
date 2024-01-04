@@ -1,6 +1,5 @@
 """Tests for `pgsync` package."""
 import mock
-import psycopg2
 import pytest
 
 from pgsync.base import subtransactions
@@ -9,7 +8,7 @@ from pgsync.exc import (
     NodeAttributeError,
     TableNotInNodeError,
 )
-from pgsync.settings import NTHREADS_POLLDB
+from pgsync.node import Tree
 from pgsync.singleton import Singleton
 from pgsync.sync import Sync
 
@@ -47,9 +46,6 @@ class TestRoot(object):
 
         with subtransactions(session):
             conn = session.connection().engine.connect().connection
-            conn.set_isolation_level(
-                psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT
-            )
             cursor = conn.cursor()
             channel = sync.database
             cursor.execute(f"UNLISTEN {channel}")
@@ -67,9 +63,6 @@ class TestRoot(object):
 
         with subtransactions(session):
             conn = session.connection().engine.connect().connection
-            conn.set_isolation_level(
-                psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT
-            )
             cursor = conn.cursor()
             channel = session.connection().engine.url.database
             cursor.execute(f"UNLISTEN {channel}")
@@ -99,8 +92,7 @@ class TestRoot(object):
         nodes = {"table": "book", "columns": ["isbn", "title", "description"]}
         txmin = sync.checkpoint
         txmax = sync.txid_current
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [doc for doc in sync.sync(txmin=txmin, txmax=txmax)]
         assert docs == [
             {
@@ -151,8 +143,7 @@ class TestRoot(object):
             },
         }
         sync.nodes = nodes
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [doc for doc in sync.sync()]
         assert docs == [
             {
@@ -195,8 +186,7 @@ class TestRoot(object):
             "columns": ["isbn", "title", "description", "xmin"],
         }
         sync.nodes = nodes
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert sorted(docs[0]["_source"].keys()) == sorted(
             ["isbn", "title", "description", "xmin", "_meta"]
@@ -207,8 +197,7 @@ class TestRoot(object):
         """Test the doc includes xmin column."""
         nodes = {"table": "book", "columns": ["isbn", "xmin"]}
         sync.nodes = nodes
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert "xmin" in docs[0]["_source"]
         assert_resync_empty(sync, nodes)
@@ -217,8 +206,7 @@ class TestRoot(object):
         """Test we include all columns when no columns are specified."""
         nodes = {"table": "book", "columns": []}
         sync.nodes = nodes
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert sorted(docs[0]["_source"].keys()) == sorted(
             [
@@ -236,8 +224,7 @@ class TestRoot(object):
 
         nodes = {"table": "book"}
         sync.nodes = nodes
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert sorted(docs[0]["_source"].keys()) == sorted(
             [
@@ -269,8 +256,7 @@ class TestRoot(object):
         # TODO also repeat this test for composite primary key
         nodes = {"table": "book", "columns": ["title"]}
         sync.nodes = nodes
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert "abc" == docs[0]["_id"]
         assert "def" == docs[1]["_id"]
@@ -281,8 +267,7 @@ class TestRoot(object):
         """Test the private key is contained in the doc."""
         nodes = {"table": "book", "columns": ["isbn"]}
         sync.nodes = nodes
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert "_meta" in docs[0]["_source"]
         assert_resync_empty(sync, nodes)
@@ -291,8 +276,7 @@ class TestRoot(object):
         """Ensure the doc only selected columns and builtins."""
         nodes = {"table": "book", "columns": ["isbn", "xmin"]}
         sync.nodes = nodes
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
 
@@ -310,8 +294,7 @@ class TestRoot(object):
             ],
         }
         sync.nodes = nodes
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
 
@@ -327,8 +310,7 @@ class TestRoot(object):
         )
         nodes = {"table": "book", "columns": ["copyright", "publisher_id"]}
         sync.nodes = nodes
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
 
         docs = [sort_list(doc) for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
@@ -349,8 +331,7 @@ class TestRoot(object):
             "columns": ["isbn", "description", "copyright"],
         }
         sync.nodes = nodes
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [doc for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
 
@@ -380,8 +361,7 @@ class TestRoot(object):
         """Private keys should be included even if null."""
         nodes = {"table": "book", "columns": ["description"]}
         sync.nodes = nodes
-        sync.tree.__post_init__()
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [doc for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
 
@@ -414,12 +394,12 @@ class TestRoot(object):
         Note to self. I think this has been fixed. i.e we delete and then
         query ibsert
         """
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
-        sync = Sync(document)
+        sync = Sync(doc)
         sync.search_client.bulk(sync.index, sync.sync())
         sync.search_client.refresh("testdb")
 
@@ -450,19 +430,19 @@ class TestRoot(object):
             {"_meta": {}, "isbn": "def", "title": "The Lion Club"},
             {"_meta": {}, "isbn": "ghi", "title": "The Rabbit Club"},
         ]
-        assert_resync_empty(sync, document.get("node", {}))
+        assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
 
     # TODO: Add another test like this and change
     # both primary key and non primary key column
     def test_update_primary_key_concurrent(self, data, book_cls):
         """Test sync updates primary_key and then sync in concurrent mode."""
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
-        sync = Sync(document)
+        sync = Sync(doc)
         sync.search_client.bulk(sync.index, sync.sync())
         sync.search_client.refresh("testdb")
 
@@ -504,7 +484,7 @@ class TestRoot(object):
                             "pgsync.sync.Sync.status",
                             side_effect=noop,
                         ):
-                            sync.receive(NTHREADS_POLLDB)
+                            sync.receive()
                             sync.search_client.refresh("testdb")
 
         docs = search(sync.search_client, "testdb")
@@ -518,17 +498,17 @@ class TestRoot(object):
             {"_meta": {}, "isbn": "def", "title": "The Lion Club"},
             {"_meta": {}, "isbn": "ghi", "title": "The Rabbit Club"},
         ]
-        assert_resync_empty(sync, document.get("node", {}))
+        assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
 
     def test_insert_non_concurrent(self, data, book_cls):
         """Test sync insert and then sync in non-concurrent mode."""
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
-        sync = Sync(document)
+        sync = Sync(doc)
         sync.search_client.bulk(sync.index, sync.sync())
         sync.search_client.refresh("testdb")
 
@@ -559,17 +539,17 @@ class TestRoot(object):
             {"_meta": {}, "isbn": "ghi", "title": "The Rabbit Club"},
             {"_meta": {}, "isbn": "xyz", "title": "Encyclopedia"},
         ]
-        assert_resync_empty(sync, document.get("node", {}))
+        assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
 
     def test_update_non_concurrent(self, data, book_cls):
         """Test sync update and then sync in non-concurrent mode."""
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
-        sync = Sync(document)
+        sync = Sync(doc)
         sync.search_client.bulk(sync.index, sync.sync())
         sync.search_client.refresh("testdb")
 
@@ -600,17 +580,17 @@ class TestRoot(object):
             {"_meta": {}, "isbn": "def", "title": "The Lion Club"},
             {"_meta": {}, "isbn": "ghi", "title": "The Rabbit Club"},
         ]
-        assert_resync_empty(sync, document.get("node", {}))
+        assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
 
     def test_update_concurrent(self, data, book_cls):
         """Test sync update and then sync in concurrent mode."""
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
-        sync = Sync(document)
+        sync = Sync(doc)
         sync.search_client.bulk(sync.index, sync.sync())
         sync.search_client.refresh("testdb")
 
@@ -652,7 +632,7 @@ class TestRoot(object):
                             "pgsync.sync.Sync.status",
                             side_effect=noop,
                         ):
-                            sync.receive(NTHREADS_POLLDB)
+                            sync.receive()
                             sync.search_client.refresh("testdb")
 
         docs = search(sync.search_client, "testdb")
@@ -662,17 +642,17 @@ class TestRoot(object):
             {"_meta": {}, "isbn": "def", "title": "The Lion Club"},
             {"_meta": {}, "isbn": "ghi", "title": "The Rabbit Club"},
         ]
-        assert_resync_empty(sync, document.get("node", {}))
+        assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
 
     def test_delete_concurrent(self, data, book_cls):
         """Test sync delete and then sync in concurrent mode."""
-        document = {
+        doc = {
             "index": "testdb",
             "database": "testdb",
             "nodes": {"table": "book", "columns": ["isbn", "title"]},
         }
-        sync = Sync(document)
+        sync = Sync(doc)
         sync.search_client.bulk(sync.index, sync.sync())
         sync.search_client.refresh("testdb")
         session = sync.session
@@ -712,7 +692,7 @@ class TestRoot(object):
                             "pgsync.sync.Sync.status",
                             side_effect=noop,
                         ):
-                            sync.receive(NTHREADS_POLLDB)
+                            sync.receive()
                             sync.search_client.refresh("testdb")
 
         docs = search(sync.search_client, "testdb")
@@ -721,7 +701,7 @@ class TestRoot(object):
             {"_meta": {}, "isbn": "def", "title": "The Lion Club"},
             {"_meta": {}, "isbn": "ghi", "title": "The Rabbit Club"},
         ]
-        assert_resync_empty(sync, document.get("node", {}))
+        assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
 
     def test_truncate(self, data, book_cls):

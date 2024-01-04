@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: debezium/postgres:15
+    image: debezium/postgres:16
     ports:
       - "15432:5432"
     environment:
@@ -13,7 +13,7 @@ services:
     image: redis
     command: redis-server --requirepass PLEASE_CHANGE_ME
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.9
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.13
     ports:
       - "9201:9200"
       - "9301:9300"
@@ -51,4 +51,3 @@ services:
       - REDIS_PORT=6379
       - REDIS_AUTH=PLEASE_CHANGE_ME
       - ELASTICSEARCH=true
-      - OPENSEARCH=false

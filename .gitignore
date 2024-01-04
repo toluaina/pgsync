@@ -90,6 +90,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.virtualenv/
 
 # Spyder project settings
 .spyderproject
@@ -113,3 +114,8 @@ venv.bak/
 .rental*
 .social*
 .shakespeare*
+old
+examples/tiers/
+
+# vscode
+.vscode/

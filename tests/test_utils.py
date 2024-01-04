@@ -70,7 +70,7 @@ class TestUtils(object):
             call("Path: ./"),
             call("\x1b[4mPostgres\x1b[0m:"),
             call("URL: {get_postgres_url}"),
-            call("\x1b[4mSearch\x1b[0m:"),
+            call("\x1b[4mElasticsearch\x1b[0m:"),
             call(f"URL: {get_search_url()}"),
             call("\x1b[4mRedis\x1b[0m:"),
             call(f"URL: {get_redis_url}"),
@@ -122,7 +122,7 @@ class TestUtils(object):
     ):
         pg_base = Base(connection.engine.url.database)
         model = pg_base.models("book", "public")
-        statement = sa.select([model.c.isbn]).select_from(model)
+        statement = sa.select(*[model.c.isbn]).select_from(model)
         compiled_query(statement, label="foo", literal_binds=True)
         mock_logger.debug.assert_called_once_with(
             "\x1b[4mfoo:\x1b[0m\nSELECT book_1.isbn\n"
@@ -137,7 +137,7 @@ class TestUtils(object):
     ):
         pg_base = Base(connection.engine.url.database)
         model = pg_base.models("book", "public")
-        statement = sa.select([model.c.isbn]).select_from(model)
+        statement = sa.select(*[model.c.isbn]).select_from(model)
         compiled_query(statement, literal_binds=True)
         mock_logger.debug.assert_called_once_with(
             "SELECT book_1.isbn\nFROM public.book AS book_1"
@@ -189,7 +189,7 @@ class TestUtils(object):
         with patch("pgsync.utils.os._exit", return_value=None):
             foo(1)
             mock_sys.stdout.write.assert_called_once_with(
-                "Exception in foo() for thread MainThread: \nExiting...\n"
+                "Exception in foo() for thread MainThread: ()\nExiting...\n"
             )
 
         bar(1)

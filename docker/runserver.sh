@@ -14,4 +14,4 @@ python $EXAMPLE_DIR/data.py --config $EXAMPLE_DIR/schema.json
 
 bootstrap --config $EXAMPLE_DIR/schema.json
 
-pgsync --config $EXAMPLE_DIR//schema.json --daemon
+pgsync --config $EXAMPLE_DIR/schema.json --daemon

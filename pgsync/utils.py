@@ -4,18 +4,18 @@ import logging
 import os
 import sys
 import threading
+import typing as t
 from datetime import timedelta
 from string import Template
 from time import time
-from typing import Callable, Generator, Optional, Set
 from urllib.parse import ParseResult, urlparse
 
 import click
 import sqlalchemy as sa
 import sqlparse
 
+from . import settings
 from .exc import SchemaError
-from .settings import CHECKPOINT_PATH, QUERY_LITERAL_BINDS, SCHEMA
 from .urls import get_postgres_url, get_redis_url, get_search_url
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ def chunks(value: list, size: int) -> list:
         yield value[i : i + size]
 
 
-def timeit(func: Callable):
+def timeit(func: t.Callable):
     def timed(*args, **kwargs):
         since: float = time()
         fn = func(*args, **kwargs)
@@ -42,7 +42,7 @@ def timeit(func: Callable):
 
 
 class Timer:
-    def __init__(self, message: Optional[str] = None):
+    def __init__(self, message: t.Optional[str] = None):
         self.message: str = message or ""
 
     def __enter__(self):
@@ -57,7 +57,7 @@ class Timer:
         )
 
 
-def threaded(func: Callable):
+def threaded(func: t.Callable):
     """Decorator for threaded code execution."""
 
     def wrapper(*args, **kwargs) -> threading.Thread:
@@ -70,16 +70,17 @@ def threaded(func: Callable):
     return wrapper
 
 
-def exception(func: Callable):
+def exception(func: t.Callable):
     """Decorator for threaded exception handling."""
 
-    def wrapper(*args, **kwargs) -> Callable:
+    def wrapper(*args, **kwargs) -> t.Callable:
         try:
             fn = func(*args, **kwargs)
         except Exception as e:
             name: str = threading.current_thread().name
+            err = e.args[0] if len(e.args) > 0 else e.args
             sys.stdout.write(
-                f"Exception in {func.__name__}() for thread {name}: {e}\n"
+                f"Exception in {func.__name__}() for thread {name}: {err}\n"
                 f"Exiting...\n"
             )
             os._exit(-1)
@@ -90,9 +91,18 @@ def exception(func: Callable):
 
 
 def get_redacted_url(result: ParseResult) -> ParseResult:
+    """
+    Returns a redacted version of the input URL, with the password replaced by asterisks.
+
+    Args:
+        result (ParseResult): The parsed URL to redact.
+
+    Returns:
+        ParseResult: The redacted URL.
+    """
     if result.password:
-        username: Optional[str] = result.username
-        hostname: Optional[str] = result.hostname
+        username: t.Optional[str] = result.username
+        hostname: t.Optional[str] = result.hostname
         if username and hostname:
             result = result._replace(
                 netloc=f"{username}:{'*' * len(result.password)}@{hostname}"
@@ -100,20 +110,23 @@ def get_redacted_url(result: ParseResult) -> ParseResult:
     return result
 
 
-def show_settings(schema: Optional[str] = None) -> None:
+def show_settings(schema: t.Optional[str] = None) -> None:
     """Show settings."""
     logger.info(f"{HIGHLIGHT_BEGIN}Settings{HIGHLIGHT_END}")
-    logger.info(f'{"Schema":<10s}: {schema or SCHEMA}')
+    logger.info(f'{"Schema":<10s}: {schema or settings.SCHEMA}')
     logger.info("-" * 65)
     logger.info(f"{HIGHLIGHT_BEGIN}Checkpoint{HIGHLIGHT_END}")
-    logger.info(f"Path: {CHECKPOINT_PATH}")
+    logger.info(f"Path: {settings.CHECKPOINT_PATH}")
     logger.info(f"{HIGHLIGHT_BEGIN}Postgres{HIGHLIGHT_END}")
     result: ParseResult = get_redacted_url(
         urlparse(get_postgres_url("postgres"))
     )
     logger.info(f"URL: {result.geturl()}")
     result = get_redacted_url(urlparse(get_search_url()))
-    logger.info(f"{HIGHLIGHT_BEGIN}Search{HIGHLIGHT_END}")
+    if settings.ELASTICSEARCH:
+        logger.info(f"{HIGHLIGHT_BEGIN}Elasticsearch{HIGHLIGHT_END}")
+    else:
+        logger.info(f"{HIGHLIGHT_BEGIN}OpenSearch{HIGHLIGHT_END}")
     logger.info(f"URL: {result.geturl()}")
     logger.info(f"{HIGHLIGHT_BEGIN}Redis{HIGHLIGHT_END}")
     result = get_redacted_url(urlparse(get_redis_url()))
@@ -121,9 +134,9 @@ def show_settings(schema: Optional[str] = None) -> None:
     logger.info("-" * 65)
 
 
-def get_config(config: Optional[str] = None) -> str:
+def get_config(config: t.Optional[str] = None) -> str:
     """Return the schema config for PGSync."""
-    config = config or SCHEMA
+    config = config or settings.SCHEMA
     if not config:
         raise SchemaError(
             "Schema config not set\n. "
@@ -135,21 +148,33 @@ def get_config(config: Optional[str] = None) -> str:
     return config
 
 
-def config_loader(config: str) -> Generator:
-    with open(config, "r") as documents:
-        for document in json.load(documents):
-            for key, value in document.items():
+def config_loader(config: str) -> t.Generator:
+    """
+    Loads a configuration file and yields each document in the file as a dictionary.
+    The values in the dictionary are processed as templates, with environment variables
+    substituted for placeholders. If a value cannot be processed as a template, it is
+    left unchanged.
+
+    Args:
+        config (str): The path to the configuration file.
+
+    Yields:
+        dict: A dictionary representing a document in the configuration file.
+    """
+    with open(config, "r") as docs:
+        for doc in json.load(docs):
+            for key, value in doc.items():
                 try:
-                    document[key] = Template(value).safe_substitute(os.environ)
+                    doc[key] = Template(value).safe_substitute(os.environ)
                 except TypeError:
                     pass
-            yield document
+            yield doc
 
 
 def compiled_query(
     query: sa.sql.Select,
-    label: Optional[str] = None,
-    literal_binds: bool = QUERY_LITERAL_BINDS,
+    label: t.Optional[str] = None,
+    literal_binds: bool = settings.QUERY_LITERAL_BINDS,
 ) -> None:
     """Compile an SQLAlchemy query with an optional label."""
     query = str(
@@ -170,8 +195,18 @@ def compiled_query(
 
 
 class MutuallyExclusiveOption(click.Option):
+    """
+    A custom Click option that allows for mutually exclusive arguments.
+
+    Args:
+        click.Option: The base class for Click options.
+
+    Attributes:
+        mutually_exclusive (set): A set of argument names that are mutually exclusive with this option.
+    """
+
     def __init__(self, *args, **kwargs):
-        self.mutually_exclusive: Set = set(
+        self.mutually_exclusive: t.Set = set(
             kwargs.pop("mutually_exclusive", [])
         )
         help: str = kwargs.get("help", "")
@@ -182,7 +217,23 @@ class MutuallyExclusiveOption(click.Option):
             )
         super(MutuallyExclusiveOption, self).__init__(*args, **kwargs)
 
-    def handle_parse_result(self, ctx, opts, args):
+    def handle_parse_result(
+        self,
+        ctx: click.Context,
+        opts: t.Mapping[str, t.Any],
+        args: t.List[str],
+    ) -> t.Tuple[t.Any, t.List[str]]:
+        """
+        Handles the parsing of the command-line arguments.
+
+        Args:
+            ctx (click.Context): The Click context.
+            opts (dict): The dictionary of parsed options.
+            args (list): The list of parsed arguments.
+
+        Returns:
+            The result of the base class's `handle_parse_result` method.
+        """
         if self.mutually_exclusive.intersection(opts) and self.name in opts:
             raise click.UsageError(
                 f"Illegal usage: `{self.name}` is mutually exclusive with "

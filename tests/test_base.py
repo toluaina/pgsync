@@ -2,7 +2,7 @@
 
 import pytest
 import sqlalchemy as sa
-from mock import ANY, call, patch
+from mock import call, patch
 
 from pgsync.base import (
     _pg_engine,
@@ -152,17 +152,19 @@ class TestBase(object):
 
     @patch("pgsync.base.logger")
     @patch("pgsync.sync.Base.execute")
-    @patch("pgsync.base.sa.DDL")
+    @patch("pgsync.base.sa.text")
     def test_truncate_table(
-        self, mock_ddl, mock_execute, mock_logger, connection
+        self, mock_text, mock_execute, mock_logger, connection
     ):
         pg_base = Base(connection.engine.url.database)
         pg_base.truncate_table("book")
-        mock_logger.debug.assert_called_once_with(
-            "Truncating table: public.book"
-        )
+        calls = [
+            call("Truncating table: public.book"),
+            call("Truncated table: public.book"),
+        ]
+        assert mock_logger.debug.call_args_list == calls
         mock_execute.assert_called_once()
-        mock_ddl.assert_called_once_with(
+        mock_text.assert_called_once_with(
             'TRUNCATE TABLE "public"."book" CASCADE'
         )
 
@@ -173,9 +175,11 @@ class TestBase(object):
     ):
         pg_base = Base(connection.engine.url.database)
         pg_base.truncate_tables(["book", "user"])
-        mock_logger.debug.assert_called_once_with(
-            "Truncating tables: ['book', 'user']"
-        )
+        calls = [
+            call("Truncating tables: ['book', 'user']"),
+            call("Truncated tables: ['book', 'user']"),
+        ]
+        assert mock_logger.debug.call_args_list == calls
         calls = [
             call("book", schema="public"),
             call("user", schema="public"),
@@ -189,7 +193,11 @@ class TestBase(object):
     ):
         pg_base = Base(connection.engine.url.database)
         pg_base.truncate_schema("public")
-        mock_logger.debug.assert_called_once_with("Truncating schema: public")
+        calls = [
+            call("Truncating schema: public"),
+            call("Truncated schema: public"),
+        ]
+        assert mock_logger.debug.call_args_list == calls
         mock_truncate_tables.assert_called_once_with(
             [
                 "author",
@@ -232,13 +240,13 @@ class TestBase(object):
     @patch("pgsync.base.logger")
     def test_create_replication_slot(self, mock_logger, connection):
         pg_base = Base(connection.engine.url.database)
-        row = pg_base.create_replication_slot("slot_name")
-        assert row[0] == "slot_name"
-        assert row[1] is not None
+        pg_base.create_replication_slot("slot_name")
         pg_base.drop_replication_slot("slot_name")
         calls = [
             call("Creating replication slot: slot_name"),
+            call("Created replication slot: slot_name"),
             call("Dropping replication slot: slot_name"),
+            call("Dropped replication slot: slot_name"),
         ]
         assert mock_logger.debug.call_args_list == calls
 
@@ -252,7 +260,9 @@ class TestBase(object):
         pg_base.drop_replication_slot("slot_name")
         calls = [
             call("Creating replication slot: slot_name"),
+            call("Created replication slot: slot_name"),
             call("Dropping replication slot: slot_name"),
+            call("Dropped replication slot: slot_name"),
         ]
         assert mock_logger.debug.call_args_list == calls
 
@@ -374,28 +384,26 @@ class TestBase(object):
         mock_pg_execute.call_args_list == calls
 
     @patch("pgsync.base.logger")
-    @patch("pgsync.sync.Base.engine")
-    def test_drop_view(self, mock_engine, mock_logger, connection):
+    def test_drop_view(self, mock_logger, connection):
         pg_base = Base(connection.engine.url.database)
-        pg_base.drop_view("public")
-        calls = [
-            call("Dropping view: public._view"),
-            call("Dropped view: public._view"),
-        ]
-        assert mock_logger.debug.call_args_list == calls
-        mock_engine.execute.assert_called_once_with(ANY)
+        with patch("pgsync.sync.Base.engine"):
+            pg_base.drop_view("public")
+            calls = [
+                call("Dropping view: public._view"),
+                call("Dropped view: public._view"),
+            ]
+            assert mock_logger.debug.call_args_list == calls
 
     @patch("pgsync.base.logger")
-    @patch("pgsync.sync.Base.engine")
-    def test_refresh_view(self, mock_engine, mock_logger, connection):
+    def test_refresh_view(self, mock_logger, connection):
         pg_base = Base(connection.engine.url.database)
-        pg_base.refresh_view("foo", "public", concurrently=True)
-        calls = [
-            call("Refreshing view: public.foo"),
-            call("Refreshed view: public.foo"),
-        ]
-        assert mock_logger.debug.call_args_list == calls
-        mock_engine.execute.assert_called_once_with(ANY)
+        with patch("pgsync.sync.Base.engine"):
+            pg_base.refresh_view("foo", "public", concurrently=True)
+            calls = [
+                call("Refreshing view: public.foo"),
+                call("Refreshed view: public.foo"),
+            ]
+            assert mock_logger.debug.call_args_list == calls
 
     def test_parse_value(self, connection):
         pg_base = Base(connection.engine.url.database)
@@ -457,10 +465,11 @@ class TestBase(object):
     def test_fetchone(self, connection):
         pg_base = Base(connection.engine.url.database, verbose=True)
         with patch("pgsync.base.compiled_query") as mock_compiled_query:
-            row = pg_base.fetchone("SELECT 1", label="foo", literal_binds=True)
+            statement = sa.text("SELECT 1")
+            row = pg_base.fetchone(statement, label="foo", literal_binds=True)
             assert row == (1,)
             mock_compiled_query.assert_called_once_with(
-                "SELECT 1", label="foo", literal_binds=True
+                statement, label="foo", literal_binds=True
             )
 
         with pytest.raises(sa.exc.ProgrammingError):
@@ -471,10 +480,11 @@ class TestBase(object):
     def test_fetchall(self, connection):
         pg_base = Base(connection.engine.url.database, verbose=True)
         with patch("pgsync.base.compiled_query") as mock_compiled_query:
-            row = pg_base.fetchall("SELECT 1", label="foo", literal_binds=True)
+            statement = sa.text("SELECT 1")
+            row = pg_base.fetchall(statement, label="foo", literal_binds=True)
             assert row == [(1,)]
             mock_compiled_query.assert_called_once_with(
-                "SELECT 1", label="foo", literal_binds=True
+                statement, label="foo", literal_binds=True
             )
 
         with pytest.raises(sa.exc.ProgrammingError):
@@ -489,45 +499,59 @@ class TestBase(object):
 
     def test_views(self, connection):
         pg_base = Base(connection.engine.url.database)
-        connection.engine.execute(
-            CreateView(
-                DEFAULT_SCHEMA, "mymatview", sa.select(1), materialized=True
+        with connection.engine.connect() as conn:
+            conn.execute(
+                CreateView(
+                    DEFAULT_SCHEMA,
+                    "mymatview",
+                    sa.select(1),
+                    materialized=True,
+                )
             )
-        )
-        connection.engine.execute(
-            CreateView(
-                DEFAULT_SCHEMA, "myview", sa.select(1), materialized=False
+            conn.execute(
+                CreateView(
+                    DEFAULT_SCHEMA, "myview", sa.select(1), materialized=False
+                )
             )
-        )
+            conn.commit()
         views = pg_base._views(DEFAULT_SCHEMA)
         assert views == ["myview"]
-        connection.engine.execute(
-            DropView(DEFAULT_SCHEMA, "mymatview", materialized=True)
-        )
-        connection.engine.execute(
-            DropView(DEFAULT_SCHEMA, "myview", materialized=False)
-        )
+        with connection.engine.connect() as conn:
+            conn.execute(
+                DropView(DEFAULT_SCHEMA, "mymatview", materialized=True)
+            )
+            conn.execute(
+                DropView(DEFAULT_SCHEMA, "myview", materialized=False)
+            )
+            conn.commit()
 
     def test_materialized_views(self, connection):
         pg_base = Base(connection.engine.url.database)
-        connection.engine.execute(
-            CreateView(
-                DEFAULT_SCHEMA, "mymatview", sa.select(1), materialized=True
+        with connection.engine.connect() as conn:
+            conn.execute(
+                CreateView(
+                    DEFAULT_SCHEMA,
+                    "mymatview",
+                    sa.select(1),
+                    materialized=True,
+                )
             )
-        )
-        connection.engine.execute(
-            CreateView(
-                DEFAULT_SCHEMA, "myview", sa.select(1), materialized=False
+            conn.execute(
+                CreateView(
+                    DEFAULT_SCHEMA, "myview", sa.select(1), materialized=False
+                )
             )
-        )
+            conn.commit()
         views = pg_base._materialized_views(DEFAULT_SCHEMA)
         assert views == ["mymatview"]
-        connection.engine.execute(
-            DropView(DEFAULT_SCHEMA, "mymatview", materialized=True)
-        )
-        connection.engine.execute(
-            DropView(DEFAULT_SCHEMA, "myview", materialized=False)
-        )
+        with connection.engine.connect() as conn:
+            conn.execute(
+                DropView(DEFAULT_SCHEMA, "mymatview", materialized=True)
+            )
+            conn.execute(
+                DropView(DEFAULT_SCHEMA, "myview", materialized=False)
+            )
+            conn.commit()
 
     def test_pg_execute(self, connection):
         with patch("pgsync.base.logger") as mock_logger:
@@ -537,15 +561,14 @@ class TestBase(object):
                 options={"isolation_level": "AUTOCOMMIT"},
             )
             mock_logger.exception.assert_not_called()
-        with patch("pgsync.base.logger") as mock_logger:
-            with pytest.raises(Exception) as excinfo:
-                pg_execute(
-                    connection.engine,
-                    sa.select(1),
-                    options={None: "AUTOCOMMIT"},
-                )
-            mock_logger.exception.assert_called_once()
-            assert "must be strings" in str(excinfo.value)
+
+        with pytest.raises(Exception) as excinfo:
+            pg_execute(
+                connection.engine,
+                sa.select(1),
+                options={None: "AUTOCOMMIT"},
+            )
+        assert "must be strings" in str(excinfo.value)
 
     def test_pg_engine(self, connection):
         with pytest.raises(ValueError) as excinfo:
