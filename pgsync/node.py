@@ -68,6 +68,9 @@ class ForeignKey:
     def __str__(self):
         return f"foreign_key: {self.parent}:{self.child}"
 
+    def __repr__(self):
+        return self.__str__()
+
 
 @dataclass
 class Relationship:
@@ -112,6 +115,9 @@ class Relationship:
 
     def __str__(self):
         return f"relationship: {self.variant}.{self.type}:{self.tables}"
+
+    def __repr__(self):
+        return self.__str__()
 
 
 @dataclass

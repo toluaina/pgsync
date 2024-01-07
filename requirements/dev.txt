@@ -8,9 +8,9 @@ async-timeout==4.0.3
     # via redis
 black==23.12.1
     # via -r requirements/dev.in
-boto3==1.34.11
+boto3==1.34.14
     # via -r requirements/base.in
-botocore==1.34.11
+botocore==1.34.14
     # via
     #   boto3
     #   s3transfer
@@ -49,7 +49,7 @@ faker==22.0.0
     # via -r requirements/dev.in
 filelock==3.13.1
     # via virtualenv
-flake8==6.1.0
+flake8==7.0.0
     # via -r requirements/dev.in
 freezegun==1.4.0
     # via -r requirements/dev.in
@@ -100,7 +100,7 @@ psycopg2-binary==2.9.9
     # via -r requirements/base.in
 pycodestyle==2.11.1
     # via flake8
-pyflakes==3.1.0
+pyflakes==3.2.0
     # via flake8
 pytest==7.4.4
     # via

@@ -148,7 +148,7 @@ elif ELASTICSEARCH:
 OPENSEARCH_AWS_HOSTED = env.bool("OPENSEARCH_AWS_HOSTED", default=False)
 OPENSEARCH_AWS_SERVERLESS = env.bool(
     "OPENSEARCH_AWS_SERVERLESS", default=False
-)  # noqa E501
+)
 
 # Postgres:
 PG_HOST = env.str("PG_HOST", default="localhost")

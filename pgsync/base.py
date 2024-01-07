@@ -48,6 +48,15 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+SSL_MODES = (
+    "allow",
+    "disable",
+    "prefer",
+    "require",
+    "verify-ca",
+    "verify-full",
+)
+
 
 class Payload(object):
     """
@@ -141,6 +150,36 @@ class TupleIdentifierType(sa.types.UserDefinedType):
 
 
 class Base(object):
+    INT_TYPES = (
+        "bigint",
+        "bigserial",
+        "int",
+        "int2",
+        "int4",
+        "int8",
+        "integer",
+        "serial",
+        "serial2",
+        "serial4",
+        "serial8",
+        "smallint",
+        "smallserial",
+    )
+    FLOAT_TYPES = (
+        "double precision",
+        "float4",
+        "float8",
+        "real",
+    )
+    CHAR_TYPES = (
+        "char",
+        "character",
+        "character varying",
+        "text",
+        "uuid",
+        "varchar",
+    )
+
     def __init__(
         self, database: str, verbose: bool = False, *args, **kwargs
     ) -> None:
@@ -732,43 +771,16 @@ class Base(object):
         """
         if value.lower() == "null":
             return None
-
-        if type_.lower() in (
-            "bigint",
-            "bigserial",
-            "int",
-            "int2",
-            "int4",
-            "int8",
-            "integer",
-            "serial",
-            "serial2",
-            "serial4",
-            "serial8",
-            "smallint",
-            "smallserial",
-        ):
+        if type_.lower() in self.INT_TYPES:
             try:
                 value = int(value)
             except ValueError:
                 raise
-        if type_.lower() in (
-            "char",
-            "character",
-            "character varying",
-            "text",
-            "uuid",
-            "varchar",
-        ):
+        if type_.lower() in self.CHAR_TYPES:
             value = value.lstrip("'").rstrip("'")
         if type_.lower() == "boolean":
             value = bool(value)
-        if type_.lower() in (
-            "double precision",
-            "float4",
-            "float8",
-            "real",
-        ):
+        if type_.lower() in self.FLOAT_TYPES:
             try:
                 value = float(value)
             except ValueError:
@@ -999,14 +1011,7 @@ def _pg_engine(
     sslrootcert = sslrootcert or PG_SSLROOTCERT
 
     if sslmode:
-        if sslmode not in (
-            "allow",
-            "disable",
-            "prefer",
-            "require",
-            "verify-ca",
-            "verify-full",
-        ):
+        if sslmode not in SSL_MODES:
             raise ValueError(f'Invalid sslmode: "{sslmode}"')
         connect_args["sslmode"] = sslmode
 
