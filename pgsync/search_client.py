@@ -245,7 +245,7 @@ class SearchClient(object):
             if "is out of range for a long" not in str(e):
                 raise
 
-    def search(self, index: str, body: dict):
+    def search(self, index: str, body: dict) -> t.Any:
         """
         Search in Elasticsearch/OpenSearch.
 

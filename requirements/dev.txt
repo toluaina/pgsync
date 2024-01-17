@@ -8,9 +8,9 @@ async-timeout==4.0.3
     # via redis
 black==23.12.1
     # via -r requirements/dev.in
-boto3==1.34.14
+boto3==1.34.20
     # via -r requirements/base.in
-botocore==1.34.14
+botocore==1.34.20
     # via
     #   boto3
     #   s3transfer
@@ -41,11 +41,11 @@ elasticsearch==8.11.1
     #   elasticsearch-dsl
 elasticsearch-dsl==8.11.0
     # via -r requirements/base.in
-environs==10.0.0
+environs==10.3.0
     # via -r requirements/base.in
 exceptiongroup==1.2.0
     # via pytest
-faker==22.0.0
+faker==22.2.0
     # via -r requirements/dev.in
 filelock==3.13.1
     # via virtualenv
@@ -67,7 +67,7 @@ jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-marshmallow==3.20.1
+marshmallow==3.20.2
     # via environs
 mccabe==0.7.0
     # via flake8
