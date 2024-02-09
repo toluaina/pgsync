@@ -1,7 +1,7 @@
 """PGSync views."""
 import logging
+import typing as t
 import warnings
-from typing import Callable, List, Set
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import array
@@ -229,9 +229,9 @@ def compile_drop_index(
 
 
 def _get_constraints(
-    models: Callable,
+    models: t.Callable,
     schema: str,
-    tables: Set[str],
+    tables: t.Set[str],
     label: str,
     constraint_type: str,
 ) -> sa.sql.Select:
@@ -254,7 +254,7 @@ def _get_constraints(
         key_column_usage = models("key_column_usage", "information_schema")
     return (
         sa.select(
-            [
+            *[
                 table_constraints.c.table_name,
                 sa.func.ARRAY_AGG(
                     sa.cast(
@@ -285,7 +285,7 @@ def _get_constraints(
 
 
 def _primary_keys(
-    models: Callable, schema: str, tables: Set[str]
+    models: t.Callable, schema: str, tables: t.Set[str]
 ) -> sa.sql.Select:
     """
     Returns a SQLAlchemy Select object that represents the primary keys of the specified tables in the given schema.
@@ -308,7 +308,7 @@ def _primary_keys(
 
 
 def _foreign_keys(
-    models: Callable, schema: str, tables: Set[str]
+    models: t.Callable, schema: str, tables: t.Set[str]
 ) -> sa.sql.Select:
     """
     Returns a SQLAlchemy SELECT statement that retrieves foreign key constraints for the specified tables in the given schema.
@@ -332,13 +332,13 @@ def _foreign_keys(
 
 def create_view(
     engine: sa.engine.Engine,
-    models: Callable,
-    fetchall: Callable,
+    models: t.Callable,
+    fetchall: t.Callable,
     index: str,
     schema: str,
-    tables: Set,
+    tables: t.Set,
     user_defined_fkey_tables: dict,
-    views: List[str],
+    views: t.List[str],
 ) -> None:
     """
     This module defines a function `create_view` that creates a view describing primary_keys and foreign_keys for each table
@@ -359,7 +359,6 @@ def create_view(
 
     Raises:
         None
-
 
         This is only called once on bootstrap.
         It is used within the trigger function to determine what payload
@@ -383,7 +382,7 @@ def create_view(
     rows: dict = {}
     if MATERIALIZED_VIEW in views:
         for table_name, primary_keys, foreign_keys, indices in fetchall(
-            sa.select(["*"]).select_from(
+            sa.select("*").select_from(
                 sa.text(f"{schema}.{MATERIALIZED_VIEW}")
             )
         ):
@@ -401,8 +400,9 @@ def create_view(
                 rows[table_name]["foreign_keys"] = set(foreign_keys)
             if indices:
                 rows[table_name]["indices"] = set(indices)
-
-        engine.execute(DropView(schema, MATERIALIZED_VIEW))
+        with engine.connect() as conn:
+            conn.execute(DropView(schema, MATERIALIZED_VIEW))
+            conn.commit()
 
     if schema != DEFAULT_SCHEMA:
         for table in set(tables):
@@ -473,16 +473,18 @@ def create_view(
         .alias("t")
     )
     logger.debug(f"Creating view: {schema}.{MATERIALIZED_VIEW}")
-    engine.execute(CreateView(schema, MATERIALIZED_VIEW, statement))
-    engine.execute(DropIndex("_idx"))
-    engine.execute(
-        CreateIndex(
-            "_idx",
-            schema,
-            MATERIALIZED_VIEW,
-            ["table_name"],
+    with engine.connect() as conn:
+        conn.execute(CreateView(schema, MATERIALIZED_VIEW, statement))
+        conn.execute(DropIndex("_idx"))
+        conn.execute(
+            CreateIndex(
+                "_idx",
+                schema,
+                MATERIALIZED_VIEW,
+                ["table_name"],
+            )
         )
-    )
+        conn.commit()
     logger.debug(f"Created view: {schema}.{MATERIALIZED_VIEW}")
 
 
@@ -509,7 +511,7 @@ def is_view(
     with engine.connect() as conn:
         return (
             conn.execute(
-                sa.select([sa.column(column)])
+                sa.select(*[sa.column(column)])
                 .select_from(sa.text(pg_table))
                 .where(
                     sa.and_(
@@ -519,7 +521,7 @@ def is_view(
                         ]
                     )
                 )
-                .with_only_columns([sa.func.COUNT()])
+                .with_only_columns(*[sa.func.COUNT()])
                 .order_by(None)
             ).scalar()
             > 0

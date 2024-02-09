@@ -2,7 +2,7 @@ PGSync version:
 
 Postgres version: 
 
-Elasticsearch version: 
+Elasticsearch/OpenSearch version: 
 
 Redis version: 
 

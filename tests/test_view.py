@@ -35,6 +35,10 @@ class TestView(object):
         with subtransactions(session):
             session.add_all(books)
         yield books
+
+        with subtransactions(session):
+            session.query(book_cls).delete()
+
         session.connection().engine.connect().close()
         session.connection().engine.dispose()
         sync.search_client.close()
@@ -42,9 +46,13 @@ class TestView(object):
     def test_create_materialized_view(self, connection):
         """Test create materialized view."""
         view = "test_mat_view"
-        connection.engine.execute(
-            CreateView(DEFAULT_SCHEMA, view, sa.select(1), materialized=True)
-        )
+        with connection.engine.connect() as conn:
+            conn.execute(
+                CreateView(
+                    DEFAULT_SCHEMA, view, sa.select(1), materialized=True
+                )
+            )
+            conn.commit()
         assert (
             is_view(connection.engine, DEFAULT_SCHEMA, view, materialized=True)
             is True
@@ -55,16 +63,20 @@ class TestView(object):
             )
             is False
         )
-        connection.engine.execute(
-            DropView(DEFAULT_SCHEMA, view, materialized=True)
-        )
+        with connection.engine.connect() as conn:
+            conn.execute(DropView(DEFAULT_SCHEMA, view, materialized=True))
+            conn.commit()
 
     def test_create_view(self, connection):
         """Test create non-materialized view."""
         view = "test_view"
-        connection.engine.execute(
-            CreateView(DEFAULT_SCHEMA, view, sa.select(1), materialized=False)
-        )
+        with connection.engine.connect() as conn:
+            conn.execute(
+                CreateView(
+                    DEFAULT_SCHEMA, view, sa.select(1), materialized=False
+                )
+            )
+            conn.commit()
         assert (
             is_view(
                 connection.engine, DEFAULT_SCHEMA, view, materialized=False
@@ -75,23 +87,27 @@ class TestView(object):
             is_view(connection.engine, DEFAULT_SCHEMA, view, materialized=True)
             is False
         )
-        connection.engine.execute(
-            DropView(DEFAULT_SCHEMA, view, materialized=False)
-        )
+        with connection.engine.connect() as conn:
+            conn.execute(DropView(DEFAULT_SCHEMA, view, materialized=False))
+            conn.commit()
 
     def test_drop_materialized_view(self, connection):
         """Test drop materialized view."""
         view = "test_view_drop"
-        connection.engine.execute(
-            CreateView(DEFAULT_SCHEMA, view, sa.select(1), materialized=True)
-        )
+        with connection.engine.connect() as conn:
+            conn.execute(
+                CreateView(
+                    DEFAULT_SCHEMA, view, sa.select(1), materialized=True
+                )
+            )
+            conn.commit()
         assert (
             is_view(connection.engine, DEFAULT_SCHEMA, view, materialized=True)
             is True
         )
-        connection.engine.execute(
-            DropView(DEFAULT_SCHEMA, view, materialized=True)
-        )
+        with connection.engine.connect() as conn:
+            conn.execute(DropView(DEFAULT_SCHEMA, view, materialized=True))
+            conn.commit()
         assert (
             is_view(connection.engine, DEFAULT_SCHEMA, view, materialized=True)
             is False
@@ -106,18 +122,22 @@ class TestView(object):
     def test_drop_view(self, connection):
         """Test drop non-materialized view."""
         view = "test_view_drop"
-        connection.engine.execute(
-            CreateView(DEFAULT_SCHEMA, view, sa.select(1), materialized=False)
-        )
+        with connection.engine.connect() as conn:
+            conn.execute(
+                CreateView(
+                    DEFAULT_SCHEMA, view, sa.select(1), materialized=False
+                )
+            )
+            conn.commit()
         assert (
             is_view(
                 connection.engine, DEFAULT_SCHEMA, view, materialized=False
             )
             is True
         )
-        connection.engine.execute(
-            DropView(DEFAULT_SCHEMA, view, materialized=False)
-        )
+        with connection.engine.connect() as conn:
+            conn.execute(DropView(DEFAULT_SCHEMA, view, materialized=False))
+            conn.commit()
         assert (
             is_view(connection.engine, DEFAULT_SCHEMA, view, materialized=True)
             is False
@@ -134,17 +154,20 @@ class TestView(object):
         """Test refresh materialized view."""
         view = "test_view_refresh"
         pg_base = Base(connection.engine.url.database)
+
         model = pg_base.models("book", "public")
-        statement = sa.select([model.c.isbn]).select_from(model)
-        connection.engine.execute(
-            CreateView(DEFAULT_SCHEMA, view, statement, materialized=True)
-        )
-        assert [
-            result.isbn
-            for result in connection.engine.execute(
-                sa.text(f"SELECT * FROM {view}")
+        statement = sa.select(*[model.c.isbn]).select_from(model)
+        with connection.engine.connect() as conn:
+            conn.execute(
+                CreateView(DEFAULT_SCHEMA, view, statement, materialized=True)
             )
-        ][0] == "abc"
+            conn.commit()
+
+        with connection.engine.connect() as conn:
+            assert [
+                result.isbn
+                for result in conn.execute(sa.text(f"SELECT * FROM {view}"))
+            ][0] == "abc"
 
         session = sync.session
         with subtransactions(session):
@@ -154,26 +177,27 @@ class TestView(object):
                 .values(isbn="xyz")
             )
 
-        # the value should still be abc
-        assert [
-            result.isbn
-            for result in connection.engine.execute(
-                sa.text(f"SELECT * FROM {view}")
-            )
-        ][0] == "abc"
+        with connection.engine.connect() as conn:
+            # the value should still be abc
+            assert [
+                result.isbn
+                for result in conn.execute(sa.text(f"SELECT * FROM {view}"))
+            ][0] == "abc"
 
-        connection.engine.execute(RefreshView(DEFAULT_SCHEMA, view))
+        with connection.engine.connect() as conn:
+            conn.execute(RefreshView(DEFAULT_SCHEMA, view))
+            conn.commit()
 
-        # the value should now be xyz
-        assert [
-            result.isbn
-            for result in connection.engine.execute(
-                sa.text(f"SELECT * FROM {view}")
-            )
-        ][0] == "xyz"
-        connection.engine.execute(
-            DropView(DEFAULT_SCHEMA, view, materialized=True)
-        )
+        with connection.engine.connect() as conn:
+            # the value should now be xyz
+            assert [
+                result.isbn
+                for result in conn.execute(sa.text(f"SELECT * FROM {view}"))
+            ][0] == "xyz"
+
+        with connection.engine.connect() as conn:
+            conn.execute(DropView(DEFAULT_SCHEMA, view, materialized=True))
+            conn.commit()
 
     @pytest.mark.usefixtures("table_creator")
     def test_index(self, connection, sync, book_cls, data):
@@ -182,9 +206,11 @@ class TestView(object):
             "book", schema=DEFAULT_SCHEMA
         )
         assert indices == []
-        connection.engine.execute(
-            CreateIndex("my_index", DEFAULT_SCHEMA, "book", ["isbn"])
-        )
+        with connection.engine.connect() as conn:
+            conn.execute(
+                CreateIndex("my_index", DEFAULT_SCHEMA, "book", ["isbn"])
+            )
+            conn.commit()
         indices = sa.inspect(connection.engine).get_indexes(
             "book", schema=DEFAULT_SCHEMA
         )
@@ -198,7 +224,9 @@ class TestView(object):
                 "postgresql_include": [],
             },
         }
-        connection.engine.execute(DropIndex("my_index"))
+        with connection.engine.connect() as conn:
+            conn.execute(DropIndex("my_index"))
+            conn.commit()
         indices = sa.inspect(connection.engine).get_indexes(
             "book", schema=DEFAULT_SCHEMA
         )

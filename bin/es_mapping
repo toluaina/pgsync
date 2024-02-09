@@ -114,9 +114,7 @@ def main(config):
     """Create custom NGram analyzer for the default mapping."""
 
     config: str = get_config(config)
-    for index in set(
-        [document["index"] for document in config_loader(config)]
-    ):
+    for index in set([doc["index"] for doc in config_loader(config)]):
         create_es_mapping(index)
 
 

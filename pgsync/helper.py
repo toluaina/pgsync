@@ -1,7 +1,7 @@
 """PGSync helpers."""
 import logging
 import os
-from typing import Optional
+import typing as t
 
 import sqlalchemy as sa
 
@@ -18,7 +18,7 @@ def teardown(
     delete_redis: bool = True,
     drop_index: bool = True,
     delete_checkpoint: bool = True,
-    config: Optional[str] = None,
+    config: t.Optional[str] = None,
     validate: bool = False,
 ) -> None:
     """
@@ -35,12 +35,12 @@ def teardown(
     """
     config: str = get_config(config)
 
-    for document in config_loader(config):
-        if not database_exists(document["database"]):
-            logger.warning(f'Database {document["database"]} does not exist')
+    for doc in config_loader(config):
+        if not database_exists(doc["database"]):
+            logger.warning(f'Database {doc["database"]} does not exist')
             continue
 
-        sync: Sync = Sync(document, validate=validate)
+        sync: Sync = Sync(doc, validate=validate)
         if truncate_db:
             try:
                 sync.truncate_schemas()

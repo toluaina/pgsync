@@ -7,7 +7,7 @@ The variables are used to configure various parameters such as block size, check
 import logging
 import logging.config
 import os
-from typing import Optional
+import typing as t
 
 from environs import Env
 
@@ -25,8 +25,8 @@ JOIN_QUERIES = env.bool("JOIN_QUERIES", default=True)
 LOGICAL_SLOT_CHUNK_SIZE = env.int("LOGICAL_SLOT_CHUNK_SIZE", default=5000)
 # stdout log interval (in secs)
 LOG_INTERVAL = env.float("LOG_INTERVAL", default=0.5)
-# number of threads to spawn for poll db
-NTHREADS_POLLDB = env.int("NTHREADS_POLLDB", default=1)
+# number of workers to spawn for handling events
+NUM_WORKERS = env.int("NUM_WORKERS", default=2)
 PG_DRIVER = env.str("PG_DRIVER", default="psycopg2")
 # poll db interval (consider reducing this duration to increase throughput)
 POLL_TIMEOUT = env.float("POLL_TIMEOUT", default=0.1)
@@ -132,12 +132,23 @@ ELASTICSEARCH_IGNORE_STATUS = env.list(
 )
 ELASTICSEARCH_IGNORE_STATUS = tuple(map(int, ELASTICSEARCH_IGNORE_STATUS))
 
+if env.bool("ELASTICSEARCH", default=None) and env.bool(
+    "OPENSEARCH", default=None
+):
+    raise ValueError("Cannot set both ELASTICSEARCH and OPENSEARCH to True")
+
 ELASTICSEARCH = env.bool("ELASTICSEARCH", default=True)
 OPENSEARCH = env.bool("OPENSEARCH", default=(not ELASTICSEARCH))
+
+if OPENSEARCH:
+    ELASTICSEARCH = False
+elif ELASTICSEARCH:
+    OPENSEARCH = False
+
 OPENSEARCH_AWS_HOSTED = env.bool("OPENSEARCH_AWS_HOSTED", default=False)
 OPENSEARCH_AWS_SERVERLESS = env.bool(
     "OPENSEARCH_AWS_SERVERLESS", default=False
-)  # noqa E501
+)
 
 # Postgres:
 PG_HOST = env.str("PG_HOST", default="localhost")
@@ -161,11 +172,11 @@ REDIS_SCHEME = env.str("REDIS_SCHEME", default="redis")
 # redis socket connection timeout
 REDIS_SOCKET_TIMEOUT = env.int("REDIS_SOCKET_TIMEOUT", default=5)
 # number of items to write to Redis at a time
-REDIS_WRITE_CHUNK_SIZE = env.int("REDIS_WRITE_CHUNK_SIZE", default=1000)
+REDIS_WRITE_CHUNK_SIZE = env.int("REDIS_WRITE_CHUNK_SIZE", default=500)
 
 
 # Logging:
-def _get_logging_config(silent_loggers: Optional[str] = None):
+def _get_logging_config(silent_loggers: t.Optional[str] = None):
     """Return the logging configuration based on environment variables."""
     config: dict = {
         "version": 1,
@@ -213,6 +224,7 @@ LOGGING = _get_logging_config(
         "urllib3.connectionpool",
         "urllib3.util.retry",
         "elasticsearch",
+        "elastic_transport.transport",
     ]
 )
 

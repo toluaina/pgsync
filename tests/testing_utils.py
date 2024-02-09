@@ -1,8 +1,8 @@
 """Test helper methods."""
 
 import os
+import typing as t
 from contextlib import contextmanager
-from typing import Optional
 
 from pgsync.node import Node
 
@@ -29,7 +29,7 @@ def get_docs(results, _id=None):
 
 
 def search(
-    es, index: str, body: Optional[str] = None, _id: Optional[str] = None
+    es, index: str, body: t.Optional[str] = None, _id: t.Optional[str] = None
 ):
     body: dict = body or {
         "size": 10000,
@@ -40,7 +40,9 @@ def search(
         return get_docs(results, _id=_id)
 
 
-def assert_resync_empty(sync, node: Node, txmin: Optional[int] = None) -> None:
+def assert_resync_empty(
+    sync, node: Node, txmin: t.Optional[int] = None
+) -> None:
     # re-sync and ensure we are not syncing more data
     txmin = txmin or sync.txid_current
     docs = [doc for doc in sync.sync(node, txmin=txmin)]

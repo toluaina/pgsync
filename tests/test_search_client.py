@@ -1,6 +1,7 @@
 """SearchClient tests."""
 import importlib
 
+import elastic_transport
 import mock
 from mock import ANY, MagicMock
 
@@ -30,7 +31,7 @@ class TestSearchClient(object):
                     mock_search_client.assert_called_once_with(
                         url,
                         client=elasticsearch.Elasticsearch,
-                        connection_class=elasticsearch.RequestsHttpConnection,
+                        node_class=elastic_transport.RequestsHttpNode,
                     )
 
     def test_get_search_client(self, mocker):
@@ -49,7 +50,7 @@ class TestSearchClient(object):
                 get_search_client(
                     url,
                     client=elasticsearch.Elasticsearch,
-                    connection_class=elasticsearch.RequestsHttpConnection,
+                    node_class=elastic_transport.RequestsHttpNode,
                 )
                 ssl_assert_hostname = (
                     settings.ELASTICSEARCH_SSL_ASSERT_HOSTNAME
@@ -75,7 +76,6 @@ class TestSearchClient(object):
                     ssl_version=settings.ELASTICSEARCH_SSL_VERSION,
                     ssl_context=settings.ELASTICSEARCH_SSL_CONTEXT,
                     ssl_show_warn=settings.ELASTICSEARCH_SSL_SHOW_WARN,
-                    use_ssl=settings.ELASTICSEARCH_USE_SSL,
                     timeout=settings.ELASTICSEARCH_TIMEOUT,
                 )
 
@@ -100,16 +100,12 @@ class TestSearchClient(object):
                             get_search_client(
                                 url,
                                 client=elasticsearch.Elasticsearch,
-                                connection_class=(
-                                    elasticsearch.RequestsHttpConnection
-                                ),
+                                node_class=elastic_transport.RequestsHttpNode,
                             )
                             mock_search_client.assert_called_once_with(
                                 hosts=[url],
                                 http_auth=ANY,
                                 use_ssl=True,
                                 verify_certs=True,
-                                connection_class=(
-                                    elasticsearch.RequestsHttpConnection
-                                ),
+                                node_class=elastic_transport.RequestsHttpNode,
                             )

@@ -27,7 +27,7 @@
                             "symbol"
                         ],
                         "min_gram": "9",
-                        "type": "nGram",
+                        "type": "ngram",
                         "max_gram": "10"
                     }
                 }

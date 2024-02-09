@@ -7,7 +7,7 @@ class GrootPlugin(plugin.Plugin):
     name: str = "Groot"
 
     def transform(self, doc: dict, **kwargs) -> dict:
-        """Demonstrates how to modify a document."""
+        """Demonstrates how to modify a doc."""
         doc_id: str = kwargs["_id"]
         doc_index: str = kwargs["_index"]
 

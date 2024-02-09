@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import re
+import threading
+import typing as t
 from dataclasses import dataclass
-from typing import Callable, Dict, Generator, List, Optional, Set, Tuple
 
 import sqlalchemy as sa
 
@@ -41,7 +42,7 @@ class ForeignKey:
         child (str): The name of the child table.
     """
 
-    foreign_key: Optional[dict] = None
+    foreign_key: t.Optional[dict] = None
 
     def __post_init__(self):
         """Initialize the ForeignKey object.
@@ -67,18 +68,21 @@ class ForeignKey:
     def __str__(self):
         return f"foreign_key: {self.parent}:{self.child}"
 
+    def __repr__(self):
+        return self.__str__()
+
 
 @dataclass
 class Relationship:
-    relationship: Optional[dict] = None
+    relationship: t.Optional[dict] = None
 
     def __post_init__(self):
         """Relationship constructor."""
         self.relationship: dict = self.relationship or dict()
         self.type: str = self.relationship.get("type")
         self.variant: str = self.relationship.get("variant")
-        self.tables: List[str] = self.relationship.get("through_tables", [])
-        self.throughs: List[Node] = []
+        self.tables: t.List[str] = self.relationship.get("through_tables", [])
+        self.throughs: t.List[Node] = []
 
         if not set(self.relationship.keys()).issubset(
             set(RELATIONSHIP_ATTRIBUTES)
@@ -112,30 +116,33 @@ class Relationship:
     def __str__(self):
         return f"relationship: {self.variant}.{self.type}:{self.tables}"
 
+    def __repr__(self):
+        return self.__str__()
+
 
 @dataclass
 class Node(object):
-    models: Callable
+    models: t.Callable
     table: str
     schema: str
-    primary_key: Optional[list] = None
-    label: Optional[str] = None
-    transform: Optional[dict] = None
-    columns: Optional[list] = None
-    relationship: Optional[dict] = None
-    parent: Optional[Node] = None
-    base_tables: Optional[list] = None
+    primary_key: t.Optional[list] = None
+    label: t.Optional[str] = None
+    transform: t.Optional[dict] = None
+    columns: t.Optional[list] = None
+    relationship: t.Optional[dict] = None
+    parent: t.Optional[Node] = None
+    base_tables: t.Optional[list] = None
 
     def __post_init__(self):
         self.model: sa.sql.Alias = self.models(self.table, self.schema)
         self.columns = self.columns or []
-        self.children: List[Node] = []
-        self.table_columns: List[str] = self.model.columns.keys()
+        self.children: t.List[Node] = []
+        self.table_columns: t.List[str] = self.model.columns.keys()
         if not self.model.primary_keys:
             setattr(self.model, "primary_keys", self.primary_key)
 
         # columns to fetch
-        self.column_names: List[str] = [
+        self.column_names: t.List[str] = [
             column for column in self.columns if isinstance(column, str)
         ]
         if not self.column_names:
@@ -177,7 +184,7 @@ class Node(object):
         self.columns = []
 
         for column_name in self.column_names:
-            tokens: Optional[list] = None
+            tokens: t.Optional[list] = None
             if any(op in column_name for op in JSONB_OPERATORS):
                 tokens = re.split(
                     f"({'|'.join(JSONB_OPERATORS)})",
@@ -254,64 +261,66 @@ class Node(object):
             leaf = i == (len(self.children) - 1)
             child.display(prefix, leaf)
 
-    def traverse_breadth_first(self) -> Generator:
-        stack: List[Node] = [self]
+    def traverse_breadth_first(self) -> t.Generator:
+        stack: t.List[Node] = [self]
         while stack:
             node: Node = stack.pop(0)
             yield node
             for child in node.children:
                 stack.append(child)
 
-    def traverse_post_order(self) -> Generator:
+    def traverse_post_order(self) -> t.Generator:
         for child in self.children:
             yield from child.traverse_post_order()
         yield self
 
 
 @dataclass
-class Tree:
-    models: Callable
+class Tree(threading.local):
+    models: t.Callable
+    nodes: dict
 
     def __post_init__(self):
-        self.tables: Set[str] = set()
-        self.__nodes: Dict[Node] = {}
-        self.root: Optional[Node] = None
+        self.tables: t.Set[str] = set()
+        self.__nodes: t.Dict[Node] = {}
+        self.root: t.Optional[Node] = None
+        self.build(self.nodes)
 
     def display(self) -> None:
         self.root.display()
 
-    def traverse_breadth_first(self) -> Generator:
+    def traverse_breadth_first(self) -> t.Generator:
         return self.root.traverse_breadth_first()
 
-    def traverse_post_order(self) -> Generator:
+    def traverse_post_order(self) -> t.Generator:
         return self.root.traverse_post_order()
 
-    def build(self, data: dict) -> Node:
-        if not isinstance(data, dict):
+    def build(self, nodes: dict) -> Node:
+        if not isinstance(nodes, dict):
             raise SchemaError(
                 "Incompatible schema. Please run v2 schema migration"
             )
-        table: str = data.get("table")
-        schema: str = data.get("schema", DEFAULT_SCHEMA)
-        key: Tuple[str, str] = (schema, table)
+        table: str = nodes.get("table")
+        schema: str = nodes.get("schema", DEFAULT_SCHEMA)
+        key: t.Tuple[str, str] = (schema, table)
 
         if table is None:
-            raise TableNotInNodeError(f"Table not specified in node: {data}")
+            raise TableNotInNodeError(f"Table not specified in node: {nodes}")
 
-        if not set(data.keys()).issubset(set(NODE_ATTRIBUTES)):
-            attrs = set(data.keys()).difference(set(NODE_ATTRIBUTES))
+        if not set(nodes.keys()).issubset(set(NODE_ATTRIBUTES)):
+            attrs = set(nodes.keys()).difference(set(NODE_ATTRIBUTES))
             raise NodeAttributeError(f"Unknown node attribute(s): {attrs}")
 
         node: Node = Node(
             models=self.models,
             table=table,
             schema=schema,
-            primary_key=data.get("primary_key", []),
-            label=data.get("label", table),
-            transform=data.get("transform", {}),
-            columns=data.get("columns", []),
-            relationship=data.get("relationship", {}),
-            base_tables=data.get("base_tables", []),
+            primary_key=nodes.get("primary_key", []),
+            label=nodes.get("label", table),
+            transform=nodes.get("transform", {}),
+            columns=nodes.get("columns", []),
+            relationship=nodes.get("relationship", {}),
+            base_tables=nodes.get("base_tables", []),
         )
         if self.root is None:
             self.root = node
@@ -320,7 +329,7 @@ class Tree:
         for through in node.relationship.throughs:
             self.tables.add(through.table)
 
-        for child in data.get("children", []):
+        for child in nodes.get("children", []):
             node.add_child(self.build(child))
 
         self.__nodes[key] = node
@@ -328,7 +337,7 @@ class Tree:
 
     def get_node(self, table: str, schema: str) -> Node:
         """Get node by name."""
-        key: Tuple[str, str] = (schema, table)
+        key: t.Tuple[str, str] = (schema, table)
         if key not in self.__nodes:
             for node in self.traverse_post_order():
                 if table == node.table and schema == node.schema:

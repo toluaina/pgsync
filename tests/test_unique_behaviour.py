@@ -1,9 +1,9 @@
 """Tests for `pgsync` package."""
 
-import psycopg2
 import pytest
 
 from pgsync.base import subtransactions
+from pgsync.node import Tree
 
 from .testing_utils import assert_resync_empty, sort_list
 
@@ -45,9 +45,6 @@ class TestUniqueBehaviour(object):
         ]
         with subtransactions(session):
             conn = session.connection().engine.connect().connection
-            conn.set_isolation_level(
-                psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT
-            )
             cursor = conn.cursor()
             channel = sync.database
             cursor.execute(f"UNLISTEN {channel}")
@@ -72,9 +69,6 @@ class TestUniqueBehaviour(object):
 
         with subtransactions(session):
             conn = session.connection().engine.connect().connection
-            conn.set_isolation_level(
-                psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT
-            )
             cursor = conn.cursor()
             channel = session.connection().engine.url.database
             cursor.execute(f"UNLISTEN {channel}")
@@ -217,9 +211,7 @@ class TestUniqueBehaviour(object):
         Test regular sync produces the correct result
         """
         sync.tree.__nodes = {}
-        sync.tree.__post_init__()
-        sync.nodes = nodes
-        sync.root = sync.tree.build(nodes)
+        sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         docs = sorted(docs, key=lambda k: k["_id"])
         assert docs == [

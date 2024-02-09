@@ -1,4 +1,4 @@
-from typing import Optional
+import typing as t
 
 from pgsync import plugin
 
@@ -11,7 +11,7 @@ class Auth(plugin.Plugin):
     def transform(self, doc: dict, **kwargs) -> dict:
         pass
 
-    def auth(self, key: str) -> Optional[str]:
+    def auth(self, key: str) -> t.Optional[str]:
         """Sample auth."""
         if key == "PG_PASSWORD":
             return None
@@ -27,7 +27,7 @@ class VillainPlugin(plugin.Plugin):
     name: str = "Villain"
 
     def transform(self, doc: dict, **kwargs) -> dict:
-        """Demonstrates how to modify a document."""
+        """Demonstrates how to modify a doc."""
         doc_id: str = kwargs["_id"]
         doc_index: str = kwargs["_index"]
 
@@ -48,13 +48,14 @@ class HeroPlugin(plugin.Plugin):
     name: str = "Hero"
 
     def transform(self, doc: dict, **kwargs) -> dict:
-        """Demonstrates how to modify a document."""
+        """Demonstrates how to modify a doc."""
         doc_id: str = kwargs["_id"]
         doc_index: str = kwargs["_index"]
 
         if doc_id == "x":
             # do something...
             pass
+
         if doc_index == "myindex":
             # do another thing...
             pass
@@ -69,7 +70,7 @@ class GeometryPlugin(plugin.Plugin):
     name: str = "Geometry"
 
     def transform(self, doc: dict, **kwargs) -> dict:
-        """Demonstrates how to modify a document."""
+        """Demonstrates how to modify a doc."""
         doc_index: str = kwargs["_index"]
 
         if doc_index == "book":

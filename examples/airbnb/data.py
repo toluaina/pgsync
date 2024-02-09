@@ -1,5 +1,5 @@
+import typing as t
 from datetime import datetime, timedelta
-from typing import List
 
 import click
 from schema import Booking, City, Country, Host, Place, Review, User
@@ -20,13 +20,13 @@ from pgsync.utils import config_loader, get_config
 def main(config):
     config: str = get_config(config)
     teardown(drop_db=False, config=config)
-    document: dict = next(config_loader(config))
-    database: str = document.get("database", document["index"])
+    doc: dict = next(config_loader(config))
+    database: str = doc.get("database", doc["index"])
     with pg_engine(database) as engine:
         Session = sessionmaker(bind=engine, autoflush=True)
         session = Session()
 
-        users: List[User] = [
+        users: t.List[User] = [
             User(email="stephanie.miller@aol.com"),
             User(email="nancy.gaines@ibm.com"),
             User(email="andrea.cabrera@gmail.com"),
@@ -35,7 +35,7 @@ def main(config):
             User(email="john.brown@apple.com"),
         ]
 
-        hosts: List[Host] = [
+        hosts: t.List[Host] = [
             Host(email="kermit@muppet-labs.inc"),
             Host(email="bert@sesame.street"),
             Host(email="big.bird@sesame.street"),
@@ -45,7 +45,7 @@ def main(config):
             Host(email="miss.piggy@muppet-labs.inc"),
         ]
 
-        cities: List[City] = [
+        cities: t.List[City] = [
             City(
                 name="Manila",
                 country=Country(
@@ -90,7 +90,7 @@ def main(config):
             ),
         ]
 
-        places: List[Place] = [
+        places: t.List[Place] = [
             Place(
                 host=hosts[0],
                 city=cities[0],
@@ -123,7 +123,7 @@ def main(config):
             ),
         ]
 
-        reviews: List[Review] = [
+        reviews: t.List[Review] = [
             Review(
                 booking=Booking(
                     user=users[0],

@@ -1,19 +1,14 @@
 # base libraries
-black
+
 boto3
 click
-elasticsearch==7.13.4 # pin this to version 7.13.4 for compatibility with OpenSearch https://opensearch.org/docs/clients/index/
-elasticsearch-dsl>=6.0.0,<8.0.0
+elasticsearch
+elasticsearch-dsl
 environs
-faker
-opensearch-dsl>=2.0.1
+opensearch-dsl
 psycopg2-binary
+python-dotenv
 redis
 requests-aws4auth
+sqlalchemy
 sqlparse
-
-# Pinned dependencies
-# pin sqlalchemy to latest 1.4.* until 2.0 support
-sqlalchemy==1.4.*
-isort==5.12.*
-python-dotenv==0.21.*
