@@ -6,15 +6,15 @@
 #
 async-timeout==4.0.3
     # via redis
-black==23.12.1
+black==24.1.1
     # via -r requirements/dev.in
-boto3==1.34.20
+boto3==1.34.38
     # via -r requirements/base.in
-botocore==1.34.20
+botocore==1.34.38
     # via
     #   boto3
     #   s3transfer
-certifi==2023.11.17
+certifi==2024.2.2
     # via
     #   elastic-transport
     #   opensearch-py
@@ -27,25 +27,25 @@ click==8.1.7
     # via
     #   -r requirements/base.in
     #   black
-coverage[toml]==7.4.0
+coverage[toml]==7.4.1
     # via
     #   -r requirements/dev.in
     #   pytest-cov
 distlib==0.3.8
     # via virtualenv
-elastic-transport==8.11.0
+elastic-transport==8.12.0
     # via elasticsearch
-elasticsearch==8.11.1
+elasticsearch==8.12.0
     # via
     #   -r requirements/base.in
     #   elasticsearch-dsl
-elasticsearch-dsl==8.11.0
+elasticsearch-dsl==8.12.0
     # via -r requirements/base.in
 environs==10.3.0
     # via -r requirements/base.in
 exceptiongroup==1.2.0
     # via pytest
-faker==22.2.0
+faker==23.1.0
     # via -r requirements/dev.in
 filelock==3.13.1
     # via virtualenv
@@ -88,11 +88,11 @@ packaging==23.2
     #   pytest
 pathspec==0.12.1
     # via black
-platformdirs==4.1.0
+platformdirs==4.2.0
     # via
     #   black
     #   virtualenv
-pluggy==1.3.0
+pluggy==1.4.0
     # via pytest
 pre-commit==3.5.0
     # via -r requirements/dev.in
@@ -102,7 +102,7 @@ pycodestyle==2.11.1
     # via flake8
 pyflakes==3.2.0
     # via flake8
-pytest==7.4.4
+pytest==8.0.0
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -119,7 +119,7 @@ python-dateutil==2.8.2
     #   freezegun
     #   opensearch-dsl
     #   opensearch-py
-python-dotenv==1.0.0
+python-dotenv==1.0.1
     # via
     #   -r requirements/base.in
     #   environs
