@@ -1,8 +1,9 @@
 """PGSync Demo application."""
+
 import aiohttp_cors
 from aiohttp import web
 from app import settings
-from app.views import TypeAheadView
+from app.views import TypeAheadHandler, TypeAheadView
 
 
 async def create_app():
@@ -14,10 +15,10 @@ async def create_app():
     )
     app.add_routes(
         [
+            web.get("/typeahead", TypeAheadHandler),
             web.get("/", TypeAheadView),
         ]
     )
-
     cors = aiohttp_cors.setup(
         app,
         defaults={

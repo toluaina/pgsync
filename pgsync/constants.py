@@ -89,6 +89,7 @@ ELASTICSEARCH_TYPES = [
     "constant_keyword",
     "date",
     "date_range",
+    "dense_vector",
     "double",
     "double_range",
     "flattened",

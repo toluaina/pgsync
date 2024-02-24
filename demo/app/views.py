@@ -1,4 +1,5 @@
 """PGSync Demo views."""
+
 import logging
 from copy import deepcopy
 
@@ -6,12 +7,16 @@ from aiohttp import web
 from app.settings import (
     ELASTICSEARCH_INDEX,
     ELASTICSEARCH_TIMEOUT,
+    ELASTICSEARCH_URL,
     ELASTICSEARCH_VERIFY_CERTS,
     MAX_RESULTS,
+    VECTOR_SEARCH,
 )
 from elasticsearch import Elasticsearch
-from elasticsearch_dsl import Search
-from elasticsearch_dsl.query import Bool, Match
+from elasticsearch_dsl import Q, Search
+from elasticsearch_dsl.query import Bool, Match, ScriptScore
+
+from .utils import get_embedding
 
 logger = logging.getLogger(__name__)
 
@@ -62,8 +67,8 @@ class DictQuery(dict):
                         self.nested_update(o, key, value)
 
 
-class TypeAheadView(web.View):
-    """TypeAheadView view."""
+class TypeAheadHandler(web.View):
+    """TypeAheadHandler view."""
 
     def _build_queries(self, key, value, search_param, parents=[]):
         queries = []
@@ -137,7 +142,7 @@ class TypeAheadView(web.View):
     def queries(self, mapping, search_param):
         """Return matching query by search_param."""
         should = self.build_queries(
-            mapping[ELASTICSEARCH_INDEX]["mappings"]["_doc"]["properties"],
+            mapping[ELASTICSEARCH_INDEX]["mappings"]["properties"],
             search_param.lower(),
         )
         return Bool(
@@ -147,27 +152,38 @@ class TypeAheadView(web.View):
 
     async def get(self):
         """Get the results from Elasticsearch."""
-        q = self.request.query.get("q")
-        if not q:
+        qs: str = self.request.query.get("q")
+        if not qs:
             return web.json_response([])
 
-        es = Elasticsearch(
-            hosts=[self.request.app["settings"].ELASTICSEARCH_URL],
+        es: Elasticsearch = Elasticsearch(
+            hosts=ELASTICSEARCH_URL,
             timeout=ELASTICSEARCH_TIMEOUT,
             verify_certs=ELASTICSEARCH_VERIFY_CERTS,
         )
-        mapping = es.indices.get_mapping(
-            ELASTICSEARCH_INDEX, include_type_name=True
-        )
-        search = Search(index=ELASTICSEARCH_INDEX, using=es)
+        mapping: dict = es.indices.get_mapping(index=ELASTICSEARCH_INDEX)
+        search: Search = Search(index=ELASTICSEARCH_INDEX, using=es)
         search = search.highlight_options(
             pre_tags=[PRE_HIGHLIGHT_TAG],
             post_tags=[POST_HIGHLIGHT_TAG],
         )
-        query = self.queries(mapping, q)
-        search = search.query(query)
+
+        if VECTOR_SEARCH:
+            search = search.query(
+                ScriptScore(
+                    query=Q("match_all"),
+                    script={
+                        "source": "cosineSimilarity(params.query_vector, \u0027embedding\u0027) + 1.0",
+                        "params": {"query_vector": get_embedding(qs)},
+                    },
+                )
+            )
+        else:
+            query = self.queries(mapping, qs)
+            search = search.query(query)
+
         highlights = self.build_highlight(
-            mapping[ELASTICSEARCH_INDEX]["mappings"]["_doc"]["properties"]
+            mapping[ELASTICSEARCH_INDEX]["mappings"]["properties"]
         )
 
         for highlight in highlights:
@@ -176,6 +192,7 @@ class TypeAheadView(web.View):
         search = search.extra(
             from_=0,
             size=MAX_RESULTS,
+            _source={"excludes": ["embedding"]},
         )
 
         values = []
@@ -192,3 +209,10 @@ class TypeAheadView(web.View):
             else:
                 values.append(hit._d_)
         return web.json_response(values)
+
+
+class TypeAheadView(web.View):
+    """TypeAheadView view."""
+
+    async def get(self):
+        return web.FileResponse("index.html")

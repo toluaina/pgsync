@@ -1,4 +1,5 @@
 """PGSync Demo settings."""
+
 from environs import Env
 
 env = Env()
@@ -6,6 +7,7 @@ env = Env()
 env.read_env()
 
 MAX_RESULTS = env.int("MAX_RESULTS", default=100)
+VECTOR_SEARCH = env.bool("VECTOR_SEARCH", default=False)
 
 ELASTICSEARCH_URL = env.str("ELASTICSEARCH_URL")
 ELASTICSEARCH_INDEX = env.str("ELASTICSEARCH_INDEX")

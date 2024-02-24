@@ -6,11 +6,11 @@
 #
 async-timeout==4.0.3
     # via redis
-black==24.1.1
+black==24.2.0
     # via -r requirements/dev.in
-boto3==1.34.38
+boto3==1.34.49
     # via -r requirements/base.in
-botocore==1.34.38
+botocore==1.34.49
     # via
     #   boto3
     #   s3transfer
@@ -27,7 +27,7 @@ click==8.1.7
     # via
     #   -r requirements/base.in
     #   black
-coverage[toml]==7.4.1
+coverage[toml]==7.4.3
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -35,7 +35,7 @@ distlib==0.3.8
     # via virtualenv
 elastic-transport==8.12.0
     # via elasticsearch
-elasticsearch==8.12.0
+elasticsearch==8.12.1
     # via
     #   -r requirements/base.in
     #   elasticsearch-dsl
@@ -45,7 +45,7 @@ environs==10.3.0
     # via -r requirements/base.in
 exceptiongroup==1.2.0
     # via pytest
-faker==23.1.0
+faker==23.2.1
     # via -r requirements/dev.in
 filelock==3.13.1
     # via virtualenv
@@ -55,7 +55,7 @@ freezegun==1.4.0
     # via -r requirements/dev.in
 greenlet==3.0.3
     # via sqlalchemy
-identify==2.5.33
+identify==2.5.35
     # via pre-commit
 idna==3.6
     # via requests
@@ -102,7 +102,7 @@ pycodestyle==2.11.1
     # via flake8
 pyflakes==3.2.0
     # via flake8
-pytest==8.0.0
+pytest==8.0.1
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -141,7 +141,7 @@ six==1.16.0
     #   opensearch-py
     #   python-dateutil
     #   requests-aws4auth
-sqlalchemy==2.0.25
+sqlalchemy==2.0.27
     # via -r requirements/base.in
 sqlparse==0.4.4
     # via -r requirements/base.in
@@ -161,7 +161,7 @@ urllib3==1.26.18
     #   elastic-transport
     #   opensearch-py
     #   requests
-virtualenv==20.25.0
+virtualenv==20.25.1
     # via pre-commit
 
 # The following packages are considered to be unsafe in a requirements file:

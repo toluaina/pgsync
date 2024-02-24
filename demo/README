@@ -1,0 +1,12 @@
+To run the PGSync demo:
+
+- make sure you have bootstrapped your project and populated or Elasticsearch/Opensearch
+- `cd pgsync`
+- `source  source <path/to/virtualenv>/bin/activate`
+- `source .pythonpath`
+- `./bin/es_mapping -c /path/to/your/schema.json`
+- `cd demo`
+- `pip install -r requirements.txt`
+- `./runserver.sh`
+
+Then open your browser and go to `http://127.0.0.1:5000/`
