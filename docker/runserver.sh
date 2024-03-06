@@ -6,7 +6,7 @@
 
 ./wait-for-it.sh $REDIS_HOST:$REDIS_PORT -t 60
 
-EXAMPLE_DIR="examples/airbnb"
+EXAMPLE_DIR="examples/${EXAMPLE_NAME:-airbnb}"
 
 python $EXAMPLE_DIR/schema.py --config $EXAMPLE_DIR/schema.json
 
