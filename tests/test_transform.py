@@ -1,4 +1,5 @@
 """Transform tests."""
+
 import pytest
 
 from pgsync.constants import CONCAT_TRANSFORM, RENAME_TRANSFORM

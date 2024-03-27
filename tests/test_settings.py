@@ -1,4 +1,5 @@
 """Tests for the settings module."""
+
 import importlib
 
 from pgsync import settings

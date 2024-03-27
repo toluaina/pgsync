@@ -1,4 +1,5 @@
 """URLS tests."""
+
 import pytest
 from mock import MagicMock, patch
 

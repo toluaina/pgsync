@@ -1,4 +1,5 @@
 """Helper tests."""
+
 import pytest
 import sqlalchemy as sa
 from mock import ANY, call, patch

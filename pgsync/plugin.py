@@ -1,4 +1,5 @@
 """PGSync Plugin."""
+
 import logging
 import os
 import typing as t

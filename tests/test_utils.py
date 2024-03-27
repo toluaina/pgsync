@@ -1,4 +1,5 @@
 """Utils tests."""
+
 import os
 from urllib.parse import ParseResult, urlparse
 

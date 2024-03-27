@@ -1,4 +1,5 @@
 """Env vars tests."""
+
 import pytest
 
 

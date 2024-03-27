@@ -1,4 +1,5 @@
 """Tests for `pgsync` package."""
+
 import mock
 import pytest
 

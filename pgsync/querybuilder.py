@@ -1,4 +1,5 @@
 """PGSync QueryBuilder."""
+
 import threading
 import typing as t
 from collections import defaultdict

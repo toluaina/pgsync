@@ -1,4 +1,5 @@
 """PGSync Demo server."""
+
 from aiohttp import web
 from app.main import create_app
 
