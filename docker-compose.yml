@@ -21,6 +21,14 @@ services:
       - xpack.security.enabled=false
       - network.host=127.0.0.1
       - http.host=0.0.0.0
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.13
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
   pgsync:
     build:
       context: .
