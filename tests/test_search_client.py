@@ -1,4 +1,5 @@
 """SearchClient tests."""
+
 import importlib
 
 import elastic_transport

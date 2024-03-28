@@ -1,4 +1,5 @@
 """PGSync helpers."""
+
 import logging
 import os
 import typing as t

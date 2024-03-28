@@ -1,4 +1,5 @@
 """PGSync views."""
+
 import logging
 import typing as t
 import warnings
@@ -457,15 +458,21 @@ def create_view(
             [
                 (
                     table_name,
-                    array(fields["primary_keys"])
-                    if fields.get("primary_keys")
-                    else None,
-                    array(fields.get("foreign_keys"))
-                    if fields.get("foreign_keys")
-                    else None,
-                    array(fields.get("indices"))
-                    if fields.get("indices")
-                    else None,
+                    (
+                        array(fields["primary_keys"])
+                        if fields.get("primary_keys")
+                        else None
+                    ),
+                    (
+                        array(fields.get("foreign_keys"))
+                        if fields.get("foreign_keys")
+                        else None
+                    ),
+                    (
+                        array(fields.get("indices"))
+                        if fields.get("indices")
+                        else None
+                    ),
                 )
                 for table_name, fields in rows.items()
             ]

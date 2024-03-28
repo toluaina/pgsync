@@ -1,4 +1,5 @@
 """PGSync utils."""
+
 import json
 import logging
 import os

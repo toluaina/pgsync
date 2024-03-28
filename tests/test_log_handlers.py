@@ -1,4 +1,5 @@
 """Loghandler tests."""
+
 import pytest
 
 

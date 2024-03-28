@@ -1,4 +1,5 @@
 """PGSync Node class representation."""
+
 from __future__ import annotations
 
 import re

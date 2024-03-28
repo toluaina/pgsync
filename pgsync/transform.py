@@ -1,4 +1,5 @@
 """PGSync Transform."""
+
 import logging
 import typing as t
 

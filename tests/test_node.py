@@ -1,4 +1,5 @@
 """Node tests."""
+
 import pytest
 
 from pgsync.base import Base

@@ -1,4 +1,5 @@
 """PGSync RedisQueue."""
+
 import json
 import logging
 import typing as t
