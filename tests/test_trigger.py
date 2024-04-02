@@ -1,4 +1,5 @@
 """Trigger tests."""
+
 import pytest
 import sqlalchemy as sa
 

@@ -1,4 +1,5 @@
 """Generic fixtures for PGSync tests."""
+
 import logging
 import os
 

@@ -6,11 +6,11 @@
 #
 async-timeout==4.0.3
     # via redis
-black==24.2.0
+black==24.3.0
     # via -r requirements/dev.in
-boto3==1.34.49
+boto3==1.34.71
     # via -r requirements/base.in
-botocore==1.34.49
+botocore==1.34.71
     # via
     #   boto3
     #   s3transfer
@@ -27,13 +27,13 @@ click==8.1.7
     # via
     #   -r requirements/base.in
     #   black
-coverage[toml]==7.4.3
+coverage[toml]==7.4.4
     # via
     #   -r requirements/dev.in
     #   pytest-cov
 distlib==0.3.8
     # via virtualenv
-elastic-transport==8.12.0
+elastic-transport==8.13.0
     # via elasticsearch
 elasticsearch==8.12.1
     # via
@@ -41,13 +41,13 @@ elasticsearch==8.12.1
     #   elasticsearch-dsl
 elasticsearch-dsl==8.12.0
     # via -r requirements/base.in
-environs==10.3.0
+environs==11.0.0
     # via -r requirements/base.in
 exceptiongroup==1.2.0
     # via pytest
-faker==23.2.1
+faker==24.4.0
     # via -r requirements/dev.in
-filelock==3.13.1
+filelock==3.13.3
     # via virtualenv
 flake8==7.0.0
     # via -r requirements/dev.in
@@ -67,7 +67,7 @@ jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-marshmallow==3.20.2
+marshmallow==3.21.1
     # via environs
 mccabe==0.7.0
     # via flake8
@@ -79,9 +79,9 @@ nodeenv==1.8.0
     # via pre-commit
 opensearch-dsl==2.1.0
     # via -r requirements/base.in
-opensearch-py==2.4.2
+opensearch-py==2.5.0
     # via opensearch-dsl
-packaging==23.2
+packaging==24.0
     # via
     #   black
     #   marshmallow
@@ -102,16 +102,16 @@ pycodestyle==2.11.1
     # via flake8
 pyflakes==3.2.0
     # via flake8
-pytest==8.0.1
+pytest==8.1.1
     # via
     #   -r requirements/dev.in
     #   pytest-cov
     #   pytest-mock
-pytest-cov==4.1.0
+pytest-cov==5.0.0
     # via -r requirements/dev.in
-pytest-mock==3.12.0
+pytest-mock==3.14.0
     # via -r requirements/dev.in
-python-dateutil==2.8.2
+python-dateutil==2.9.0.post0
     # via
     #   botocore
     #   elasticsearch-dsl
@@ -125,7 +125,7 @@ python-dotenv==1.0.1
     #   environs
 pyyaml==6.0.1
     # via pre-commit
-redis==5.0.1
+redis==5.0.3
     # via -r requirements/base.in
 requests==2.31.0
     # via
@@ -133,7 +133,7 @@ requests==2.31.0
     #   requests-aws4auth
 requests-aws4auth==1.2.3
     # via -r requirements/base.in
-s3transfer==0.10.0
+s3transfer==0.10.1
     # via boto3
 six==1.16.0
     # via
@@ -141,7 +141,7 @@ six==1.16.0
     #   opensearch-py
     #   python-dateutil
     #   requests-aws4auth
-sqlalchemy==2.0.27
+sqlalchemy==2.0.29
     # via -r requirements/base.in
 sqlparse==0.4.4
     # via -r requirements/base.in
@@ -150,7 +150,7 @@ tomli==2.0.1
     #   black
     #   coverage
     #   pytest
-typing-extensions==4.9.0
+typing-extensions==4.10.0
     # via
     #   black
     #   faker

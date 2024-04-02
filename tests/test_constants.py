@@ -1,4 +1,5 @@
 """Constants tests."""
+
 from pgsync.constants import (
     ELASTICSEARCH_MAPPING_PARAMETERS,
     ELASTICSEARCH_TYPES,

@@ -1,4 +1,5 @@
 """PGSync SearchClient helper."""
+
 import logging
 import typing as t
 from collections import defaultdict
@@ -409,9 +410,9 @@ def get_search_client(
         # API
         cloud_id: t.Optional[str] = settings.ELASTICSEARCH_CLOUD_ID
         api_key: t.Optional[t.Union[str, t.Tuple[str, str]]] = None
-        http_auth: t.Optional[
-            t.Union[str, t.Tuple[str, str]]
-        ] = settings.ELASTICSEARCH_HTTP_AUTH
+        http_auth: t.Optional[t.Union[str, t.Tuple[str, str]]] = (
+            settings.ELASTICSEARCH_HTTP_AUTH
+        )
         if (
             settings.ELASTICSEARCH_API_KEY_ID
             and settings.ELASTICSEARCH_API_KEY
@@ -429,12 +430,12 @@ def get_search_client(
         ca_certs: t.Optional[str] = settings.ELASTICSEARCH_CA_CERTS
         client_cert: t.Optional[str] = settings.ELASTICSEARCH_CLIENT_CERT
         client_key: t.Optional[str] = settings.ELASTICSEARCH_CLIENT_KEY
-        ssl_assert_hostname: t.Optional[
-            str
-        ] = settings.ELASTICSEARCH_SSL_ASSERT_HOSTNAME
-        ssl_assert_fingerprint: t.Optional[
-            str
-        ] = settings.ELASTICSEARCH_SSL_ASSERT_FINGERPRINT
+        ssl_assert_hostname: t.Optional[str] = (
+            settings.ELASTICSEARCH_SSL_ASSERT_HOSTNAME
+        )
+        ssl_assert_fingerprint: t.Optional[str] = (
+            settings.ELASTICSEARCH_SSL_ASSERT_FINGERPRINT
+        )
         ssl_version: t.Optional[int] = settings.ELASTICSEARCH_SSL_VERSION
         ssl_context: t.Optional[t.Any] = settings.ELASTICSEARCH_SSL_CONTEXT
         ssl_show_warn: bool = settings.ELASTICSEARCH_SSL_SHOW_WARN

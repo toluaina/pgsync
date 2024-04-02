@@ -1,4 +1,5 @@
 """Sync tests."""
+
 import importlib
 import os
 import typing as t
