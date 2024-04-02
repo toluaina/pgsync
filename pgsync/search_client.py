@@ -368,6 +368,9 @@ def get_search_client(
     Raises:
         None
     """
+    # Transport
+    timeout: float = settings.ELASTICSEARCH_TIMEOUT
+    
     if settings.OPENSEARCH_AWS_HOSTED or settings.ELASTICSEARCH_AWS_HOSTED:
         credentials = boto3.Session().get_credentials()
         service: str = "aoss" if settings.OPENSEARCH_AWS_SERVERLESS else "es"
@@ -384,6 +387,7 @@ def get_search_client(
                 use_ssl=True,
                 verify_certs=True,
                 connection_class=connection_class,
+                timeout=timeout
             )
         elif settings.ELASTICSEARCH:
             return client(
@@ -398,6 +402,7 @@ def get_search_client(
                 use_ssl=True,
                 verify_certs=True,
                 node_class=node_class,
+                timeout=timeout
             )
     else:
         hosts: t.List[str] = [url]
@@ -433,8 +438,6 @@ def get_search_client(
         ssl_version: t.Optional[int] = settings.ELASTICSEARCH_SSL_VERSION
         ssl_context: t.Optional[t.Any] = settings.ELASTICSEARCH_SSL_CONTEXT
         ssl_show_warn: bool = settings.ELASTICSEARCH_SSL_SHOW_WARN
-        # Transport
-        timeout: float = settings.ELASTICSEARCH_TIMEOUT
         return client(
             hosts=hosts,
             http_auth=http_auth,
