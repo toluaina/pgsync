@@ -1,5 +1,6 @@
+from sentence_transformers import SentenceTransformer
+
 from pgsync import plugin
-from plugins.sentence_transformer_plugin import SentenceTransformer
 
 
 class SentenceTransformersPlugin(plugin.Plugin):
