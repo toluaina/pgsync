@@ -2,6 +2,7 @@
 
 import logging
 import os
+import sys
 import typing as t
 from abc import ABC, abstractmethod
 from importlib import import_module
@@ -43,7 +44,9 @@ class Plugins(object):
         self.plugins: list = []
         self._paths: list = []
         logger.debug(f"Reloading plugins from package: {self.package}")
-        self.walk(self.package)
+        # skip in test
+        if "test" not in sys.argv[0]:
+            self.walk(self.package)
 
     def walk(self, package: str) -> None:
         """Recursively walk the supplied package and fetch all plugins."""

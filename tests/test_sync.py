@@ -763,7 +763,12 @@ class TestSync(object):
     def test_create_setting(self, mock_es, sync):
         sync.create_setting()
         mock_es.assert_called_once_with(
-            "testdb", ANY, setting=None, mapping=None, routing=None
+            "testdb",
+            ANY,
+            setting=None,
+            mapping=None,
+            mappings=None,
+            routing=None,
         )
 
     @patch("pgsync.sync.Sync.teardown")

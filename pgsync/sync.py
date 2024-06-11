@@ -82,6 +82,7 @@ class Sync(Base, metaclass=Singleton):
         self.nodes: dict = doc.get("nodes", {})
         self.setting: dict = doc.get("setting")
         self.mapping: dict = doc.get("mapping")
+        self.mappings: dict = doc.get("mappings")
         self.routing: str = doc.get("routing")
         super().__init__(
             doc.get("database", self.index), verbose=verbose, **kwargs
@@ -255,6 +256,7 @@ class Sync(Base, metaclass=Singleton):
             self.tree,
             setting=self.setting,
             mapping=self.mapping,
+            mappings=self.mappings,
             routing=self.routing,
         )
 

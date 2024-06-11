@@ -260,6 +260,7 @@ class SearchClient(object):
         tree: Tree,
         setting: t.Optional[dict] = None,
         mapping: t.Optional[dict] = None,
+        mappings: t.Optional[dict] = None,
         routing: t.Optional[str] = None,
     ) -> None:
         """Create Elasticsearch/OpenSearch setting and mapping if required."""
@@ -268,7 +269,8 @@ class SearchClient(object):
         if not self.__client.indices.exists(index=index):
             if setting:
                 body.update(**{"settings": {"index": setting}})
-
+            if mappings:
+                body.update(**{"mappings": {"index": mappings}})
             if mapping:
                 if "dynamic_templates" in mapping:
                     body.update(**{"mappings": mapping})

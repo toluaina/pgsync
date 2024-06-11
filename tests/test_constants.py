@@ -99,6 +99,7 @@ class TestConstants(object):
                 "constant_keyword",
                 "date",
                 "double",
+                "dense_vector",
                 "float",
                 "geo_point",
                 "geo_shape",

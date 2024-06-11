@@ -2,6 +2,19 @@
     {
         "database": "book",
         "index": "book",
+        "mappings": {
+            "properties": {
+                "age": {
+                    "type": "integer"
+                },
+                "email": {
+                    "type": "keyword"
+                },
+                "name": {
+                    "type": "text"
+                }
+            }
+        },
         "mapping": {
             "authors": {
                 "type": "nested"
@@ -37,7 +50,14 @@
                 }
             }
         },
-        "plugins": ["Groot", "Hero", "Villain", "Geometry", "Infinity", "TextEmbedding3Small"],
+        "plugins": [
+            "Groot",
+            "Hero",
+            "Villain",
+            "Geometry",
+            "Infinity",
+            "TextEmbedding3Small"
+        ],
         "nodes": {
             "table": "book",
             "columns": [
@@ -71,7 +91,7 @@
                     },
                     "book_isbn": {
                         "type": "text",
-                        "fields":{
+                        "fields": {
                             "ngram": {
                                 "type": "text",
                                 "analyzer": "ngram_analyzer",
@@ -95,26 +115,38 @@
                         "variant": "object",
                         "type": "one_to_one",
                         "foreign_key": {
-                            "child": ["id"],
-                            "parent": ["publisher_id"]
+                            "child": [
+                                "id"
+                            ],
+                            "parent": [
+                                "publisher_id"
+                            ]
                         }
                     },
-                    "children": [
-
-                    ],
+                    "children": [],
                     "transform": {
                         "rename": {
                             "id": "publisher_id",
                             "name": "publisher_name"
-                        }, 
+                        },
                         "concat": [
                             {
-                                "columns": ["publisher_id", "publisher_name", "is_active", "foo"],
+                                "columns": [
+                                    "publisher_id",
+                                    "publisher_name",
+                                    "is_active",
+                                    "foo"
+                                ],
                                 "destination": "xyz",
                                 "delimiter": "_"
                             },
                             {
-                                "columns": ["publisher_id", "publisher_name", "is_active", "bar"],
+                                "columns": [
+                                    "publisher_id",
+                                    "publisher_name",
+                                    "is_active",
+                                    "bar"
+                                ],
                                 "destination": "abc",
                                 "delimiter": "-"
                             }
@@ -148,7 +180,9 @@
                 {
                     "table": "author",
                     "columns": [
-                        "id", "name", "date_of_birth"
+                        "id",
+                        "name",
+                        "date_of_birth"
                     ],
                     "label": "authors",
                     "relationship": {
