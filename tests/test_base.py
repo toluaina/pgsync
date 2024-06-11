@@ -462,6 +462,32 @@ class TestBase(object):
             pg_base.parse_logical_slot(row)
             assert '"Unknown UNKNOWN operation for row:' in str(excinfo.value)
 
+    def test_parse_logical_slot_with_double_precision(
+        self,
+        connection,
+    ):
+        pg_base = Base(connection.engine.url.database)
+        row = """
+        table public.book: UPDATE: id[integer]:1 isbn[character varying]:'001' title[character varying]:'It' description[character varying]:'Stephens Kings It' copyright[character varying]:null tags[jsonb]:'["a", "b", "c"]' doc[jsonb]:'{"a": {"b": {"c": [0, 1, 2, 3, 4]}}, "i": 73, "x": [{"y": 0, "z": 5}, {"y": 1, "z": 6}], "bool": true, "lastname": "Judye", "firstname": "Glenda", "generation": {"name": "X"}, "nick_names": ["Beatriz", "Jean", "Carilyn", "Carol-Jean", "Sara-Ann"], "coordinates": {"lat": 21.1, "lon": 32.9}}' publisher_id[integer]:1 publish_date[timestamp without time zone]:'1980-01-01 00:00:00' quad[double precision]:2e+58
+        """  # noqa E501
+        payload = pg_base.parse_logical_slot(row)
+        assert payload.data == {
+            "id": 1,
+            "isbn": "001",
+            "title": "It",
+            "description": "Stephens",
+            "copyright": None,
+            "tags": "'",
+            "doc": "'",
+            "publisher_id": 1,
+            "publish_date": "'1980-01-01",
+            "quad": 2e58,
+        }
+        assert payload.old == {}
+        assert payload.schema == "public"
+        assert payload.table == "book"
+        assert payload.tg_op == "UPDATE"
+
     def test_fetchone(self, connection):
         pg_base = Base(connection.engine.url.database, verbose=True)
         with patch("pgsync.base.compiled_query") as mock_compiled_query:
