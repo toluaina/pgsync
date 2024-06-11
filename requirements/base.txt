@@ -6,13 +6,13 @@
 #
 async-timeout==4.0.3
     # via redis
-boto3==1.34.100
+boto3==1.34.123
     # via -r requirements/base.in
-botocore==1.34.100
+botocore==1.34.123
     # via
     #   boto3
     #   s3transfer
-certifi==2024.2.2
+certifi==2024.6.2
     # via
     #   elastic-transport
     #   opensearch-py
@@ -21,16 +21,18 @@ charset-normalizer==3.3.2
     # via requests
 click==8.1.7
     # via -r requirements/base.in
-elastic-transport==8.13.0
+elastic-transport==8.13.1
     # via elasticsearch
-elasticsearch==8.13.1
+elasticsearch==8.14.0
     # via
     #   -r requirements/base.in
     #   elasticsearch-dsl
-elasticsearch-dsl==8.13.1
+elasticsearch-dsl==8.14.0
     # via -r requirements/base.in
 environs==11.0.0
     # via -r requirements/base.in
+events==0.5
+    # via opensearch-py
 greenlet==3.0.3
     # via sqlalchemy
 idna==3.7
@@ -39,13 +41,13 @@ jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-marshmallow==3.21.2
+marshmallow==3.21.3
     # via environs
 opensearch-dsl==2.1.0
     # via -r requirements/base.in
-opensearch-py==2.5.0
+opensearch-py==2.6.0
     # via opensearch-dsl
-packaging==24.0
+packaging==24.1
     # via marshmallow
 psycopg2-binary==2.9.9
     # via -r requirements/base.in
@@ -59,9 +61,9 @@ python-dotenv==1.0.1
     # via
     #   -r requirements/base.in
     #   environs
-redis==5.0.4
+redis==5.0.5
     # via -r requirements/base.in
-requests==2.31.0
+requests==2.32.3
     # via
     #   opensearch-py
     #   requests-aws4auth
@@ -79,8 +81,10 @@ sqlalchemy==2.0.30
     # via -r requirements/base.in
 sqlparse==0.5.0
     # via -r requirements/base.in
-typing-extensions==4.11.0
-    # via sqlalchemy
+typing-extensions==4.12.2
+    # via
+    #   elasticsearch-dsl
+    #   sqlalchemy
 urllib3==1.26.18
     # via
     #   botocore

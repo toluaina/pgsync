@@ -28,11 +28,11 @@ PYTHON_REQUIRES = ">=3.8.0"
 VERSION = get_version()
 INSTALL_REQUIRES = []
 KEYWORDS = [
-    "pgsync",
+    "change data capture",
     "elasticsearch",
     "opensearch",
+    "pgsync",
     "postgres",
-    "change data capture",
 ]
 CLASSIFIERS = [
     "Development Status :: 5 - Production/Stable",
@@ -48,11 +48,7 @@ CLASSIFIERS = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-SCRIPTS = [
-    "bin/pgsync",
-    "bin/bootstrap",
-    "bin/parallel_sync",
-]
+SCRIPTS = ["bin/bootstrap", "bin/parallel_sync", "bin/pgsync"]
 SETUP_REQUIRES = ["pytest-runner"]
 TESTS_REQUIRE = ["pytest"]
 
