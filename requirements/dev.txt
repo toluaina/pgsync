@@ -8,9 +8,9 @@ async-timeout==4.0.3
     # via redis
 black==24.4.2
     # via -r requirements/dev.in
-boto3==1.34.124
+boto3==1.34.138
     # via -r requirements/base.in
-botocore==1.34.124
+botocore==1.34.138
     # via
     #   boto3
     #   s3transfer
@@ -27,7 +27,7 @@ click==8.1.7
     # via
     #   -r requirements/base.in
     #   black
-coverage[toml]==7.5.3
+coverage[toml]==7.5.4
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -47,11 +47,11 @@ events==0.5
     # via opensearch-py
 exceptiongroup==1.2.1
     # via pytest
-faker==25.8.0
+faker==26.0.0
     # via -r requirements/dev.in
-filelock==3.14.0
+filelock==3.15.4
     # via virtualenv
-flake8==7.0.0
+flake8==7.1.0
     # via -r requirements/dev.in
 freezegun==1.5.1
     # via -r requirements/dev.in
@@ -100,7 +100,7 @@ pre-commit==3.5.0
     # via -r requirements/dev.in
 psycopg2-binary==2.9.9
     # via -r requirements/base.in
-pycodestyle==2.11.1
+pycodestyle==2.12.0
     # via flake8
 pyflakes==3.2.0
     # via flake8
@@ -127,7 +127,7 @@ python-dotenv==1.0.1
     #   environs
 pyyaml==6.0.1
     # via pre-commit
-redis==5.0.5
+redis==5.0.7
     # via -r requirements/base.in
 requests==2.32.3
     # via
@@ -135,7 +135,7 @@ requests==2.32.3
     #   requests-aws4auth
 requests-aws4auth==1.2.3
     # via -r requirements/base.in
-s3transfer==0.10.1
+s3transfer==0.10.2
     # via boto3
 six==1.16.0
     # via
@@ -143,7 +143,7 @@ six==1.16.0
     #   opensearch-py
     #   python-dateutil
     #   requests-aws4auth
-sqlalchemy==2.0.30
+sqlalchemy==2.0.31
     # via -r requirements/base.in
 sqlparse==0.5.0
     # via -r requirements/base.in
@@ -157,11 +157,11 @@ typing-extensions==4.12.2
     #   black
     #   elasticsearch-dsl
     #   sqlalchemy
-urllib3==1.26.18
+urllib3==1.26.19
     # via
     #   botocore
     #   elastic-transport
     #   opensearch-py
     #   requests
-virtualenv==20.26.2
+virtualenv==20.26.3
     # via pre-commit

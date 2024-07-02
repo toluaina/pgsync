@@ -81,9 +81,8 @@ class TestSync(object):
                     "testdb_testdb",
                     txmin=None,
                     txmax=None,
-                    upto_nchanges=None,
-                    limit=settings.LOGICAL_SLOT_CHUNK_SIZE,
-                    offset=0,
+                    upto_nchanges=settings.LOGICAL_SLOT_CHUNK_SIZE,
+                    upto_lsn=None,
                 )
                 mock_sync.assert_not_called()
 
@@ -98,9 +97,8 @@ class TestSync(object):
                     "testdb_testdb",
                     txmin=None,
                     txmax=None,
-                    upto_nchanges=None,
-                    limit=settings.LOGICAL_SLOT_CHUNK_SIZE,
-                    offset=0,
+                    upto_nchanges=settings.LOGICAL_SLOT_CHUNK_SIZE,
+                    upto_lsn=None,
                 )
                 mock_sync.assert_not_called()
 
@@ -127,9 +125,8 @@ class TestSync(object):
                         "testdb_testdb",
                         txmin=None,
                         txmax=None,
-                        upto_nchanges=None,
-                        limit=settings.LOGICAL_SLOT_CHUNK_SIZE,
-                        offset=0,
+                        upto_nchanges=settings.LOGICAL_SLOT_CHUNK_SIZE,
+                        upto_lsn=None,
                     )
                     mock_get.assert_called_once()
                     mock_sync.assert_called_once()

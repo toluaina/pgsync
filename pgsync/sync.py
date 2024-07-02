@@ -377,25 +377,21 @@ class Sync(Base, metaclass=Singleton):
         # minimize the tmp file disk usage when calling
         # PG_LOGICAL_SLOT_PEEK_CHANGES and PG_LOGICAL_SLOT_GET_CHANGES
         # by limiting to a smaller batch size.
-        offset: int = 0
-        total: int = 0
-        limit: int = settings.LOGICAL_SLOT_CHUNK_SIZE
-        count: int = self.logical_slot_count_changes(
-            self.__name,
-            txmin=txmin,
-            txmax=txmax,
-            upto_nchanges=upto_nchanges,
-        )
+
+        upto_nchanges: int = upto_nchanges or settings.LOGICAL_SLOT_CHUNK_SIZE
+
+        # this is the max lsn we can go upto
+        max_lsn: int = self.max_lsn(self.__name, txmin=txmin, txmax=txmax)
+
         while True:
             changes: int = self.logical_slot_peek_changes(
                 self.__name,
                 txmin=txmin,
                 txmax=txmax,
                 upto_nchanges=upto_nchanges,
-                limit=limit,
-                offset=offset,
+                upto_lsn=max_lsn,
             )
-            if not changes or total > count:
+            if not changes:
                 break
 
             rows: list = []
@@ -450,11 +446,8 @@ class Sync(Base, metaclass=Singleton):
                 txmin=txmin,
                 txmax=txmax,
                 upto_nchanges=upto_nchanges,
-                limit=limit,
-                offset=offset,
+                upto_lsn=max_lsn,
             )
-            offset += limit
-            total += len(changes)
             self.count["xlog"] += len(rows)
 
     def _root_primary_key_resolver(

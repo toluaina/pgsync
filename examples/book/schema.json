@@ -55,8 +55,7 @@
             "Hero",
             "Villain",
             "Geometry",
-            "Infinity",
-            "TextEmbedding3Small"
+            "Infinity"
         ],
         "nodes": {
             "table": "book",

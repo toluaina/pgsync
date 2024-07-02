@@ -529,6 +529,42 @@ class Base(object):
             statement = statement.offset(offset)
         return statement
 
+    def max_lsn(
+        self,
+        slot_name: str,
+        txmin: t.Optional[int] = None,
+        txmax: t.Optional[int] = None,
+    ):
+        filters: list = []
+        statement: sa.sql.Select = sa.select(
+            sa.func.MAX(sa.text("lsn")),
+        ).select_from(
+            sa.func.PG_LOGICAL_SLOT_PEEK_CHANGES(
+                slot_name,
+                None,
+                None,
+            )
+        )
+        if txmin is not None:
+            filters.append(
+                sa.cast(
+                    sa.cast(sa.column("xid"), sa.Text),
+                    sa.BigInteger,
+                )
+                >= txmin
+            )
+        if txmax is not None:
+            filters.append(
+                sa.cast(
+                    sa.cast(sa.column("xid"), sa.Text),
+                    sa.BigInteger,
+                )
+                < txmax
+            )
+        if filters:
+            statement = statement.where(sa.and_(*filters))
+        return self.fetchone(statement)[0]
+
     def logical_slot_get_changes(
         self,
         slot_name: str,

@@ -34,7 +34,7 @@ class QueryBuilder(threading.local):
             ):
                 # handle UUID typed expressions:
                 # psycopg2.errors.UndefinedFunction: operator does not exist: uuid = integer
-                return expression.left == None
+                return expression.left is None
 
         return expression
 
