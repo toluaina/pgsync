@@ -1,8 +1,8 @@
-name: Publish Python Package
+name: Build Python Package
 
 on:
-  release:
-    types: [created]
+  push:
+    branches: ['pgsync-with-redis-username']
 
 jobs:
   deploy:
@@ -13,14 +13,24 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.x'
+  
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install setuptools wheel twine
-    - name: Build and publish
-      env:
-        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        pip install setuptools wheel
+
+    - name: Build Package
       run: |
         python setup.py sdist bdist_wheel
-        twine upload dist/*
+        mv dist/pgsync-*.whl pgsync-3.1.0-py3-none-any.whl
+    
+    - name: Publish to Github Package
+      uses: meeDamian/github-release@2.0
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        name: PgSync
+        tag: v3.1.0
+        files: pgsync-3.1.0-py3-none-any.whl
+        overwrite: true
+        gzip: false
+
