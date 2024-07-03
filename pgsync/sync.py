@@ -350,6 +350,7 @@ class Sync(Base, metaclass=Singleton):
         txmin: t.Optional[int] = None,
         txmax: t.Optional[int] = None,
         upto_nchanges: t.Optional[int] = None,
+        upto_lsn: t.Optional[str] = None,
     ) -> None:
         """
         Process changes from the db logical replication logs.
@@ -377,19 +378,13 @@ class Sync(Base, metaclass=Singleton):
         # minimize the tmp file disk usage when calling
         # PG_LOGICAL_SLOT_PEEK_CHANGES and PG_LOGICAL_SLOT_GET_CHANGES
         # by limiting to a smaller batch size.
-
-        upto_nchanges: int = upto_nchanges or settings.LOGICAL_SLOT_CHUNK_SIZE
-
-        # this is the max lsn we can go upto
-        max_lsn: int = self.max_lsn(self.__name, txmin=txmin, txmax=txmax)
-
         while True:
             changes: int = self.logical_slot_peek_changes(
                 self.__name,
                 txmin=txmin,
                 txmax=txmax,
                 upto_nchanges=upto_nchanges,
-                upto_lsn=max_lsn,
+                upto_lsn=upto_lsn,
             )
             if not changes:
                 break
@@ -446,7 +441,7 @@ class Sync(Base, metaclass=Singleton):
                 txmin=txmin,
                 txmax=txmax,
                 upto_nchanges=upto_nchanges,
-                upto_lsn=max_lsn,
+                upto_lsn=upto_lsn,
             )
             self.count["xlog"] += len(rows)
 
@@ -1220,13 +1215,22 @@ class Sync(Base, metaclass=Singleton):
         """Pull data from db."""
         txmin: int = self.checkpoint
         txmax: int = self.txid_current
+        # this is the max lsn we should go upto
+        upto_lsn: str = self.current_wal_lsn
+        upto_nchanges: int = settings.LOGICAL_SLOT_CHUNK_SIZE
+
         logger.debug(f"pull txmin: {txmin} - txmax: {txmax}")
         # forward pass sync
         self.search_client.bulk(
             self.index, self.sync(txmin=txmin, txmax=txmax)
         )
         # now sync up to txmax to capture everything we may have missed
-        self.logical_slot_changes(txmin=txmin, txmax=txmax, upto_nchanges=None)
+        self.logical_slot_changes(
+            txmin=txmin,
+            txmax=txmax,
+            upto_nchanges=upto_nchanges,
+            upto_lsn=upto_lsn,
+        )
         self.checkpoint: int = txmax or self.txid_current
         self._truncate = True
 
@@ -1263,6 +1267,7 @@ class Sync(Base, metaclass=Singleton):
             await asyncio.sleep(settings.LOG_INTERVAL)
 
     def _status(self, label: str) -> None:
+        # TODO: indicate if we are processing logical logs or not
         sys.stdout.write(
             f"{label} {self.database}:{self.index} "
             f"Xlog: [{self.count['xlog']:,}] => "

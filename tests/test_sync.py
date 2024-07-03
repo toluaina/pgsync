@@ -81,7 +81,7 @@ class TestSync(object):
                     "testdb_testdb",
                     txmin=None,
                     txmax=None,
-                    upto_nchanges=settings.LOGICAL_SLOT_CHUNK_SIZE,
+                    upto_nchanges=None,
                     upto_lsn=None,
                 )
                 mock_sync.assert_not_called()
@@ -97,7 +97,7 @@ class TestSync(object):
                     "testdb_testdb",
                     txmin=None,
                     txmax=None,
-                    upto_nchanges=settings.LOGICAL_SLOT_CHUNK_SIZE,
+                    upto_nchanges=None,
                     upto_lsn=None,
                 )
                 mock_sync.assert_not_called()
@@ -125,7 +125,7 @@ class TestSync(object):
                         "testdb_testdb",
                         txmin=None,
                         txmax=None,
-                        upto_nchanges=settings.LOGICAL_SLOT_CHUNK_SIZE,
+                        upto_nchanges=None,
                         upto_lsn=None,
                     )
                     mock_get.assert_called_once()
@@ -353,7 +353,10 @@ class TestSync(object):
             txmin = None
             txmax = sync.txid_current - 1
             mock_get.assert_called_once_with(
-                txmin=txmin, txmax=txmax, upto_nchanges=None
+                txmin=txmin,
+                txmax=txmax,
+                upto_nchanges=settings.LOGICAL_SLOT_CHUNK_SIZE,
+                upto_lsn=ANY,
             )
             mock_logger.debug.assert_called_once_with(
                 f"pull txmin: {txmin} - txmax: {txmax}"
