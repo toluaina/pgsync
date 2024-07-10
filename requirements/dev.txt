@@ -8,13 +8,13 @@ async-timeout==4.0.3
     # via redis
 black==24.4.2
     # via -r requirements/dev.in
-boto3==1.34.138
+boto3==1.34.142
     # via -r requirements/base.in
-botocore==1.34.138
+botocore==1.34.142
     # via
     #   boto3
     #   s3transfer
-certifi==2024.6.2
+certifi==2024.7.4
     # via
     #   elastic-transport
     #   opensearch-py
@@ -57,7 +57,7 @@ freezegun==1.5.1
     # via -r requirements/dev.in
 greenlet==3.0.3
     # via sqlalchemy
-identify==2.5.36
+identify==2.6.0
     # via pre-commit
 idna==3.7
     # via requests

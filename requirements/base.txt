@@ -6,13 +6,13 @@
 #
 async-timeout==4.0.3
     # via redis
-boto3==1.34.138
+boto3==1.34.142
     # via -r requirements/base.in
-botocore==1.34.138
+botocore==1.34.142
     # via
     #   boto3
     #   s3transfer
-certifi==2024.6.2
+certifi==2024.7.4
     # via
     #   elastic-transport
     #   opensearch-py
