@@ -59,6 +59,6 @@ def teardown(
             sync.redis.delete()
         if delete_checkpoint:
             try:
-                os.unlink(sync._checkpoint_file)
+                sync.redis.delete_key(sync._checkpoint_key)
             except (OSError, FileNotFoundError):
                 pass

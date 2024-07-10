@@ -97,9 +97,7 @@ class Sync(Base, metaclass=Singleton):
         self.producer = producer
         self.consumer = consumer
         self.num_workers: int = num_workers
-        self._checkpoint_file: str = os.path.join(
-            settings.CHECKPOINT_PATH, f".{self.__name}"
-        )
+        self._checkpoint_key: str = f"pgsync_{self.__name}"
         self.redis: RedisQueue = RedisQueue(self.__name)
         self.tree: Tree = Tree(self.models, nodes=self.nodes)
         if validate:
@@ -308,12 +306,12 @@ class Sync(Base, metaclass=Singleton):
 
         join_queries: bool = settings.JOIN_QUERIES
 
-        try:
-            os.unlink(self._checkpoint_file)
-        except (OSError, FileNotFoundError):
+        if self.redis.get_value(self._checkpoint_key) is None:
             logger.warning(
-                f"Checkpoint file not found: {self._checkpoint_file}"
+                f"Checkpoint key not found: {self._checkpoint_key}"
             )
+        else:
+            self.redis.delete_key(self._checkpoint_key)
 
         self.redis.delete()
 
@@ -1013,9 +1011,9 @@ class Sync(Base, metaclass=Singleton):
         :return: The current checkpoint value.
         :rtype: int
         """
-        if os.path.exists(self._checkpoint_file):
-            with open(self._checkpoint_file, "r") as fp:
-                self._checkpoint: int = int(fp.read().split()[0])
+        value = self.redis.get_value(self._checkpoint_key)
+        if value is not None:
+            self._checkpoint: int = int(value.split()[0])
         return self._checkpoint
 
     @checkpoint.setter
@@ -1029,8 +1027,7 @@ class Sync(Base, metaclass=Singleton):
         """
         if value is None:
             raise ValueError("Cannot assign a None value to checkpoint")
-        with open(self._checkpoint_file, "w+") as fp:
-            fp.write(f"{value}\n")
+        self.redis.set_value(self._checkpoint_key, value)
         self._checkpoint: int = value
 
     def _poll_redis(self) -> None:

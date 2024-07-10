@@ -54,3 +54,15 @@ class RedisQueue(object):
         """Delete all items from the named queue."""
         logger.info(f"Deleting redis key: {self.key}")
         self.__db.delete(self.key)
+
+    def get_value(self, key: str) -> t.Optional[str]:
+        """Get the value of a specific key."""
+        return self.__db.get(key)
+
+    def set_value(self, key: str, value: str) -> None:
+        """Set the value of a specific key with TTL infinity."""
+        self.__db.set(key, value)
+
+    def delete_key(self, key: str) -> None:
+        """Delete a specific key from Redis."""
+        self.__db.delete(key)
