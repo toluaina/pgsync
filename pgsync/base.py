@@ -103,31 +103,31 @@ class Payload(object):
     def foreign_key_constraint(self, model) -> dict:
         """
         {
-            'public.customer': {  referred table with a fully qualified name
+            'public.customer': [{  referred table with a fully qualified name
                 'local': 'customer_id',
                 'remote': 'id',
                 'value': 1
-            },
-            'public.group': {  referred table with a fully qualified name
+            }],
+            'public.group': [{  referred table with a fully qualified name
                 'local': 'group_id',
                 'remote': 'id',
                 'value': 1
-            }
+            }]
         }
         """
         constraints: dict = {}
         for foreign_key in model.foreign_keys:
             referred_table: str = str(foreign_key.constraint.referred_table)
-            constraints.setdefault(referred_table, {})
+            constraints.setdefault(referred_table, [])
             if foreign_key.constraint.column_keys:
                 if foreign_key.constraint.column_keys[0] in self.data:
-                    constraints[referred_table] = {
+                    constraints[referred_table].append({
                         "local": foreign_key.constraint.column_keys[0],
                         "remote": foreign_key.column.name,
                         "value": self.data[
                             foreign_key.constraint.column_keys[0]
                         ],
-                    }
+                    })
         return constraints
 
 
