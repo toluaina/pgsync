@@ -387,6 +387,7 @@ def get_search_client(
                 use_ssl=True,
                 verify_certs=True,
                 connection_class=connection_class,
+                timeout=settings.ELASTICSEARCH_TIMEOUT,
             )
         elif settings.ELASTICSEARCH:
             return client(
@@ -401,6 +402,7 @@ def get_search_client(
                 use_ssl=True,
                 verify_certs=True,
                 node_class=node_class,
+                timeout=settings.ELASTICSEARCH_TIMEOUT,
             )
     else:
         hosts: t.List[str] = [url]
@@ -436,8 +438,6 @@ def get_search_client(
         ssl_version: t.Optional[int] = settings.ELASTICSEARCH_SSL_VERSION
         ssl_context: t.Optional[t.Any] = settings.ELASTICSEARCH_SSL_CONTEXT
         ssl_show_warn: bool = settings.ELASTICSEARCH_SSL_SHOW_WARN
-        # Transport
-        timeout: float = settings.ELASTICSEARCH_TIMEOUT
         return client(
             hosts=hosts,
             http_auth=http_auth,
@@ -457,5 +457,5 @@ def get_search_client(
             ssl_context=ssl_context,
             ssl_show_warn=ssl_show_warn,
             # use_ssl=use_ssl,
-            timeout=timeout,
+            timeout=settings.ELASTICSEARCH_TIMEOUT,
         )
