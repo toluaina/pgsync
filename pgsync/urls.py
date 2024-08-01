@@ -17,6 +17,7 @@ from .settings import (
     PG_PORT,
     PG_USER,
     REDIS_AUTH,
+    REDIS_USER,
     REDIS_DB,
     REDIS_HOST,
     REDIS_PORT,
@@ -117,6 +118,7 @@ def get_postgres_url(
 def get_redis_url(
     scheme: t.Optional[str] = None,
     host: t.Optional[str] = None,
+    username: t.Optional[str] = None,
     password: t.Optional[str] = None,
     port: t.Optional[int] = None,
     db: t.Optional[str] = None,
@@ -127,6 +129,7 @@ def get_redis_url(
     Args:
         scheme (Optional[str]): The scheme to use for the Redis connection. Defaults to None.
         host (Optional[str]): The Redis host to connect to. Defaults to None.
+        username (Optional[str]): The Redis username to use for authentication. Defaults to None.
         password (Optional[str]): The Redis password to use for authentication. Defaults to None.
         port (Optional[int]): The Redis port to connect to. Defaults to None.
         db (Optional[str]): The Redis database to connect to. Defaults to None.
@@ -135,11 +138,16 @@ def get_redis_url(
         str: The Redis connection URL.
     """
     host = host or REDIS_HOST
+    username = username or REDIS_USER
     password = _get_auth("REDIS_AUTH") or password or REDIS_AUTH
     port = port or REDIS_PORT
     db = db or REDIS_DB
     scheme = scheme or REDIS_SCHEME
-    if password:
+    if username and password:
+        logger.debug("Connecting to Redis with custom username and password")
+        return f"{scheme}://{quote_plus(username)}:{quote_plus(password)}@{host}:{port}/{db}"
+    elif password:
+        logger.debug("Connecting to Redis with default username and password")
         return f"{scheme}://:{quote_plus(password)}@{host}:{port}/{db}"
     logger.debug("Connecting to Redis without password.")
     return f"{scheme}://{host}:{port}/{db}"
