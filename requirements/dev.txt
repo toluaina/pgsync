@@ -6,11 +6,11 @@
 #
 async-timeout==4.0.3
     # via redis
-black==24.4.2
+black==24.8.0
     # via -r requirements/dev.in
-boto3==1.34.142
+boto3==1.34.153
     # via -r requirements/base.in
-botocore==1.34.142
+botocore==1.34.153
     # via
     #   boto3
     #   s3transfer
@@ -27,7 +27,7 @@ click==8.1.7
     # via
     #   -r requirements/base.in
     #   black
-coverage[toml]==7.5.4
+coverage[toml]==7.6.0
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -45,9 +45,9 @@ environs==11.0.0
     # via -r requirements/base.in
 events==0.5
     # via opensearch-py
-exceptiongroup==1.2.1
+exceptiongroup==1.2.2
     # via pytest
-faker==26.0.0
+faker==26.1.0
     # via -r requirements/dev.in
 filelock==3.15.4
     # via virtualenv
@@ -104,7 +104,7 @@ pycodestyle==2.12.0
     # via flake8
 pyflakes==3.2.0
     # via flake8
-pytest==8.2.2
+pytest==8.3.2
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -127,13 +127,13 @@ python-dotenv==1.0.1
     #   environs
 pyyaml==6.0.1
     # via pre-commit
-redis==5.0.7
+redis==5.0.8
     # via -r requirements/base.in
 requests==2.32.3
     # via
     #   opensearch-py
     #   requests-aws4auth
-requests-aws4auth==1.2.3
+requests-aws4auth==1.3.1
     # via -r requirements/base.in
 s3transfer==0.10.2
     # via boto3
@@ -142,10 +142,9 @@ six==1.16.0
     #   opensearch-dsl
     #   opensearch-py
     #   python-dateutil
-    #   requests-aws4auth
 sqlalchemy==2.0.31
     # via -r requirements/base.in
-sqlparse==0.5.0
+sqlparse==0.5.1
     # via -r requirements/base.in
 tomli==2.0.1
     # via

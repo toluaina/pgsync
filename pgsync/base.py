@@ -778,6 +778,8 @@ class Base(object):
 
         NB: All integers are long in python3 and call to convert is just int
         """
+        if self.verbose:
+            logger.debug(f"type: {type_} value: {value}")
         if value.lower() == "null":
             return None
         if type_.lower() in self.INT_TYPES:
