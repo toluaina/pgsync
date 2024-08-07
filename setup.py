@@ -34,6 +34,7 @@ KEYWORDS = [
     "pgsync",
     "postgres",
 ]
+LICENSE = "MIT"
 CLASSIFIERS = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -64,7 +65,7 @@ with open("requirements/base.txt") as fp:
 setup(
     name=NAME,
     author=AUTHOR,
-    license="MIT",
+    license=LICENSE,
     maintainer=MAINTAINER,
     maintainer_email=MAINTAINER_EMAIL,
     author_email=AUTHOR_EMAIL,

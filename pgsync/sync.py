@@ -1414,22 +1414,22 @@ class Sync(Base, metaclass=Singleton):
     default=settings.NUM_WORKERS,
 )
 def main(
-    config,
-    daemon,
-    host,
-    password,
-    port,
-    sslmode,
-    sslrootcert,
-    user,
-    verbose,
-    version,
-    analyze,
-    num_workers,
-    polling,
-    producer,
-    consumer,
-):
+    config: str,
+    daemon: bool,
+    host: str,
+    password: bool,
+    port: int,
+    sslmode: str,
+    sslrootcert: str,
+    user: str,
+    verbose: bool,
+    version: bool,
+    analyze: bool,
+    num_workers: int,
+    polling: bool,
+    producer: bool,
+    consumer: bool,
+) -> None:
     """Main application syncer."""
     if version:
         sys.stdout.write(f"Version: {__version__}\n")

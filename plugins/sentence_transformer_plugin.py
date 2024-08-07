@@ -1,5 +1,3 @@
-from sentence_transformers import SentenceTransformer
-
 from pgsync import plugin
 
 
@@ -14,6 +12,8 @@ class SentenceTransformersPlugin(plugin.Plugin):
 
     def __init__(self) -> None:
         super().__init__()
+        from sentence_transformers import SentenceTransformer
+
         self.model: SentenceTransformer = SentenceTransformer(
             "all-MiniLM-L6-v2"
         )
