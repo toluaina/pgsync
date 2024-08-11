@@ -17,11 +17,11 @@ from .settings import (
     PG_PORT,
     PG_USER,
     REDIS_AUTH,
-    REDIS_USER,
     REDIS_DB,
     REDIS_HOST,
     REDIS_PORT,
     REDIS_SCHEME,
+    REDIS_USER,
 )
 
 logger = logging.getLogger(__name__)
@@ -144,10 +144,10 @@ def get_redis_url(
     db = db or REDIS_DB
     scheme = scheme or REDIS_SCHEME
     if username and password:
-        logger.debug("Connecting to Redis with custom username and password")
+        logger.debug("Connecting to Redis with custom username and password.")
         return f"{scheme}://{quote_plus(username)}:{quote_plus(password)}@{host}:{port}/{db}"
-    elif password:
-        logger.debug("Connecting to Redis with default username and password")
+    if password:
+        logger.debug("Connecting to Redis with default password.")
         return f"{scheme}://:{quote_plus(password)}@{host}:{port}/{db}"
     logger.debug("Connecting to Redis without password.")
     return f"{scheme}://{host}:{port}/{db}"

@@ -6,9 +6,9 @@
 #
 async-timeout==4.0.3
     # via redis
-boto3==1.34.155
+boto3==1.34.158
     # via -r requirements/base.in
-botocore==1.34.155
+botocore==1.34.158
     # via
     #   boto3
     #   s3transfer
