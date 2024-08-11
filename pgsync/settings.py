@@ -161,6 +161,7 @@ PG_USER = env.str("PG_USER")
 
 # Redis:
 REDIS_AUTH = env.str("REDIS_AUTH", default=None)
+REDIS_USER = env.str("REDIS_USER", default=None)
 REDIS_DB = env.int("REDIS_DB", default=0)
 REDIS_HOST = env.str("REDIS_HOST", default="localhost")
 # redis poll interval (in secs)
