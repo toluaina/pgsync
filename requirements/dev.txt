@@ -33,13 +33,13 @@ coverage[toml]==7.6.1
     #   pytest-cov
 distlib==0.3.8
     # via virtualenv
-elastic-transport==8.13.1
+elastic-transport==8.15.0
     # via elasticsearch
 elasticsearch==8.14.0
     # via
     #   -r requirements/base.in
     #   elasticsearch-dsl
-elasticsearch-dsl==8.14.0
+elasticsearch-dsl==8.15.0
     # via -r requirements/base.in
 environs==11.0.0
     # via -r requirements/base.in

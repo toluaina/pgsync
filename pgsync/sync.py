@@ -109,6 +109,7 @@ class Sync(Base, metaclass=Singleton):
             self._plugins: Plugins = Plugins("plugins", self.plugins)
         self.query_builder: QueryBuilder = QueryBuilder(verbose=verbose)
         self.count: dict = dict(xlog=0, db=0, redis=0)
+        self.tasks: t.List[asyncio.Task] = []
 
     def validate(self, repl_slots: bool = True) -> None:
         """Perform all validation right away."""
@@ -1295,13 +1296,11 @@ class Sync(Base, metaclass=Singleton):
             cursor.execute(f'LISTEN "{self.database}"')
             event_loop = asyncio.get_event_loop()
             event_loop.add_reader(self.conn, self.async_poll_db)
-            tasks: list = [
+            self.tasks: t.List[asyncio.Task] = [
                 event_loop.create_task(self.async_poll_redis()),
                 event_loop.create_task(self.async_truncate_slots()),
                 event_loop.create_task(self.async_status()),
             ]
-            event_loop.run_until_complete(asyncio.wait(tasks))
-            event_loop.close()
 
         else:
             # sync up to and produce items in the Redis cache
@@ -1477,6 +1476,7 @@ def main(
                 time.sleep(settings.POLL_INTERVAL)
 
         else:
+            tasks: t.List[asyncio.Task] = []
             for doc in config_loader(config):
                 sync: Sync = Sync(
                     doc,
@@ -1489,6 +1489,12 @@ def main(
                 sync.pull()
                 if daemon:
                     sync.receive()
+                    tasks.extend(sync.tasks)
+
+            if settings.USE_ASYNC:
+                event_loop = asyncio.get_event_loop()
+                event_loop.run_until_complete(asyncio.gather(*tasks))
+                event_loop.close()
 
 
 if __name__ == "__main__":
