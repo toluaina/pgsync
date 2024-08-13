@@ -1,3 +1,5 @@
+import typing as t
+
 import click
 from schema import Customer, CustomerGroup, Group
 from sqlalchemy.orm import sessionmaker
@@ -15,7 +17,7 @@ from pgsync.utils import config_loader, get_config
     help="Schema config",
     type=click.Path(exists=True),
 )
-def main(config):
+def main(config: str) -> None:
     config: str = get_config(config)
     teardown(drop_db=False, config=config)
 
@@ -29,7 +31,7 @@ def main(config):
             Session = sessionmaker(bind=connection, autoflush=True)
             session = Session()
 
-            customers = [
+            customers: t.List[Customer] = [
                 Customer(name="CustomerA"),
                 Customer(name="CustomerB"),
                 Customer(name="CustomerC"),
@@ -37,7 +39,7 @@ def main(config):
             with subtransactions(session):
                 session.add_all(customers)
 
-            groups = [
+            groups: t.List[Group] = [
                 Group(group_name="GroupA"),
                 Group(group_name="GroupB"),
                 Group(group_name="GroupC"),
@@ -45,7 +47,7 @@ def main(config):
             with subtransactions(session):
                 session.add_all(groups)
 
-            customers_groups = [
+            customers_groups: t.List[CustomerGroup] = [
                 CustomerGroup(customer=customers[0], group=groups[0]),
                 CustomerGroup(customer=customers[1], group=groups[1]),
                 CustomerGroup(customer=customers[2], group=groups[2]),

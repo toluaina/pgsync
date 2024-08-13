@@ -409,7 +409,7 @@ def run_task(
     ),
     default="multiprocess_async",
 )
-def main(config: str, nprocs: int, mode: str, verbose: bool):
+def main(config: str, nprocs: int, mode: str, verbose: bool) -> None:
     """
     TODO:
     - Track progress across cpus/threads

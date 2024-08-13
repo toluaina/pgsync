@@ -39,7 +39,7 @@ def setup(config: str) -> None:
     help="Schema config",
     type=click.Path(exists=True),
 )
-def main(config):
+def main(config: str) -> None:
     config = get_config(config)
     teardown(config=config)
     setup(config)

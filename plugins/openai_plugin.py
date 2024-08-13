@@ -17,7 +17,7 @@ class OpenAIPlugin(plugin.Plugin):
         self.client: OpenAI = OpenAI()
         self.model: str = "text-embedding-3-small"
         # vector dims must match models input dims
-        self.vector_dims = 1536
+        self.vector_dims: int = 1536
 
     name: str = "TextEmbedding3Small"
 
