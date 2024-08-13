@@ -410,6 +410,11 @@ class Sync(Base, metaclass=Singleton):
                         f"Error parsing row: {e}\nRow data: {row.data}"
                     )
                     raise
+
+                # filter out unknown schemas
+                if payload.schema not in self.tree.schemas:
+                    continue
+
                 payloads.append(payload)
 
                 j: int = i + 1
@@ -811,7 +816,10 @@ class Sync(Base, metaclass=Singleton):
         # e.g a through table which we need to react to.
         # in this case, we find the parent of the through
         # table and force a re-sync.
-        if payload.table not in self.tree.tables:
+        if (
+            payload.table not in self.tree.tables
+            or payload.schema not in self.tree.schemas
+        ):
             return
 
         node: Node = self.tree.get_node(payload.table, payload.schema)
@@ -1112,7 +1120,11 @@ class Sync(Base, metaclass=Singleton):
                 notification: t.AnyStr = conn.notifies.pop(0)
                 if notification.channel == self.database:
                     payload = json.loads(notification.payload)
-                    if payload["indices"] and self.index in payload["indices"]:
+                    if (
+                        payload["indices"]
+                        and self.index in payload["indices"]
+                        and payload["schema"] in self.tree.schemas
+                    ):
                         payloads.append(payload)
                         logger.debug(f"poll_db: {payload}")
                         self.count["db"] += 1
@@ -1134,7 +1146,11 @@ class Sync(Base, metaclass=Singleton):
             notification: t.AnyStr = self.conn.notifies.pop(0)
             if notification.channel == self.database:
                 payload = json.loads(notification.payload)
-                if payload["indices"] and self.index in payload["indices"]:
+                if (
+                    payload["indices"]
+                    and self.index in payload["indices"]
+                    and payload["schema"] in self.tree.schemas
+                ):
                     self.redis.push([payload])
                     logger.debug(f"async_poll: {payload}")
                     self.count["db"] += 1

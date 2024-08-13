@@ -6,9 +6,9 @@
 #
 async-timeout==4.0.3
     # via redis
-boto3==1.34.158
+boto3==1.34.159
     # via -r requirements/base.in
-botocore==1.34.158
+botocore==1.34.159
     # via
     #   boto3
     #   s3transfer
@@ -23,7 +23,7 @@ click==8.1.7
     # via -r requirements/base.in
 elastic-transport==8.15.0
     # via elasticsearch
-elasticsearch==8.14.0
+elasticsearch==8.15.0
     # via
     #   -r requirements/base.in
     #   elasticsearch-dsl
