@@ -388,7 +388,6 @@ def get_search_client(
                     service,
                     session_token=credentials.token,
                 ),
-                use_ssl=True,
                 verify_certs=True,
                 connection_class=connection_class,
                 timeout=settings.ELASTICSEARCH_TIMEOUT,
@@ -403,7 +402,6 @@ def get_search_client(
                     service,
                     session_token=credentials.token,
                 ),
-                use_ssl=True,
                 verify_certs=True,
                 node_class=node_class,
                 timeout=settings.ELASTICSEARCH_TIMEOUT,
@@ -460,6 +458,5 @@ def get_search_client(
             ssl_version=ssl_version,
             ssl_context=ssl_context,
             ssl_show_warn=ssl_show_warn,
-            # use_ssl=use_ssl,
             timeout=settings.ELASTICSEARCH_TIMEOUT,
         )
