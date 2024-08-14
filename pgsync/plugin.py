@@ -48,6 +48,11 @@ class Plugins(object):
         if "test" not in sys.argv[0]:
             self.walk(self.package)
 
+        # main plugin ordering
+        self.plugins = sorted(
+            self.plugins, key=lambda x: self.names.index(x.name)
+        )
+
     def walk(self, package: str) -> None:
         """Recursively walk the supplied package and fetch all plugins."""
         module = import_module(package)
