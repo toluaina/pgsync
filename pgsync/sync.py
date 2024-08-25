@@ -983,6 +983,18 @@ class Sync(Base, metaclass=Singleton):
 
                 row[META] = Transform.get_primary_keys(keys)
 
+                if node.is_root:
+                    primary_key_values: t.List[str] = list(
+                        map(str, primary_keys)
+                    )
+                    primary_key_names: t.List[str] = [
+                        primary_key.name for primary_key in node.primary_keys
+                    ]
+                    # TODO: add support for composite pkeys
+                    row[META][node.table] = {
+                        primary_key_names[0]: [primary_key_values[0]],
+                    }
+
                 if self.verbose:
                     print(f"{(i+1)})")
                     print(f"pkeys: {primary_keys}")
