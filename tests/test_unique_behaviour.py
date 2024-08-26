@@ -20,6 +20,8 @@ class TestUniqueBehaviour(object):
         user_cls,
         contact_cls,
         contact_item_cls,
+        author_cls,
+        book_author_cls,
     ):
         session = sync.session
         contacts = [
@@ -31,8 +33,8 @@ class TestUniqueBehaviour(object):
             # contact_item_cls(name="Contact Item 2", contact=contacts[1]),
         ]
         users = [
-            user_cls(name="Fonzy Bear", contact=contacts[0]),
-            user_cls(name="Jack Jones", contact=contacts[1]),
+            user_cls(id=1, name="Fonzy Bear", contact=contacts[0]),
+            user_cls(id=2, name="Jack Jones", contact=contacts[1]),
         ]
         books = [
             book_cls(
@@ -42,6 +44,22 @@ class TestUniqueBehaviour(object):
                 buyer=users[0],
                 seller=users[1],
             ),
+        ]
+        authors = [
+            author_cls(
+                id=1,
+                name="Roald Dahl",
+                birth_year=1916,
+            ),
+            author_cls(
+                id=2,
+                name="Haruki Murakami",
+                birth_year=1949,
+            ),
+        ]
+        book_authors = [
+            book_author_cls(id=1, book=books[0], author=authors[0]),
+            book_author_cls(id=2, book=books[0], author=authors[1]),
         ]
         with subtransactions(session):
             conn = session.connection().engine.connect().connection
@@ -54,6 +72,8 @@ class TestUniqueBehaviour(object):
             session.add_all(contact_items)
             session.add_all(users)
             session.add_all(books)
+            session.add_all(authors)
+            session.add_all(book_authors)
 
         sync.logical_slot_get_changes(
             f"{sync.database}_testdb",
@@ -65,6 +85,8 @@ class TestUniqueBehaviour(object):
             contacts,
             contact_items,
             users,
+            authors,
+            book_authors,
         )
 
         with subtransactions(session):
@@ -80,6 +102,8 @@ class TestUniqueBehaviour(object):
                     contact_item_cls.__table__.name,
                     contact_cls.__table__.name,
                     user_cls.__table__.name,
+                    author_cls.__table__.name,
+                    book_author_cls.__table__.name,
                 ]
             )
 
@@ -99,9 +123,18 @@ class TestUniqueBehaviour(object):
         session.connection().engine.dispose()
         sync.search_client.close()
 
-    @pytest.fixture(scope="function")
-    def nodes(self):
-        return {
+    def test_sync_multiple_children_empty_leaf(
+        self,
+        sync,
+        data,
+    ):
+        """
+                 ----> User(buyer) ----> Contact ----> ContactItem
+        Book ----|
+                  ----> User(seller) ----> Contact ----> ContactItem
+        Test regular sync produces the correct result
+        """
+        nodes = {
             "table": "book",
             "columns": ["isbn", "title", "description"],
             "children": [
@@ -194,26 +227,11 @@ class TestUniqueBehaviour(object):
             ],
         }
 
-    def test_sync_multiple_children_empty_leaf(
-        self,
-        sync,
-        data,
-        nodes,
-        book_cls,
-        user_cls,
-        contact_cls,
-        contact_item_cls,
-    ):
-        """
-                 ----> User(buyer) ----> Contact ----> ContactItem
-        Book ----|
-                  ----> User(seller) ----> Contact ----> ContactItem
-        Test regular sync produces the correct result
-        """
         sync.tree.__nodes = {}
         sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         docs = sorted(docs, key=lambda k: k["_id"])
+
         assert docs == [
             {
                 "_id": "abc",
@@ -254,3 +272,78 @@ class TestUniqueBehaviour(object):
         ]
 
         assert_resync_empty(sync, nodes)
+
+    def test_though_table_for_grandchildren(
+        self,
+        sync,
+        data,
+    ):
+        nodes = {
+            "table": "user",
+            "columns": ["id", "name"],
+            "children": [
+                {
+                    "table": "book",
+                    "label": "books",
+                    "columns": ["isbn", "title", "description"],
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_many",
+                        "foreign_key": {
+                            "parent": ["id"],
+                            "child": ["buyer_id"],
+                        },
+                    },
+                    "children": [
+                        {
+                            "table": "author",
+                            "label": "authors",
+                            "columns": ["id", "name"],
+                            "relationship": {
+                                "type": "one_to_many",
+                                "variant": "object",
+                                "through_tables": ["book_author"],
+                            },
+                        }
+                    ]
+                }
+            ]
+        }
+
+        sync.tree.__nodes = {}
+        sync.tree.__post_init__()
+        sync.nodes = nodes
+        sync.root = sync.tree.build(nodes)
+        docs = [sort_list(doc) for doc in sync.sync()]
+        docs = sorted(docs, key=lambda k: k["_id"])
+
+        assert docs == [
+            {'_id': '1',
+             '_index': 'testdb',
+             '_source': {
+                 'id': 1,
+                 'name': 'Fonzy Bear',
+                 'books': [{
+                     'isbn': 'abc',
+                     'title': 'The Tiger Club',
+                     'authors': [
+                         {'id': 1, 'name': 'Roald Dahl'},
+                         {'id': 2, 'name': 'Haruki Murakami'}
+                     ],
+                     'description': 'Tigers are fierce creatures'
+                 }],
+                 '_meta': {
+                     'book': {'isbn': ['abc']},
+                     'author': {'id': [1, 2]},
+                     'book_author': {'id': [1, 2]}
+                 }
+             }},
+            {'_id': '2',
+             '_index': 'testdb',
+             '_source': {
+                 'id': 2,
+                 'name': 'Jack Jones',
+                 'books': None,
+                 '_meta': {}
+             }}
+        ]
