@@ -398,6 +398,15 @@ def rating_cls(base, book_cls):
 
     return Rating
 
+@pytest.fixture(scope="session")
+def review_cls(base, book_cls):
+    class Review(base):
+        __tablename__ = "review"
+        id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
+        book_isbn: Mapped[str] = mapped_column(sa.String, nullable=False)
+        text: Mapped[str] = mapped_column(sa.String, nullable=False)
+
+    return Review
 
 @pytest.fixture(scope="session")
 def group_cls(base):
@@ -453,6 +462,7 @@ def model_mapping(
     contact_item_cls,
     book_group_cls,
     group_cls,
+    review_cls,
 ):
     return {
         "cities": city_cls,
@@ -474,6 +484,7 @@ def model_mapping(
         "contact_items": contact_item_cls,
         "book_groups": book_group_cls,
         "groups": group_cls,
+        "reviews": review_cls,
     }
 
 
@@ -520,6 +531,7 @@ def dataset(
     rating_cls,
     book_group_cls,
     group_cls,
+    review_cls,
 ):
     eu_continent = continent_cls(name="Europe")
     na_continent = continent_cls(name="North America")
@@ -755,5 +767,11 @@ def dataset(
         rating_cls(book=book_008, rating=8),
     ]
     session.add_all(ratings)
+
+    reviews = [
+        review_cls(book_isbn="001", text="Great book"),
+    ]
+
+    session.add_all(reviews)
 
     session.commit()
