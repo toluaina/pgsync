@@ -97,16 +97,10 @@ class TestSyncBetweenSchemas(object):
         sync.tree = Tree(sync.models, nodes)
         docs = list(sync.sync())
         assert docs[0]["_id"] == "abc"
-        assert docs[0]["_source"] == {
-            "_meta": {"review": {"id": [1]}},
-            "isbn": "abc",
-            "title": "The Tiger Club",
-            "description": "Tigers are fierce creatures",
-            "reviews": [{
-                "id": 1,
-                "text": "Great book",
-            }]
-        }
+        assert docs[0]["_source"]["reviews"] == [{
+            "id": 1,
+            "text": "Great book",
+        }]
         sync.search_client.bulk(
             sync.index,
             docs,

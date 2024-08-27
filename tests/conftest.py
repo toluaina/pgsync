@@ -5,7 +5,6 @@ import os
 
 import pytest
 import sqlalchemy as sa
-import sqlalchemy.schema
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 from sqlalchemy.schema import UniqueConstraint
 
@@ -491,10 +490,6 @@ def model_mapping(
 
 @pytest.fixture(scope="session")
 def table_creator(base, connection, model_mapping):
-    with connection.engine.connect() as conn:
-        conn.execute(sqlalchemy.schema.CreateSchema(name="review", if_not_exists=True))
-        conn.commit()
-
     sa.orm.configure_mappers()
     with connection.engine.connect() as conn:
         base.metadata.create_all(connection.engine)
