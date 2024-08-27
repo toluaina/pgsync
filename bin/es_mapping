@@ -110,7 +110,7 @@ def create_es_mapping(index: str) -> None:
     help="Schema config",
     type=click.Path(exists=True),
 )
-def main(config):
+def main(config: str) -> None:
     """Create custom NGram analyzer for the default mapping."""
 
     config: str = get_config(config)

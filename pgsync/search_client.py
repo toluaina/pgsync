@@ -174,7 +174,7 @@ class SearchClient(object):
     ):
         """Bulk index, update, delete docs to Elasticsearch/OpenSearch."""
         if settings.ELASTICSEARCH_STREAMING_BULK:
-            for ok, _ in self.streaming_bulk(
+            for ok, info in self.streaming_bulk(
                 self.__client,
                 actions,
                 index=index,
@@ -189,10 +189,12 @@ class SearchClient(object):
             ):
                 if ok:
                     self.doc_count += 1
+                else:
+                    logger.error(f"Document failed to index: {info}")
         else:
             # parallel bulk consumes more memory and is also more likely
             # to result in 429 errors.
-            for ok, _ in self.parallel_bulk(
+            for ok, info in self.parallel_bulk(
                 self.__client,
                 actions,
                 thread_count=thread_count,
@@ -206,6 +208,8 @@ class SearchClient(object):
             ):
                 if ok:
                     self.doc_count += 1
+                else:
+                    logger.error(f"Document failed to index: {info}")
 
     def refresh(self, indices: t.List[str]) -> None:
         """Refresh the Elasticsearch/OpenSearch index."""
@@ -384,7 +388,6 @@ def get_search_client(
                     service,
                     session_token=credentials.token,
                 ),
-                use_ssl=True,
                 verify_certs=True,
                 connection_class=connection_class,
                 timeout=settings.ELASTICSEARCH_TIMEOUT,
@@ -399,7 +402,6 @@ def get_search_client(
                     service,
                     session_token=credentials.token,
                 ),
-                use_ssl=True,
                 verify_certs=True,
                 node_class=node_class,
                 timeout=settings.ELASTICSEARCH_TIMEOUT,
@@ -456,6 +458,5 @@ def get_search_client(
             ssl_version=ssl_version,
             ssl_context=ssl_context,
             ssl_show_warn=ssl_show_warn,
-            # use_ssl=use_ssl,
             timeout=settings.ELASTICSEARCH_TIMEOUT,
         )

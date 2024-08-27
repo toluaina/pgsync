@@ -36,7 +36,7 @@ from pgsync.utils import config_loader, get_config
     type=click.Path(exists=True),
 )
 @click.option("--nsize", "-n", default=1, help="Number of dummy data samples")
-def main(config, nsize):
+def main(config: str, nsize: int):
     config: str = get_config(config)
     teardown(drop_db=False, config=config)
 

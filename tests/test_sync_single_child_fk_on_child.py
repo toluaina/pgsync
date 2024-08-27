@@ -116,7 +116,7 @@ class TestParentSingleChildFkOnChild(object):
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
-            "_meta": {"rating": {"id": [1]}},
+            "_meta": {"book": {"isbn": ["abc"]}, "rating": {"id": [1]}},
             "description": "Tigers are fierce creatures",
             "isbn": "abc",
             "rating": {"id": 1, "value": 1.1},
@@ -125,7 +125,7 @@ class TestParentSingleChildFkOnChild(object):
 
         assert docs[1]["_id"] == "def"
         assert docs[1]["_source"] == {
-            "_meta": {"rating": {"id": [2]}},
+            "_meta": {"book": {"isbn": ["def"]}, "rating": {"id": [2]}},
             "description": "Lion and the mouse",
             "isbn": "def",
             "rating": {"id": 2, "value": 2.2},
@@ -134,7 +134,7 @@ class TestParentSingleChildFkOnChild(object):
 
         assert docs[2]["_id"] == "ghi"
         assert docs[2]["_source"] == {
-            "_meta": {"rating": {"id": [3]}},
+            "_meta": {"book": {"isbn": ["ghi"]}, "rating": {"id": [3]}},
             "description": "Rabbits on the run",
             "isbn": "ghi",
             "rating": {"id": 3, "value": 3.3},
@@ -163,7 +163,7 @@ class TestParentSingleChildFkOnChild(object):
 
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
-            "_meta": {"rating": {"id": [1]}},
+            "_meta": {"book": {"isbn": ["abc"]}, "rating": {"id": [1]}},
             "description": "Tigers are fierce creatures",
             "isbn": "abc",
             "rating": [{"id": 1, "value": 1.1}],
@@ -172,7 +172,7 @@ class TestParentSingleChildFkOnChild(object):
 
         assert docs[1]["_id"] == "def"
         assert docs[1]["_source"] == {
-            "_meta": {"rating": {"id": [2]}},
+            "_meta": {"book": {"isbn": ["def"]}, "rating": {"id": [2]}},
             "description": "Lion and the mouse",
             "isbn": "def",
             "rating": [{"id": 2, "value": 2.2}],
@@ -181,7 +181,7 @@ class TestParentSingleChildFkOnChild(object):
 
         assert docs[2]["_id"] == "ghi"
         assert docs[2]["_source"] == {
-            "_meta": {"rating": {"id": [3]}},
+            "_meta": {"book": {"isbn": ["ghi"]}, "rating": {"id": [3]}},
             "description": "Rabbits on the run",
             "isbn": "ghi",
             "rating": [{"id": 3, "value": 3.3}],
@@ -208,7 +208,7 @@ class TestParentSingleChildFkOnChild(object):
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
-            "_meta": {"rating": {"id": [1]}},
+            "_meta": {"book": {"isbn": ["abc"]}, "rating": {"id": [1]}},
             "description": "Tigers are fierce creatures",
             "isbn": "abc",
             "rating": 1.1,
@@ -217,7 +217,7 @@ class TestParentSingleChildFkOnChild(object):
 
         assert docs[1]["_id"] == "def"
         assert docs[1]["_source"] == {
-            "_meta": {"rating": {"id": [2]}},
+            "_meta": {"book": {"isbn": ["def"]}, "rating": {"id": [2]}},
             "description": "Lion and the mouse",
             "isbn": "def",
             "rating": 2.2,
@@ -226,7 +226,7 @@ class TestParentSingleChildFkOnChild(object):
 
         assert docs[2]["_id"] == "ghi"
         assert docs[2]["_source"] == {
-            "_meta": {"rating": {"id": [3]}},
+            "_meta": {"book": {"isbn": ["ghi"]}, "rating": {"id": [3]}},
             "description": "Rabbits on the run",
             "isbn": "ghi",
             "rating": 3.3,
@@ -254,7 +254,7 @@ class TestParentSingleChildFkOnChild(object):
         docs = sorted(docs, key=lambda k: k["_id"])
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
-            "_meta": {"rating": {"id": [1]}},
+            "_meta": {"book": {"isbn": ["abc"]}, "rating": {"id": [1]}},
             "description": "Tigers are fierce creatures",
             "isbn": "abc",
             "rating": [1.1],
@@ -263,7 +263,7 @@ class TestParentSingleChildFkOnChild(object):
 
         assert docs[1]["_id"] == "def"
         assert docs[1]["_source"] == {
-            "_meta": {"rating": {"id": [2]}},
+            "_meta": {"book": {"isbn": ["def"]}, "rating": {"id": [2]}},
             "description": "Lion and the mouse",
             "isbn": "def",
             "rating": [2.2],
@@ -272,7 +272,7 @@ class TestParentSingleChildFkOnChild(object):
 
         assert docs[2]["_id"] == "ghi"
         assert docs[2]["_source"] == {
-            "_meta": {"rating": {"id": [3]}},
+            "_meta": {"book": {"isbn": ["ghi"]}, "rating": {"id": [3]}},
             "description": "Rabbits on the run",
             "isbn": "ghi",
             "rating": [3.3],
@@ -300,7 +300,7 @@ class TestParentSingleChildFkOnChild(object):
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
-            "_meta": {"rating": {"id": [1]}},
+            "_meta": {"book": {"isbn": ["abc"]}, "rating": {"id": [1]}},
             "description": "Tigers are fierce creatures",
             "isbn": "abc",
             "rating_x": 1.1,
@@ -309,7 +309,7 @@ class TestParentSingleChildFkOnChild(object):
 
         assert docs[1]["_id"] == "def"
         assert docs[1]["_source"] == {
-            "_meta": {"rating": {"id": [2]}},
+            "_meta": {"book": {"isbn": ["def"]}, "rating": {"id": [2]}},
             "description": "Lion and the mouse",
             "isbn": "def",
             "rating_x": 2.2,
@@ -318,7 +318,7 @@ class TestParentSingleChildFkOnChild(object):
 
         assert docs[2]["_id"] == "ghi"
         assert docs[2]["_source"] == {
-            "_meta": {"rating": {"id": [3]}},
+            "_meta": {"book": {"isbn": ["ghi"]}, "rating": {"id": [3]}},
             "description": "Rabbits on the run",
             "isbn": "ghi",
             "rating_x": 3.3,
@@ -347,7 +347,7 @@ class TestParentSingleChildFkOnChild(object):
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
-            "_meta": {"rating": {"id": [1]}},
+            "_meta": {"book": {"isbn": ["abc"]}, "rating": {"id": [1]}},
             "description": "Tigers are fierce creatures",
             "isbn": "abc",
             "rating": 1.1,
@@ -382,7 +382,7 @@ class TestParentSingleChildFkOnChild(object):
         assert docs[0]["_id"] == "abc"
 
         assert docs[0]["_source"] == {
-            "_meta": {"rating": {"id": [1]}},
+            "_meta": {"book": {"isbn": ["abc"]}, "rating": {"id": [1]}},
             "book_isbn": "abc",
             "book_title": "The Tiger Club",
             "description": "Tigers are fierce creatures",
@@ -390,7 +390,7 @@ class TestParentSingleChildFkOnChild(object):
         }
         assert docs[1]["_id"] == "def"
         assert docs[1]["_source"] == {
-            "_meta": {"rating": {"id": [2]}},
+            "_meta": {"book": {"isbn": ["def"]}, "rating": {"id": [2]}},
             "book_isbn": "def",
             "book_title": "The Lion Club",
             "description": "Lion and the mouse",
@@ -399,7 +399,7 @@ class TestParentSingleChildFkOnChild(object):
 
         assert docs[2]["_id"] == "ghi"
         assert docs[2]["_source"] == {
-            "_meta": {"rating": {"id": [3]}},
+            "_meta": {"book": {"isbn": ["ghi"]}, "rating": {"id": [3]}},
             "book_isbn": "ghi",
             "book_title": "The Rabbit Club",
             "description": "Rabbits on the run",
@@ -452,7 +452,7 @@ class TestParentSingleChildFkOnChild(object):
         sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[2]["_source"] == {
-            "_meta": {"rating": {"id": [3]}},
+            "_meta": {"book": {"isbn": ["ghi"]}, "rating": {"id": [3]}},
             "copyright": None,
             "description": "Rabbits on the run",
             "isbn": "ghi",
@@ -534,9 +534,18 @@ class TestParentSingleChildFkOnChild(object):
         sync.tree = Tree(sync.models, nodes)
         docs = [sort_list(doc) for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
-        assert sources["abc"]["_meta"] == {"rating": {"id": [1]}}
-        assert sources["def"]["_meta"] == {"rating": {"id": [2]}}
-        assert sources["ghi"]["_meta"] == {"rating": {"id": [3]}}
+        assert sources["abc"]["_meta"] == {
+            "book": {"isbn": ["abc"]},
+            "rating": {"id": [1]},
+        }
+        assert sources["def"]["_meta"] == {
+            "book": {"isbn": ["def"]},
+            "rating": {"id": [2]},
+        }
+        assert sources["ghi"]["_meta"] == {
+            "book": {"isbn": ["ghi"]},
+            "rating": {"id": [3]},
+        }
         assert_resync_empty(sync, nodes)
 
     def test_missing_foreign_keys(self, sync, data):
@@ -602,19 +611,19 @@ class TestParentSingleChildFkOnChild(object):
 
         assert docs == [
             {
-                "_meta": {"rating": {"id": [1]}},
+                "_meta": {"book": {"isbn": ["abc"]}, "rating": {"id": [1]}},
                 "isbn": "abc",
                 "rating": {"id": 1, "value": 1.1},
                 "title": "The Tiger Club",
             },
             {
-                "_meta": {"rating": {"id": [2]}},
+                "_meta": {"book": {"isbn": ["def"]}, "rating": {"id": [2]}},
                 "isbn": "def",
                 "rating": {"id": 2, "value": 2.2},
                 "title": "The Lion Club",
             },
             {
-                "_meta": {"rating": {"id": [3]}},
+                "_meta": {"book": {"isbn": ["ghi"]}, "rating": {"id": [3]}},
                 "isbn": "ghi",
                 "rating": {"id": 3, "value": 3.3},
                 "title": "The Rabbit Club",
@@ -644,25 +653,25 @@ class TestParentSingleChildFkOnChild(object):
         docs = search(sync.search_client, "testdb")
         assert docs == [
             {
-                "_meta": {"rating": {"id": [1]}},
+                "_meta": {"book": {"isbn": ["abc"]}, "rating": {"id": [1]}},
                 "isbn": "abc",
                 "rating": {"id": 1, "value": 1.1},
                 "title": "The Tiger Club",
             },
             {
-                "_meta": {"rating": {"id": [2]}},
+                "_meta": {"book": {"isbn": ["def"]}, "rating": {"id": [2]}},
                 "isbn": "def",
                 "rating": {"id": 2, "value": 2.2},
                 "title": "The Lion Club",
             },
             {
-                "_meta": {},
+                "_meta": {"book": {"isbn": ["ghi"]}},
                 "isbn": "ghi",
                 "rating": None,
                 "title": "The Rabbit Club",
             },
             {
-                "_meta": {"rating": {"id": [3]}},
+                "_meta": {"book": {"isbn": ["xyz"]}, "rating": {"id": [3]}},
                 "isbn": "xyz",
                 "rating": {"id": 3, "value": 3.3},
                 "title": "Milli and the Ants",
@@ -700,19 +709,19 @@ class TestParentSingleChildFkOnChild(object):
 
         assert docs == [
             {
-                "_meta": {"rating": {"id": [1]}},
+                "_meta": {"book": {"isbn": ["abc"]}, "rating": {"id": [1]}},
                 "isbn": "abc",
                 "rating": {"id": 1, "value": 1.1},
                 "title": "The Tiger Club",
             },
             {
-                "_meta": {"rating": {"id": [2]}},
+                "_meta": {"book": {"isbn": ["def"]}, "rating": {"id": [2]}},
                 "isbn": "def",
                 "rating": {"id": 2, "value": 2.2},
                 "title": "The Lion Club",
             },
             {
-                "_meta": {"rating": {"id": [3]}},
+                "_meta": {"book": {"isbn": ["ghi"]}, "rating": {"id": [3]}},
                 "isbn": "ghi",
                 "rating": {"id": 3, "value": 3.3},
                 "title": "The Rabbit Club",
@@ -764,25 +773,25 @@ class TestParentSingleChildFkOnChild(object):
         docs = search(sync.search_client, "testdb")
         assert docs == [
             {
-                "_meta": {"rating": {"id": [1]}},
+                "_meta": {"book": {"isbn": ["abc"]}, "rating": {"id": [1]}},
                 "isbn": "abc",
                 "rating": {"id": 1, "value": 1.1},
                 "title": "The Tiger Club",
             },
             {
-                "_meta": {"rating": {"id": [2]}},
+                "_meta": {"book": {"isbn": ["def"]}, "rating": {"id": [2]}},
                 "isbn": "def",
                 "rating": {"id": 2, "value": 2.2},
                 "title": "The Lion Club",
             },
             {
-                "_meta": {},
+                "_meta": {"book": {"isbn": ["ghi"]}},
                 "isbn": "ghi",
                 "rating": None,
                 "title": "The Rabbit Club",
             },
             {
-                "_meta": {"rating": {"id": [3]}},
+                "_meta": {"book": {"isbn": ["xyz"]}, "rating": {"id": [3]}},
                 "isbn": "xyz",
                 "rating": {"id": 3, "value": 3.3},
                 "title": "Milli and the Ants",
@@ -820,19 +829,19 @@ class TestParentSingleChildFkOnChild(object):
         docs = search(sync.search_client, "testdb")
         assert docs == [
             {
-                "_meta": {"rating": {"id": [1]}},
+                "_meta": {"book": {"isbn": ["abc"]}, "rating": {"id": [1]}},
                 "isbn": "abc",
                 "rating": {"id": 1, "value": 1.1},
                 "title": "The Tiger Club",
             },
             {
-                "_meta": {"rating": {"id": [2]}},
+                "_meta": {"book": {"isbn": ["def"]}, "rating": {"id": [2]}},
                 "isbn": "def",
                 "rating": {"id": 2, "value": 2.2},
                 "title": "The Lion Club",
             },
             {
-                "_meta": {"rating": {"id": [3]}},
+                "_meta": {"book": {"isbn": ["ghi"]}, "rating": {"id": [3]}},
                 "isbn": "ghi",
                 "rating": {"id": 3, "value": 3.3},
                 "title": "The Rabbit Club",
@@ -865,25 +874,25 @@ class TestParentSingleChildFkOnChild(object):
 
         assert docs == [
             {
-                "_meta": {"rating": {"id": [1]}},
+                "_meta": {"book": {"isbn": ["abc"]}, "rating": {"id": [1]}},
                 "isbn": "abc",
                 "rating": {"id": 1, "value": 1.1},
                 "title": "The Tiger Club",
             },
             {
-                "_meta": {"rating": {"id": [2]}},
+                "_meta": {"book": {"isbn": ["def"]}, "rating": {"id": [2]}},
                 "isbn": "def",
                 "rating": {"id": 2, "value": 2.2},
                 "title": "The Lion Club",
             },
             {
-                "_meta": {"rating": {"id": [3]}},
+                "_meta": {"book": {"isbn": ["ghi"]}, "rating": {"id": [3]}},
                 "isbn": "ghi",
                 "rating": {"id": 3, "value": 3.3},
                 "title": "The Rabbit Club",
             },
             {
-                "_meta": {"rating": {"id": [99]}},
+                "_meta": {"book": {"isbn": ["xyz"]}, "rating": {"id": [99]}},
                 "isbn": "xyz",
                 "rating": {"id": 99, "value": 4.4},
                 "title": "Encyclopedia",
@@ -922,19 +931,19 @@ class TestParentSingleChildFkOnChild(object):
 
         assert docs == [
             {
-                "_meta": {"rating": {"id": [1]}},
+                "_meta": {"book": {"isbn": ["abc"]}, "rating": {"id": [1]}},
                 "isbn": "abc",
                 "rating": {"id": 1, "value": 1.1},
                 "title": "The Tiger Club",
             },
             {
-                "_meta": {"rating": {"id": [2]}},
+                "_meta": {"book": {"isbn": ["def"]}, "rating": {"id": [2]}},
                 "isbn": "def",
                 "rating": {"id": 2, "value": 2.2},
                 "title": "The Lion Club",
             },
             {
-                "_meta": {"rating": {"id": [3]}},
+                "_meta": {"book": {"isbn": ["ghi"]}, "rating": {"id": [3]}},
                 "isbn": "ghi",
                 "rating": {"id": 3, "value": 3.3},
                 "title": "The Rabbit Club",
@@ -961,19 +970,19 @@ class TestParentSingleChildFkOnChild(object):
 
         assert docs == [
             {
-                "_meta": {"rating": {"id": [1]}},
+                "_meta": {"book": {"isbn": ["abc"]}, "rating": {"id": [1]}},
                 "isbn": "abc",
                 "rating": {"id": 1, "value": 1.1},
                 "title": "The Tiger Club",
             },
             {
-                "_meta": {"rating": {"id": [2]}},
+                "_meta": {"book": {"isbn": ["def"]}, "rating": {"id": [2]}},
                 "isbn": "def",
                 "rating": {"id": 2, "value": 2.2},
                 "title": "The Lion Club",
             },
             {
-                "_meta": {"rating": {"id": [3]}},
+                "_meta": {"book": {"isbn": ["ghi"]}, "rating": {"id": [3]}},
                 "isbn": "ghi",
                 "rating": {"id": 3, "value": 4.4},
                 "title": "The Rabbit Club",
@@ -1012,19 +1021,19 @@ class TestParentSingleChildFkOnChild(object):
 
         assert docs == [
             {
-                "_meta": {"rating": {"id": [1]}},
+                "_meta": {"book": {"isbn": ["abc"]}, "rating": {"id": [1]}},
                 "isbn": "abc",
                 "rating": {"id": 1, "value": 1.1},
                 "title": "The Tiger Club",
             },
             {
-                "_meta": {"rating": {"id": [2]}},
+                "_meta": {"book": {"isbn": ["def"]}, "rating": {"id": [2]}},
                 "isbn": "def",
                 "rating": {"id": 2, "value": 2.2},
                 "title": "The Lion Club",
             },
             {
-                "_meta": {"rating": {"id": [3]}},
+                "_meta": {"book": {"isbn": ["ghi"]}, "rating": {"id": [3]}},
                 "isbn": "ghi",
                 "rating": {"id": 3, "value": 3.3},
                 "title": "The Rabbit Club",
@@ -1068,19 +1077,19 @@ class TestParentSingleChildFkOnChild(object):
 
         assert docs == [
             {
-                "_meta": {"rating": {"id": [1]}},
+                "_meta": {"book": {"isbn": ["abc"]}, "rating": {"id": [1]}},
                 "isbn": "abc",
                 "rating": {"id": 1, "value": 1.1},
                 "title": "The Tiger Club",
             },
             {
-                "_meta": {"rating": {"id": [2]}},
+                "_meta": {"book": {"isbn": ["def"]}, "rating": {"id": [2]}},
                 "isbn": "def",
                 "rating": {"id": 2, "value": 2.2},
                 "title": "The Lion Club",
             },
             {
-                "_meta": {"rating": {"id": [3]}},
+                "_meta": {"book": {"isbn": ["ghi"]}, "rating": {"id": [3]}},
                 "isbn": "ghi",
                 "rating": {"id": 3, "value": 4.4},
                 "title": "The Rabbit Club",
@@ -1118,19 +1127,19 @@ class TestParentSingleChildFkOnChild(object):
 
         assert docs == [
             {
-                "_meta": {"rating": {"id": [1]}},
+                "_meta": {"book": {"isbn": ["abc"]}, "rating": {"id": [1]}},
                 "isbn": "abc",
                 "rating": {"id": 1, "value": 1.1},
                 "title": "The Tiger Club",
             },
             {
-                "_meta": {"rating": {"id": [2]}},
+                "_meta": {"book": {"isbn": ["def"]}, "rating": {"id": [2]}},
                 "isbn": "def",
                 "rating": {"id": 2, "value": 2.2},
                 "title": "The Lion Club",
             },
             {
-                "_meta": {"rating": {"id": [3]}},
+                "_meta": {"book": {"isbn": ["ghi"]}, "rating": {"id": [3]}},
                 "isbn": "ghi",
                 "rating": {"id": 3, "value": 3.3},
                 "title": "The Rabbit Club",
@@ -1187,19 +1196,19 @@ class TestParentSingleChildFkOnChild(object):
         docs = search(sync.search_client, "testdb")
         assert docs == [
             {
-                "_meta": {"rating": {"id": [1]}},
+                "_meta": {"book": {"isbn": ["abc"]}, "rating": {"id": [1]}},
                 "isbn": "abc",
                 "rating": {"id": 1, "value": 1.1},
                 "title": "The Tiger Club",
             },
             {
-                "_meta": {"rating": {"id": [2]}},
+                "_meta": {"book": {"isbn": ["def"]}, "rating": {"id": [2]}},
                 "isbn": "def",
                 "rating": {"id": 2, "value": 2.2},
                 "title": "The Lion Club",
             },
             {
-                "_meta": {"rating": {"id": [3]}},
+                "_meta": {"book": {"isbn": ["xyz"]}, "rating": {"id": [3]}},
                 "isbn": "xyz",
                 "rating": {"id": 3, "value": 3.3},
                 "title": "The End of time",

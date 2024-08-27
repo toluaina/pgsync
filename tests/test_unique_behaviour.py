@@ -220,6 +220,7 @@ class TestUniqueBehaviour(object):
                 "_index": "testdb",
                 "_source": {
                     "_meta": {
+                        "book": {"isbn": ["abc"]},
                         "contact": {"id": [1, 2]},
                         "user": {"id": [1, 2]},
                     },

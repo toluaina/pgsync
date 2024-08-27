@@ -1,3 +1,5 @@
+import typing as t
+
 import click
 from schema import Answer, Category, PossibleAnswer, Question, RealAnswer
 from sqlalchemy.orm import sessionmaker
@@ -14,17 +16,17 @@ from pgsync.utils import config_loader, get_config
     help="Schema config",
     type=click.Path(exists=True),
 )
-def main(config):
+def main(config: str) -> None:
     config: str = get_config(config)
     teardown(drop_db=False, config=config)
-    doc = next(config_loader(config))
+    doc: dict = next(config_loader(config))
     database: str = doc.get("database", doc["index"])
     with pg_engine(database) as engine:
         Session = sessionmaker(bind=engine, autoflush=True)
         session = Session()
 
         # Bootstrap
-        categories = [
+        categories: t.List[Category] = [
             Category(
                 id=1,
                 uid="c001",
@@ -39,7 +41,7 @@ def main(config):
         with subtransactions(session):
             session.add_all(categories)
 
-        questions = [
+        questions: t.List[Question] = [
             Question(
                 id=1,
                 uid="q001",
@@ -58,7 +60,7 @@ def main(config):
         with subtransactions(session):
             session.add_all(questions)
 
-        answers = [
+        answers: t.List[Answer] = [
             Answer(id=1, uid="a001", text="Red"),
             Answer(id=2, uid="a002", text="Yes"),
             Answer(id=3, uid="a003", text="Green"),
@@ -67,7 +69,7 @@ def main(config):
         with subtransactions(session):
             session.add_all(answers)
 
-        possible_answers = [
+        possible_answers: t.List[PossibleAnswer] = [
             PossibleAnswer(
                 question_id=1,
                 question_uid="q001",
@@ -96,7 +98,7 @@ def main(config):
         with subtransactions(session):
             session.add_all(possible_answers)
 
-        real_answers = [
+        real_answers: t.List[RealAnswer] = [
             RealAnswer(
                 question_id=1,
                 question_uid="q001",

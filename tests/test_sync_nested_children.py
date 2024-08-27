@@ -391,6 +391,7 @@ class TestNestedChildren(object):
                 "_index": "testdb",
                 "_source": {
                     "_meta": {
+                        "book": {"isbn": ["abc"]},
                         "author": {"id": [1, 4]},
                         "book_author": {"id": [1, 4]},
                         "book_language": {"id": [1, 4, 7, 9]},
@@ -449,6 +450,7 @@ class TestNestedChildren(object):
                 "_index": "testdb",
                 "_source": {
                     "_meta": {
+                        "book": {"isbn": ["def"]},
                         "author": {"id": [1, 2]},
                         "book_author": {"id": [2, 5]},
                         "book_language": {"id": [2, 5, 8]},
@@ -506,6 +508,7 @@ class TestNestedChildren(object):
                 "_index": "testdb",
                 "_source": {
                     "_meta": {
+                        "book": {"isbn": ["ghi"]},
                         "author": {"id": [2, 3]},
                         "book_author": {"id": [3, 6]},
                         "book_language": {"id": [3, 6]},
@@ -708,6 +711,7 @@ class TestNestedChildren(object):
                 "_index": "testdb",
                 "_source": {
                     "_meta": {
+                        "book": {"isbn": ["jkl"]},
                         "author": {"id": [5]},
                         "book_author": {"id": [7]},
                         "book_language": {"id": [10, 11]},
@@ -753,6 +757,7 @@ class TestNestedChildren(object):
                 "_index": "testdb",
                 "_source": {
                     "_meta": {
+                        "book": {"isbn": ["mno"]},
                         "author": {"id": [5]},
                         "book_author": {"id": [8]},
                         "book_language": {"id": [12, 13]},
@@ -834,6 +839,7 @@ class TestNestedChildren(object):
                 "_index": "testdb",
                 "_source": {
                     "_meta": {
+                        "book": {"isbn": ["abc"]},
                         "author": {"id": [1, 4]},
                         "book_author": {"id": [1, 4]},
                         "book_language": {"id": [1, 4, 7, 9]},
@@ -1001,6 +1007,7 @@ class TestNestedChildren(object):
         expected = [
             {
                 "_meta": {
+                    "book": {"isbn": ["def"]},
                     "author": {"id": [1, 2]},
                     "book_author": {"id": [2, 5]},
                     "book_language": {"id": [2, 5, 8]},
@@ -1054,6 +1061,7 @@ class TestNestedChildren(object):
             },
             {
                 "_meta": {
+                    "book": {"isbn": ["ghi"]},
                     "author": {"id": [2, 3]},
                     "book_author": {"id": [3, 6]},
                     "book_language": {"id": [3, 6]},
@@ -1174,7 +1182,7 @@ class TestNestedChildren(object):
                     "isbn": "abc",
                     "group": None,
                     "title": "The Tiger Club",
-                    "_meta": {},
+                    "_meta": {"book": {"isbn": ["abc"]}},
                 },
             },
             {
@@ -1184,7 +1192,7 @@ class TestNestedChildren(object):
                     "isbn": "def",
                     "group": None,
                     "title": "The Lion Club",
-                    "_meta": {},
+                    "_meta": {"book": {"isbn": ["def"]}},
                 },
             },
             {
@@ -1194,7 +1202,7 @@ class TestNestedChildren(object):
                     "isbn": "ghi",
                     "group": None,
                     "title": "The Rabbit Club",
-                    "_meta": {},
+                    "_meta": {"book": {"isbn": ["ghi"]}},
                 },
             },
         ]
@@ -1249,6 +1257,7 @@ class TestNestedChildren(object):
                     ],
                     "title": "The Tiger Club",
                     "_meta": {
+                        "book": {"isbn": ["abc"]},
                         "group": {"id": [1, 2]},
                         "book_group": {"id": [1, 2]},
                     },
@@ -1261,7 +1270,7 @@ class TestNestedChildren(object):
                     "isbn": "def",
                     "group": None,
                     "title": "The Lion Club",
-                    "_meta": {},
+                    "_meta": {"book": {"isbn": ["def"]}},
                 },
             },
             {
@@ -1271,7 +1280,7 @@ class TestNestedChildren(object):
                     "isbn": "ghi",
                     "group": None,
                     "title": "The Rabbit Club",
-                    "_meta": {},
+                    "_meta": {"book": {"isbn": ["ghi"]}},
                 },
             },
         ]
@@ -1346,6 +1355,7 @@ class TestNestedChildren(object):
         expected = [
             {
                 "_meta": {
+                    "book": {"isbn": ["abc"]},
                     "author": {"id": [1, 4, 5]},
                     "book_author": {"id": [1, 4, 7]},
                     "book_language": {"id": [1, 4, 7, 9]},
@@ -1413,6 +1423,7 @@ class TestNestedChildren(object):
             },
             {
                 "_meta": {
+                    "book": {"isbn": ["def"]},
                     "author": {"id": [1, 2]},
                     "book_author": {"id": [2, 5]},
                     "book_language": {"id": [2, 5, 8]},
@@ -1466,6 +1477,7 @@ class TestNestedChildren(object):
             },
             {
                 "_meta": {
+                    "book": {"isbn": ["ghi"]},
                     "author": {"id": [2, 3]},
                     "book_author": {"id": [3, 6]},
                     "book_language": {"id": [3, 6]},
@@ -1602,6 +1614,7 @@ class TestNestedChildren(object):
         expected = [
             {
                 "_meta": {
+                    "book": {"isbn": ["abc"]},
                     "author": {"id": [4, 5]},
                     "book_author": {"id": [1, 4]},
                     "book_language": {"id": [1, 4, 7, 9]},
@@ -1656,6 +1669,7 @@ class TestNestedChildren(object):
             },
             {
                 "_meta": {
+                    "book": {"isbn": ["def"]},
                     "author": {"id": [1, 2]},
                     "book_author": {"id": [2, 5]},
                     "book_language": {"id": [2, 5, 8]},
@@ -1709,6 +1723,7 @@ class TestNestedChildren(object):
             },
             {
                 "_meta": {
+                    "book": {"isbn": ["ghi"]},
                     "author": {"id": [2, 3]},
                     "book_author": {"id": [3, 6]},
                     "book_language": {"id": [3, 6]},
@@ -1818,6 +1833,7 @@ class TestNestedChildren(object):
         expected = [
             {
                 "_meta": {
+                    "book": {"isbn": ["abc"]},
                     "book_language": {"id": [1, 4, 7, 9]},
                     "book_subject": {"id": [1, 4, 6]},
                     "language": {"id": [1, 2, 3, 4]},
@@ -1840,6 +1856,7 @@ class TestNestedChildren(object):
             },
             {
                 "_meta": {
+                    "book": {"isbn": ["def"]},
                     "author": {"id": [1, 2]},
                     "book_author": {"id": [2, 5]},
                     "book_language": {"id": [2, 5, 8]},
@@ -1893,6 +1910,7 @@ class TestNestedChildren(object):
             },
             {
                 "_meta": {
+                    "book": {"isbn": ["ghi"]},
                     "author": {"id": [2, 3]},
                     "book_author": {"id": [3, 6]},
                     "book_language": {"id": [3, 6]},

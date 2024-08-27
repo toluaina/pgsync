@@ -1,7 +1,5 @@
 from functools import lru_cache
 
-from openai import OpenAI
-
 from pgsync import plugin
 
 
@@ -14,10 +12,12 @@ class OpenAIPlugin(plugin.Plugin):
 
     def __init__(self) -> None:
         super().__init__()
+        from openai import OpenAI
+
         self.client: OpenAI = OpenAI()
         self.model: str = "text-embedding-3-small"
         # vector dims must match models input dims
-        self.vector_dims = 1536
+        self.vector_dims: int = 1536
 
     name: str = "TextEmbedding3Small"
 

@@ -134,7 +134,7 @@ def truncate_op(session: sessionmaker, model, nsize: int) -> None:
         case_sensitive=False,
     ),
 )
-def main(config, nsize, daemon, tg_op):
+def main(config: str, nsize: int, daemon: bool, tg_op: str):
     show_settings()
 
     config: str = get_config(config)
@@ -145,7 +145,7 @@ def main(config, nsize, daemon, tg_op):
         session = Session()
 
         model = Book
-        func = {
+        func: dict = {
             INSERT: insert_op,
             UPDATE: update_op,
             DELETE: delete_op,

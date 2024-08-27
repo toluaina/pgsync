@@ -17,7 +17,7 @@ from pgsync.utils import config_loader, get_config
     help="Schema config",
     type=click.Path(exists=True),
 )
-def main(config):
+def main(config: str) -> None:
     config: str = get_config(config)
     teardown(drop_db=False, config=config)
     doc: dict = next(config_loader(config))

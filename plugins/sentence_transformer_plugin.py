@@ -1,5 +1,3 @@
-from sentence_transformers import SentenceTransformer
-
 from pgsync import plugin
 
 
@@ -14,11 +12,13 @@ class SentenceTransformersPlugin(plugin.Plugin):
 
     def __init__(self) -> None:
         super().__init__()
+        from sentence_transformers import SentenceTransformer
+
         self.model: SentenceTransformer = SentenceTransformer(
             "all-MiniLM-L6-v2"
         )
         # vector dims must match models input dims
-        self.vector_dims = 1536
+        self.vector_dims: int = 1536
 
     name: str = "SentenceTransformer"
 

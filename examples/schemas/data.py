@@ -14,10 +14,10 @@ from pgsync.utils import config_loader, get_config
     help="Schema config",
     type=click.Path(exists=True),
 )
-def main(config):
+def main(config: str) -> None:
     config: str = get_config(config)
     teardown(drop_db=False, config=config)
-    doc = next(config_loader(config))
+    doc: dict = next(config_loader(config))
     database: str = doc.get("database", doc["index"])
     with pg_engine(database) as engine:
         Session = sessionmaker(bind=engine, autoflush=True)

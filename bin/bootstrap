@@ -35,7 +35,15 @@ logger = logging.getLogger(__name__)
     default=False,
     help="Turn on verbosity",
 )
-def main(teardown, config, user, password, host, port, verbose):
+def main(
+    teardown: bool,
+    config: str,
+    user: str,
+    password: bool,
+    host: str,
+    port: int,
+    verbose: bool,
+) -> None:
     """Application onetime Bootstrap."""
     kwargs: dict = {
         "user": user,
