@@ -520,13 +520,12 @@ class Sync(Base, metaclass=Singleton):
         """
         foreign_key_constraint = payload.foreign_key_constraint(node.model)
         if self.tree.root.name in foreign_key_constraint:
-            filters.append(
-                {
-                    foreign_key_constraint[self.tree.root.name][
-                        "remote"
-                    ]: foreign_key_constraint[self.tree.root.name]["value"]
-                }
-            )
+            for constraint in foreign_key_constraint[self.tree.root.name]:
+                filters.append(
+                    {
+                        constraint["remote"]: constraint["value"]
+                    }
+                )
         return filters
 
     def _insert_op(
