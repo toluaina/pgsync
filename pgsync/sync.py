@@ -160,6 +160,7 @@ class Sync(Base, metaclass=Singleton):
             )
 
         # ensure the checkpoint dirpath is valid
+        # TODO: Does following two checks needed if we store checkpoint in Redis?
         if not os.path.exists(settings.CHECKPOINT_PATH):
             raise RuntimeError(
                 f"Ensure the checkpoint directory exists "
@@ -483,14 +484,9 @@ class Sync(Base, metaclass=Singleton):
         our insert/update operation and sync the tree branch for that root.
         """
         fields: dict = defaultdict(list)
-        foreign_values: list = []
-        for column in node.columns:
-            if isinstance(column, Column):
-                for foreign_key in column.foreign_keys:
-                    referenced_column = foreign_key.column
-                    base_table = referenced_column.table
-                    if base_table.name == node.parent.table:
-                        foreign_values.append(payload.new.get(column.name))
+        foreign_values: list = [
+            payload.new.get(key) for key in foreign_keys[node.name]
+        ]
 
         for key in [key.name for key in node.primary_keys]:
             for value in foreign_values:
