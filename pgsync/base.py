@@ -670,7 +670,7 @@ class Base(object):
             ]:
                 self.drop_triggers(schema, [table])
                 queries.append(
-                    f'CREATE TRIGGER "{table}_{name}" '
+                    f'CREATE TRIGGER "{schema}_{table}_{name}" '
                     f'AFTER {" OR ".join(tg_op)} ON "{schema}"."{table}" '
                     f"FOR EACH {level} EXECUTE PROCEDURE "
                     f"{schema}.{TRIGGER_FUNC}()",
@@ -696,7 +696,7 @@ class Base(object):
             logger.debug(f"Dropping trigger on table: {schema}.{table}")
             for name in ("notify", "truncate"):
                 queries.append(
-                    f'DROP TRIGGER IF EXISTS "{table}_{name}" ON '
+                    f'DROP TRIGGER IF EXISTS "{schema}_{table}_{name}" ON '
                     f'"{schema}"."{table}"'
                 )
         if join_queries:
@@ -732,7 +732,7 @@ class Base(object):
             self.execute(
                 sa.text(
                     f'ALTER TABLE "{schema}"."{table}" '
-                    f"DISABLE TRIGGER {table}_{name}"
+                    f"DISABLE TRIGGER {schema}_{table}_{name}"
                 )
             )
 
@@ -749,7 +749,7 @@ class Base(object):
             self.execute(
                 sa.text(
                     f'ALTER TABLE "{schema}"."{table}" '
-                    f"ENABLE TRIGGER {table}_{name}"
+                    f"ENABLE TRIGGER {schema}_{table}_{name}"
                 )
             )
 
