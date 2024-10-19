@@ -8,9 +8,9 @@ async-timeout==4.0.3
     # via redis
 black==24.8.0
     # via -r requirements/dev.in
-boto3==1.35.41
+boto3==1.35.44
     # via -r requirements/base.in
-botocore==1.35.41
+botocore==1.35.44
     # via
     #   boto3
     #   s3transfer
@@ -47,7 +47,7 @@ events==0.5
     # via opensearch-py
 exceptiongroup==1.2.2
     # via pytest
-faker==30.5.0
+faker==30.6.0
     # via -r requirements/dev.in
 filelock==3.16.1
     # via virtualenv
@@ -162,5 +162,5 @@ urllib3==1.26.20
     #   elastic-transport
     #   opensearch-py
     #   requests
-virtualenv==20.26.6
+virtualenv==20.27.0
     # via pre-commit
