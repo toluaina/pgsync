@@ -7,8 +7,7 @@ flake8
 freezegun
 isort
 mock
-# pinned to 3.5.0 because of python 3.8 support
-pre-commit==3.5.0
+pre-commit
 pytest
 pytest-cov
 pytest-mock
