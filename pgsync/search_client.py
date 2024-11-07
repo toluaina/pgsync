@@ -1,4 +1,5 @@
 """PGSync SearchClient helper."""
+
 import logging
 import typing as t
 from collections import defaultdict
@@ -371,6 +372,10 @@ def get_search_client(
     if settings.OPENSEARCH_AWS_HOSTED or settings.ELASTICSEARCH_AWS_HOSTED:
         credentials = boto3.Session().get_credentials()
         service: str = "aoss" if settings.OPENSEARCH_AWS_SERVERLESS else "es"
+        timeout: float = settings.ELASTICSEARCH_TIMEOUT
+
+        print(f"Creating a client and using timeout {timeout}")
+
         if settings.OPENSEARCH:
             return client(
                 hosts=[url],
@@ -384,6 +389,7 @@ def get_search_client(
                 use_ssl=True,
                 verify_certs=True,
                 connection_class=connection_class,
+                timeout=timeout,
             )
         elif settings.ELASTICSEARCH:
             return client(
@@ -398,15 +404,16 @@ def get_search_client(
                 use_ssl=True,
                 verify_certs=True,
                 node_class=node_class,
+                timeout=timeout,
             )
     else:
         hosts: t.List[str] = [url]
         # API
         cloud_id: t.Optional[str] = settings.ELASTICSEARCH_CLOUD_ID
         api_key: t.Optional[t.Union[str, t.Tuple[str, str]]] = None
-        http_auth: t.Optional[
-            t.Union[str, t.Tuple[str, str]]
-        ] = settings.ELASTICSEARCH_HTTP_AUTH
+        http_auth: t.Optional[t.Union[str, t.Tuple[str, str]]] = (
+            settings.ELASTICSEARCH_HTTP_AUTH
+        )
         if (
             settings.ELASTICSEARCH_API_KEY_ID
             and settings.ELASTICSEARCH_API_KEY
@@ -424,12 +431,12 @@ def get_search_client(
         ca_certs: t.Optional[str] = settings.ELASTICSEARCH_CA_CERTS
         client_cert: t.Optional[str] = settings.ELASTICSEARCH_CLIENT_CERT
         client_key: t.Optional[str] = settings.ELASTICSEARCH_CLIENT_KEY
-        ssl_assert_hostname: t.Optional[
-            str
-        ] = settings.ELASTICSEARCH_SSL_ASSERT_HOSTNAME
-        ssl_assert_fingerprint: t.Optional[
-            str
-        ] = settings.ELASTICSEARCH_SSL_ASSERT_FINGERPRINT
+        ssl_assert_hostname: t.Optional[str] = (
+            settings.ELASTICSEARCH_SSL_ASSERT_HOSTNAME
+        )
+        ssl_assert_fingerprint: t.Optional[str] = (
+            settings.ELASTICSEARCH_SSL_ASSERT_FINGERPRINT
+        )
         ssl_version: t.Optional[int] = settings.ELASTICSEARCH_SSL_VERSION
         ssl_context: t.Optional[t.Any] = settings.ELASTICSEARCH_SSL_CONTEXT
         ssl_show_warn: bool = settings.ELASTICSEARCH_SSL_SHOW_WARN
