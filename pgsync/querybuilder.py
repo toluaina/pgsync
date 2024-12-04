@@ -419,7 +419,12 @@ class QueryBuilder(threading.local):
                 self.from_obj = child.parent.model
 
             if child._filters:
-                self.isouter = False
+
+                self.isouter = not any(
+                    column in child.table_columns
+                    for column in child.relationship.foreign_key.parent
+                )
+
                 for _filter in child._filters:
                     if isinstance(_filter, sa.sql.elements.BinaryExpression):
                         for column in _filter._orig:
@@ -569,7 +574,11 @@ class QueryBuilder(threading.local):
                 from_obj = node.model
 
             if child._filters:
-                self.isouter = False
+
+                self.isouter = not any(
+                    column in child.table_columns
+                    for column in child.relationship.foreign_key.parent
+                )
 
                 for _filter in child._filters:
                     if isinstance(_filter, sa.sql.elements.BinaryExpression):
@@ -690,7 +699,10 @@ class QueryBuilder(threading.local):
             )
 
         if node._filters:
-            self.isouter = False
+            self.isouter = not any(
+                column in node.table_columns
+                for column in node.relationship.foreign_key.parent
+            )
 
         op = sa.and_
         if node.table == node.parent.table:
@@ -746,7 +758,13 @@ class QueryBuilder(threading.local):
                 from_obj = node.model
 
             if child._filters:
-                self.isouter = False
+
+                # NB:sometimes the FK is in the parent not the child
+                # if none of child.relationship.foreign_key.parent is in child.table_columns then isouter = True
+                self.isouter = not any(
+                    column in child.table_columns
+                    for column in child.relationship.foreign_key.parent
+                )
 
                 for _filter in child._filters:
                     if isinstance(_filter, sa.sql.elements.BinaryExpression):
@@ -776,11 +794,10 @@ class QueryBuilder(threading.local):
                                             == column.value
                                         )
 
-            isouter = not (len(child._filters) > 0)
             from_obj = from_obj.join(
                 child._subquery,
                 onclause=sa.and_(*onclause),
-                isouter=isouter,
+                isouter=self.isouter,
             )
 
         foreign_keys: dict = self.get_foreign_keys(node.parent, node)
