@@ -346,6 +346,7 @@ class QueryBuilder(threading.local):
                 < txmax
             )
 
+        # NB: only apply filters to the root node
         if node._filters:
             node._subquery = node._subquery.where(sa.and_(*node._filters))
         node._subquery = node._subquery.alias()
@@ -419,11 +420,6 @@ class QueryBuilder(threading.local):
                 self.from_obj = child.parent.model
 
             if child._filters:
-
-                self.isouter = not any(
-                    column in child.table_columns
-                    for column in child.relationship.foreign_key.parent
-                )
 
                 for _filter in child._filters:
                     if isinstance(_filter, sa.sql.elements.BinaryExpression):
@@ -575,11 +571,6 @@ class QueryBuilder(threading.local):
 
             if child._filters:
 
-                self.isouter = not any(
-                    column in child.table_columns
-                    for column in child.relationship.foreign_key.parent
-                )
-
                 for _filter in child._filters:
                     if isinstance(_filter, sa.sql.elements.BinaryExpression):
                         for column in _filter._orig:
@@ -698,12 +689,6 @@ class QueryBuilder(threading.local):
                 == through.model.c[right_foreign_keys[i]]
             )
 
-        if node._filters:
-            self.isouter = not any(
-                column in node.table_columns
-                for column in node.relationship.foreign_key.parent
-            )
-
         op = sa.and_
         if node.table == node.parent.table:
             op = sa.or_
@@ -715,8 +700,10 @@ class QueryBuilder(threading.local):
         )
 
         node._subquery = inner_subquery.select_from(from_obj)
-        if node._filters:
-            node._subquery = node._subquery.where(sa.and_(*node._filters))
+
+        # NB do not apply filters to the child node as they are applied to the parent
+        # if node._filters:
+        #     node._subquery = node._subquery.where(sa.and_(*node._filters))
 
         node._subquery = node._subquery.group_by(
             *[through.model.c[column] for column in foreign_keys[through.name]]
@@ -758,13 +745,6 @@ class QueryBuilder(threading.local):
                 from_obj = node.model
 
             if child._filters:
-
-                # NB:sometimes the FK is in the parent not the child
-                # if none of child.relationship.foreign_key.parent is in child.table_columns then isouter = True
-                self.isouter = not any(
-                    column in child.table_columns
-                    for column in child.relationship.foreign_key.parent
-                )
 
                 for _filter in child._filters:
                     if isinstance(_filter, sa.sql.elements.BinaryExpression):
@@ -882,8 +862,9 @@ class QueryBuilder(threading.local):
             )
         node._subquery = node._subquery.where(sa.and_(*where))
 
-        if node._filters:
-            node._subquery = node._subquery.where(sa.and_(*node._filters))
+        # NB do not apply filters to the child node as they are applied to the parent
+        # if node._filters:
+        #     node._subquery = node._subquery.where(sa.and_(*node._filters))
 
         if node.relationship.type == ONE_TO_MANY:
             node._subquery = node._subquery.group_by(

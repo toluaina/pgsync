@@ -8,9 +8,9 @@ async-timeout==5.0.1
     # via redis
 black==24.10.0
     # via -r requirements/dev.in
-boto3==1.35.75
+boto3==1.35.76
     # via -r /Users/tolu/pgsync/requirements/base.in
-botocore==1.35.75
+botocore==1.35.76
     # via
     #   boto3
     #   s3transfer
@@ -27,7 +27,7 @@ click==8.1.7
     # via
     #   -r /Users/tolu/pgsync/requirements/base.in
     #   black
-coverage[toml]==7.6.8
+coverage[toml]==7.6.9
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -129,7 +129,7 @@ python-dotenv==1.0.1
     #   environs
 pyyaml==6.0.2
     # via pre-commit
-redis==5.2.0
+redis==5.2.1
     # via -r /Users/tolu/pgsync/requirements/base.in
 requests==2.32.3
     # via

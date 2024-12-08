@@ -577,11 +577,10 @@ class Sync(Base, metaclass=Singleton):
                         node, payload, foreign_keys, _filters
                     )
 
-                    # through table with a direct references to root
-                    if not _filters:
-                        _filters = self._through_node_resolver(
-                            node, payload, _filters
-                        )
+                    # also check through table with a direct references to root
+                    _filters = self._through_node_resolver(
+                        node, payload, _filters
+                    )
 
                 if _filters:
                     filters[self.tree.root.table].extend(_filters)
