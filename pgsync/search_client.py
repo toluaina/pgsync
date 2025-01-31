@@ -152,6 +152,12 @@ class SearchClient(object):
                 ignore_status=ignore_status,
             )
         except Exception as e:
+            error_message = str(e)
+            # quick fix for now, let's add proper refreshes etc later
+            # this will close the service, and ECS will automatically scale back to 1 after that
+            if "AuthorizationException" in error_message or "security token included in the request is invalid" in error_message:
+                raise
+
             logger.exception(f"Exception {e}")
             if raise_on_exception or raise_on_error:
                 raise
