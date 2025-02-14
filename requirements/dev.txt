@@ -6,15 +6,15 @@
 #
 async-timeout==5.0.1
     # via redis
-black==24.10.0
+black==25.1.0
     # via -r requirements/dev.in
-boto3==1.36.3
+boto3==1.36.20
     # via -r /Users/tolu/pgsync/requirements/base.in
-botocore==1.36.3
+botocore==1.36.20
     # via
     #   boto3
     #   s3transfer
-certifi==2024.12.14
+certifi==2025.1.31
     # via
     #   elastic-transport
     #   opensearch-py
@@ -27,7 +27,7 @@ click==8.1.8
     # via
     #   -r /Users/tolu/pgsync/requirements/base.in
     #   black
-coverage[toml]==7.6.10
+coverage[toml]==7.6.12
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -37,19 +37,19 @@ elastic-transport==8.17.0
     # via
     #   elasticsearch
     #   elasticsearch-dsl
-elasticsearch==8.17.0
+elasticsearch==8.17.1
     # via
     #   -r /Users/tolu/pgsync/requirements/base.in
     #   elasticsearch-dsl
 elasticsearch-dsl==8.17.1
     # via -r /Users/tolu/pgsync/requirements/base.in
-environs==14.1.0
+environs==14.1.1
     # via -r /Users/tolu/pgsync/requirements/base.in
 events==0.5
     # via opensearch-py
 exceptiongroup==1.2.2
     # via pytest
-faker==34.0.0
+faker==36.1.1
     # via -r requirements/dev.in
 filelock==3.17.0
     # via virtualenv
@@ -59,19 +59,19 @@ freezegun==1.5.1
     # via -r requirements/dev.in
 greenlet==3.1.1
     # via sqlalchemy
-identify==2.6.6
+identify==2.6.7
     # via pre-commit
 idna==3.10
     # via requests
 iniconfig==2.0.0
     # via pytest
-isort==5.13.2
+isort==6.0.0
     # via -r requirements/dev.in
 jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-marshmallow==3.25.1
+marshmallow==3.26.1
     # via environs
 mccabe==0.7.0
     # via flake8
@@ -119,7 +119,6 @@ python-dateutil==2.9.0.post0
     # via
     #   botocore
     #   elasticsearch-dsl
-    #   faker
     #   freezegun
     #   opensearch-dsl
     #   opensearch-py
@@ -137,13 +136,13 @@ requests==2.32.3
     #   requests-aws4auth
 requests-aws4auth==1.3.1
     # via -r /Users/tolu/pgsync/requirements/base.in
-s3transfer==0.11.1
+s3transfer==0.11.2
     # via boto3
 six==1.17.0
     # via
     #   opensearch-dsl
     #   python-dateutil
-sqlalchemy==2.0.37
+sqlalchemy==2.0.38
     # via -r /Users/tolu/pgsync/requirements/base.in
 sqlparse==0.5.3
     # via -r /Users/tolu/pgsync/requirements/base.in
@@ -157,13 +156,14 @@ typing-extensions==4.12.2
     #   black
     #   elasticsearch-dsl
     #   environs
-    #   faker
     #   sqlalchemy
+tzdata==2025.1
+    # via faker
 urllib3==1.26.20
     # via
     #   botocore
     #   elastic-transport
     #   opensearch-py
     #   requests
-virtualenv==20.29.1
+virtualenv==20.29.2
     # via pre-commit
