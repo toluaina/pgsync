@@ -1216,6 +1216,10 @@ class Sync(Base, metaclass=Singleton):
         else:
             _payloads: t.List[Payload] = []
             for i, payload in enumerate(payloads):
+                if payload.tg_op == UPDATE and payload.old == payload.new:
+                    logger.debug(f"Skipping payload due to no changes.")
+                    continue
+
                 _payloads.append(payload)
                 j: int = i + 1
                 if j < len(payloads):
@@ -1228,11 +1232,12 @@ class Sync(Base, metaclass=Singleton):
                             self.index, self._payloads(_payloads)
                         )
                         _payloads = []
-                elif j == len(payloads):
-                    self.search_client.bulk(
-                        self.index, self._payloads(_payloads)
-                    )
-                    _payloads: list = []
+
+            if _payloads:
+                self.search_client.bulk(
+                    self.index, self._payloads(_payloads)
+                )
+                _payloads: list = []
 
         txids: t.Set = set(map(lambda x: x.xmin, payloads))
         # for truncate, tg_op txids is None so skip setting the checkpoint
