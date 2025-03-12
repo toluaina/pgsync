@@ -434,6 +434,41 @@ class TestSync(object):
         mock_es.debug.call_count == 3
         mock_es.assert_any_call("testdb", ANY)
 
+    @patch("pgsync.sync.SearchClient.bulk")
+    @patch("pgsync.sync.logger")
+    def test__on_publish_mixed_update_no_changes(self, mock_logger, mock_es, sync):
+        payloads = [
+            Payload(
+                schema="public",
+                tg_op="INSERT",
+                table="book",
+                old={"isbn": "001"},
+                new={"isbn": "0001"},
+                xmin=1234,
+            ),
+            Payload(
+                schema="public",
+                tg_op="UPDATE",
+                table="book",
+                old={"isbn": "0002"},
+                new={"isbn": "0002"},
+                xmin=1234,
+            ),
+            Payload(
+                schema="public",
+                tg_op="DELETE",
+                table="book",
+                old={"isbn": "003"},
+                new={"isbn": "0003"},
+                xmin=1234,
+            ),
+        ]
+        sync._on_publish(payloads)
+        mock_logger.debug.assert_any_call("Skipping payload due to no changes.")
+        assert sync.checkpoint is not None
+        mock_es.debug.call_count == 2
+        mock_es.assert_any_call("testdb", ANY)
+
     @patch("pgsync.sync.Sync._on_publish")
     def test_on_publish(self, mock_on_publish, sync):
         payloads = [
