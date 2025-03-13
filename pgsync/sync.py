@@ -564,14 +564,19 @@ class Sync(Base, metaclass=Singleton):
                         node,
                     )
 
-                _filters: list = []
                 for payload in payloads:
+                    _filters: list = []
+
                     for node_key in foreign_keys[node.name]:
                         for parent_key in foreign_keys[node.parent.name]:
                             if node_key == parent_key:
                                 filters[node.parent.table].append(
                                     {parent_key: payload.data[node_key]}
                                 )
+
+                    _filters = self._root_primary_key_resolver(
+                        node, payload, _filters
+                    )
 
                     _filters = self._root_foreign_key_resolver(
                         node, payload, foreign_keys, _filters
@@ -582,8 +587,8 @@ class Sync(Base, metaclass=Singleton):
                         node, payload, _filters
                     )
 
-                if _filters:
-                    filters[self.tree.root.table].extend(_filters)
+                    if _filters:
+                        filters[self.tree.root.table].extend(_filters)
 
         else:
             # handle case where we insert into a through table
