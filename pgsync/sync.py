@@ -70,6 +70,7 @@ class Sync(Base, metaclass=Singleton):
         verbose: bool = False,
         validate: bool = True,
         repl_slots: bool = True,
+        polling: bool = False,
         num_workers: int = 1,
         producer: bool = True,
         consumer: bool = True,
@@ -103,7 +104,7 @@ class Sync(Base, metaclass=Singleton):
         self.redis: RedisQueue = RedisQueue(self.__name)
         self.tree: Tree = Tree(self.models, nodes=self.nodes)
         if validate:
-            self.validate(repl_slots=repl_slots)
+            self.validate(repl_slots=repl_slots, polling=polling)
             self.create_setting()
         if self.plugins:
             self._plugins: Plugins = Plugins("plugins", self.plugins)
@@ -111,7 +112,7 @@ class Sync(Base, metaclass=Singleton):
         self.count: dict = dict(xlog=0, db=0, redis=0)
         self.tasks: t.List[asyncio.Task] = []
 
-    def validate(self, repl_slots: bool = True) -> None:
+    def validate(self, repl_slots: bool = True, polling=False) -> None:
         """Perform all validation right away."""
 
         # ensure v2 compatible schema
@@ -122,44 +123,45 @@ class Sync(Base, metaclass=Singleton):
 
         self.connect()
 
-        max_replication_slots: t.Optional[str] = self.pg_settings(
-            "max_replication_slots"
-        )
-        try:
-            if int(max_replication_slots) < 1:
-                raise TypeError
-        except TypeError:
-            raise RuntimeError(
-                "Ensure there is at least one replication slot defined "
-                "by setting max_replication_slots = 1"
-            )
-
-        wal_level: t.Optional[str] = self.pg_settings("wal_level")
-        if not wal_level or wal_level.lower() != "logical":
-            raise RuntimeError(
-                "Enable logical decoding by setting wal_level = logical"
-            )
-
-        self._can_create_replication_slot("_tmp_")
-
-        rds_logical_replication: t.Optional[str] = self.pg_settings(
-            "rds.logical_replication"
-        )
-        if (
-            rds_logical_replication
-            and rds_logical_replication.lower() == "off"
-        ):
-            raise RDSError("rds.logical_replication is not enabled")
-
         if self.index is None:
             raise ValueError("Index is missing for doc")
 
-        # ensure we have run bootstrap and the replication slot exists
-        if repl_slots and not self.replication_slots(self.__name):
-            raise RuntimeError(
-                f'Replication slot "{self.__name}" does not exist.\n'
-                f'Make sure you have run the "bootstrap" command.'
+        if not polling:
+            max_replication_slots: t.Optional[str] = self.pg_settings(
+                "max_replication_slots"
             )
+            try:
+                if int(max_replication_slots) < 1:
+                    raise TypeError
+            except TypeError:
+                raise RuntimeError(
+                    "Ensure there is at least one replication slot defined "
+                    "by setting max_replication_slots = 1"
+                )
+
+            wal_level: t.Optional[str] = self.pg_settings("wal_level")
+            if not wal_level or wal_level.lower() != "logical":
+                raise RuntimeError(
+                    "Enable logical decoding by setting wal_level = logical"
+                )
+
+            self._can_create_replication_slot("_tmp_")
+
+            rds_logical_replication: t.Optional[str] = self.pg_settings(
+                "rds.logical_replication"
+            )
+            if (
+                rds_logical_replication
+                and rds_logical_replication.lower() == "off"
+            ):
+                raise RDSError("rds.logical_replication is not enabled")
+
+            # ensure we have run bootstrap and the replication slot exists
+            if repl_slots and not self.replication_slots(self.__name):
+                raise RuntimeError(
+                    f'Replication slot "{self.__name}" does not exist.\n'
+                    f'Make sure you have run the "bootstrap" command.'
+                )
 
         # ensure the checkpoint dirpath is valid
         if not os.path.exists(settings.CHECKPOINT_PATH):
@@ -1239,7 +1241,7 @@ class Sync(Base, metaclass=Singleton):
         if txids != set([None]):
             self.checkpoint: int = min(min(txids), self.txid_current) - 1
 
-    def pull(self) -> None:
+    def pull(self, polling: bool = False) -> None:
         """Pull data from db."""
         txmin: int = self.checkpoint
         txmax: int = self.txid_current
@@ -1252,13 +1254,21 @@ class Sync(Base, metaclass=Singleton):
         self.search_client.bulk(
             self.index, self.sync(txmin=txmin, txmax=txmax)
         )
-        # now sync up to txmax to capture everything we may have missed
-        self.logical_slot_changes(
-            txmin=txmin,
-            txmax=txmax,
-            upto_nchanges=upto_nchanges,
-            upto_lsn=upto_lsn,
-        )
+
+        try:
+            # now sync up to txmax to capture everything we may have missed
+            self.logical_slot_changes(
+                txmin=txmin,
+                txmax=txmax,
+                upto_nchanges=upto_nchanges,
+                upto_lsn=upto_lsn,
+            )
+        except Exception as e:
+            # if we are polling, we can just continue
+            if polling:
+                return
+            else:
+                raise
         self.checkpoint: int = txmax or self.txid_current
         self._truncate = True
 
@@ -1496,10 +1506,14 @@ def main(
                 sync.analyze()
 
         elif polling:
+            # In polling mode, the app can run without replication slots or triggers.
+            # However, this is not the preferred mode of operation.
+            # It should be considered a workaround for running on a read-only cluster.
+            kwargs["polling"] = True
             while True:
                 for doc in config_loader(config):
                     sync: Sync = Sync(doc, verbose=verbose, **kwargs)
-                    sync.pull()
+                    sync.pull(polling=True)
                 time.sleep(settings.POLL_INTERVAL)
 
         else:
