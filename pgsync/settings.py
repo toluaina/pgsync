@@ -150,6 +150,8 @@ OPENSEARCH_AWS_HOSTED = env.bool("OPENSEARCH_AWS_HOSTED", default=False)
 OPENSEARCH_AWS_SERVERLESS = env.bool(
     "OPENSEARCH_AWS_SERVERLESS", default=False
 )
+# full elasticsearch/opensearch url including user, password, host, port and dbname
+ELASTICSEARCH_URL = env.str("ELASTICSEARCH_URL", default=None)
 
 # Postgres:
 PG_HOST = env.str("PG_HOST", default="localhost")
@@ -158,6 +160,8 @@ PG_PORT = env.int("PG_PORT", default=5432)
 PG_SSLMODE = env.str("PG_SSLMODE", default=None)
 PG_SSLROOTCERT = env.str("PG_SSLROOTCERT", default=None)
 PG_USER = env.str("PG_USER")
+# full database url including user, password, host, port and dbname
+PG_URL = env.str("PG_URL", default=None)
 
 # Redis:
 REDIS_AUTH = env.str("REDIS_AUTH", default=None)
@@ -174,6 +178,7 @@ REDIS_SCHEME = env.str("REDIS_SCHEME", default="redis")
 REDIS_SOCKET_TIMEOUT = env.int("REDIS_SOCKET_TIMEOUT", default=5)
 # number of items to write to Redis at a time
 REDIS_WRITE_CHUNK_SIZE = env.int("REDIS_WRITE_CHUNK_SIZE", default=500)
+REDIS_URL = env.str("REDIS_URL", default=None)
 
 
 # Logging:

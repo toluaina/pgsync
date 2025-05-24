@@ -18,16 +18,16 @@ logger = logging.getLogger(__name__)
     help="Schema config",
     type=click.Path(exists=True),
 )
-@click.option("--host", "-h", help="PG_HOST overide")
+@click.option("--host", "-h", help="PG_HOST override")
 @click.option("--password", is_flag=True, help="Prompt for database password")
-@click.option("--port", "-p", help="PG_PORT overide", type=int)
+@click.option("--port", "-p", help="PG_PORT override", type=int)
 @click.option(
     "--teardown",
     "-t",
     is_flag=True,
     help="Teardown database triggers and replication slots",
 )
-@click.option("--user", "-u", help="PG_USER overide")
+@click.option("--user", "-u", help="PG_USER override")
 @click.option(
     "--verbose",
     "-v",

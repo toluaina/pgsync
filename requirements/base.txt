@@ -6,36 +6,38 @@
 #
 async-timeout==5.0.1
     # via redis
-boto3==1.37.11
+backports-datetime-fromisoformat==2.0.3
+    # via marshmallow
+boto3==1.38.23
     # via -r requirements/base.in
-botocore==1.37.11
+botocore==1.38.23
     # via
     #   boto3
     #   s3transfer
-certifi==2025.1.31
+certifi==2025.4.26
     # via
     #   elastic-transport
     #   opensearch-py
     #   requests
-charset-normalizer==3.4.1
+charset-normalizer==3.4.2
     # via requests
 click==8.1.8
     # via -r requirements/base.in
-elastic-transport==8.17.0
+elastic-transport==8.17.1
     # via
     #   elasticsearch
     #   elasticsearch-dsl
-elasticsearch==8.17.2
+elasticsearch==8.18.1
     # via
     #   -r requirements/base.in
     #   elasticsearch-dsl
-elasticsearch-dsl==8.17.1
+elasticsearch-dsl==8.18.0
     # via -r requirements/base.in
-environs==14.1.1
+environs==14.2.0
     # via -r requirements/base.in
 events==0.5
     # via opensearch-py
-greenlet==3.1.1
+greenlet==3.2.2
     # via sqlalchemy
 idna==3.10
     # via requests
@@ -43,27 +45,26 @@ jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-marshmallow==3.26.1
+marshmallow==4.0.0
     # via environs
 opensearch-dsl==2.1.0
     # via -r requirements/base.in
 opensearch-py==2.8.0
     # via opensearch-dsl
-packaging==24.2
-    # via marshmallow
 psycopg2-binary==2.9.10
     # via -r requirements/base.in
 python-dateutil==2.9.0.post0
     # via
     #   botocore
+    #   elasticsearch
     #   elasticsearch-dsl
     #   opensearch-dsl
     #   opensearch-py
-python-dotenv==1.0.1
+python-dotenv==1.1.0
     # via
     #   -r requirements/base.in
     #   environs
-redis==5.2.1
+redis==6.1.0
     # via -r requirements/base.in
 requests==2.32.3
     # via
@@ -71,20 +72,22 @@ requests==2.32.3
     #   requests-aws4auth
 requests-aws4auth==1.3.1
     # via -r requirements/base.in
-s3transfer==0.11.4
+s3transfer==0.13.0
     # via boto3
 six==1.17.0
     # via
     #   opensearch-dsl
     #   python-dateutil
-sqlalchemy==2.0.39
+sqlalchemy==2.0.41
     # via -r requirements/base.in
 sqlparse==0.5.3
     # via -r requirements/base.in
-typing-extensions==4.12.2
+typing-extensions==4.13.2
     # via
+    #   elasticsearch
     #   elasticsearch-dsl
     #   environs
+    #   marshmallow
     #   sqlalchemy
 urllib3==1.26.20
     # via
