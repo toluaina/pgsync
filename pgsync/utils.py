@@ -91,24 +91,19 @@ def exception(func: t.Callable):
     return wrapper
 
 
-def get_redacted_url(result: ParseResult) -> ParseResult:
+def get_redacted_url(url: str) -> str:
     """
     Returns a redacted version of the input URL, with the password replaced by asterisks.
-
-    Args:
-        result (ParseResult): The parsed URL to redact.
-
-    Returns:
-        ParseResult: The redacted URL.
     """
-    if result.password:
-        username: t.Optional[str] = result.username
-        hostname: t.Optional[str] = result.hostname
-        if username and hostname:
-            result = result._replace(
-                netloc=f"{username}:{'*' * len(result.password)}@{hostname}"
-            )
-    return result
+    parsed_url: ParseResult = urlparse(url)
+    if parsed_url.password:
+        username = parsed_url.username or ""
+        hostname = parsed_url.hostname or ""
+        port = f":{parsed_url.port}" if parsed_url.port else ""
+        redacted_password = "*" * len(parsed_url.password)
+        netloc: str = f"{username}:{redacted_password}@{hostname}{port}"
+        parsed_url = parsed_url._replace(netloc=netloc)
+    return parsed_url.geturl()
 
 
 def show_settings(schema: t.Optional[str] = None) -> None:
@@ -119,19 +114,23 @@ def show_settings(schema: t.Optional[str] = None) -> None:
     logger.info(f"{HIGHLIGHT_BEGIN}Checkpoint{HIGHLIGHT_END}")
     logger.info(f"Path: {settings.CHECKPOINT_PATH}")
     logger.info(f"{HIGHLIGHT_BEGIN}Postgres{HIGHLIGHT_END}")
-    result: ParseResult = get_redacted_url(
-        urlparse(get_postgres_url("postgres"))
-    )
-    logger.info(f"URL: {result.geturl()}")
-    result = get_redacted_url(urlparse(get_search_url()))
+
+    url: str = get_postgres_url("postgres")
+    redacted_url: str = get_redacted_url(url)
+    logger.info(f"URL: {redacted_url}")
+
+    url: str = get_search_url()
+    redacted_url: str = get_redacted_url(url)
     if settings.ELASTICSEARCH:
         logger.info(f"{HIGHLIGHT_BEGIN}Elasticsearch{HIGHLIGHT_END}")
     else:
         logger.info(f"{HIGHLIGHT_BEGIN}OpenSearch{HIGHLIGHT_END}")
-    logger.info(f"URL: {result.geturl()}")
+    logger.info(f"URL: {redacted_url}")
     logger.info(f"{HIGHLIGHT_BEGIN}Redis{HIGHLIGHT_END}")
-    result = get_redacted_url(urlparse(get_redis_url()))
-    logger.info(f"URL: {result.geturl()}")
+
+    url: str = get_redis_url()
+    redacted_url: str = get_redacted_url(url)
+    logger.info(f"URL: {redacted_url}")
     logger.info("-" * 65)
 
 
