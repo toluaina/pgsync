@@ -2,7 +2,9 @@
 
 import logging
 import os
+import time
 import typing as t
+from contextlib import contextmanager
 
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql  # noqa
@@ -224,22 +226,27 @@ class Base(object):
 
     def _can_create_replication_slot(self, slot_name: str) -> None:
         """Check if the given user can create and destroy replication slots."""
-        if self.replication_slots(slot_name):
-            logger.exception(f"Replication slot {slot_name} already exists")
-            self.drop_replication_slot(slot_name)
+        with self.advisory_lock(
+            slot_name, max_retries=None, retry_interval=0.1
+        ):
+            if self.replication_slots(slot_name):
+                logger.exception(
+                    f"Replication slot {slot_name} already exists"
+                )
+                self.drop_replication_slot(slot_name)
 
-        try:
-            self.create_replication_slot(slot_name)
+            try:
+                self.create_replication_slot(slot_name)
 
-        except Exception as e:
-            logger.exception(f"{e}")
-            raise ReplicationSlotError(
-                f'PG_USER "{self.engine.url.username}" needs to be '
-                f"superuser or have permission to read, create and destroy "
-                f"replication slots to perform this action.\n{e}"
-            )
-        else:
-            self.drop_replication_slot(slot_name)
+            except Exception as e:
+                logger.exception(f"{e}")
+                raise ReplicationSlotError(
+                    f'PG_USER "{self.engine.url.username}" needs to be '
+                    f"superuser or have permission to read, create and destroy "
+                    f"replication slots to perform this action.\n{e}"
+                )
+            else:
+                self.drop_replication_slot(slot_name)
 
     # Tables...
     def models(self, table: str, schema: str) -> sa.sql.Alias:
@@ -467,6 +474,71 @@ class Base(object):
                 raise
         logger.debug(f"Dropped replication slot: {slot_name}")
 
+    def advisory_key(self, slot_name: str) -> int:
+        """Compute a stable bigint advisory key from slot name."""
+        return self.fetchone(
+            sa.text("SELECT HASHTEXT(:slot)::BIGINT").bindparams(
+                slot=slot_name
+            )
+        )[0]
+
+    def pg_try_advisory_lock(self, key: int) -> bool:
+        """
+        Attempts to acquire an advisory lock based on a hashed slot name.
+
+        Returns:
+            bool: True if the lock was acquired, False otherwise.
+        """
+        result = self.fetchone(
+            sa.text("SELECT PG_TRY_ADVISORY_LOCK(:key)").bindparams(key=key)
+        )
+        return result[0] if result else False
+
+    def pg_advisory_unlock(self, key: int) -> bool:
+        """
+        Releases an advisory lock associated with the hashed slot name.
+
+        Returns:
+            bool: True if the lock was released, False if it was not held.
+        """
+        result = self.fetchone(
+            sa.text("SELECT PG_ADVISORY_UNLOCK(:key)").bindparams(key=key)
+        )
+        return result[0] if result else False
+
+    @contextmanager
+    def advisory_lock(
+        self,
+        slot_name: str,
+        max_retries: int = 5,
+        retry_interval: float = 1.0,
+        backoff_type: str = "fixed",  # or "exponential"
+        backoff_factor: float = 2.0,
+    ):
+        """Context manager to acquire a PostgreSQL advisory lock with optional retries."""
+        key: int = self.advisory_key(slot_name)
+        attempt: int = 0
+        delay: int = retry_interval
+        while True:
+            if self.pg_try_advisory_lock(key):
+                break
+
+            if max_retries is not None and attempt >= max_retries:
+                raise RuntimeError(
+                    f"Failed to acquire advisory lock for '{slot_name}' after {max_retries} retries."
+                )
+
+            time.sleep(delay)
+            if backoff_type == "exponential":
+                delay *= backoff_factor
+
+            attempt += 1
+
+        try:
+            yield
+        finally:
+            self.pg_advisory_unlock(key)
+
     def _logical_slot_changes(
         self,
         slot_name: str,
@@ -555,17 +627,22 @@ class Base(object):
         To get ALL changes and data in existing replication slot:
         SELECT * FROM PG_LOGICAL_SLOT_GET_CHANGES('testdb', NULL, NULL)
         """
-        statement: sa.sql.Select = self._logical_slot_changes(
-            slot_name,
-            sa.func.PG_LOGICAL_SLOT_GET_CHANGES,
-            txmin=txmin,
-            txmax=txmax,
-            upto_lsn=upto_lsn,
-            upto_nchanges=upto_nchanges,
-            limit=limit,
-            offset=offset,
-        )
-        self.execute(statement, options=dict(stream_results=STREAM_RESULTS))
+        with self.advisory_lock(
+            slot_name, max_retries=None, retry_interval=0.1
+        ):
+            statement: sa.sql.Select = self._logical_slot_changes(
+                slot_name,
+                sa.func.PG_LOGICAL_SLOT_GET_CHANGES,
+                txmin=txmin,
+                txmax=txmax,
+                upto_lsn=upto_lsn,
+                upto_nchanges=upto_nchanges,
+                limit=limit,
+                offset=offset,
+            )
+            self.execute(
+                statement, options=dict(stream_results=STREAM_RESULTS)
+            )
 
     def logical_slot_peek_changes(
         self,
@@ -581,17 +658,20 @@ class Base(object):
 
         SELECT * FROM PG_LOGICAL_SLOT_PEEK_CHANGES('testdb', NULL, 1)
         """
-        statement: sa.sql.Select = self._logical_slot_changes(
-            slot_name,
-            sa.func.PG_LOGICAL_SLOT_PEEK_CHANGES,
-            txmin=txmin,
-            txmax=txmax,
-            upto_lsn=upto_lsn,
-            upto_nchanges=upto_nchanges,
-            limit=limit,
-            offset=offset,
-        )
-        return self.fetchall(statement)
+        with self.advisory_lock(
+            slot_name, max_retries=None, retry_interval=0.1
+        ):
+            statement: sa.sql.Select = self._logical_slot_changes(
+                slot_name,
+                sa.func.PG_LOGICAL_SLOT_PEEK_CHANGES,
+                txmin=txmin,
+                txmax=txmax,
+                upto_lsn=upto_lsn,
+                upto_nchanges=upto_nchanges,
+                limit=limit,
+                offset=offset,
+            )
+            return self.fetchall(statement)
 
     def logical_slot_count_changes(
         self,
