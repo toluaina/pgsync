@@ -146,24 +146,10 @@ class TestUtils(object):
         assert mock_sys.stdout.write.call_count == 3
 
     def test_get_redacted_url(self):
-        result: ParseResult = get_redacted_url(
-            urlparse(get_postgres_url("postgres"))
+        url: str = get_redacted_url(
+            get_postgres_url("postgres", user="root", password="bar")
         )
-        assert result.scheme == "postgresql+psycopg2"
-        assert result.path == "/postgres"
-        assert result.params == ""
-        assert result.query == ""
-        assert result.fragment == ""
-
-        result: ParseResult = get_redacted_url(
-            urlparse(get_postgres_url("postgres", user="root", password="bar"))
-        )
-        assert result.scheme == "postgresql+psycopg2"
-        assert result.path == "/postgres"
-        assert result.netloc == "root:***@localhost"
-        assert result.params == ""
-        assert result.query == ""
-        assert result.fragment == ""
+        assert url == "postgresql+psycopg2://root:***@localhost:5432/postgres"
 
     def test_threaded(self):
         @threaded
