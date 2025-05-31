@@ -150,7 +150,7 @@ OPENSEARCH_AWS_HOSTED = env.bool("OPENSEARCH_AWS_HOSTED", default=False)
 OPENSEARCH_AWS_SERVERLESS = env.bool(
     "OPENSEARCH_AWS_SERVERLESS", default=False
 )
-# full elasticsearch/opensearch url including user, password, host, port and dbname
+# full Elasticsearch/OpenSearch url including user, password, host, port and dbname
 ELASTICSEARCH_URL = env.str("ELASTICSEARCH_URL", default=None)
 
 # Postgres:
