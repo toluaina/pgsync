@@ -20,6 +20,7 @@ class RedisQueue(object):
         """Init Simple Queue with Redis Backend."""
         url: str = get_redis_url(**kwargs)
         self.key: str = f"{namespace}:{name}"
+        self._meta_key: str = f"{self.key}:meta"
         try:
             self.__db: Redis = Redis.from_url(
                 url,
@@ -54,3 +55,12 @@ class RedisQueue(object):
         """Delete all items from the named queue."""
         logger.info(f"Deleting redis key: {self.key}")
         self.__db.delete(self.key)
+
+    def set_meta(self, value: t.Any) -> None:
+        """Store an arbitrary JSON-serialisable value in a dedicated key."""
+        self.__db.set(self._meta_key, json.dumps(value))
+
+    def get_meta(self, default: t.Any = None) -> t.Any:
+        """Retrieve the stored value (or *default* if nothing is set)."""
+        raw = self.__db.get(self._meta_key)
+        return json.loads(raw) if raw is not None else default

@@ -21,6 +21,7 @@ env.read_env(path=os.path.join(os.getcwd(), ".env"))
 # page block size
 BLOCK_SIZE = env.int("BLOCK_SIZE", default=2048 * 10)
 CHECKPOINT_PATH = env.str("CHECKPOINT_PATH", default="./")
+REDIS_CHECKPOINT = env.bool("REDIS_CHECKPOINT", default=False)
 JOIN_QUERIES = env.bool("JOIN_QUERIES", default=True)
 # batch size for LOGICAL_SLOT_CHANGES for minimizing tmp file disk usage
 LOGICAL_SLOT_CHUNK_SIZE = env.int("LOGICAL_SLOT_CHUNK_SIZE", default=5000)

@@ -706,7 +706,7 @@ class TestSync(object):
             value: int = int(fp.read().split()[0])
             assert value == 1234
 
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(TypeError) as excinfo:
             sync.checkpoint = None
             assert "Cannot assign a None value to checkpoint" == str(
                 excinfo.value

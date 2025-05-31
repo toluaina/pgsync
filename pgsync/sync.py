@@ -11,6 +11,7 @@ import sys
 import time
 import typing as t
 from collections import defaultdict
+from pathlib import Path
 
 import click
 import sqlalchemy as sa
@@ -163,18 +164,19 @@ class Sync(Base, metaclass=Singleton):
                     f'Make sure you have run the "bootstrap" command.'
                 )
 
-        # ensure the checkpoint dirpath is valid
-        if not os.path.exists(settings.CHECKPOINT_PATH):
-            raise RuntimeError(
-                f"Ensure the checkpoint directory exists "
-                f'"{settings.CHECKPOINT_PATH}" and is readable.'
-            )
+        if not settings.REDIS_CHECKPOINT:
+            # ensure the checkpoint dirpath is valid
+            if not Path(settings.CHECKPOINT_PATH).exists():
+                raise RuntimeError(
+                    f"Ensure the checkpoint directory exists "
+                    f'"{settings.CHECKPOINT_PATH}" and is readable.'
+                )
 
-        if not os.access(settings.CHECKPOINT_PATH, os.W_OK | os.R_OK):
-            raise RuntimeError(
-                f'Ensure the checkpoint directory "{settings.CHECKPOINT_PATH}"'
-                f" is read/writable"
-            )
+            if not os.access(settings.CHECKPOINT_PATH, os.W_OK | os.R_OK):
+                raise RuntimeError(
+                    f'Ensure the checkpoint directory "{settings.CHECKPOINT_PATH}"'
+                    f" is read/writable"
+                )
 
         self.tree.display()
 
@@ -1035,9 +1037,25 @@ class Sync(Base, metaclass=Singleton):
         :return: The current checkpoint value.
         :rtype: int
         """
-        if os.path.exists(self._checkpoint_file):
-            with open(self._checkpoint_file, "r") as fp:
-                self._checkpoint: int = int(fp.read().split()[0])
+        raw: t.Optional[str]
+        if settings.REDIS_CHECKPOINT:
+            raw = self.redis.get_meta(default={}).get("checkpoint")
+        else:
+            path = Path(self._checkpoint_file)
+            raw = (
+                path.read_text(encoding="utf-8").split()[0]
+                if path.exists()
+                else None
+            )
+
+        if raw is None:
+            return None
+
+        try:
+            self._checkpoint = int(raw)
+        except ValueError as exc:
+            raise ValueError(f"Corrupt checkpoint value: {raw!r}") from exc
+
         return self._checkpoint
 
     @checkpoint.setter
@@ -1047,13 +1065,20 @@ class Sync(Base, metaclass=Singleton):
 
         :param value: The new checkpoint value.
         :type value: Optional[str]
-        :raises ValueError: If the value is None.
+        :raises TypeError: If the value is None.
         """
         if value is None:
-            raise ValueError("Cannot assign a None value to checkpoint")
-        with open(self._checkpoint_file, "w+") as fp:
-            fp.write(f"{value}\n")
-        self._checkpoint: int = value
+            raise TypeError("Cannot assign a None value to checkpoint")
+
+        if settings.REDIS_CHECKPOINT:
+            self.redis.set_meta({"checkpoint": value})
+        else:
+            Path(self._checkpoint_file).write_text(
+                f"{value}\n", encoding="utf-8"
+            )
+
+        # Update in-memory cache last
+        self._checkpoint = value
 
     def _poll_redis(self) -> None:
         payloads: list = self.redis.pop()

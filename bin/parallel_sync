@@ -39,7 +39,6 @@ filtered based on the page number and row numbers.
 This systematic and parallel approach optimizes the synchronization process,
 especially in environments challenged by network latency.
 """
-
 import asyncio
 import multiprocessing
 import os
@@ -48,6 +47,7 @@ import sys
 import typing as t
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import dataclass
+from pathlib import Path
 from queue import Queue
 from threading import Thread
 
