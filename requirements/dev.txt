@@ -101,11 +101,15 @@ pluggy==1.6.0
     # via pytest
 pre-commit==4.2.0
     # via -r requirements/dev.in
+psycopg2-binary==2.9.10
+    # via -r /Users/tolu/pgsync/requirements/base.in
 pycodestyle==2.13.0
     # via flake8
 pyflakes==3.3.2
     # via flake8
-pytest==8.3.5
+pygments==2.19.1
+    # via pytest
+pytest==8.4.0
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -151,7 +155,7 @@ tomli==2.2.1
     #   black
     #   coverage
     #   pytest
-typing-extensions==4.13.2
+typing-extensions==4.14.0
     # via
     #   black
     #   elasticsearch

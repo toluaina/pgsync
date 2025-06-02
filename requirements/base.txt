@@ -51,6 +51,8 @@ opensearch-dsl==2.1.0
     # via -r requirements/base.in
 opensearch-py==2.8.0
     # via opensearch-dsl
+psycopg2-binary==2.9.10
+    # via -r requirements/base.in
 python-dateutil==2.9.0.post0
     # via
     #   botocore
@@ -80,7 +82,7 @@ sqlalchemy==2.0.41
     # via -r requirements/base.in
 sqlparse==0.5.3
     # via -r requirements/base.in
-typing-extensions==4.13.2
+typing-extensions==4.14.0
     # via
     #   elasticsearch
     #   elasticsearch-dsl

@@ -6,6 +6,7 @@ elasticsearch
 elasticsearch-dsl
 environs
 opensearch-dsl
+psycopg2-binary
 python-dotenv
 redis
 requests-aws4auth
