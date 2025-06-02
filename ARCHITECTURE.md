@@ -10,6 +10,28 @@ GitHub repo: [https://github.com/toluaina/pgsync](https://github.com/toluaina/pg
 
 ---
 
+Architecture
+
+```mermaid
+graph TD
+subgraph "PostgreSQL Database"
+PG[(Postgres DB)]
+PG -->|Logical Decoding WAL|WAL[Replication Slot/WAL]
+PG -->|Triggers| TG[pg_notify]
+end
+
+SP[pgsync] -->| poll | WAL
+TG --> | notify | SP
+
+SP -->|JSON with SQLAlchemy | QB[Query Builder]
+QB -->|Fetch Docs| DOC[JSON Documents]
+
+DOC -->|Bulk Index| ES[(Elasticsearch/OpenSearch)]
+SP -->|Checkpoint & Locking| REDIS[Redis]
+```
+
+---
+
 ## Core Components
 
 - **PostgreSQL**: The primary relational database. PGSync uses PostgreSQL's logical decoding to capture changes.
