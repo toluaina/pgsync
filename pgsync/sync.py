@@ -205,6 +205,9 @@ class Sync(Base, metaclass=Singleton):
                     )
 
     def analyze(self) -> None:
+        sys.stdout.write(f"Replication slot: {self.__name}\n")
+        sys.stdout.write("-" * 80)
+        sys.stdout.write("\n")
         for node in self.tree.traverse_breadth_first():
             if node.is_root:
                 continue
