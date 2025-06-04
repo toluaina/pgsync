@@ -401,9 +401,10 @@ def create_view(
                 rows[table_name]["foreign_keys"] = set(foreign_keys)
             if indices:
                 rows[table_name]["indices"] = set(indices)
-        with engine.connect() as conn:
+        with engine.connect().execution_options(
+            isolation_level="AUTOCOMMIT"
+        ) as conn:
             conn.execute(DropView(schema, MATERIALIZED_VIEW))
-            conn.commit()
 
     if schema != DEFAULT_SCHEMA:
         for table in set(tables):
@@ -480,7 +481,9 @@ def create_view(
         .alias("t")
     )
     logger.debug(f"Creating view: {schema}.{MATERIALIZED_VIEW}")
-    with engine.connect() as conn:
+    with engine.connect().execution_options(
+        isolation_level="AUTOCOMMIT"
+    ) as conn:
         conn.execute(CreateView(schema, MATERIALIZED_VIEW, statement))
         conn.execute(DropIndex("_idx"))
         conn.execute(
@@ -491,7 +494,6 @@ def create_view(
                 ["table_name"],
             )
         )
-        conn.commit()
     logger.debug(f"Created view: {schema}.{MATERIALIZED_VIEW}")
 
 

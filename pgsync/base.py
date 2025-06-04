@@ -716,7 +716,9 @@ class Base(object):
     def drop_view(self, schema: str) -> None:
         """Drop a view."""
         logger.debug(f"Dropping view: {schema}.{MATERIALIZED_VIEW}")
-        with self.engine.connect() as conn:
+        with self.engine.connect().execution_options(
+            isolation_level="AUTOCOMMIT"
+        ) as conn:
             conn.execute(DropView(schema, MATERIALIZED_VIEW))
         logger.debug(f"Dropped view: {schema}.{MATERIALIZED_VIEW}")
 
@@ -725,7 +727,9 @@ class Base(object):
     ) -> None:
         """Refresh a materialized view."""
         logger.debug(f"Refreshing view: {schema}.{name}")
-        with self.engine.connect() as conn:
+        with self.engine.connect().execution_options(
+            isolation_level="AUTOCOMMIT"
+        ) as conn:
             conn.execute(RefreshView(schema, name, concurrently=concurrently))
         logger.debug(f"Refreshed view: {schema}.{name}")
 
