@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import re
 import sys
 import threading
 import typing as t
@@ -131,6 +132,17 @@ def show_settings(schema: t.Optional[str] = None) -> None:
     url: str = get_redis_url()
     redacted_url: str = get_redacted_url(url)
     logger.info(f"URL: {redacted_url}")
+    logger.info("-" * 65)
+
+    logger.info(f"{HIGHLIGHT_BEGIN}Replication slots{HIGHLIGHT_END}")
+    for doc in config_loader(schema):
+        index: str = doc.get("index") or doc["database"]
+        database: str = doc.get("database", index)
+        slot_name: str = re.sub(
+            "[^0-9a-zA-Z_]+", "", f"{database.lower()}_{index}"
+        )
+        logger.info(f"Slot: {slot_name}")
+
     logger.info("-" * 65)
 
 
