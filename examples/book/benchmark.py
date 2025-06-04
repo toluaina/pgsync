@@ -135,7 +135,7 @@ def truncate_op(session: sessionmaker, model, nsize: int) -> None:
     ),
 )
 def main(config: str, nsize: int, daemon: bool, tg_op: str):
-    show_settings()
+    show_settings(config)
 
     config: str = get_config(config)
     doc: dict = next(config_loader(config))
