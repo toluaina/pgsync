@@ -695,6 +695,10 @@ class Base(object):
             ).scalar()
 
     # Views...
+
+    def view_exists(self, name: str, schema: str) -> bool:
+        return name in self.views(schema)
+
     def create_view(
         self,
         index: str,
@@ -734,11 +738,37 @@ class Base(object):
         logger.debug(f"Refreshed view: {schema}.{name}")
 
     # Triggers...
+
+    def trigger_exists(self, trigger: str, table: str, schema: str) -> bool:
+        """
+        Return True if the user-defined trigger is already present on table in schema.
+        """
+        sql: str = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM   pg_trigger     AS t
+                JOIN   pg_class       AS c  ON c.oid = t.tgrelid
+                JOIN   pg_namespace   AS n  ON n.oid = c.relnamespace
+                WHERE  NOT t.tgisinternal           -- exclude system triggers
+                AND  t.tgname   = :trigge
+                AND  c.relname  = :table
+                AND  n.nspname  = :schema
+            )
+        """
+        params: dict = dict(
+            trigger=trigger,
+            table=table,
+            schema=schema,
+        )
+        with self.engine.connect() as conn:
+            return bool(conn.execute(sa.text(sql), params).scalar())
+
     def create_triggers(
         self,
         schema: str,
         tables: t.Optional[t.List[str]] = None,
         join_queries: bool = False,
+        if_not_exists: bool = False,
     ) -> None:
         """Create a database triggers."""
         queries: t.List[str] = []
@@ -752,13 +782,18 @@ class Base(object):
                 ("notify", "ROW", ["INSERT", "UPDATE", "DELETE"]),
                 ("truncate", "STATEMENT", ["TRUNCATE"]),
             ]:
-                self.drop_triggers(schema, [table])
-                queries.append(
-                    f'CREATE TRIGGER "{schema}_{table}_{name}" '
-                    f'AFTER {" OR ".join(tg_op)} ON "{schema}"."{table}" '
-                    f"FOR EACH {level} EXECUTE PROCEDURE "
-                    f"{schema}.{TRIGGER_FUNC}()",
-                )
+
+                if if_not_exists or not self.view_exists(
+                    MATERIALIZED_VIEW, schema
+                ):
+
+                    self.drop_triggers(schema, [table])
+                    queries.append(
+                        f'CREATE TRIGGER "{schema}_{table}_{name}" '
+                        f'AFTER {" OR ".join(tg_op)} ON "{schema}"."{table}" '
+                        f"FOR EACH {level} EXECUTE PROCEDURE "
+                        f"{schema}.{TRIGGER_FUNC}()",
+                    )
         if join_queries:
             if queries:
                 self.execute(sa.text("; ".join(queries)))
@@ -789,6 +824,16 @@ class Base(object):
         else:
             for query in queries:
                 self.execute(sa.text(query))
+
+    def function_exists(self, schema: str) -> bool:
+        """Check if the trigger function exists."""
+        return self.exists(
+            sa.text(
+                f"SELECT 1 FROM pg_proc WHERE proname = :name "
+                f"AND pronamespace = (SELECT oid FROM pg_namespace "
+                f"WHERE nspname = :schema)"
+            ).bindparams(name=TRIGGER_FUNC, schema=schema),
+        )
 
     def create_function(self, schema: str) -> None:
         self.execute(
@@ -978,6 +1023,20 @@ class Base(object):
 
         with self.engine.connect() as conn:
             return conn.execute(statement).fetchall()
+
+    def exists(
+        self,
+        statement: sa.sql.Select,
+        label: t.Optional[str] = None,
+        literal_binds: bool = False,
+    ) -> t.List[sa.engine.Row]:
+        if self.verbose:
+            compiled_query(statement, label=label, literal_binds=literal_binds)
+        with self.engine.connect() as conn:
+            result = conn.execute(statement).fetchone()
+            if result is None:
+                return False
+            return result[0] > 0
 
     def fetchmany(
         self,

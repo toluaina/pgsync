@@ -265,18 +265,26 @@ class Sync(Base, metaclass=Singleton):
             routing=self.routing,
         )
 
-    def setup(self) -> None:
+    def setup(self, no_create: bool = False) -> None:
         """Create the database triggers and replication slot."""
+
+        if_not_exists: bool = not no_create
 
         join_queries: bool = settings.JOIN_QUERIES
 
         with self.advisory_lock(
             self.__name, max_retries=None, retry_interval=0.1
         ):
-            self.teardown(drop_view=False)
+            if if_not_exists:
+
+                self.teardown(drop_view=False)
 
             for schema in self.schemas:
-                self.create_function(schema)
+                # TODO: move if_not_exists to the function
+                if if_not_exists or not self.function_exists(schema):
+
+                    self.create_function(schema)
+
                 tables: t.Set = set()
                 # tables with user defined foreign keys
                 user_defined_fkey_tables: dict = {}
@@ -307,13 +315,27 @@ class Sync(Base, metaclass=Singleton):
                         user_defined_fkey_tables.setdefault(node.table, set())
                         user_defined_fkey_tables[node.table] |= set(columns)
                 if tables:
-                    self.create_view(
-                        self.index, schema, tables, user_defined_fkey_tables
-                    )
+                    if if_not_exists or not self.view_exists(
+                        MATERIALIZED_VIEW, schema
+                    ):
+
+                        self.create_view(
+                            self.index,
+                            schema,
+                            tables,
+                            user_defined_fkey_tables,
+                        )
+
                     self.create_triggers(
-                        schema, tables=tables, join_queries=join_queries
+                        schema,
+                        tables=tables,
+                        join_queries=join_queries,
+                        if_not_exists=if_not_exists,
                     )
-            self.create_replication_slot(self.__name)
+
+            if if_not_exists or not self.replication_slots(self.__name):
+
+                self.create_replication_slot(self.__name)
 
     def teardown(self, drop_view: bool = True) -> None:
         """Drop the database triggers and replication slot."""

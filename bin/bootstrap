@@ -27,6 +27,16 @@ logger = logging.getLogger(__name__)
     is_flag=True,
     help="Teardown database triggers and replication slots",
 )
+@click.option(
+    "--no-create",
+    "-nc",
+    is_flag=True,
+    help=(
+        "Skip DDL statement for objects "
+        "(Functions, Views & Replication slots) creation"
+    ),
+    default=False,
+)
 @click.option("--user", "-u", help="PG_USER override")
 @click.option(
     "--verbose",
@@ -43,6 +53,7 @@ def main(
     host: str,
     port: int,
     verbose: bool,
+    no_create: bool = False,
 ) -> None:
     """Application onetime Bootstrap."""
     kwargs: dict = {
@@ -75,7 +86,7 @@ def main(
         if teardown:
             sync.teardown()
             continue
-        sync.setup()
+        sync.setup(no_create=no_create)
         logger.info(f"Bootstrap: {sync.database}")
 
 
