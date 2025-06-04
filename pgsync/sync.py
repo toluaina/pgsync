@@ -205,9 +205,6 @@ class Sync(Base, metaclass=Singleton):
                     )
 
     def analyze(self) -> None:
-        sys.stdout.write(f"Replication slot: {self.__name}\n")
-        sys.stdout.write("-" * 80)
-        sys.stdout.write("\n")
         for node in self.tree.traverse_breadth_first():
             if node.is_root:
                 continue
@@ -272,76 +269,89 @@ class Sync(Base, metaclass=Singleton):
         """Create the database triggers and replication slot."""
 
         join_queries: bool = settings.JOIN_QUERIES
-        self.teardown(drop_view=False)
 
-        for schema in self.schemas:
-            self.create_function(schema)
-            tables: t.Set = set()
-            # tables with user defined foreign keys
-            user_defined_fkey_tables: dict = {}
+        with self.advisory_lock(
+            self.__name, max_retries=None, retry_interval=0.1
+        ):
+            self.teardown(drop_view=False)
 
-            for node in self.tree.traverse_breadth_first():
-                if node.schema != schema:
-                    continue
-                tables |= set(
-                    [through.table for through in node.relationship.throughs]
-                )
-                tables |= set([node.table])
-                # we also need to bootstrap the base tables
-                tables |= set(node.base_tables)
+            for schema in self.schemas:
+                self.create_function(schema)
+                tables: t.Set = set()
+                # tables with user defined foreign keys
+                user_defined_fkey_tables: dict = {}
 
-                # we want to get both the parent and the child keys here
-                # even though only one of them is the foreign_key.
-                # this is because we define both in the schema but
-                # do not specify which table is the foreign key.
-                columns: list = []
-                if node.relationship.foreign_key.parent:
-                    columns.extend(node.relationship.foreign_key.parent)
-                if node.relationship.foreign_key.child:
-                    columns.extend(node.relationship.foreign_key.child)
-                if columns:
-                    user_defined_fkey_tables.setdefault(node.table, set())
-                    user_defined_fkey_tables[node.table] |= set(columns)
-            if tables:
-                self.create_view(
-                    self.index, schema, tables, user_defined_fkey_tables
-                )
-                self.create_triggers(
-                    schema, tables=tables, join_queries=join_queries
-                )
-        self.create_replication_slot(self.__name)
+                for node in self.tree.traverse_breadth_first():
+                    if node.schema != schema:
+                        continue
+                    tables |= set(
+                        [
+                            through.table
+                            for through in node.relationship.throughs
+                        ]
+                    )
+                    tables |= set([node.table])
+                    # we also need to bootstrap the base tables
+                    tables |= set(node.base_tables)
+
+                    # we want to get both the parent and the child keys here
+                    # even though only one of them is the foreign_key.
+                    # this is because we define both in the schema but
+                    # do not specify which table is the foreign key.
+                    columns: list = []
+                    if node.relationship.foreign_key.parent:
+                        columns.extend(node.relationship.foreign_key.parent)
+                    if node.relationship.foreign_key.child:
+                        columns.extend(node.relationship.foreign_key.child)
+                    if columns:
+                        user_defined_fkey_tables.setdefault(node.table, set())
+                        user_defined_fkey_tables[node.table] |= set(columns)
+                if tables:
+                    self.create_view(
+                        self.index, schema, tables, user_defined_fkey_tables
+                    )
+                    self.create_triggers(
+                        schema, tables=tables, join_queries=join_queries
+                    )
+            self.create_replication_slot(self.__name)
 
     def teardown(self, drop_view: bool = True) -> None:
         """Drop the database triggers and replication slot."""
 
         join_queries: bool = settings.JOIN_QUERIES
 
-        try:
-            os.unlink(self._checkpoint_file)
-        except (OSError, FileNotFoundError):
-            logger.warning(
-                f"Checkpoint file not found: {self._checkpoint_file}"
-            )
-
-        self.redis.delete()
-
-        for schema in self.schemas:
-            tables: t.Set = set()
-            for node in self.tree.traverse_breadth_first():
-                tables |= set(
-                    [through.table for through in node.relationship.throughs]
+        with self.advisory_lock(
+            self.__name, max_retries=None, retry_interval=0.1
+        ):
+            try:
+                os.unlink(self._checkpoint_file)
+            except (OSError, FileNotFoundError):
+                logger.warning(
+                    f"Checkpoint file not found: {self._checkpoint_file}"
                 )
-                tables |= set([node.table])
-                # we also need to teardown the base tables
-                tables |= set(node.base_tables)
-            self.drop_triggers(
-                schema=schema, tables=tables, join_queries=join_queries
-            )
-            if drop_view:
-                self.drop_view(schema)
-                self.drop_function(schema)
 
-        self.drop_replication_slot(self.__name)
+            self.redis.delete()
+
+            for schema in self.schemas:
+                tables: t.Set = set()
+                for node in self.tree.traverse_breadth_first():
+                    tables |= set(
+                        [
+                            through.table
+                            for through in node.relationship.throughs
+                        ]
+                    )
+                    tables |= set([node.table])
+                    # we also need to teardown the base tables
+                    tables |= set(node.base_tables)
+                self.drop_triggers(
+                    schema=schema, tables=tables, join_queries=join_queries
+                )
+                if drop_view:
+                    self.drop_view(schema)
+                    self.drop_function(schema)
+
+            self.drop_replication_slot(self.__name)
 
     def get_doc_id(self, primary_keys: t.List[str], table: str) -> str:
         """
