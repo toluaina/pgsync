@@ -273,7 +273,7 @@ class Sync(Base, metaclass=Singleton):
         join_queries: bool = settings.JOIN_QUERIES
 
         with self.advisory_lock(
-            self.__name, max_retries=None, retry_interval=0.1
+            self.database, max_retries=None, retry_interval=0.1
         ):
             if if_not_exists:
 
@@ -343,7 +343,7 @@ class Sync(Base, metaclass=Singleton):
         join_queries: bool = settings.JOIN_QUERIES
 
         with self.advisory_lock(
-            self.__name, max_retries=None, retry_interval=0.1
+            self.database, max_retries=None, retry_interval=0.1
         ):
             try:
                 os.unlink(self._checkpoint_file)

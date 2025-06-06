@@ -226,27 +226,22 @@ class Base(object):
 
     def _can_create_replication_slot(self, slot_name: str) -> None:
         """Check if the given user can create and destroy replication slots."""
-        with self.advisory_lock(
-            slot_name, max_retries=None, retry_interval=0.1
-        ):
-            if self.replication_slots(slot_name):
-                logger.exception(
-                    f"Replication slot {slot_name} already exists"
-                )
-                self.drop_replication_slot(slot_name)
+        if self.replication_slots(slot_name):
+            logger.exception(f"Replication slot {slot_name} already exists")
+            self.drop_replication_slot(slot_name)
 
-            try:
-                self.create_replication_slot(slot_name)
+        try:
+            self.create_replication_slot(slot_name)
 
-            except Exception as e:
-                logger.exception(f"{e}")
-                raise ReplicationSlotError(
-                    f'PG_USER "{self.engine.url.username}" needs to be '
-                    f"superuser or have permission to read, create and destroy "
-                    f"replication slots to perform this action.\n{e}"
-                )
-            else:
-                self.drop_replication_slot(slot_name)
+        except Exception as e:
+            logger.exception(f"{e}")
+            raise ReplicationSlotError(
+                f'PG_USER "{self.engine.url.username}" needs to be '
+                f"superuser or have permission to read, create and destroy "
+                f"replication slots to perform this action.\n{e}"
+            )
+        else:
+            self.drop_replication_slot(slot_name)
 
     # Tables...
     def models(self, table: str, schema: str) -> sa.sql.Alias:
@@ -420,20 +415,23 @@ class Base(object):
 
         SELECT * FROM PG_REPLICATION_SLOTS
         """
-        return self.fetchall(
-            sa.select("*")
-            .select_from(sa.text("PG_REPLICATION_SLOTS"))
-            .where(
-                sa.and_(
-                    *[
-                        sa.column("slot_name") == slot_name,
-                        sa.column("slot_type") == slot_type,
-                        sa.column("plugin") == plugin,
-                    ]
-                )
-            ),
-            label="replication_slots",
-        )
+        with self.advisory_lock(
+            slot_name, max_retries=None, retry_interval=0.1
+        ):
+            return self.fetchall(
+                sa.select("*")
+                .select_from(sa.text("PG_REPLICATION_SLOTS"))
+                .where(
+                    sa.and_(
+                        *[
+                            sa.column("slot_name") == slot_name,
+                            sa.column("slot_type") == slot_type,
+                            sa.column("plugin") == plugin,
+                        ]
+                    )
+                ),
+                label="replication_slots",
+            )
 
     def create_replication_slot(self, slot_name: str) -> None:
         """Create a replication slot.
@@ -446,14 +444,17 @@ class Base(object):
         """
         logger.debug(f"Creating replication slot: {slot_name}")
         try:
-            self.execute(
-                sa.select("*").select_from(
-                    sa.func.PG_CREATE_LOGICAL_REPLICATION_SLOT(
-                        slot_name,
-                        PLUGIN,
+            with self.advisory_lock(
+                slot_name, max_retries=None, retry_interval=0.1
+            ):
+                self.execute(
+                    sa.select("*").select_from(
+                        sa.func.PG_CREATE_LOGICAL_REPLICATION_SLOT(
+                            slot_name,
+                            PLUGIN,
+                        )
                     )
                 )
-            )
         except Exception as e:
             logger.exception(f"{e}")
             raise
@@ -464,11 +465,14 @@ class Base(object):
         logger.debug(f"Dropping replication slot: {slot_name}")
         if self.replication_slots(slot_name):
             try:
-                self.execute(
-                    sa.select("*").select_from(
-                        sa.func.PG_DROP_REPLICATION_SLOT(slot_name),
+                with self.advisory_lock(
+                    slot_name, max_retries=None, retry_interval=0.1
+                ):
+                    self.execute(
+                        sa.select("*").select_from(
+                            sa.func.PG_DROP_REPLICATION_SLOT(slot_name),
+                        )
                     )
-                )
             except Exception as e:
                 logger.exception(f"{e}")
                 raise
