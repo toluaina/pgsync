@@ -155,14 +155,25 @@ OPENSEARCH_AWS_SERVERLESS = env.bool(
 ELASTICSEARCH_URL = env.str("ELASTICSEARCH_URL", default=None)
 
 # Postgres:
+# full database url including user, password, host, port and dbname
+PG_URL = env.str("PG_URL", default=None)
 PG_HOST = env.str("PG_HOST", default="localhost")
 PG_PASSWORD = env.str("PG_PASSWORD", default=None)
 PG_PORT = env.int("PG_PORT", default=5432)
 PG_SSLMODE = env.str("PG_SSLMODE", default=None)
 PG_SSLROOTCERT = env.str("PG_SSLROOTCERT", default=None)
-PG_USER = env.str("PG_USER")
-# full database url including user, password, host, port and dbname
-PG_URL = env.str("PG_URL", default=None)
+if PG_URL:
+    # If PG_URL is set, we don't need to use the other PG_* variables
+    PG_HOST = None
+    PG_PASSWORD = None
+    PG_PORT = None
+    PG_SSLMODE = None
+    PG_SSLROOTCERT = None
+    PG_USER = env.str("PG_USER", default=None)
+else:
+    # If PG_URL is not set, we need to use the other PG_* variables
+    PG_URL = None
+    PG_USER = env.str("PG_USER")
 
 # Redis:
 REDIS_AUTH = env.str("REDIS_AUTH", default=None)
