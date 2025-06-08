@@ -773,55 +773,64 @@ class TestSync(object):
 
     @patch("pgsync.sync.Sync.teardown")
     def test_setup(self, mock_teardown, sync):
-        with patch("pgsync.sync.Base.create_function") as mock_create_function:
-            with patch("pgsync.sync.Base.create_view") as mock_create_view:
-                with patch(
-                    "pgsync.sync.Base.create_triggers"
-                ) as mock_create_triggers:
+        with override_env_var(JOIN_QUERIES="False"):
+            importlib.reload(settings)
+
+            with patch(
+                "pgsync.sync.Base.create_function"
+            ) as mock_create_function:
+                with patch("pgsync.sync.Base.create_view") as mock_create_view:
                     with patch(
-                        "pgsync.sync.Base.create_replication_slot"
-                    ) as mock_create_replication_slot:
-                        sync.setup()
-                        mock_create_replication_slot.assert_called_once_with(
-                            "testdb_testdb"
+                        "pgsync.sync.Base.create_triggers"
+                    ) as mock_create_triggers:
+                        with patch(
+                            "pgsync.sync.Base.create_replication_slot"
+                        ) as mock_create_replication_slot:
+                            sync.setup()
+                            mock_create_replication_slot.assert_called_once_with(
+                                "testdb_testdb"
+                            )
+                        mock_create_triggers.assert_called_once_with(
+                            "public",
+                            tables={"publisher", "book"},
+                            join_queries=False,
+                            if_not_exists=True,
                         )
-                    mock_create_triggers.assert_called_once_with(
+                    mock_create_view.assert_called_once_with(
+                        "testdb",
                         "public",
-                        tables={"publisher", "book"},
-                        join_queries=True,
+                        {"publisher", "book"},
+                        {"publisher": {"publisher_id", "id"}},
                     )
-                mock_create_view.assert_called_once_with(
-                    "testdb",
-                    "public",
-                    {"publisher", "book"},
-                    {"publisher": {"publisher_id", "id"}},
-                )
-            mock_create_function.assert_called_once_with("public")
-        mock_teardown.assert_called_once_with(drop_view=False)
+                mock_create_function.assert_called_once_with("public")
+            mock_teardown.assert_called_once_with(drop_view=False)
 
     @patch("pgsync.redisqueue.RedisQueue.delete")
     def test_teardown(self, mock_redis, sync):
-        with patch("pgsync.sync.Base.drop_function") as mock_drop_function:
-            with patch("pgsync.sync.Base.drop_view") as mock_drop_view:
-                with patch(
-                    "pgsync.sync.Base.drop_triggers"
-                ) as mock_drop_triggers:
+        with override_env_var(JOIN_QUERIES="False"):
+            importlib.reload(settings)
+
+            with patch("pgsync.sync.Base.drop_function") as mock_drop_function:
+                with patch("pgsync.sync.Base.drop_view") as mock_drop_view:
                     with patch(
-                        "pgsync.sync.Base.drop_replication_slot"
-                    ) as mock_drop_replication_slot:
-                        sync.teardown()
-                        mock_drop_replication_slot.assert_called_once_with(
-                            "testdb_testdb"
+                        "pgsync.sync.Base.drop_triggers"
+                    ) as mock_drop_triggers:
+                        with patch(
+                            "pgsync.sync.Base.drop_replication_slot"
+                        ) as mock_drop_replication_slot:
+                            sync.teardown()
+                            mock_drop_replication_slot.assert_called_once_with(
+                                "testdb_testdb"
+                            )
+                        mock_drop_triggers.assert_called_once_with(
+                            schema="public",
+                            tables={"publisher", "book"},
+                            join_queries=False,
                         )
-                    mock_drop_triggers.assert_called_once_with(
-                        schema="public",
-                        tables={"publisher", "book"},
-                        join_queries=True,
-                    )
-                mock_drop_view.assert_called_once_with("public")
-            mock_drop_function.assert_called_once_with("public")
-        mock_redis.assert_called_once()
-        assert os.path.exists(sync._checkpoint_file) is False
+                    mock_drop_view.assert_called_once_with("public")
+                mock_drop_function.assert_called_once_with("public")
+            mock_redis.assert_called_once()
+            assert os.path.exists(sync._checkpoint_file) is False
 
         with patch("pgsync.sync.logger") as mock_logger:
             with patch("pgsync.sync.Base.drop_replication_slot"):

@@ -8,6 +8,7 @@ import pprint
 import re
 import select
 import sys
+import threading
 import time
 import typing as t
 from collections import defaultdict
@@ -112,6 +113,7 @@ class Sync(Base, metaclass=Singleton):
         self.query_builder: QueryBuilder = QueryBuilder(verbose=verbose)
         self.count: dict = dict(xlog=0, db=0, redis=0)
         self.tasks: t.List[asyncio.Task] = []
+        self.lock = threading.Lock()
 
     def validate(self, repl_slots: bool = True, polling=False) -> None:
         """Perform all validation right away."""
@@ -488,7 +490,8 @@ class Sync(Base, metaclass=Singleton):
                 upto_nchanges=upto_nchanges,
                 upto_lsn=upto_lsn,
             )
-            self.count["xlog"] += len(rows)
+            with self.lock:
+                self.count["xlog"] += len(rows)
 
     def _root_primary_key_resolver(
         self, node: Node, payload: Payload, filters: list
@@ -1119,7 +1122,8 @@ class Sync(Base, metaclass=Singleton):
         payloads: list = self.redis.pop()
         if payloads:
             logger.debug(f"_poll_redis: {payloads}")
-            self.count["redis"] += len(payloads)
+            with self.lock:
+                self.count["redis"] += len(payloads)
             self.refresh_views()
             self.on_publish(
                 list(map(lambda payload: Payload(**payload), payloads))
@@ -1192,7 +1196,15 @@ class Sync(Base, metaclass=Singleton):
                     payloads = []
                 notification: t.AnyStr = conn.notifies.pop(0)
                 if notification.channel == self.database:
-                    payload = json.loads(notification.payload)
+
+                    try:
+                        payload = json.loads(notification.payload)
+                    except json.JSONDecodeError as e:
+                        logger.exception(
+                            f"Error decoding JSON payload: {e}\n"
+                            f"Payload: {notification.payload}"
+                        )
+                        continue
                     if (
                         payload["indices"]
                         and self.index in payload["indices"]
@@ -1200,7 +1212,8 @@ class Sync(Base, metaclass=Singleton):
                     ):
                         payloads.append(payload)
                         logger.debug(f"poll_db: {payload}")
-                        self.count["db"] += 1
+                        with self.lock:
+                            self.count["db"] += 1
 
     @exception
     def async_poll_db(self) -> None:
