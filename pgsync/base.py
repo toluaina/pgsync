@@ -73,9 +73,19 @@ class Payload(object):
         new (dict): The new values of the row that was affected by the event (for INSERT and UPDATE operations).
         xmin (int): The transaction ID of the event.
         indices (List[str]): The indices of the affected rows (for UPDATE and DELETE operations).
+        delayed (bool): Whether the event was delayed or not.
     """
 
-    __slots__ = ("tg_op", "table", "schema", "old", "new", "xmin", "indices")
+    __slots__ = (
+        "tg_op",
+        "table",
+        "schema",
+        "old",
+        "new",
+        "xmin",
+        "indices",
+        "delayed",
+    )
 
     def __init__(
         self,
@@ -86,6 +96,7 @@ class Payload(object):
         new: t.Optional[t.Dict[str, t.Any]] = None,
         xmin: t.Optional[int] = None,
         indices: t.Optional[t.List[str]] = None,
+        delayed: bool = False,
     ):
         self.tg_op: t.Optional[str] = tg_op
         self.table: t.Optional[str] = table
@@ -94,6 +105,7 @@ class Payload(object):
         self.new: t.Dict[str, t.Any] = new or {}
         self.xmin: t.Optional[int] = xmin
         self.indices: t.List[str] = indices
+        self.delayed: bool = delayed
 
     @property
     def data(self) -> dict:
