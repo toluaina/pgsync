@@ -79,20 +79,20 @@ class Payload(object):
 
     def __init__(
         self,
-        tg_op: str = t.Optional[None],
-        table: str = t.Optional[None],
-        schema: str = t.Optional[None],
-        old: dict = t.Optional[None],
-        new: dict = t.Optional[None],
-        xmin: int = t.Optional[None],
-        indices: t.List[str] = t.Optional[None],
+        tg_op: t.Optional[str] = None,
+        table: t.Optional[str] = None,
+        schema: t.Optional[str] = None,
+        old: t.Optional[t.Dict[str, t.Any]] = None,
+        new: t.Optional[t.Dict[str, t.Any]] = None,
+        xmin: t.Optional[int] = None,
+        indices: t.Optional[t.List[str]] = None,
     ):
-        self.tg_op: str = tg_op
-        self.table: str = table
-        self.schema: str = schema
-        self.old: dict = old or {}
-        self.new: dict = new or {}
-        self.xmin: str = xmin
+        self.tg_op: t.Optional[str] = tg_op
+        self.table: t.Optional[str] = table
+        self.schema: t.Optional[str] = schema
+        self.old: t.Dict[str, t.Any] = old or {}
+        self.new: t.Dict[str, t.Any] = new or {}
+        self.xmin: t.Optional[int] = xmin
         self.indices: t.List[str] = indices
 
     @property
