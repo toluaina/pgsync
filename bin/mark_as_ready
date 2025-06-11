@@ -1,0 +1,82 @@
+#!/usr/bin/env python
+
+"""PGSync Mark As Ready."""
+import logging
+
+import click
+
+from pgsync.sync import Sync
+from pgsync.utils import config_loader, get_config, show_settings
+
+logger = logging.getLogger(__name__)
+
+
+@click.command()
+@click.option(
+    "--config",
+    "-c",
+    help="Schema config",
+    type=click.Path(exists=True),
+)
+@click.option("--host", "-h", help="PG_HOST override")
+@click.option("--password", is_flag=True, help="Prompt for database password")
+@click.option("--port", "-p", help="PG_PORT override", type=int)
+@click.option(
+    "--teardown",
+    "-t",
+    is_flag=True,
+    help="Teardown database triggers and replication slots",
+)
+@click.option("--user", "-u", help="PG_USER override")
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    default=False,
+    help="Turn on verbosity",
+)
+def main(
+    teardown: bool,
+    config: str,
+    user: str,
+    password: bool,
+    host: str,
+    port: int,
+    verbose: bool,
+) -> None:
+    kwargs: dict = {
+        "user": user,
+        "host": host,
+        "port": port,
+    }
+    if password:
+        kwargs["password"] = click.prompt(
+            "Password",
+            type=str,
+            hide_input=True,
+        )
+    kwargs = {key: value for key, value in kwargs.items() if value is not None}
+
+    config: str = get_config(config)
+
+    show_settings(config)
+
+    validate: bool = False if teardown else True
+
+    for doc in config_loader(config):
+        sync: Sync = Sync(
+            doc,
+            verbose=verbose,
+            validate=validate,
+            repl_slots=False,
+            **kwargs,
+        )
+        if teardown:
+            sync.teardown()
+            continue
+        sync.redis.mark_all_ready()
+        logger.info("Marked all items as ready in Redis")
+
+
+if __name__ == "__main__":
+    main()

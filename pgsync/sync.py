@@ -1171,6 +1171,28 @@ class Sync(Base, metaclass=Singleton):
         )
         payloads: list = []
 
+        def _flush_payloads():
+            nonlocal payloads
+            if not payloads:
+                return
+            # split into ready vs delayed items
+            ready_items = [
+                payload
+                for payload in payloads
+                if not payload.get("delayed", False)
+            ]
+            delayed_items = [
+                payload
+                for payload in payloads
+                if payload.get("delayed", False)
+            ]
+            # push each batch with appropriate flag
+            if ready_items:
+                self.redis.push(ready_items, ready=True)
+            if delayed_items:
+                self.redis.push(delayed_items, ready=False)
+            payloads = []
+
         while True:
             # NB: consider reducing POLL_TIMEOUT to increase throughput
             if select.select([conn], [], [], settings.POLL_TIMEOUT) == (
@@ -1178,10 +1200,8 @@ class Sync(Base, metaclass=Singleton):
                 [],
                 [],
             ):
-                # Catch any hanging items from the last poll
-                if payloads:
-                    self.redis.push(payloads)
-                    payloads = []
+                # flush anything hanging from the last poll
+                _flush_payloads()
                 continue
 
             try:
@@ -1192,28 +1212,33 @@ class Sync(Base, metaclass=Singleton):
 
             while conn.notifies:
                 if len(payloads) >= settings.REDIS_WRITE_CHUNK_SIZE:
-                    self.redis.push(payloads)
-                    payloads = []
-                notification: t.AnyStr = conn.notifies.pop(0)
-                if notification.channel == self.database:
+                    _flush_payloads()
 
-                    try:
-                        payload = json.loads(notification.payload)
-                    except json.JSONDecodeError as e:
-                        logger.exception(
-                            f"Error decoding JSON payload: {e}\n"
-                            f"Payload: {notification.payload}"
-                        )
-                        continue
-                    if (
-                        payload["indices"]
-                        and self.index in payload["indices"]
-                        and payload["schema"] in self.tree.schemas
-                    ):
-                        payloads.append(payload)
-                        logger.debug(f"poll_db: {payload}")
-                        with self.lock:
-                            self.count["db"] += 1
+                notification = conn.notifies.pop(0)
+                if notification.channel != self.database:
+                    continue
+
+                try:
+                    payload = json.loads(notification.payload)
+                except json.JSONDecodeError as e:
+                    logger.exception(
+                        f"Error decoding JSON payload: {e}\n"
+                        f"Payload: {notification.payload}"
+                    )
+                    continue
+
+                if (
+                    payload.get("indices")
+                    and self.index in payload["indices"]
+                    and payload.get("schema") in self.tree.schemas
+                ):
+                    payloads.append(payload)
+                    logger.debug(f"poll_db: {payload}")
+                    with self.lock:
+                        self.count["db"] += 1
+
+            # after draining notifies, flush any remaining
+            _flush_payloads()
 
     @exception
     def async_poll_db(self) -> None:
@@ -1222,6 +1247,9 @@ class Sync(Base, metaclass=Singleton):
 
         Receive a notification message from the channel we are listening on
         """
+        raise NotImplementedError(
+            "async_poll_db is not implemented. Use poll_db instead."
+        )
         try:
             self.conn.poll()
         except OperationalError as e:

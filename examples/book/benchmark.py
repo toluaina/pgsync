@@ -134,7 +134,11 @@ def truncate_op(session: sessionmaker, model, nsize: int) -> None:
         case_sensitive=False,
     ),
 )
-def main(config: str, nsize: int, daemon: bool, tg_op: str):
+@click.option("--delayed", is_flag=True, help="Delay persist to Redis")
+def main(
+    config: str, nsize: int, daemon: bool, tg_op: str, delayed: bool
+) -> None:
+    """Benchmarking script for Book model operations."""
     show_settings(config)
 
     config: str = get_config(config)
@@ -143,6 +147,9 @@ def main(config: str, nsize: int, daemon: bool, tg_op: str):
     with pg_engine(database) as engine:
         Session = sessionmaker(bind=engine, autoflush=False, autocommit=False)
         session = Session()
+
+        if delayed:
+            session.execute(sa.text("SET pgsync.delayed = True"))
 
         model = Book
         func: dict = {

@@ -18,10 +18,14 @@ DECLARE
   _indices TEXT [];
   _primary_keys TEXT [];
   _foreign_keys TEXT [];
+  delayed BOOLEAN := FALSE;
 
 BEGIN
     -- database is also the channel name.
     channel := CURRENT_DATABASE();
+
+    -- If the pgsync.delayed setting is true, we delay the notification.
+    delayed := CURRENT_SETTING('pgsync.delayed', true)::BOOLEAN;
 
     IF TG_OP = 'DELETE' THEN
 
@@ -71,7 +75,8 @@ BEGIN
         'indices', _indices,
         'tg_op', TG_OP,
         'table', TG_TABLE_NAME,
-        'schema', TG_TABLE_SCHEMA
+        'schema', TG_TABLE_SCHEMA,
+        'delayed', delayed
     );
 
     -- Notify/Listen updates occur asynchronously,
