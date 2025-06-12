@@ -7,7 +7,11 @@ import typing as t
 from redis import Redis
 from redis.exceptions import ConnectionError
 
-from .settings import REDIS_READ_CHUNK_SIZE, REDIS_SOCKET_TIMEOUT
+from .settings import (
+    REDIS_READ_CHUNK_SIZE,
+    REDIS_RETRY_ON_TIMEOUT,
+    REDIS_SOCKET_TIMEOUT,
+)
 from .urls import get_redis_url
 
 logger = logging.getLogger(__name__)
@@ -25,6 +29,7 @@ class RedisQueue(object):
             self.__db: Redis = Redis.from_url(
                 url,
                 socket_timeout=REDIS_SOCKET_TIMEOUT,
+                retry_on_timeout=REDIS_RETRY_ON_TIMEOUT,
             )
             self.__db.ping()
         except ConnectionError as e:
