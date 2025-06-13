@@ -1119,7 +1119,9 @@ class Sync(Base, metaclass=Singleton):
         self._checkpoint = value
 
     def _poll_redis(self) -> None:
-        payloads: list = self.redis.pop()
+        payloads: list = self.redis.pop(
+            auto_ready=settings.REDIS_AUTO_POP_READY_STATE
+        )
         if payloads:
             logger.debug(f"_poll_redis: {payloads}")
             with self.lock:
@@ -1138,7 +1140,7 @@ class Sync(Base, metaclass=Singleton):
             self._poll_redis()
 
     async def _async_poll_redis(self) -> None:
-        payloads: list = self.redis.pop()
+        payloads: list = self.redis.pop(settings.REDIS_AUTO_POP_READY_STATE)
         if payloads:
             logger.debug(f"_async_poll_redis: {payloads}")
             self.count["redis"] += len(payloads)
@@ -1247,9 +1249,6 @@ class Sync(Base, metaclass=Singleton):
 
         Receive a notification message from the channel we are listening on
         """
-        raise NotImplementedError(
-            "async_poll_db is not implemented. Use poll_db instead."
-        )
         try:
             self.conn.poll()
         except OperationalError as e:
@@ -1265,7 +1264,7 @@ class Sync(Base, metaclass=Singleton):
                     and self.index in payload["indices"]
                     and payload["schema"] in self.tree.schemas
                 ):
-                    self.redis.push([payload])
+                    self.redis.push([payload], ready=True)
                     logger.debug(f"async_poll: {payload}")
                     self.count["db"] += 1
 

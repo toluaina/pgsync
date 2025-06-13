@@ -50,7 +50,9 @@ class RedisQueue:
         mapping: dict = {json.dumps(item): score for item in items}
         self.__db.zadd(self.key, mapping)
 
-    def pop(self, chunk_size: int = REDIS_READ_CHUNK_SIZE) -> t.List[dict]:
+    def pop_ready(
+        self, chunk_size: int = REDIS_READ_CHUNK_SIZE
+    ) -> t.List[dict]:
         """
         Atomically pull up to chunk_size items whose score ≤ now_ms.
         These are the ready items.
@@ -68,9 +70,25 @@ class RedisQueue:
         pipeline.execute()
         return [json.loads(value) for value in values]
 
+    def pop(
+        self, chunk_size: int = REDIS_READ_CHUNK_SIZE, auto_ready: bool = False
+    ) -> t.List[dict]:
+        """
+        Pop up to chunk_size ready items.
+        If auto_ready=True and none are ready, will flip up
+        to chunk_size delayed items to ready and retry once.
+        """
+        items = self.pop_ready(chunk_size)
+        if not items and auto_ready:
+            flipped = self._mark_next_n_ready(chunk_size)
+            if flipped:
+                items = self.pop_ready(chunk_size)
+        return items
+
     def mark_ready(self, items: t.List[dict]) -> None:
         """
-        Flip previously-pushed, delayed items to ready by updating their score to now_ms.
+        Flip previously-pushed, delayed items to ready by
+        updating their score to now_ms.
         """
         now_ms: int = int(time.time() * 1_000)
         mapping: dict = {json.dumps(item): now_ms for item in items}
@@ -90,6 +108,22 @@ class RedisQueue:
         # map each member to new score
         update: dict = {member: now_ms for member in pending}
         self.__db.zadd(self.key, update)
+
+    def _mark_next_n_ready(self, nsize: int) -> int:
+        """
+        Find up to nsize members whose score > now and set their score to now.
+        Returns how many were flipped.
+        """
+        now_ms: int = int(time.time() * 1_000)
+        # get at most nsize pending items (score > now)
+        pending = self.__db.zrangebyscore(
+            self.key, now_ms + 1, "+inf", start=0, num=nsize
+        )
+        if not pending:
+            return 0
+        update: dict = {member: now_ms for member in pending}
+        self.__db.zadd(self.key, update)
+        return len(pending)
 
     def delete(self) -> None:
         """Delte all items from the named queue including its metadata."""
