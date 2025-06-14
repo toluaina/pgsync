@@ -86,6 +86,6 @@ class TestRedisQueue(object):
         assert queue.qsize == 6
         queue.delete()
         mock_logger.info.assert_called_once_with(
-            "Deleting redis key: queue:something"
+            "Deleting redis key: queue:something and queue:something:meta"
         )
         assert queue.qsize == 0

@@ -78,7 +78,8 @@ class RedisQueue:
         If auto_ready=True and none are ready, will flip up
         to chunk_size delayed items to ready and retry once.
         """
-        items = self.pop_ready(chunk_size)
+        items: t.List[dict] = self.pop_ready(chunk_size)
+        logger.debug(f"pop size: {len(items[0])}")
         if not items and auto_ready:
             flipped = self._mark_next_n_ready(chunk_size)
             if flipped:
@@ -127,6 +128,7 @@ class RedisQueue:
 
     def delete(self) -> None:
         """Delte all items from the named queue including its metadata."""
+        logger.info(f"Deleting redis key: {self.key} and {self._meta_key}")
         self.__db.delete(self.key)
         self.__db.delete(self._meta_key)
 
