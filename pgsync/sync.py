@@ -1368,7 +1368,9 @@ class Sync(Base, metaclass=Singleton):
             if polling:
                 return
             else:
-                raise
+                raise Exception(
+                    f"Error while pulling logical slot changes: {e}"
+                ) from e
         self.checkpoint: int = txmax or self.txid_current
         self._truncate = True
 
