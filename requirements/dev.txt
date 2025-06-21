@@ -10,13 +10,13 @@ backports-datetime-fromisoformat==2.0.3
     # via marshmallow
 black==25.1.0
     # via -r requirements/dev.in
-boto3==1.38.36
+boto3==1.38.41
     # via -r /Users/tolu/pgsync/requirements/base.in
-botocore==1.38.36
+botocore==1.38.41
     # via
     #   boto3
     #   s3transfer
-certifi==2025.4.26
+certifi==2025.6.15
     # via
     #   elastic-transport
     #   opensearch-py
@@ -55,7 +55,7 @@ faker==37.4.0
     # via -r requirements/dev.in
 filelock==3.18.0
     # via virtualenv
-flake8==7.2.0
+flake8==7.3.0
     # via -r requirements/dev.in
 freezegun==1.5.2
     # via -r requirements/dev.in
@@ -85,7 +85,7 @@ nodeenv==1.9.1
     # via pre-commit
 opensearch-dsl==2.1.0
     # via -r /Users/tolu/pgsync/requirements/base.in
-opensearch-py==2.8.0
+opensearch-py==3.0.0
     # via opensearch-dsl
 packaging==25.0
     # via
@@ -105,13 +105,13 @@ pre-commit==4.2.0
     # via -r requirements/dev.in
 psycopg2-binary==2.9.10
     # via -r /Users/tolu/pgsync/requirements/base.in
-pycodestyle==2.13.0
+pycodestyle==2.14.0
     # via flake8
-pyflakes==3.3.2
+pyflakes==3.4.0
     # via flake8
-pygments==2.19.1
+pygments==2.19.2
     # via pytest
-pytest==8.4.0
+pytest==8.4.1
     # via
     #   -r requirements/dev.in
     #   pytest-cov
