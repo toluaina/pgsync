@@ -482,11 +482,12 @@ class Sync(Base, metaclass=Singleton):
                     payloads,
                     key=lambda payload: (payload.tg_op, payload.table),
                 ):
-                    batch = list(run)
-                    current += len(payloads)
+                    batch: list = list(run)
+                    logger.debug(f"op: {op} tbl {tbl} - {len(batch)}")
+                    current += len(batch)
                     self.log_xlog_progress(current, total, bar_length=30)
                     self.search_client.bulk(self.index, self._payloads(batch))
-                    self.count["xlog"] += len(payloads)
+                    self.count["xlog"] += len(batch)
 
         # mark those rows consumed
         self.logical_slot_get_changes(
