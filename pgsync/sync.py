@@ -468,7 +468,6 @@ class Sync(Base, metaclass=Singleton):
             for row in raw:
                 if TX_BOUNDARY_RE.match(row.data):
                     continue
-
                 try:
                     payload: Payload = self.parse_logical_slot(row.data)
                 except Exception:

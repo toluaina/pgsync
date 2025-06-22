@@ -72,34 +72,56 @@ class TestSync(object):
     def test_logical_slot_changes(self, mock_logger, sync):
         with patch("pgsync.sync.Sync.logical_slot_peek_changes") as mock_peek:
             mock_peek.side_effect = [
-                [ROW("BEGIN: blah", 1234)],
+                [ROW("BEGIN 72736", 1234)],
                 [],
             ]
             with patch("pgsync.sync.Sync.sync") as mock_sync:
                 sync.logical_slot_changes()
-                mock_peek.assert_any_call(
-                    "testdb_testdb",
-                    txmin=None,
-                    txmax=None,
-                    logical_slot_chunk_size=5,
-                    upto_lsn=None,
-                )
+                assert mock_peek.call_args_list == [
+                    call(
+                        slot_name="testdb_testdb",
+                        txmin=None,
+                        txmax=None,
+                        upto_lsn=None,
+                        limit=5000,
+                        offset=0,
+                    ),
+                    call(
+                        slot_name="testdb_testdb",
+                        txmin=None,
+                        txmax=None,
+                        upto_lsn=None,
+                        limit=5000,
+                        offset=5000,
+                    ),
+                ]
                 mock_sync.assert_not_called()
 
         with patch("pgsync.sync.Sync.logical_slot_peek_changes") as mock_peek:
             mock_peek.side_effect = [
-                [ROW("COMMIT: blah", 1234)],
+                [ROW("COMMIT 72736", 1234)],
                 [],
             ]
             with patch("pgsync.sync.Sync.sync") as mock_sync:
                 sync.logical_slot_changes()
-                mock_peek.assert_any_call(
-                    "testdb_testdb",
-                    txmin=None,
-                    txmax=None,
-                    logical_slot_chunk_size=5,
-                    upto_lsn=None,
-                )
+                assert mock_peek.call_args_list == [
+                    call(
+                        slot_name="testdb_testdb",
+                        txmin=None,
+                        txmax=None,
+                        upto_lsn=None,
+                        limit=5000,
+                        offset=0,
+                    ),
+                    call(
+                        slot_name="testdb_testdb",
+                        txmin=None,
+                        txmax=None,
+                        upto_lsn=None,
+                        limit=5000,
+                        offset=5000,
+                    ),
+                ]
                 mock_sync.assert_not_called()
 
         with patch("pgsync.sync.Sync.logical_slot_peek_changes") as mock_peek:
@@ -121,21 +143,29 @@ class TestSync(object):
             ) as mock_get:
                 with patch("pgsync.sync.Sync.sync") as mock_sync:
                     sync.logical_slot_changes()
-                    mock_peek.assert_any_call(
-                        "testdb_testdb",
-                        txmin=None,
-                        txmax=None,
-                        logical_slot_chunk_size=5,
-                        upto_lsn=None,
-                    )
+                    assert mock_peek.call_args_list == [
+                        call(
+                            slot_name="testdb_testdb",
+                            txmin=None,
+                            txmax=None,
+                            upto_lsn=None,
+                            limit=5000,
+                            offset=0,
+                        ),
+                        call(
+                            slot_name="testdb_testdb",
+                            txmin=None,
+                            txmax=None,
+                            upto_lsn=None,
+                            limit=5000,
+                            offset=5000,
+                        ),
+                    ]
                     mock_get.assert_called_once()
                     mock_sync.assert_called_once()
-                    calls = [
-                        call("txid: 1234"),
-                        call(ANY),
+                    assert mock_logger.debug.call_args_list == [
                         call("tg_op: INSERT table: public.book"),
                     ]
-                    assert mock_logger.debug.call_args_list == calls
 
         with pytest.raises(Exception) as excinfo:
             with patch(
@@ -335,10 +365,12 @@ class TestSync(object):
 
     @patch("pgsync.sync.logger")
     def test_truncate_slots(self, mock_logger, sync):
-        with patch("pgsync.sync.Sync.logical_slot_get_changes") as mock_get:
+        with patch(
+            "pgsync.sync.Sync.logical_slot_get_changes"
+        ) as mock_logical_slot_changes:
             sync._truncate = True
             sync._truncate_slots()
-            mock_get.assert_called_once_with(
+            mock_logical_slot_changes.assert_called_once_with(
                 "testdb_testdb", upto_nchanges=None
             )
             mock_logger.debug.assert_called_once_with(
@@ -348,14 +380,16 @@ class TestSync(object):
     @patch("pgsync.sync.SearchClient.bulk")
     @patch("pgsync.sync.logger")
     def test_pull(self, mock_logger, mock_es, sync):
-        with patch("pgsync.sync.Sync.logical_slot_changes") as mock_get:
+        with patch(
+            "pgsync.sync.Sync.logical_slot_changes"
+        ) as mock_logical_slot_changes:
             sync.pull()
             txmin = None
             txmax = sync.txid_current - 1
-            mock_get.assert_called_once_with(
+            mock_logical_slot_changes.assert_called_once_with(
                 txmin=txmin,
                 txmax=txmax,
-                upto_nchanges=settings.LOGICAL_SLOT_CHUNK_SIZE,
+                logical_slot_chunk_size=settings.LOGICAL_SLOT_CHUNK_SIZE,
                 upto_lsn=ANY,
             )
             mock_logger.debug.assert_called_once_with(
