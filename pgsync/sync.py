@@ -12,6 +12,7 @@ import threading
 import time
 import typing as t
 from collections import defaultdict
+from itertools import groupby
 from pathlib import Path
 
 import click
@@ -59,6 +60,8 @@ from .utils import (
     threaded,
     Timer,
 )
+
+TX_BOUNDARY_RE = re.compile(r"^(BEGIN|COMMIT)\s+(\d+)", re.IGNORECASE)
 
 logger = logging.getLogger(__name__)
 
@@ -387,15 +390,33 @@ class Sync(Base, metaclass=Singleton):
             )
         return f"{PRIMARY_KEY_DELIMITER}".join(map(str, primary_keys))
 
+    def log_xlog_progress(
+        self, current: int, total: int, bar_length: int = 100
+    ) -> None:
+        """
+        Render a single-line, in-place progress update for WAL streaming.
+        """
+        # prevent division by zero
+        percent: float = (current / total * 100) if total else 0.0
+        filled: int = int(bar_length * current // total) if total else 0
+        bar: str = "=" * filled + "-" * (bar_length - filled)
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        sys.stdout.write(
+            f"\r{timestamp} WAL {self.database}:{self.index} "
+            f"[{bar}] {current:>12,}/{total:<12,} ({percent:6.2f}%)"
+        )
+        sys.stdout.flush()
+
     def logical_slot_changes(
         self,
         txmin: t.Optional[int] = None,
         txmax: t.Optional[int] = None,
-        upto_nchanges: t.Optional[int] = None,
         upto_lsn: t.Optional[str] = None,
+        logical_slot_chunk_size: t.Optional[int] = None,
     ) -> None:
         """
-        Process changes from the db logical replication logs.
+        Stream through the slot in pages of logical_slot_chunk_size,
+        grouping consecutive rows with the same (tg_op, table).
 
         Here, we are grouping all rows of the same table and tg_op
         and processing them as a group in bulk.
@@ -417,81 +438,64 @@ class Sync(Base, metaclass=Singleton):
         TODO: We can also process all INSERTS together and rearrange
         them as done below
         """
-        # minimize the tmp file disk usage when calling
-        # PG_LOGICAL_SLOT_PEEK_CHANGES and PG_LOGICAL_SLOT_GET_CHANGES
-        # by limiting to a smaller batch size.
+        offset: int = 0
+        limit: int = (
+            logical_slot_chunk_size or settings.LOGICAL_SLOT_CHUNK_SIZE
+        )
+        current: int = 0
+        total: int = self.logical_slot_count_changes(
+            self.__name,
+            txmin=txmin,
+            txmax=txmax,
+            upto_lsn=upto_lsn,
+        )
         while True:
-            changes: int = self.logical_slot_peek_changes(
-                self.__name,
+            # peek one page of up to limit rows
+            raw: t.List[sa.engine.row.Row] = self.logical_slot_peek_changes(
+                slot_name=self.__name,
                 txmin=txmin,
                 txmax=txmax,
-                upto_nchanges=upto_nchanges,
                 upto_lsn=upto_lsn,
+                limit=limit,
+                offset=offset,
             )
-            if not changes:
+            if not raw:
                 break
+            offset += limit
 
-            rows: list = []
-            for row in changes:
-                if re.search(r"^BEGIN", row.data) or re.search(
-                    r"^COMMIT", row.data
-                ):
-                    continue
-                rows.append(row)
-
+            # parse and filter out BEGIN/COMMIT and unwanted schemas
             payloads: t.List[Payload] = []
-            for i, row in enumerate(rows):
-                logger.debug(f"txid: {row.xid}")
-                logger.debug(f"data: {row.data}")
-                # TODO: optimize this so we are not parsing the same row twice
+            for row in raw:
+                if TX_BOUNDARY_RE.match(row.data):
+                    continue
+
                 try:
                     payload: Payload = self.parse_logical_slot(row.data)
-                except Exception as e:
-                    logger.exception(
-                        f"Error parsing row: {e}\nRow data: {row.data}"
-                    )
+                except Exception:
+                    logger.exception(f"Error parsing row: {row.data}")
                     raise
+                if payload.schema in self.tree.schemas:
+                    payloads.append(payload)
 
-                # filter out unknown schemas
-                if payload.schema not in self.tree.schemas:
-                    continue
+            if payloads:
+                # bulk-index each consecutive run of (tg_op, table)
+                for (op, tbl), run in groupby(
+                    payloads,
+                    key=lambda payload: (payload.tg_op, payload.table),
+                ):
+                    batch = list(run)
+                    current += len(payloads)
+                    self.log_xlog_progress(current, total, bar_length=30)
+                    self.search_client.bulk(self.index, self._payloads(batch))
+                    self.count["xlog"] += len(payloads)
 
-                payloads.append(payload)
-
-                j: int = i + 1
-                if j < len(rows):
-                    try:
-                        payload2: Payload = self.parse_logical_slot(
-                            rows[j].data
-                        )
-                    except Exception as e:
-                        logger.exception(
-                            f"Error parsing row: {e}\nRow data: {rows[j].data}"
-                        )
-                        raise
-
-                    if (
-                        payload.tg_op != payload2.tg_op
-                        or payload.table != payload2.table
-                    ):
-                        self.search_client.bulk(
-                            self.index, self._payloads(payloads)
-                        )
-                        payloads: list = []
-                elif j == len(rows):
-                    self.search_client.bulk(
-                        self.index, self._payloads(payloads)
-                    )
-                    payloads: list = []
-            self.logical_slot_get_changes(
-                self.__name,
-                txmin=txmin,
-                txmax=txmax,
-                upto_nchanges=upto_nchanges,
-                upto_lsn=upto_lsn,
-            )
-            with self.lock:
-                self.count["xlog"] += len(rows)
+        # mark those rows consumed
+        self.logical_slot_get_changes(
+            slot_name=self.__name,
+            txmin=txmin,
+            txmax=txmax,
+            upto_lsn=upto_lsn,
+        )
 
     def _root_primary_key_resolver(
         self, node: Node, payload: Payload, filters: list
@@ -1004,68 +1008,53 @@ class Sync(Base, metaclass=Singleton):
         if self.verbose:
             compiled_query(node._subquery, "Query")
 
-        count: int = self.fetchcount(node._subquery)
+        for i, (keys, row, primary_keys) in enumerate(
+            self.fetchmany(node._subquery)
+        ):
+            row: dict = Transform.transform(row, self.nodes)
 
-        with click.progressbar(
-            length=count,
-            show_pos=True,
-            show_percent=True,
-            show_eta=True,
-            fill_char="=",
-            empty_char="-",
-            width=50,
-        ) as bar:
-            for i, (keys, row, primary_keys) in enumerate(
-                self.fetchmany(node._subquery)
-            ):
-                bar.update(1)
+            row[META] = Transform.get_primary_keys(keys)
 
-                row: dict = Transform.transform(row, self.nodes)
-
-                row[META] = Transform.get_primary_keys(keys)
-
-                if node.is_root:
-                    primary_key_values: t.List[str] = list(
-                        map(str, primary_keys)
-                    )
-                    primary_key_names: t.List[str] = [
-                        primary_key.name for primary_key in node.primary_keys
-                    ]
-                    # TODO: add support for composite pkeys
-                    row[META][node.table] = {
-                        primary_key_names[0]: [primary_key_values[0]],
-                    }
-
-                if self.verbose:
-                    print(f"{(i+1)})")
-                    print(f"pkeys: {primary_keys}")
-                    pprint.pprint(row)
-                    print("-" * 10)
-
-                doc: dict = {
-                    "_id": self.get_doc_id(primary_keys, node.table),
-                    "_index": self.index,
-                    "_source": row,
+            if node.is_root:
+                primary_key_values: t.List[str] = list(map(str, primary_keys))
+                primary_key_names: t.List[str] = [
+                    primary_key.name for primary_key in node.primary_keys
+                ]
+                # TODO: add support for composite pkeys
+                row[META][node.table] = {
+                    primary_key_names[0]: [primary_key_values[0]],
                 }
 
-                if self.routing:
-                    doc["_routing"] = row[self.routing]
+            if self.verbose:
+                print(f"{(i+1)})")
+                print(f"pkeys: {primary_keys}")
+                pprint.pprint(row)
+                print("-" * 10)
 
-                if (
-                    self.search_client.major_version < 7
-                    and not self.search_client.is_opensearch
-                ):
-                    doc["_type"] = "_doc"
+            doc: dict = {
+                "_id": self.get_doc_id(primary_keys, node.table),
+                "_index": self.index,
+                "_source": row,
+            }
 
-                if self._plugins:
-                    doc = next(self._plugins.transform([doc]))
-                    if not doc:
-                        continue
+            if self.routing:
+                doc["_routing"] = row[self.routing]
 
-                if self.pipeline:
-                    doc["pipeline"] = self.pipeline
+            if (
+                self.search_client.major_version < 7
+                and not self.search_client.is_opensearch
+            ):
+                doc["_type"] = "_doc"
 
-                yield doc
+            if self._plugins:
+                doc = next(self._plugins.transform([doc]))
+                if not doc:
+                    continue
+
+            if self.pipeline:
+                doc["pipeline"] = self.pipeline
+
+            yield doc
 
     @property
     def checkpoint(self) -> int:
@@ -1320,7 +1309,7 @@ class Sync(Base, metaclass=Singleton):
         txmax: int = self.txid_current
         # this is the max lsn we should go upto
         upto_lsn: str = self.current_wal_lsn
-        upto_nchanges: int = settings.LOGICAL_SLOT_CHUNK_SIZE
+        logical_slot_chunk_size: int = settings.LOGICAL_SLOT_CHUNK_SIZE
 
         logger.debug(f"pull txmin: {txmin} - txmax: {txmax}")
         # forward pass sync
@@ -1333,7 +1322,7 @@ class Sync(Base, metaclass=Singleton):
             self.logical_slot_changes(
                 txmin=txmin,
                 txmax=txmax,
-                upto_nchanges=upto_nchanges,
+                logical_slot_chunk_size=logical_slot_chunk_size,
                 upto_lsn=upto_lsn,
             )
         except Exception as e:
