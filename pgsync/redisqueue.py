@@ -11,11 +11,12 @@ from redis.exceptions import ConnectionError
 from .settings import REDIS_READ_CHUNK_SIZE, REDIS_SOCKET_TIMEOUT
 from .urls import get_redis_url
 
+# Pick a MULTIPLIER > max timestamp_ms (~1.7e12).
+# 10**13 is safe for now.
+_MULTIPLIER = 10**13
+
+
 logger = logging.getLogger(__name__)
-
-
-# sentinel 300 years in ms
-_FAR_FUTURE = int((time.time() + 300 * 365 * 24 * 3600) * 1_000)
 
 
 class RedisQueue:
@@ -39,95 +40,38 @@ class RedisQueue:
         """Number of items currently in the ZSET (regardless of ready/not)."""
         return self.__db.zcard(self.key)
 
-    def push(self, items: t.List[dict], ready: bool = True) -> None:
+    def push(self, items: t.List[dict], weight: float = 0.0) -> None:
         """
-        Push a batch of items.
-        If ready=True score = now (ms), so pop_ready() can retrieve immediately.
-        If ready=False score = FAR_FUTURE, so pop_ready() ignores it until mark_ready().
+        Push a batch of items with the given numeric weight.
+
+        - Higher weight -> higher priority.
+        - Among equal weight, FIFO order.
         """
         now_ms: int = int(time.time() * 1_000)
-        score: int = now_ms if ready else _FAR_FUTURE
-        mapping: dict = {json.dumps(item): score for item in items}
+        mapping: dict = {}
+        for item in items:
+            # score = -weight*M + timestamp
+            score = -weight * _MULTIPLIER + now_ms
+            mapping[json.dumps(item)] = score
+        # ZADD will add/update each member's score
         self.__db.zadd(self.key, mapping)
 
-    def pop_ready(
-        self, chunk_size: int = REDIS_READ_CHUNK_SIZE
-    ) -> t.List[dict]:
+    def pop(self, chunk_size: int = REDIS_READ_CHUNK_SIZE) -> t.List[dict]:
         """
-        Atomically pull up to chunk_size items whose score ≤ now_ms.
-        These are the ready items.
+        Pop up to chunk_size highest priority items (by weight, then FIFO).
         """
-        now_ms: int = int(time.time() * 1_000)
-        # fetch members ready to run
-        values = self.__db.zrangebyscore(
-            self.key, 0, now_ms, start=0, num=chunk_size
+        # ZPOPMIN pulls the entries with the smallest score first
+        popped: t.List[t.Tuple[bytes, float]] = self.__db.zpopmin(
+            self.key, chunk_size
         )
-        if not values:
-            return []
-        # remove them in one pipeline
-        pipeline = self.__db.pipeline()
-        pipeline.zrem(self.key, *values)
-        pipeline.execute()
-        return [json.loads(value) for value in values]
-
-    def pop(
-        self, chunk_size: int = REDIS_READ_CHUNK_SIZE, auto_ready: bool = False
-    ) -> t.List[dict]:
-        """
-        Pop up to chunk_size ready items.
-        If auto_ready=True and none are ready, will flip up
-        to chunk_size delayed items to ready and retry once.
-        """
-        items: t.List[dict] = self.pop_ready(chunk_size)
-        logger.debug(f"pop size: {len(items[0])}")
-        if not items and auto_ready:
-            flipped = self._mark_next_n_ready(chunk_size)
-            if flipped:
-                items = self.pop_ready(chunk_size)
-        return items
-
-    def mark_ready(self, items: t.List[dict]) -> None:
-        """
-        Flip previously-pushed, delayed items to ready by
-        updating their score to now_ms.
-        """
-        now_ms: int = int(time.time() * 1_000)
-        mapping: dict = {json.dumps(item): now_ms for item in items}
-        self.__db.zadd(self.key, mapping)
-
-    def mark_all_ready(self) -> None:
-        """
-        Find every queue member whose score is still in the future
-        and set its score to now, so pop_ready() will pick it up.
-        """
-        now_ms: int = int(time.time() * 1_000)
-        # grab everything with score > now
-        pending = self.__db.zrangebyscore(self.key, now_ms + 1, "+inf")
-        if not pending:
-            return
-
-        # map each member to new score
-        update: dict = {member: now_ms for member in pending}
-        self.__db.zadd(self.key, update)
-
-    def _mark_next_n_ready(self, nsize: int) -> int:
-        """
-        Find up to nsize members whose score > now and set their score to now.
-        Returns how many were flipped.
-        """
-        now_ms: int = int(time.time() * 1_000)
-        # get at most nsize pending items (score > now)
-        pending = self.__db.zrangebyscore(
-            self.key, now_ms + 1, "+inf", start=0, num=nsize
-        )
-        if not pending:
-            return 0
-        update: dict = {member: now_ms for member in pending}
-        self.__db.zadd(self.key, update)
-        return len(pending)
+        results: t.List[dict] = [
+            json.loads(member) for member, score in popped
+        ]
+        logger.debug(f"popped {len(results)} items (by priority)")
+        return results
 
     def delete(self) -> None:
-        """Delte all items from the named queue including its metadata."""
+        """Delete all items from the named queue including its metadata."""
         logger.info(f"Deleting redis key: {self.key} and {self._meta_key}")
         self.__db.delete(self.key)
         self.__db.delete(self._meta_key)

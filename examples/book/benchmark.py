@@ -134,9 +134,11 @@ def truncate_op(session: sessionmaker, model, nsize: int) -> None:
         case_sensitive=False,
     ),
 )
-@click.option("--delayed", is_flag=True, help="Delay persist to Redis")
+@click.option(
+    "--weight", "-w", default=0.0, help="Weight for pgsync operations"
+)
 def main(
-    config: str, nsize: int, daemon: bool, tg_op: str, delayed: bool
+    config: str, nsize: int, daemon: bool, tg_op: str, weight: float
 ) -> None:
     """Benchmarking script for Book model operations."""
     show_settings(config)
@@ -148,8 +150,8 @@ def main(
         Session = sessionmaker(bind=engine, autoflush=False, autocommit=False)
         session = Session()
 
-        if delayed:
-            session.execute(sa.text("SET pgsync.delayed = True"))
+        if weight:
+            session.execute(sa.text(f"SET pgsync.weight = {weight}"))
 
         model = Book
         func: dict = {

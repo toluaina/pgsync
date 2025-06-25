@@ -4,6 +4,7 @@ import importlib
 import os
 import typing as t
 from collections import namedtuple
+from math import inf
 
 import pytest
 from mock import ANY, call, patch
@@ -948,3 +949,36 @@ class TestSync(object):
         mock_logger.debug.assert_called_once_with(f"_poll_redis: {items}")
         mock_time.sleep.assert_called_once_with(settings.REDIS_POLL_INTERVAL)
         assert sync.count["redis"] == 2
+
+    def test_flush_groups_and_orders(self, sync):
+
+        class DummyRedis:
+            def __init__(self):
+                self.calls = []
+
+            def push(self, items, weight):
+                self.calls.append((tuple(items), weight))
+
+        sync.redis = DummyRedis()
+
+        # four payloads; one has no weight
+        payloads = [
+            {"id": 1, "indices": ["x"], "schema": "public"},
+            {"id": 2, "weight": 1, "indices": ["x"], "schema": "public"},
+            {"id": 3, "weight": 2, "indices": ["x"], "schema": "public"},
+            {"id": 4, "weight": 1, "indices": ["x"], "schema": "public"},
+        ]
+
+        sync._flush_payloads(payloads)
+
+        # expect three pushes, in this order:
+        # 1) id=1 (no weight → inf)
+        # 2) id=3 (weight=2)
+        # 3) ids=2 and 4 (weight=1)
+        calls = sync.redis.calls
+        assert calls[0][1] == inf
+        assert calls[0][0] == (payloads[0],)
+        assert calls[1][1] == 2.0
+        assert calls[1][0] == (payloads[2],)
+        assert calls[2][1] == 1.0
+        assert set(item["id"] for item in calls[2][0]) == {2, 4}

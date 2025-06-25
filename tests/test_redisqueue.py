@@ -1,6 +1,9 @@
 """RedisQueues tests."""
 
+import time
+
 import pytest
+from freezegun import freeze_time
 from mock import patch
 from redis.exceptions import ConnectionError
 
@@ -69,11 +72,13 @@ class TestRedisQueue(object):
         queue.delete()
         queue.push([1, 2])
         items = queue.pop()
-        mock_logger.debug.assert_called_once_with("pop size: 2")
+        mock_logger.debug.assert_called_once_with(
+            "popped 2 items (by priority)"
+        )
         assert items == [1, 2]
         queue.push([3, 4, 5])
         items = queue.pop()
-        mock_logger.debug.assert_any_call("pop size: 3")
+        mock_logger.debug.assert_any_call("popped 3 items (by priority)")
         assert items == [3, 4, 5]
         queue.delete()
 
@@ -89,3 +94,22 @@ class TestRedisQueue(object):
             "Deleting redis key: queue:something and queue:something:meta"
         )
         assert queue.qsize == 0
+
+    @freeze_time("2025-06-25T12:00:00Z")
+    def test_push_and_pop_respects_weight_and_fifo(self):
+        queue = RedisQueue("test")
+        a = {"id": "A"}
+        b = {"id": "B"}
+        c = {"id": "C"}
+        # A has no explicit weight → default 0.0
+        queue.push([a])
+        # wait a millisecond for a different timestamp
+        time.sleep(0.001)
+        # B and C both weight=5
+        queue.push([b], weight=5)
+        time.sleep(0.001)
+        queue.push([c], weight=5)
+        # popping 3 items
+        out = queue.pop(3)
+        # B then C (both weight=5, FIFO), then A (weight=0)
+        assert [x["id"] for x in out] == ["B", "C", "A"]
