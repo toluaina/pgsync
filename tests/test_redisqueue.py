@@ -1,13 +1,15 @@
 """RedisQueues tests."""
 
+import json
 import time
+import typing as t
 
 import pytest
 from freezegun import freeze_time
 from mock import patch
 from redis.exceptions import ConnectionError
 
-from pgsync.redisqueue import RedisQueue
+from pgsync.redisqueue import _MULTIPLIER, RedisQueue
 
 
 class TestRedisQueue(object):
@@ -97,10 +99,10 @@ class TestRedisQueue(object):
 
     @freeze_time("2025-06-25T12:00:00Z")
     def test_push_and_pop_respects_weight_and_fifo(self):
-        queue = RedisQueue("test")
-        a = {"id": "A"}
-        b = {"id": "B"}
-        c = {"id": "C"}
+        queue: RedisQueue = RedisQueue("test")
+        a: dict = {"id": "A"}
+        b: dict = {"id": "B"}
+        c: dict = {"id": "C"}
         # A has no explicit weight → default 0.0
         queue.push([a])
         # wait a millisecond for a different timestamp
@@ -113,3 +115,25 @@ class TestRedisQueue(object):
         out = queue.pop(3)
         # B then C (both weight=5, FIFO), then A (weight=0)
         assert [x["id"] for x in out] == ["B", "C", "A"]
+
+    @freeze_time("2024-06-25T12:00:00Z")
+    def test_push_adds_correct_scores(self):
+        queue: RedisQueue = RedisQueue("test")
+        items: t.List[t.Dict] = [{"id": 1}, {"id": 2}]
+        weight: float = 5.0
+        with (
+            patch.object(queue, "_RedisQueue__db") as mock_db,
+            patch(
+                "time.time", side_effect=[1_717_267_200.100, 1_717_267_200.200]
+            ),
+        ):
+            queue.push(items, weight=weight)
+            expected_mapping: dict = {
+                json.dumps({"id": 1}, sort_keys=True): -weight * _MULTIPLIER
+                + int(1_717_267_200.100 * 1_000),
+                json.dumps({"id": 2}, sort_keys=True): -weight * _MULTIPLIER
+                + int(1_717_267_200.200 * 1_000),
+            }
+            mock_db.zadd.assert_called_once_with(
+                "queue:test", expected_mapping
+            )

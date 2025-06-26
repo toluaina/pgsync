@@ -53,9 +53,9 @@ class RedisQueue:
         - Higher weight -> higher priority.
         - Among equal weight, FIFO order.
         """
-        now_ms: int = int(time.time() * 1_000)
         mapping: dict = {}
         for item in items:
+            now_ms: int = int(time.time() * 1_000)
             # score = -weight*M + timestamp
             score = -weight * _MULTIPLIER + now_ms
             mapping[json.dumps(item)] = score
