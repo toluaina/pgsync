@@ -415,9 +415,9 @@ def main(config: str, nprocs: int, mode: str, verbose: bool) -> None:
     - Track progress across cpus/threads
     - Handle KeyboardInterrupt Exception
     """
-
-    show_settings()
     config: str = get_config(config)
+
+    show_settings(config)
 
     for doc in config_loader(config):
         tasks: t.Generator = fetch_tasks(doc)

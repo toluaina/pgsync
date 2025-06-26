@@ -47,6 +47,7 @@ USE_ASYNC = env.bool("USE_ASYNC", default=False)
 STREAM_RESULTS = env.bool("STREAM_RESULTS", default=True)
 # db polling interval
 POLL_INTERVAL = env.float("POLL_INTERVAL", default=0.1)
+FORMAT_WITH_COMMAS = env.bool("FORMAT_WITH_COMMAS", default=True)
 
 # Elasticsearch/OpenSearch:
 ELASTICSEARCH_API_KEY = env.str("ELASTICSEARCH_API_KEY", default=None)
