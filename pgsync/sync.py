@@ -55,6 +55,7 @@ from .utils import (
     compiled_query,
     config_loader,
     exception,
+    format_number,
     get_config,
     MutuallyExclusiveOption,
     show_settings,
@@ -404,7 +405,7 @@ class Sync(Base, metaclass=Singleton):
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         sys.stdout.write(
             f"\r{timestamp} WAL {self.database}:{self.index} "
-            f"[{bar}] {current:>12,}/{total:<12,} ({percent:6.2f}%)"
+            f"[{bar}] {format_number(current):>12}/{format_number(total):<12} ({percent:6.2f}%)"
         )
         sys.stdout.flush()
 
@@ -1399,10 +1400,10 @@ class Sync(Base, metaclass=Singleton):
         # TODO: indicate if we are processing logical logs or not
         sys.stdout.write(
             f"{label} {self.database}:{self.index} "
-            f"Xlog: [{self.count['xlog']:,}] => "
-            f"Db: [{self.count['db']:,}] => "
-            f"Redis: [{self.redis.qsize:,}] => "
-            f"{self.search_client.name}: [{self.search_client.doc_count:,}]"
+            f"Xlog: [{format_number(self.count['xlog'])}] => "
+            f"Db: [{format_number(self.count['db'])}] => "
+            f"Redis: [{format_number(self.redis.qsize)}] => "
+            f"{self.search_client.name}: [{format_number(self.search_client.doc_count)}]"
             f"...\n"
         )
         sys.stdout.flush()

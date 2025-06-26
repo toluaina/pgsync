@@ -92,6 +92,12 @@ def exception(func: t.Callable):
     return wrapper
 
 
+def format_number(n: int) -> str:
+    """
+    Format a number with commas if the setting is enabled."""
+    return f"{n:,}" if settings.FORMAT_WITH_COMMAS else f"{n}"
+
+
 def get_redacted_url(url: str) -> str:
     """
     Returns a redacted version of the input URL, with the password replaced by asterisks.
@@ -135,13 +141,14 @@ def show_settings(schema: t.Optional[str] = None) -> None:
     logger.info("-" * 65)
 
     logger.info(f"{HIGHLIGHT_BEGIN}Replication slots{HIGHLIGHT_END}")
-    for doc in config_loader(schema):
-        index: str = doc.get("index") or doc["database"]
-        database: str = doc.get("database", index)
-        slot_name: str = re.sub(
-            "[^0-9a-zA-Z_]+", "", f"{database.lower()}_{index}"
-        )
-        logger.info(f"Slot: {slot_name}")
+    if schema is not None:
+        for doc in config_loader(schema):
+            index: str = doc.get("index") or doc["database"]
+            database: str = doc.get("database", index)
+            slot_name: str = re.sub(
+                "[^0-9a-zA-Z_]+", "", f"{database.lower()}_{index}"
+            )
+            logger.info(f"Slot: {slot_name}")
 
     logger.info("-" * 65)
 
