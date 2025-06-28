@@ -454,16 +454,19 @@ class TestSync(object):
     @patch("pgsync.sync.logger")
     def test_truncate_slots(self, mock_logger, sync):
         with patch(
-            "pgsync.sync.Sync.logical_slot_get_changes"
+            "pgsync.sync.Sync.logical_slot_changes"
         ) as mock_logical_slot_changes:
             sync._truncate = True
             sync._truncate_slots()
             mock_logical_slot_changes.assert_called_once_with(
-                "testdb_testdb", upto_nchanges=None
+                txmax=ANY, upto_lsn=ANY
             )
-            mock_logger.debug.assert_called_once_with(
-                "Truncating replication slot: testdb_testdb"
-            )
+            mock_logger.debug.call_args_list == [
+                call(
+                    "Truncating replication slot: testdb_testdb",
+                ),
+                call("Truncation successful."),
+            ]
 
     @patch("pgsync.sync.SearchClient.bulk")
     @patch("pgsync.sync.logger")

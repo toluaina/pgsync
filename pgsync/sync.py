@@ -1379,9 +1379,32 @@ class Sync(Base, metaclass=Singleton):
             await asyncio.sleep(settings.REPLICATION_SLOT_CLEANUP_INTERVAL)
 
     def _truncate_slots(self) -> None:
-        if self._truncate:
-            logger.debug(f"Truncating replication slot: {self.__name}")
-            self.logical_slot_get_changes(self.__name, upto_nchanges=None)
+        if not self._truncate:
+            return
+
+        """
+        Handle eventual consistency of the logical replication slot.
+        We retry logical_slot_changes a few times in case of replication slot in use error.
+        """
+        retries: int = 3
+        backoff: int = 1
+        txmax: int = self.txid_current
+        upto_lsn: str = self.current_wal_lsn
+
+        for attempt in range(1, retries + 1):
+            try:
+                logger.debug(f"Truncating replication slot: {self.__name}")
+                self.logical_slot_changes(txmax=txmax, upto_lsn=upto_lsn)
+                logger.debug("Truncation successful.")
+                break
+            except Exception as e:
+                logger.warning(f"Attempt {attempt} failed with {e}")
+                if attempt == retries:
+                    logger.error("Max retries reached, raising exception.")
+                    raise
+                sleep_time: int = backoff * (2 ** (attempt - 1))
+                logger.debug(f"Retrying in {sleep_time} seconds...")
+                time.sleep(sleep_time)
 
     @threaded
     @exception
