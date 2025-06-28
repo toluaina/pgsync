@@ -461,7 +461,7 @@ class TestSync(object):
             mock_logical_slot_changes.assert_called_once_with(
                 txmax=ANY, upto_lsn=ANY
             )
-            mock_logger.debug.call_args_list == [
+            assert mock_logger.debug.call_args_list == [
                 call(
                     "Truncating replication slot: testdb_testdb",
                 ),
