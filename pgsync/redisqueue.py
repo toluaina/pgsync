@@ -2,6 +2,7 @@
 
 import json
 import logging
+import time
 import typing as t
 
 from redis import Redis
@@ -14,14 +15,18 @@ from .settings import (
 )
 from .urls import get_redis_url
 
+# Pick a MULTIPLIER > max timestamp_ms (~1.7e12).
+# 10**13 is safe for now.
+_MULTIPLIER = 10**13
+
+
 logger = logging.getLogger(__name__)
 
 
-class RedisQueue(object):
-    """Simple Queue with Redis Backend."""
+class RedisQueue:
+    """A Redis‐backed queue where items become poppable only once ready is True."""
 
     def __init__(self, name: str, namespace: str = "queue", **kwargs):
-        """Init Simple Queue with Redis Backend."""
         url: str = get_redis_url(**kwargs)
         self.key: str = f"{namespace}:{name}"
         self._meta_key: str = f"{self.key}:meta"
@@ -38,34 +43,50 @@ class RedisQueue(object):
 
     @property
     def qsize(self) -> int:
-        """Return the approximate size of the queue."""
-        return self.__db.llen(self.key)
+        """Number of items currently in the ZSET (regardless of ready/not)."""
+        return self.__db.zcard(self.key)
 
-    def pop(self, chunk_size: t.Optional[int] = None) -> t.List[dict]:
-        """Remove and return multiple items from the queue."""
-        chunk_size = chunk_size or REDIS_READ_CHUNK_SIZE
-        if self.qsize > 0:
-            pipeline = self.__db.pipeline()
-            pipeline.lrange(self.key, 0, chunk_size - 1)
-            pipeline.ltrim(self.key, chunk_size, -1)
-            items: t.List = pipeline.execute()
-            logger.debug(f"pop size: {len(items[0])}")
-            return list(map(lambda value: json.loads(value), items[0]))
+    def push(self, items: t.List[dict], weight: float = 0.0) -> None:
+        """
+        Push a batch of items with the given numeric weight.
 
-    def push(self, items: t.List) -> None:
-        """Push multiple items onto the queue."""
-        self.__db.rpush(self.key, *map(json.dumps, items))
+        - Higher weight -> higher priority.
+        - Among equal weight, FIFO order.
+        """
+        mapping: dict = {}
+        for item in items:
+            now_ms: int = int(time.time() * 1_000)
+            # score = -weight*M + timestamp
+            score = -weight * _MULTIPLIER + now_ms
+            mapping[json.dumps(item)] = score
+        # ZADD will add/update each member's score
+        self.__db.zadd(self.key, mapping)
+
+    def pop(self, chunk_size: int = REDIS_READ_CHUNK_SIZE) -> t.List[dict]:
+        """
+        Pop up to chunk_size highest priority items (by weight, then FIFO).
+        """
+        # ZPOPMIN pulls the entries with the smallest score first
+        popped: t.List[t.Tuple[bytes, float]] = self.__db.zpopmin(
+            self.key, chunk_size
+        )
+        results: t.List[dict] = [
+            json.loads(member) for member, score in popped
+        ]
+        logger.debug(f"popped {len(results)} items (by priority)")
+        return results
 
     def delete(self) -> None:
-        """Delete all items from the named queue."""
-        logger.info(f"Deleting redis key: {self.key}")
+        """Delete all items from the named queue including its metadata."""
+        logger.info(f"Deleting redis key: {self.key} and {self._meta_key}")
         self.__db.delete(self.key)
+        self.__db.delete(self._meta_key)
 
     def set_meta(self, value: t.Any) -> None:
-        """Store an arbitrary JSON-serialisable value in a dedicated key."""
+        """Store an arbitrary JSON‐serializable value in a dedicated key."""
         self.__db.set(self._meta_key, json.dumps(value))
 
     def get_meta(self, default: t.Any = None) -> t.Any:
-        """Retrieve the stored value (or *default* if nothing is set)."""
+        """Retrieve the stored metadata (or *default* if nothing is set)."""
         raw = self.__db.get(self._meta_key)
         return json.loads(raw) if raw is not None else default
