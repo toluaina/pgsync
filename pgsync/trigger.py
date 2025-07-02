@@ -18,10 +18,18 @@ DECLARE
   _indices TEXT [];
   _primary_keys TEXT [];
   _foreign_keys TEXT [];
-
+  weight NUMERIC := 0;
 BEGIN
     -- database is also the channel name.
     channel := CURRENT_DATABASE();
+
+    -- load your numeric weight (default 0 if unset)
+    BEGIN
+        weight := CURRENT_SETTING('pgsync.weight', true)::NUMERIC;
+    EXCEPTION WHEN undefined_object THEN
+        -- setting not defined leave weight = 0
+        NULL;
+    END;
 
     IF TG_OP = 'DELETE' THEN
 
@@ -71,7 +79,8 @@ BEGIN
         'indices', _indices,
         'tg_op', TG_OP,
         'table', TG_TABLE_NAME,
-        'schema', TG_TABLE_SCHEMA
+        'schema', TG_TABLE_SCHEMA,
+        'weight', weight
     );
 
     -- Notify/Listen updates occur asynchronously,
