@@ -1184,6 +1184,7 @@ class Sync(Base, metaclass=Singleton):
                 [],
             ):
                 self._flush_payloads(payloads)
+                payloads = []
                 continue
 
             try:
@@ -1195,6 +1196,7 @@ class Sync(Base, metaclass=Singleton):
             while conn.notifies:
                 if len(payloads) >= settings.REDIS_WRITE_CHUNK_SIZE:
                     self._flush_payloads(payloads)
+                    payloads = []
 
                 notification: t.AnyStr = conn.notifies.pop(0)
                 if notification.channel != self.database:
@@ -1218,6 +1220,7 @@ class Sync(Base, metaclass=Singleton):
 
             # flush anything left after draining notifications
             self._flush_payloads(payloads)
+            payloads = []
 
     @exception
     def async_poll_db(self) -> None:
