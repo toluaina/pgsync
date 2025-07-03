@@ -66,7 +66,7 @@ the search capabilities of [Elasticsearch](https://www.elastic.co/products/elast
 
 #### How it works
 
-PGSync is written in Python (supporting version 3.9 onwards) and the stack is composed of: [Redis](https://redis.io), [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/), [Postgres](https://www.postgresql.org), and [SQlAlchemy](https://www.sqlalchemy.org).
+PGSync is written in Python (supporting version 3.9 onwards) and the stack is composed of: [Redis](https://redis.io), [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/), [Postgres](https://www.postgresql.org), and [SQLAlchemy](https://www.sqlalchemy.org).
 
 PGSync leverages the [logical decoding](https://www.postgresql.org/docs/current/logicaldecoding.html) feature of [Postgres](https://www.postgresql.org) (introduced in PostgreSQL 9.4) to capture a continuous stream of change events.
 This feature needs to be enabled in your [Postgres](https://www.postgresql.org) configuration file by setting in the postgresql.conf file:
@@ -156,7 +156,7 @@ Key features of PGSync are:
 - [Postgres](https://www.postgresql.org) 9.6+
 - [Redis](https://redis.io) 3.1.0+
 - [Elasticsearch](https://www.elastic.co/products/elastic-stack) 6.3.1+ or [OpenSearch](https://opensearch.org/) 1.3.7+
-- [SQlAlchemy](https://www.sqlalchemy.org) 1.3.4+
+- [SQLAlchemy](https://www.sqlalchemy.org) 1.3.4+
 
 
 #### Example
