@@ -80,6 +80,7 @@ class Sync(Base, metaclass=Singleton):
         num_workers: int = 1,
         producer: bool = True,
         consumer: bool = True,
+        bootstrap: bool = False,
         **kwargs,
     ) -> None:
         """Constructor."""
@@ -109,6 +110,8 @@ class Sync(Base, metaclass=Singleton):
         )
         self.redis: RedisQueue = RedisQueue(self.__name)
         self.tree: Tree = Tree(self.models, nodes=self.nodes)
+        if bootstrap:
+            self.setup()
         if validate:
             self.validate(repl_slots=repl_slots, polling=polling)
             self.create_setting()
@@ -1512,6 +1515,13 @@ class Sync(Base, metaclass=Singleton):
     type=int,
     default=settings.NUM_WORKERS,
 )
+@click.option(
+    "--bootstrap",
+    "-b",
+    is_flag=True,
+    default=False,
+    help="Bootstrap the database",
+)
 def main(
     config: str,
     daemon: bool,
@@ -1528,6 +1538,7 @@ def main(
     polling: bool,
     producer: bool,
     consumer: bool,
+    bootstrap: bool,
 ) -> None:
     """Main application syncer."""
     if version:
@@ -1588,6 +1599,7 @@ def main(
                     num_workers=num_workers,
                     producer=producer,
                     consumer=consumer,
+                    bootstrap=bootstrap,
                     **kwargs,
                 )
                 sync.pull()
