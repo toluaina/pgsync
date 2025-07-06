@@ -40,7 +40,7 @@ of engineering and development.
 Other benefits of PGSync include:
 - Real-time analytics
 - Reliable primary datastore/source of truth
-- Scale on-demand
+- Scale on-demand (multiple consumers)
 - Easily join multiple nested tables
 
 #### Why?
@@ -134,14 +134,14 @@ To start all services with Docker, follow these steps:
   toluaina1/pgsync:latest -c schema.json -d -b
   ```
 
-Environment variable Placeholders - full list [here](https://pgsync.com/env-vars):
+Environment variable placeholders - full list [here](https://pgsync.com/env-vars):
 
 - redis_host_address — Address of the Redis server (e.g., host.docker.internal for local Docker setup)
 - username — PostgreSQL username
 - password — PostgreSQL password
 - postgres_host — Host address for PostgreSQL instance (e.g., host.docker.internal)
 - database — Name of PostgreSQL database
-- elasticsearch_host — Address of Elasticsearch instance (e.g., host.docker.internal)
+- elasticsearch_host — Address of Elasticsearch/OpenSearch instance (e.g., host.docker.internal)
 
 
 ##### Manual configuration
