@@ -134,7 +134,13 @@ def truncate_op(session: sessionmaker, model, nsize: int) -> None:
         case_sensitive=False,
     ),
 )
-def main(config: str, nsize: int, daemon: bool, tg_op: str):
+@click.option(
+    "--weight", "-w", default=0.0, help="Weight for pgsync operations"
+)
+def main(
+    config: str, nsize: int, daemon: bool, tg_op: str, weight: float
+) -> None:
+    """Benchmarking script for Book model operations."""
     show_settings(config)
 
     config: str = get_config(config)
@@ -143,6 +149,9 @@ def main(config: str, nsize: int, daemon: bool, tg_op: str):
     with pg_engine(database) as engine:
         Session = sessionmaker(bind=engine, autoflush=False, autocommit=False)
         session = Session()
+
+        if weight:
+            session.execute(sa.text(f"SET pgsync.weight = {weight}"))
 
         model = Book
         func: dict = {

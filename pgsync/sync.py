@@ -13,6 +13,7 @@ import time
 import typing as t
 from collections import defaultdict
 from itertools import groupby
+from math import inf
 from pathlib import Path
 
 import click
@@ -1131,7 +1132,9 @@ class Sync(Base, metaclass=Singleton):
             self._poll_redis()
 
     async def _async_poll_redis(self) -> None:
-        payloads: list = self.redis.pop()
+        payloads: t.List[t.Dict] = self.redis.pop(
+            settings.REDIS_AUTO_POP_READY_STATE
+        )
         if payloads:
             logger.debug(f"_async_poll_redis: {payloads}")
             self.count["redis"] += len(payloads)
@@ -1147,34 +1150,44 @@ class Sync(Base, metaclass=Singleton):
         while True:
             await self._async_poll_redis()
 
+    def _flush_payloads(self, payloads: list[dict]) -> None:
+        if not payloads:
+            return
+
+        # group by weight, default=+inf so missing weights pop first
+        weight_buckets: t.Dict[float, t.List[t.Dict]] = {}
+        for payload in payloads:
+            raw = payload.get("weight")
+            weight: float = float(raw) if raw is not None else inf
+            weight_buckets.setdefault(weight, []).append(payload)
+
+        # push each bucket in descending weight order (highest first)
+        for weight, items in sorted(
+            weight_buckets.items(), key=lambda kv: -kv[0]
+        ):
+            logger.debug(f"Pushing {len(items)} items with weight={weight}")
+            self.redis.push(items, weight=weight)
+
     @threaded
     @exception
     def poll_db(self) -> None:
-        """
-        Producer which polls Postgres continuously.
-
-        Receive a notification message from the channel we are listening on
-        """
         conn = self.engine.connect().connection
         conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-        cursor = conn.cursor()
-        cursor.execute(f'LISTEN "{self.database}"')
+        conn.cursor().execute(f'LISTEN "{self.database}"')
         logger.debug(
             f'Listening to notifications on channel "{self.database}"'
         )
-        payloads: list = []
+
+        payloads: t.List[t.Dict] = []
 
         while True:
-            # NB: consider reducing POLL_TIMEOUT to increase throughput
             if select.select([conn], [], [], settings.POLL_TIMEOUT) == (
                 [],
                 [],
                 [],
             ):
-                # Catch any hanging items from the last poll
-                if payloads:
-                    self.redis.push(payloads)
-                    payloads = []
+                self._flush_payloads(payloads)
+                payloads = []
                 continue
 
             try:
@@ -1185,28 +1198,32 @@ class Sync(Base, metaclass=Singleton):
 
             while conn.notifies:
                 if len(payloads) >= settings.REDIS_WRITE_CHUNK_SIZE:
-                    self.redis.push(payloads)
+                    self._flush_payloads(payloads)
                     payloads = []
-                notification: t.AnyStr = conn.notifies.pop(0)
-                if notification.channel == self.database:
 
-                    try:
-                        payload = json.loads(notification.payload)
-                    except json.JSONDecodeError as e:
-                        logger.exception(
-                            f"Error decoding JSON payload: {e}\n"
-                            f"Payload: {notification.payload}"
-                        )
-                        continue
-                    if (
-                        payload["indices"]
-                        and self.index in payload["indices"]
-                        and payload["schema"] in self.tree.schemas
-                    ):
-                        payloads.append(payload)
-                        logger.debug(f"poll_db: {payload}")
-                        with self.lock:
-                            self.count["db"] += 1
+                notification: t.AnyStr = conn.notifies.pop(0)
+                if notification.channel != self.database:
+                    continue
+
+                try:
+                    payload = json.loads(notification.payload)
+                except json.JSONDecodeError:
+                    logger.exception("Invalid JSON in notification, skipping")
+                    continue
+
+                if (
+                    payload.get("indices")
+                    and self.index in payload["indices"]
+                    and payload.get("schema") in self.tree.schemas
+                ):
+                    payloads.append(payload)
+                    logger.debug(f"Queued payload: {payload}")
+                    with self.lock:
+                        self.count["db"] += 1
+
+            # flush anything left after draining notifications
+            self._flush_payloads(payloads)
+            payloads = []
 
     @exception
     def async_poll_db(self) -> None:
@@ -1223,16 +1240,29 @@ class Sync(Base, metaclass=Singleton):
 
         while self.conn.notifies:
             notification: t.AnyStr = self.conn.notifies.pop(0)
-            if notification.channel == self.database:
+            if notification.channel != self.database:
+                continue
+
+            try:
                 payload = json.loads(notification.payload)
-                if (
-                    payload["indices"]
-                    and self.index in payload["indices"]
-                    and payload["schema"] in self.tree.schemas
-                ):
-                    self.redis.push([payload])
-                    logger.debug(f"async_poll: {payload}")
-                    self.count["db"] += 1
+            except json.JSONDecodeError as e:
+                logger.exception(f"Error decoding JSON payload: {e}")
+                continue
+
+            if (
+                payload.get("indices")
+                and self.index in payload["indices"]
+                and payload.get("schema") in self.tree.schemas
+            ):
+                # extract numeric weight (missing +inf for highest priority)
+                raw_w = payload.get("weight")
+                weight = float(raw_w) if raw_w is not None else inf
+
+                # push via priority queue
+                self.redis.push([payload], weight=weight)
+
+                logger.debug(f"async_poll: {payload} (weight={weight})")
+                self.count["db"] += 1
 
     def refresh_views(self) -> None:
         self._refresh_views()
@@ -1334,7 +1364,9 @@ class Sync(Base, metaclass=Singleton):
             if polling:
                 return
             else:
-                raise
+                raise Exception(
+                    f"Error while pulling logical slot changes: {e}"
+                ) from e
         self.checkpoint: int = txmax or self.txid_current
         self._truncate = True
 
@@ -1353,9 +1385,32 @@ class Sync(Base, metaclass=Singleton):
             await asyncio.sleep(settings.REPLICATION_SLOT_CLEANUP_INTERVAL)
 
     def _truncate_slots(self) -> None:
-        if self._truncate:
-            logger.debug(f"Truncating replication slot: {self.__name}")
-            self.logical_slot_get_changes(self.__name, upto_nchanges=None)
+        if not self._truncate:
+            return
+
+        """
+        Handle eventual consistency of the logical replication slot.
+        We retry logical_slot_changes a few times in case of replication slot in use error.
+        """
+        retries: int = 3
+        backoff: int = 1
+        txmax: int = self.txid_current
+        upto_lsn: str = self.current_wal_lsn
+
+        for attempt in range(1, retries + 1):
+            try:
+                logger.debug(f"Truncating replication slot: {self.__name}")
+                self.logical_slot_changes(txmax=txmax, upto_lsn=upto_lsn)
+                logger.debug("Truncation successful.")
+                break
+            except Exception as e:
+                logger.warning(f"Attempt {attempt} failed with {e}")
+                if attempt == retries:
+                    logger.error("Max retries reached, raising exception.")
+                    raise
+                sleep_time: int = backoff * (2 ** (attempt - 1))
+                logger.debug(f"Retrying in {sleep_time} seconds...")
+                time.sleep(sleep_time)
 
     @threaded
     @exception
