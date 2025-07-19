@@ -48,6 +48,8 @@ STREAM_RESULTS = env.bool("STREAM_RESULTS", default=True)
 # db polling interval
 POLL_INTERVAL = env.float("POLL_INTERVAL", default=0.1)
 FORMAT_WITH_COMMAS = env.bool("FORMAT_WITH_COMMAS", default=True)
+# Read-only database mode (no replication slots or triggers with consumer)
+READ_ONLY_CONSUMER = env.bool("READ_ONLY_CONSUMER", default=False)
 
 # Elasticsearch/OpenSearch:
 ELASTICSEARCH_API_KEY = env.str("ELASTICSEARCH_API_KEY", default=None)
