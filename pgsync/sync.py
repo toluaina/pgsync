@@ -73,6 +73,7 @@ class Sync(Base, metaclass=Singleton):
     def __init__(
         self,
         doc: dict,
+        *,
         verbose: bool = False,
         validate: bool = True,
         repl_slots: bool = True,
@@ -1608,6 +1609,8 @@ def main(
     else:
         consumer = producer = True
 
+    # If we are in read-only mode, we can only run as a consumer.
+    # A read-only consumer can run against a read-only or replica database.
     if read_only and consumer and producer:
         raise click.UsageError(
             "Read-only mode is compatible with consumer only mode. "
