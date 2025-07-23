@@ -2,6 +2,7 @@
 
 import logging
 import os
+import threading
 import time
 import typing as t
 from contextlib import contextmanager
@@ -28,8 +29,13 @@ from .exc import (
     TableNotFoundError,
 )
 from .settings import (
+    PG_HOST_RO,
+    PG_PASSWORD_RO,
+    PG_PORT_RO,
     PG_SSLMODE,
     PG_SSLROOTCERT,
+    PG_URL_RO,
+    PG_USER_RO,
     QUERY_CHUNK_SIZE,
     STREAM_RESULTS,
 )
@@ -47,7 +53,6 @@ try:
     import geoalchemy2  # noqa
 except ImportError:
     pass
-
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +158,8 @@ class TupleIdentifierType(sa.types.UserDefinedType):
 
 
 class Base(object):
+    _thread_local = threading.local()
+
     INT_TYPES = (
         "bigint",
         "bigserial",
@@ -190,6 +197,26 @@ class Base(object):
         self.__engine: sa.engine.Engine = _pg_engine(
             database, echo=False, **kwargs
         )
+        self.__engine_ro: t.Optional[sa.engine.Engine] = None
+        if (
+            PG_USER_RO
+            or PG_HOST_RO
+            or PG_PASSWORD_RO
+            or PG_PORT_RO
+            or PG_URL_RO
+        ):
+            kwargs.update(
+                {
+                    "user": PG_USER_RO,
+                    "host": PG_HOST_RO,
+                    "password": PG_PASSWORD_RO,
+                    "port": PG_PORT_RO,
+                    "url": PG_URL_RO,
+                }
+            )
+            self.__engine_ro: sa.engine.Engine = _pg_engine(
+                database, echo=False, **kwargs
+            )
         self.__schemas: t.Optional[dict] = None
         # models is a dict of f'{schema}.{table}'
         self.__models: dict = {}
@@ -307,6 +334,8 @@ class Base(object):
     @property
     def engine(self) -> sa.engine.Engine:
         """Get the database engine."""
+        if getattr(self._thread_local, "read_only", False):
+            return self.__engine_ro
         return self.__engine
 
     @property
@@ -1168,6 +1197,7 @@ def _pg_engine(
     echo: bool = False,
     sslmode: t.Optional[str] = None,
     sslrootcert: t.Optional[str] = None,
+    url: t.Optional[str] = None,
 ) -> sa.engine.Engine:
     connect_args: dict = {}
     sslmode = sslmode or PG_SSLMODE
@@ -1187,13 +1217,14 @@ def _pg_engine(
             )
         connect_args["sslrootcert"] = sslrootcert
 
-    url: str = get_postgres_url(
-        database,
-        user=user,
-        host=host,
-        password=password,
-        port=port,
-    )
+    if url is None:
+        url: str = get_postgres_url(
+            database,
+            user=user,
+            host=host,
+            password=password,
+            port=port,
+        )
     return sa.create_engine(url, echo=echo, connect_args=connect_args)
 
 

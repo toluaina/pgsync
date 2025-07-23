@@ -81,7 +81,6 @@ class Sync(Base, metaclass=Singleton):
         num_workers: int = 1,
         producer: bool = True,
         consumer: bool = True,
-        read_only: bool = False,
         bootstrap: bool = False,
         **kwargs,
     ) -> None:
@@ -106,7 +105,6 @@ class Sync(Base, metaclass=Singleton):
         self._truncate: bool = False
         self.producer = producer
         self.consumer = consumer
-        self.read_only = read_only
         self.num_workers: int = num_workers
         self._checkpoint_file: str = os.path.join(
             settings.CHECKPOINT_PATH, f".{self.__name}"
@@ -116,7 +114,7 @@ class Sync(Base, metaclass=Singleton):
         if bootstrap:
             self.setup()
 
-        if validate and not self.read_only:
+        if validate:
             self.validate(repl_slots=repl_slots, polling=polling)
             self.create_setting()
 
@@ -830,7 +828,7 @@ class Sync(Base, metaclass=Singleton):
 
         return filters
 
-    def _payloads(self, payloads: t.List[Payload]) -> None:
+    def _payloads(self, payloads: t.List[Payload]) -> t.Generator:
         """
         The "payloads" is a list of payload operations to process together.
 
@@ -1122,13 +1120,16 @@ class Sync(Base, metaclass=Singleton):
         """
         Get last committed transaction id from the database or redis.
         """
-        if self.read_only:
-            # If we are in read-only mode, we can only get the txid from Redis
+        # If we are in read-only mode, we can only get the txid from Redis
+        if getattr(self._thread_local, "read_only", False):
             return self.redis.get_meta(default={}).get("txid_current", 0)
         # If we are not in read-only mode, we can get the txid from the database
         return super().txid_current
 
     def _poll_redis(self) -> None:
+        """
+        NB: this is only called by consumer thread
+        """
         payloads: list = self.redis.pop()
         if payloads:
             logger.debug(f"_poll_redis: {payloads}")
@@ -1144,6 +1145,10 @@ class Sync(Base, metaclass=Singleton):
     @exception
     def poll_redis(self) -> None:
         """Consumer which polls Redis continuously."""
+        if settings.PG_HOST_RO or settings.PG_PORT_RO:
+            logger.info("Setting read only consumer")
+            self._thread_local.read_only = True
+
         while True:
             self._poll_redis()
 
@@ -1310,7 +1315,8 @@ class Sync(Base, metaclass=Singleton):
                         or payload.table != payload2.table
                     ):
                         self.search_client.bulk(
-                            self.index, self._payloads(_payloads)
+                            self.index,
+                            self._payloads(_payloads),
                         )
                         _payloads = []
                 elif j == len(payloads):
@@ -1336,23 +1342,22 @@ class Sync(Base, metaclass=Singleton):
             self.index, self.sync(txmin=txmin, txmax=txmax)
         )
 
-        if not self.read_only:
-            # this is the max lsn we should go upto
-            upto_lsn: str = self.current_wal_lsn
-            try:
-                # now sync up to txmax to capture everything we may have missed
-                self.logical_slot_changes(
-                    txmin=txmin,
-                    txmax=txmax,
-                    logical_slot_chunk_size=logical_slot_chunk_size,
-                    upto_lsn=upto_lsn,
-                )
-            except Exception as e:
-                # if we are polling, we can just continue
-                if polling:
-                    return
-                else:
-                    raise
+        # this is the max lsn we should go upto
+        upto_lsn: str = self.current_wal_lsn
+        try:
+            # now sync up to txmax to capture everything we may have missed
+            self.logical_slot_changes(
+                txmin=txmin,
+                txmax=txmax,
+                logical_slot_chunk_size=logical_slot_chunk_size,
+                upto_lsn=upto_lsn,
+            )
+        except Exception as e:
+            # if we are polling, we can just continue
+            if polling:
+                return
+            else:
+                raise
 
         self.checkpoint: int = txmax or self.txid_current
         self._truncate = True
@@ -1381,8 +1386,7 @@ class Sync(Base, metaclass=Singleton):
     def status(self) -> None:
         while True:
             self._status(label="Sync")
-            if not self.read_only:
-                self.redis.set_meta({"txid_current": self.txid_current})
+            self.redis.set_meta({"txid_current": self.txid_current})
             time.sleep(settings.LOG_INTERVAL)
 
     @exception
@@ -1444,8 +1448,7 @@ class Sync(Base, metaclass=Singleton):
                     self.poll_redis()
 
             # start a background worker thread to cleanup the replication slot
-            if not self.read_only:
-                self.truncate_slots()
+            self.truncate_slots()
             # start a background worker thread to show status
             self.status()
 
@@ -1548,15 +1551,6 @@ class Sync(Base, metaclass=Singleton):
     default=False,
     help="Bootstrap the database",
 )
-@click.option(
-    "--read-only",
-    "-r",
-    is_flag=True,
-    default=settings.READ_ONLY_CONSUMER,
-    help="Read-only database mode (no replication slots or triggers with consumer)",
-    cls=MutuallyExclusiveOption,
-    mutually_exclusive=["producer"],
-)
 def main(
     config: str,
     daemon: bool,
@@ -1574,7 +1568,6 @@ def main(
     producer: bool,
     consumer: bool,
     bootstrap: bool,
-    read_only: bool,
 ) -> None:
     """Main application syncer."""
     if version:
@@ -1609,14 +1602,6 @@ def main(
     else:
         consumer = producer = True
 
-    # If we are in read-only mode, we can only run as a consumer.
-    # A read-only consumer can run against a read-only or replica database.
-    if read_only and consumer and producer:
-        raise click.UsageError(
-            "Read-only mode is compatible with consumer only mode. "
-            "Please use --consumer --read-only."
-        )
-
     with Timer():
         if analyze:
             for doc in config_loader(config):
@@ -1643,7 +1628,6 @@ def main(
                     num_workers=num_workers,
                     producer=producer,
                     consumer=consumer,
-                    read_only=read_only,
                     bootstrap=bootstrap,
                     **kwargs,
                 )

@@ -48,8 +48,6 @@ STREAM_RESULTS = env.bool("STREAM_RESULTS", default=True)
 # db polling interval
 POLL_INTERVAL = env.float("POLL_INTERVAL", default=0.1)
 FORMAT_WITH_COMMAS = env.bool("FORMAT_WITH_COMMAS", default=True)
-# Read-only database mode (no replication slots or triggers with consumer)
-READ_ONLY_CONSUMER = env.bool("READ_ONLY_CONSUMER", default=False)
 
 # Elasticsearch/OpenSearch:
 ELASTICSEARCH_API_KEY = env.str("ELASTICSEARCH_API_KEY", default=None)
@@ -175,8 +173,25 @@ if PG_URL:
     PG_USER = env.str("PG_USER", default=None)
 else:
     # If PG_URL is not set, we need to use the other PG_* variables
-    PG_URL = None
     PG_USER = env.str("PG_USER")
+
+# Read-only Postgres:
+# This is used for read-only consumers that do not require replication slots or triggers.
+# full database url including user, password, host, port and dbname
+PG_URL_RO = env.str("PG_URL_RO", default=None)
+PG_HOST_RO = env.str("PG_HOST_RO", default=None)
+PG_PASSWORD_RO = env.str("PG_PASSWORD_RO", default=None)
+PG_PORT_RO = env.int("PG_PORT_RO", default=None)
+PG_SSLMODE_RO = env.str("PG_SSLMODE_RO", default=None)
+PG_SSLROOTCERT_RO = env.str("PG_SSLROOTCERT_RO", default=None)
+PG_USER_RO = env.str("PG_USER_RO", default=None)
+if PG_URL_RO:
+    # If PG_URL_RO is set, we don't need to use the other PG_*_RO variables
+    PG_HOST_RO = None
+    PG_PASSWORD_RO = None
+    PG_PORT_RO = None
+    PG_SSLMODE_RO = None
+    PG_SSLROOTCERT_RO = None
 
 # Redis:
 REDIS_AUTH = env.str("REDIS_AUTH", default=None)
