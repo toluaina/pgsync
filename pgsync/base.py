@@ -939,6 +939,27 @@ class Base(object):
             label="txid_current",
         )[0]
 
+    def xmin_visibility(self) -> t.Callable[[t.List[int]], dict]:
+        def _xmin_visibility(xid8s: t.List[int]) -> dict:
+            if not xid8s:
+                return {}
+            # TODO: use the SQLAlchemy ORM to handle this query
+            sql = sa.text(
+                """
+                SELECT
+                    x AS xid8,
+                    PG_VISIBLE_IN_SNAPSHOT(x::xid8, PG_CURRENT_SNAPSHOT()) AS visible
+                FROM UNNEST(CAST(:xid8s AS text[])) AS t(x)
+            """
+            )
+            # xid8s = list of xid8 strings
+            params = {"xid8s": list(map(str, xid8s))}
+            with self.__engine_ro.connect() as conn:
+                result = conn.execute(sql, params)
+                return {int(row.xid8): row.visible for row in result}
+
+        return _xmin_visibility
+
     def parse_value(self, type_: str, value: str) -> t.Optional[str]:
         """
         Parse datatypes from db.

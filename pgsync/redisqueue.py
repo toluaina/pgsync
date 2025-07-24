@@ -52,6 +52,28 @@ class RedisQueue(object):
             logger.debug(f"pop size: {len(items[0])}")
             return list(map(lambda value: json.loads(value), items[0]))
 
+    def pop_visible_in_snapshot(
+        self,
+        xmin_visibility: t.Callable[[t.List[int]], dict],
+        chunk_size: t.Optional[int] = None,
+    ) -> t.List[dict]:
+        chunk_size = chunk_size or REDIS_READ_CHUNK_SIZE
+        items = self.__db.lrange(self.key, 0, chunk_size - 1)
+        if not items:
+            return []
+        payloads = [json.loads(i) for i in items]
+        visible_map = xmin_visibility(
+            [payload["xmin"] for payload in payloads]
+        )
+        visible = []
+        for item, payload in zip(items, payloads):
+            if visible_map.get(payload["xmin"]):
+                # Claim atomically
+                removed = self.__db.lrem(self.key, 1, item)
+                if removed:
+                    visible.append(payload)
+        return visible
+
     def push(self, items: t.List) -> None:
         """Push multiple items onto the queue."""
         self.__db.rpush(self.key, *map(json.dumps, items))

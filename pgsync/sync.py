@@ -1130,7 +1130,14 @@ class Sync(Base, metaclass=Singleton):
         """
         NB: this is only called by consumer thread
         """
-        payloads: list = self.redis.pop()
+        payloads: list
+        if getattr(self._thread_local, "read_only", False):
+            # xmin_visibility() to get the closure
+            payloads = self.redis.pop_visible_in_snapshot(
+                self.xmin_visibility()
+            )
+        else:
+            payloads = self.redis.pop()
         if payloads:
             logger.debug(f"_poll_redis: {payloads}")
             with self.lock:
