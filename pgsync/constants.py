@@ -135,6 +135,7 @@ ELASTICSEARCH_MAPPING_PARAMETERS = [
     "boost",
     "coerce",
     "copy_to",
+    "dimension",
     "doc_values",
     "dynamic",
     "eager_global_ordinals",
