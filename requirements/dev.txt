@@ -10,9 +10,9 @@ backports-datetime-fromisoformat==2.0.3
     # via marshmallow
 black==25.1.0
     # via -r requirements/dev.in
-boto3==1.39.13
+boto3==1.39.14
     # via -r /Users/tolu/pgsync/requirements/base.in
-botocore==1.39.13
+botocore==1.39.14
     # via
     #   boto3
     #   s3transfer

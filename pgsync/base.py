@@ -939,26 +939,36 @@ class Base(object):
             label="txid_current",
         )[0]
 
-    def xmin_visibility(self) -> t.Callable[[t.List[int]], dict]:
-        def _xmin_visibility(xid8s: t.List[int]) -> dict:
+    def pg_visible_in_snapshot(
+        self, literal_binds: bool = False
+    ) -> t.Callable[[t.List[int]], dict]:
+        def _pg_visible_in_snapshot(xid8s: t.List[int]) -> dict:
             if not xid8s:
                 return {}
             # TODO: use the SQLAlchemy ORM to handle this query
-            sql = sa.text(
+            statement = sa.text(
                 """
-                SELECT
-                    x AS xid8,
-                    PG_VISIBLE_IN_SNAPSHOT(x::xid8, PG_CURRENT_SNAPSHOT()) AS visible
-                FROM UNNEST(CAST(:xid8s AS text[])) AS t(x)
+                SELECT xid AS xid8,
+                PG_VISIBLE_IN_SNAPSHOT(xid::xid8, PG_CURRENT_SNAPSHOT()) AS visible
+                FROM UNNEST(CAST(:xid8s AS text[]))
+                WITH ORDINALITY AS t(xid, ord)
+                ORDER BY t.ord
             """
             )
+            if self.verbose:
+                compiled_query(
+                    statement,
+                    label="xmin_visibility",
+                    literal_binds=literal_binds,
+                )
+
             # xid8s = list of xid8 strings
-            params = {"xid8s": list(map(str, xid8s))}
+            params: dict = {"xid8s": list(map(str, xid8s))}
             with self.__engine_ro.connect() as conn:
-                result = conn.execute(sql, params)
+                result = conn.execute(statement, params)
                 return {int(row.xid8): row.visible for row in result}
 
-        return _xmin_visibility
+        return _pg_visible_in_snapshot
 
     def parse_value(self, type_: str, value: str) -> t.Optional[str]:
         """

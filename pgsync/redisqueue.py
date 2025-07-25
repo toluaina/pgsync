@@ -54,7 +54,7 @@ class RedisQueue(object):
 
     def pop_visible_in_snapshot(
         self,
-        xmin_visibility: t.Callable[[t.List[int]], dict],
+        pg_visible_in_snapshot: t.Callable[[t.List[int]], dict],
         chunk_size: t.Optional[int] = None,
     ) -> t.List[dict]:
         chunk_size = chunk_size or REDIS_READ_CHUNK_SIZE
@@ -62,10 +62,10 @@ class RedisQueue(object):
         if not items:
             return []
         payloads = [json.loads(i) for i in items]
-        visible_map = xmin_visibility(
+        visible_map = pg_visible_in_snapshot(
             [payload["xmin"] for payload in payloads]
         )
-        visible = []
+        visible: t.List[dict] = []
         for item, payload in zip(items, payloads):
             if visible_map.get(payload["xmin"]):
                 # Claim atomically
