@@ -57,12 +57,18 @@ class RedisQueue(object):
         pg_visible_in_snapshot: t.Callable[[t.List[int]], dict],
         chunk_size: t.Optional[int] = None,
     ) -> t.List[dict]:
+        """
+        Pop items in the queue that are visible in the current snapshot.
+        Uses the provided pg_visible_in_snapshot function to determine visibility.
+        This function is useful for read-only consumers that need to process items
+        that are visible in the current PostgreSQL snapshot.
+        """
         chunk_size = chunk_size or REDIS_READ_CHUNK_SIZE
-        items = self.__db.lrange(self.key, 0, chunk_size - 1)
+        items: t.List = self.__db.lrange(self.key, 0, chunk_size - 1)
         if not items:
             return []
         payloads = [json.loads(i) for i in items]
-        visible_map = pg_visible_in_snapshot(
+        visible_map: dict = pg_visible_in_snapshot()(
             [payload["xmin"] for payload in payloads]
         )
         visible: t.List[dict] = []

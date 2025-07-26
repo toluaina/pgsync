@@ -1134,7 +1134,7 @@ class Sync(Base, metaclass=Singleton):
         if getattr(self._thread_local, "read_only", False):
             # pg_visible_in_snapshot() to get the closure
             payloads = self.redis.pop_visible_in_snapshot(
-                self.pg_visible_in_snapshot()
+                self.pg_visible_in_snapshot
             )
         else:
             payloads = self.redis.pop()
