@@ -15,12 +15,12 @@ from pgsync.utils import (
     compiled_query,
     config_loader,
     exception,
-    get_config,
     get_redacted_url,
     show_settings,
     threaded,
     timeit,
     Timer,
+    validate_config,
 )
 
 
@@ -28,21 +28,46 @@ from pgsync.utils import (
 class TestUtils(object):
     """Utils tests."""
 
-    def test_get_config(self):
-        with pytest.raises(SchemaError) as excinfo:
-            get_config()
-        assert "Schema config not set" in str(excinfo.value)
+    def test_validate_config(self):
+        # Test: neither config nor s3_schema_url provided
+        with pytest.raises(ValueError) as excinfo:
+            validate_config()
+        assert (
+            "You must provide either a local config path or an S3 schema URL."
+            in str(excinfo.value)
+        )
 
+        # Test: non-existent local config file
         with pytest.raises(FileNotFoundError) as excinfo:
-            get_config("non_existent")
-        assert 'Schema config "non_existent" not found' in str(excinfo.value)
-        config: str = get_config("tests/fixtures/schema.json")
-        assert config == "tests/fixtures/schema.json"
+            validate_config(config="non_existent.json")
+        assert 'Schema config "non_existent.json" not found' in str(
+            excinfo.value
+        )
+
+        # Test: invalid S3 URL
+        with pytest.raises(ValueError) as excinfo:
+            validate_config(s3_schema_url="http://example.com/schema.json")
+        assert 'Invalid S3 URL: "http://example.com/schema.json"' in str(
+            excinfo.value
+        )
+
+        # Test: valid local config file (assumes it exists)
+        test_config_path = "tests/fixtures/schema.json"
+        assert os.path.exists(
+            test_config_path
+        ), f"Test file missing: {test_config_path}"
+        # Should not raise an error
+        validate_config(config=test_config_path)
+
+        # Test: valid S3 URL
+        validate_config(
+            s3_schema_url="s3://bucket/schema.json"
+        )  # Should not raise
 
     def test_config_loader(self):
         os.environ["foo"] = "mydb"
         os.environ["bar"] = "myindex"
-        config: str = get_config("tests/fixtures/schema.json")
+        config: str = "tests/fixtures/schema.json"
         data = config_loader(config)
         assert next(data) == {
             "database": "fakedb",
@@ -63,7 +88,7 @@ class TestUtils(object):
 
     @patch("pgsync.utils.logger")
     def test_show_settings(self, mock_logger):
-        show_settings(schema="tests/fixtures/schema.json")
+        show_settings(config="tests/fixtures/schema.json")
         calls = [
             call("\x1b[4mSettings\x1b[0m:"),
             call("Schema    : tests/fixtures/schema.json"),

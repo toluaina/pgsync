@@ -3,7 +3,6 @@
 import pytest
 from mock import MagicMock, patch
 
-from pgsync.exc import SchemaError
 from pgsync.settings import ELASTICSEARCH_PORT
 from pgsync.urls import (
     _get_auth,
@@ -11,7 +10,7 @@ from pgsync.urls import (
     get_redis_url,
     get_search_url,
 )
-from pgsync.utils import get_config
+from pgsync.utils import validate_config
 
 
 @pytest.mark.usefixtures("table_creator")
@@ -94,20 +93,27 @@ class TestUrls(object):
         )
 
     @patch("pgsync.urls.logger")
-    def test_get_config(self, mock_logger):
-        assert __file__ == get_config(config=__file__)
-        with pytest.raises(SchemaError) as excinfo:
-            get_config()
-        assert "Schema config not set" in str(excinfo.value)
-        with pytest.raises(IOError) as excinfo:
-            get_config("/tmp/nonexistent")
+    def test_validate_config_with_mock_logger(self, mock_logger):
+        # Valid file path should not raise (uses current file)
+        validate_config(config=__file__)
+
+        # Missing both config and s3_schema_url -> ValueError
+        with pytest.raises(ValueError) as excinfo:
+            validate_config()
+        assert (
+            "You must provide either a local config path or an S3 schema URL."
+            in str(excinfo.value)
+        )
+
+        # Non-existent file -> FileNotFoundError
+        with pytest.raises(FileNotFoundError) as excinfo:
+            validate_config(config="/tmp/nonexistent")
         assert 'Schema config "/tmp/nonexistent" not found' in str(
             excinfo.value
         )
 
     @patch("pgsync.urls.logger")
     def test_get_auth(self, mock_logger):
-        assert __file__ == get_config(config=__file__)
         with patch("pgsync.urls.Plugins", return_value=MagicMock()):
             _get_auth("something")
             mock_logger.assert_not_called()

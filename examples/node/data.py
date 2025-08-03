@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 
 from pgsync.base import pg_engine, subtransactions
 from pgsync.helper import teardown
-from pgsync.utils import config_loader, get_config
+from pgsync.utils import config_loader, validate_config
 
 
 @click.command()
@@ -17,7 +17,7 @@ from pgsync.utils import config_loader, get_config
     type=click.Path(exists=True),
 )
 def main(config: str) -> None:
-    config: str = get_config(config)
+    validate_config(config)
     teardown(drop_db=False, config=config)
     doc: dict = next(config_loader(config))
     database: str = doc.get("database", doc["index"])

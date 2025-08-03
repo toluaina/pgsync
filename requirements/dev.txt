@@ -10,13 +10,13 @@ backports-datetime-fromisoformat==2.0.3
     # via marshmallow
 black==25.1.0
     # via -r requirements/dev.in
-boto3==1.39.14
-    # via -r /Users/tolu/pgsync/requirements/base.in
-botocore==1.39.14
+boto3==1.40.1
+    # via -r requirements/base.in
+botocore==1.40.1
     # via
     #   boto3
     #   s3transfer
-certifi==2025.7.14
+certifi==2025.8.3
     # via
     #   elastic-transport
     #   opensearch-py
@@ -27,37 +27,35 @@ charset-normalizer==3.4.2
     # via requests
 click==8.1.8
     # via
-    #   -r /Users/tolu/pgsync/requirements/base.in
+    #   -r requirements/base.in
     #   black
-coverage[toml]==7.10.0
+coverage[toml]==7.10.1
     # via
     #   -r requirements/dev.in
     #   pytest-cov
 distlib==0.4.0
     # via virtualenv
 elastic-transport==8.17.1
+    # via elasticsearch
+elasticsearch==8.19.0
     # via
-    #   elasticsearch
+    #   -r requirements/base.in
     #   elasticsearch-dsl
-elasticsearch==8.18.1
-    # via
-    #   -r /Users/tolu/pgsync/requirements/base.in
-    #   elasticsearch-dsl
-elasticsearch-dsl==8.18.0
-    # via -r /Users/tolu/pgsync/requirements/base.in
-environs==14.2.0
-    # via -r /Users/tolu/pgsync/requirements/base.in
+elasticsearch-dsl==8.15.4
+    # via -r requirements/base.in
+environs==14.3.0
+    # via -r requirements/base.in
 events==0.5
     # via opensearch-py
 exceptiongroup==1.3.0
     # via pytest
-faker==37.4.2
+faker==37.5.3
     # via -r requirements/dev.in
 filelock==3.18.0
     # via virtualenv
 flake8==7.3.0
     # via -r requirements/dev.in
-freezegun==1.5.3
+freezegun==1.5.4
     # via -r requirements/dev.in
 greenlet==3.2.3
     # via sqlalchemy
@@ -84,7 +82,7 @@ mypy-extensions==1.1.0
 nodeenv==1.9.1
     # via pre-commit
 opensearch-dsl==2.1.0
-    # via -r /Users/tolu/pgsync/requirements/base.in
+    # via -r requirements/base.in
 opensearch-py==3.0.0
     # via opensearch-dsl
 packaging==25.0
@@ -104,7 +102,7 @@ pluggy==1.6.0
 pre-commit==4.2.0
     # via -r requirements/dev.in
 psycopg2-binary==2.9.10
-    # via -r /Users/tolu/pgsync/requirements/base.in
+    # via -r requirements/base.in
 pycodestyle==2.14.0
     # via flake8
 pyflakes==3.4.0
@@ -130,28 +128,28 @@ python-dateutil==2.9.0.post0
     #   opensearch-py
 python-dotenv==1.1.1
     # via
-    #   -r /Users/tolu/pgsync/requirements/base.in
+    #   -r requirements/base.in
     #   environs
 pyyaml==6.0.2
     # via pre-commit
 redis==6.2.0
-    # via -r /Users/tolu/pgsync/requirements/base.in
+    # via -r requirements/base.in
 requests==2.32.4
     # via
     #   opensearch-py
     #   requests-aws4auth
 requests-aws4auth==1.3.1
-    # via -r /Users/tolu/pgsync/requirements/base.in
+    # via -r requirements/base.in
 s3transfer==0.13.1
     # via boto3
 six==1.17.0
     # via
     #   opensearch-dsl
     #   python-dateutil
-sqlalchemy==2.0.41
-    # via -r /Users/tolu/pgsync/requirements/base.in
+sqlalchemy==2.0.42
+    # via -r requirements/base.in
 sqlparse==0.5.3
-    # via -r /Users/tolu/pgsync/requirements/base.in
+    # via -r requirements/base.in
 tomli==2.2.1
     # via
     #   black
@@ -174,5 +172,5 @@ urllib3==1.26.20
     #   elastic-transport
     #   opensearch-py
     #   requests
-virtualenv==20.32.0
+virtualenv==20.33.0
     # via pre-commit

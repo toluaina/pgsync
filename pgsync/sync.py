@@ -55,11 +55,11 @@ from .utils import (
     config_loader,
     exception,
     format_number,
-    get_config,
     MutuallyExclusiveOption,
     show_settings,
     threaded,
     Timer,
+    validate_config,
 )
 
 TX_BOUNDARY_RE = re.compile(r"^(BEGIN|COMMIT)\s+(\d+)", re.IGNORECASE)
@@ -1466,6 +1466,19 @@ class Sync(Base, metaclass=Singleton):
     "-c",
     help="Schema config",
     type=click.Path(exists=True),
+    default=settings.SCHEMA,
+    show_default=True,
+    cls=MutuallyExclusiveOption,
+    mutually_exclusive=["s3_schema_url"],
+)
+@click.option(
+    "--s3_schema_url",
+    help="S3 URL for schema config",
+    type=click.STRING,
+    default=settings.S3_SCHEMA_URL,
+    show_default=True,
+    cls=MutuallyExclusiveOption,
+    mutually_exclusive=["config"],
 )
 @click.option(
     "--daemon",
@@ -1560,6 +1573,7 @@ class Sync(Base, metaclass=Singleton):
 )
 def main(
     config: str,
+    s3_schema_url: str,
     daemon: bool,
     host: str,
     password: bool,
@@ -1598,9 +1612,15 @@ def main(
         key: value for key, value in kwargs.items() if value is not None
     }
 
-    config: str = get_config(config)
+    if not config and not s3_schema_url:
+        raise click.UsageError(
+            "You must provide either --config (or SCHEMA env var) or "
+            "--s3-schema-url (or S3_SCHEMA_URL env var)."
+        )
 
-    show_settings(config)
+    validate_config(config=config, s3_schema_url=s3_schema_url)
+
+    show_settings(config=config, s3_schema_url=s3_schema_url)
 
     if producer:
         consumer = False
@@ -1611,7 +1631,9 @@ def main(
 
     with Timer():
         if analyze:
-            for doc in config_loader(config):
+            for doc in config_loader(
+                config=config, s3_schema_url=s3_schema_url
+            ):
                 sync: Sync = Sync(doc, verbose=verbose, **kwargs)
                 sync.analyze()
 
@@ -1621,14 +1643,18 @@ def main(
             # It should be considered a workaround for running on a read-only cluster.
             kwargs["polling"] = True
             while True:
-                for doc in config_loader(config):
+                for doc in config_loader(
+                    config=config, s3_schema_url=s3_schema_url
+                ):
                     sync: Sync = Sync(doc, verbose=verbose, **kwargs)
                     sync.pull(polling=True)
                 time.sleep(settings.POLL_INTERVAL)
 
         else:
             tasks: t.List[asyncio.Task] = []
-            for doc in config_loader(config):
+            for doc in config_loader(
+                config=config, s3_schema_url=s3_schema_url
+            ):
                 sync: Sync = Sync(
                     doc,
                     verbose=verbose,
