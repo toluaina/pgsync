@@ -14,6 +14,7 @@ import typing as t
 from collections import defaultdict
 from itertools import groupby
 from pathlib import Path
+from typing import Dict, List, Optional
 
 import click
 import sqlalchemy as sa
@@ -284,6 +285,7 @@ class Sync(Base, metaclass=Singleton):
         if_not_exists: bool = not no_create
 
         join_queries: bool = settings.JOIN_QUERIES
+        trigger_all_columns: bool = settings.TRIGGER_ALL_COLUMNS
 
         with self.advisory_lock(
             self.database, max_retries=None, retry_interval=0.1
@@ -302,6 +304,8 @@ class Sync(Base, metaclass=Singleton):
                 # tables with user defined foreign keys
                 user_defined_fkey_tables: dict = {}
 
+                table_columns: Optional[Dict[str, List[str]]] = {}
+
                 for node in self.tree.traverse_breadth_first():
                     if node.schema != schema:
                         continue
@@ -314,6 +318,8 @@ class Sync(Base, metaclass=Singleton):
                     tables |= set([node.table])
                     # we also need to bootstrap the base tables
                     tables |= set(node.base_tables)
+                    cols = list(node.columns) if node.columns else []
+                    table_columns[node.table] = cols
 
                     # we want to get both the parent and the child keys here
                     # even though only one of them is the foreign_key.
@@ -342,6 +348,7 @@ class Sync(Base, metaclass=Singleton):
                     self.create_triggers(
                         schema,
                         tables=tables,
+                        table_columns=None if trigger_all_columns else table_columns,
                         join_queries=join_queries,
                         if_not_exists=if_not_exists,
                     )
@@ -505,6 +512,44 @@ class Sync(Base, metaclass=Singleton):
             upto_lsn=upto_lsn,
         )
 
+    def _root_primary_key_resolver_bulk(
+        self, node: Node, fields: dict, filters: list
+    ) -> list:
+        for doc_id in self.search_client._search(
+            self.index, node.table, fields
+        ):
+            where: dict = {}
+            params: dict = doc_id.split(PRIMARY_KEY_DELIMITER)
+            for i, key in enumerate(self.tree.root.model.primary_keys):
+                where[key] = params[i]
+            filters.append(where)
+            
+        return filters
+    
+    def _root_foreign_key_resolver_bulk(
+        self, node: Node, fields: dict, filters: list
+    ) -> list:
+        """
+        Bulk Foreign key resolver logic:
+
+        Lookup this value in the meta section of Elasticsearch/OpenSearch
+        Then get the root node returned and re-sync that root record.
+        Essentially, we want to lookup the root node affected by
+        our insert/update operation and sync the tree branch for that root.
+        """
+        for doc_id in self.search_client._search(
+            self.index,
+            node.parent.table,
+            fields,
+        ):
+            where: dict = {}
+            params: dict = doc_id.split(PRIMARY_KEY_DELIMITER)
+            for i, key in enumerate(self.tree.root.model.primary_keys):
+                where[key] = params[i]
+            filters.append(where)
+
+        return filters
+    
     def _root_primary_key_resolver(
         self, node: Node, payload: Payload, filters: list
     ) -> list:
@@ -663,7 +708,7 @@ class Sync(Base, metaclass=Singleton):
     ) -> dict:
         if node.is_root:
             # Here, we are performing two operations:
-            # 1) Build a filter to sync the updated record(s)
+            # 1) Build a filter by using Bulk operation to sync the updated record(s)
             # 2) Delete the old record(s) in Elasticsearch/OpenSearch if the
             #    primary key has changed
             #   2.1) This is crucial otherwise we can have the old and new
@@ -715,12 +760,18 @@ class Sync(Base, metaclass=Singleton):
 
         else:
             # update the child tables
+            fields: dict = defaultdict(list)
+            foreign_fields: dict = defaultdict(list)
             for payload in payloads:
-                _filters: list = []
-                _filters = self._root_primary_key_resolver(
-                    node, payload, _filters
+                primary_values: list = [
+                    payload.data[key] for key in node.model.primary_keys
+                ]
+                primary_fields: dict = dict(
+                    zip(node.model.primary_keys, primary_values)
                 )
-                # also handle foreign_keys
+                for key, value in primary_fields.items():
+                    fields[key].append(value)
+                # _filters: list = self._root_primary_key_resolver(node, payload, [])
                 if node.parent:
                     try:
                         foreign_keys = self.query_builder.get_foreign_keys(
@@ -732,13 +783,28 @@ class Sync(Base, metaclass=Singleton):
                             node.parent,
                             node,
                         )
+                    
+                    foreign_values: list = [
+                        payload.new.get(key) for key in foreign_keys[node.name]
+                    ]
+                    for key in [key.name for key in node.primary_keys]:
+                        for value in foreign_values:
+                            if value:
+                               foreign_fields[key].append(value)
+                    # _filters = self._root_foreign_key_resolver(
+                    #     node, payload, foreign_keys, _filters
+                    # )
 
-                    _filters = self._root_foreign_key_resolver(
-                        node, payload, foreign_keys, _filters
-                    )
 
-                if _filters:
-                    filters[self.tree.root.table].extend(_filters)
+                # if _filters:
+                #     filters[self.tree.root.table].extend(_filters)
+
+            _filters: list = self._root_primary_key_resolver_bulk(node, fields, [])
+            if _filters:
+                filters[self.tree.root.table].extend(_filters)
+            _forign_filters: list = self._root_foreign_key_resolver_bulk(node, foreign_fields, _filters)
+            if _forign_filters:
+                filters[self.tree.root.table].extend(_forign_filters)
 
         return filters
 

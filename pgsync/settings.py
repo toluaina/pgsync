@@ -36,6 +36,8 @@ QUERY_LITERAL_BINDS = env.bool("QUERY_LITERAL_BINDS", default=False)
 # db query chunk size (how many records to fetch at a time)
 QUERY_CHUNK_SIZE = env.int("QUERY_CHUNK_SIZE", default=10000)
 FILTER_CHUNK_SIZE = env.int("FILTER_CHUNK_SIZE", default=5000)
+# Whether to create triggers for all columns in a table (True) or only for columns defined in the schema (False).
+TRIGGER_ALL_COLUMNS = env.bool("TRIGGER_ALL_COLUMNS", default=True)
 # replication slot cleanup interval (in secs)
 REPLICATION_SLOT_CLEANUP_INTERVAL = env.float(
     "REPLICATION_SLOT_CLEANUP_INTERVAL",
