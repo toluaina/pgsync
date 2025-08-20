@@ -3,7 +3,7 @@
 import json
 
 import pytest
-from mock import patch
+from mock import call, patch
 from redis.exceptions import ConnectionError
 
 from pgsync.redisqueue import RedisQueue
@@ -87,9 +87,10 @@ class TestRedisQueue(object):
         queue.push([4, 5, 6])
         assert queue.qsize == 6
         queue.delete()
-        mock_logger.info.assert_called_once_with(
-            "Deleting redis key: queue:something"
-        )
+        assert mock_logger.info.call_args_list == [
+            call("Deleting redis key: queue:something"),
+            call("Deleted redis key: queue:something"),
+        ]
         assert queue.qsize == 0
 
     def test_pop_visible_in_snapshot(self):

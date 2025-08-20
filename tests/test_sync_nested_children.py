@@ -1797,6 +1797,108 @@ class TestNestedChildren(object):
         assert_resync_empty(sync, nodes)
         sync.search_client.close()
 
+    def test_insert_grand_child_through_child_op(
+        self,
+        data,
+        nodes,
+        book_cls,
+        author_cls,
+        city_cls,
+        country_cls,
+        continent_cls,
+        book_author_cls,
+    ):
+        """
+        Insert a new grand child (author) via the through child (book_author),
+        with an entirely new city/country/continent (Sydney/Australia).
+        """
+        book_author = book_author_cls(
+            id=8,
+            book_isbn="def",  # attach new author to existing book 'def'
+            author=author_cls(
+                id=6,
+                name="Italo Calvino",
+                birth_year=1923,
+                city=city_cls(
+                    id=6,
+                    name="Sydney",
+                    country=country_cls(
+                        id=6,
+                        name="Australia",
+                        continent=continent_cls(
+                            id=7,
+                            name="Australia",
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        doc = {
+            "index": "testdb",
+            "database": "testdb",
+            "nodes": nodes,
+        }
+
+        sync = Sync(doc)
+        session = sync.session
+        with subtransactions(session):
+            session.add(book_author)
+
+        sync.search_client.bulk(
+            sync.index, [sort_list(doc) for doc in sync.sync()]
+        )
+        sync.search_client.refresh("testdb")
+
+        docs = search(sync.search_client, "testdb")
+        assert len(docs) == 3
+        docs = sorted(docs, key=lambda k: k["isbn"])
+
+        expected_def_meta = {
+            "book": {"isbn": ["def"]},
+            "author": {"id": [1, 2, 6]},  # new author id=6
+            "book_author": {"id": [2, 5, 8]},  # new through id=8
+            "book_language": {"id": [2, 5, 8]},
+            "book_subject": {"id": [2, 5, 7]},
+            "city": {"id": [1, 2, 6]},  # Sydney id=6 added
+            "continent": {"id": [1, 2, 7]},  # Australia id=7 added
+            "country": {"id": [1, 2, 6]},  # Australia id=6 added
+            "language": {"id": [1, 2, 3]},
+            "publisher": {"id": [2]},
+            "subject": {"id": [2, 4, 5]},
+        }
+
+        expected_new_author = {
+            "id": 6,
+            "name": "Italo Calvino",
+            "city_label": {
+                "id": 6,
+                "name": "Sydney",
+                "country_label": {
+                    "id": 6,
+                    "name": "Australia",
+                    "continent_label": {"name": "Australia"},
+                },
+            },
+        }
+
+        # pull out the 'def' book doc
+        def_doc = next(d for d in docs if d["isbn"] == "def")
+
+        # meta checks
+        for key, val in expected_def_meta.items():
+            assert def_doc["_meta"][key] == val
+
+        # author list contains new author
+        assert any(
+            a["id"] == expected_new_author["id"] for a in def_doc["authors"]
+        )
+        new_author_doc = next(a for a in def_doc["authors"] if a["id"] == 6)
+        assert new_author_doc == expected_new_author
+
+        assert_resync_empty(sync, nodes)
+        sync.search_client.close()
+
     def test_delete_through_child_op(self, sync, data, nodes, book_author_cls):
         # delete a new through child with op
         doc = {

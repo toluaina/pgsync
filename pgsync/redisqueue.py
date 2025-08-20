@@ -88,6 +88,7 @@ class RedisQueue(object):
         """Delete all items from the named queue."""
         logger.info(f"Deleting redis key: {self.key}")
         self.__db.delete(self.key)
+        logger.info(f"Deleted redis key: {self.key}")
 
     def set_meta(self, value: t.Any) -> None:
         """Store an arbitrary JSON-serialisable value in a dedicated key."""

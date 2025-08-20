@@ -510,7 +510,9 @@ class Sync(Base, metaclass=Singleton):
     ) -> list:
         fields: dict = defaultdict(list)
         primary_values: list = [
-            payload.data[key] for key in node.model.primary_keys
+            payload.data[key]
+            for key in node.model.primary_keys
+            if key in payload.data
         ]
         primary_fields: dict = dict(
             zip(node.model.primary_keys, primary_values)
@@ -586,7 +588,34 @@ class Sync(Base, metaclass=Singleton):
     def _insert_op(
         self, node: Node, filters: dict, payloads: t.List[Payload]
     ) -> dict:
-        if node.table in self.tree.tables:
+        if node.is_through:
+
+            # handle case where we insert into a through table
+            # set the parent as the new entity that has changed
+            foreign_keys = self.query_builder.get_foreign_keys(
+                node.parent,
+                node,
+            )
+            for payload in payloads:
+                for i, key in enumerate(foreign_keys[node.name]):
+                    filters[node.parent.table].append(
+                        {foreign_keys[node.parent.name][i]: payload.data[key]}
+                    )
+
+            # find all ES docs with columns that match the filters and
+            # add their root
+            for payload in payloads:
+                _filters: list = []
+                _filters = self._root_primary_key_resolver(
+                    node.parent, payload, _filters
+                )
+                _filters = self._root_primary_key_resolver(
+                    node.parent.parent, payload, _filters
+                )
+                if _filters:
+                    filters[self.tree.root.table].extend(_filters)
+
+        elif node.table in self.tree.tables:
             if node.is_root:
                 for payload in payloads:
                     primary_values = [
@@ -638,20 +667,6 @@ class Sync(Base, metaclass=Singleton):
 
                 if _filters:
                     filters[self.tree.root.table].extend(_filters)
-
-        else:
-            # handle case where we insert into a through table
-            # set the parent as the new entity that has changed
-            foreign_keys = self.query_builder.get_foreign_keys(
-                node.parent,
-                node,
-            )
-
-            for payload in payloads:
-                for i, key in enumerate(foreign_keys[node.name]):
-                    filters[node.parent.table].append(
-                        {foreign_keys[node.parent.name][i]: payload.data[key]}
-                    )
 
         return filters
 
@@ -1138,6 +1153,7 @@ class Sync(Base, metaclass=Singleton):
             )
         else:
             payloads = self.redis.pop()
+
         if payloads:
             logger.debug(f"_poll_redis: {payloads}")
             with self.lock:
