@@ -602,18 +602,40 @@ class Sync(Base, metaclass=Singleton):
                         {foreign_keys[node.parent.name][i]: payload.data[key]}
                     )
 
-            # find all ES docs with columns that match the filters and
-            # add their root
+            # find all Elasticsearch/OpenSearch docs with fields
+            # that match the filters and add their root to the query filter
+            """
+            +------+
+            | Root |
+            |------|
+            | id   |
+            | ...  |
+            +------+
+                |
+                | 1..*
+                v
+            +---------+        +---------------+        +---------+
+            |  NodeA  | 1    * |  ThroughTable | *    1 |  NodeB  |
+            |---------|--------|---------------|--------|---------|
+            | id      |        | nodeA_id      |        | id      |
+            | ...     |        | nodeB_id      |        | ...     |
+            +---------+        +---------------+        +---------+
+            NodeA represents the grandparent from through table
+            NodeB represents the parent from through table
+            ThroughTable represents the relationship between NodeA and NodeB
+
+            """
+            _filters: list = []
             for payload in payloads:
-                _filters: list = []
                 _filters = self._root_primary_key_resolver(
                     node.parent, payload, _filters
                 )
-                _filters = self._root_primary_key_resolver(
-                    node.parent.parent, payload, _filters
-                )
-                if _filters:
-                    filters[self.tree.root.table].extend(_filters)
+                if node.parent.parent:
+                    _filters = self._root_primary_key_resolver(
+                        node.parent.parent, payload, _filters
+                    )
+            if _filters:
+                filters[self.tree.root.table].extend(_filters)
 
         elif node.table in self.tree.tables:
             if node.is_root:
