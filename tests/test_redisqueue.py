@@ -1,7 +1,9 @@
 """RedisQueues tests."""
 
+import json
+
 import pytest
-from mock import patch
+from mock import call, patch
 from redis.exceptions import ConnectionError
 
 from pgsync.redisqueue import RedisQueue
@@ -85,7 +87,69 @@ class TestRedisQueue(object):
         queue.push([4, 5, 6])
         assert queue.qsize == 6
         queue.delete()
-        mock_logger.info.assert_called_once_with(
-            "Deleting redis key: queue:something"
-        )
+        assert mock_logger.info.call_args_list == [
+            call("Deleting redis key: queue:something"),
+            call("Deleted redis key: queue:something"),
+        ]
         assert queue.qsize == 0
+
+    def test_pop_visible_in_snapshot(self):
+        queue: RedisQueue = RedisQueue("something")
+        queue.delete()
+        # prepare 3 payloads with different xmin values
+        payloads: list[dict] = [
+            {"xmin": 2001, "data": "alpha"},
+            {"xmin": 2002, "data": "beta"},
+            {"xmin": 2003, "data": "gamma"},
+        ]
+        # push into Redis
+        for item in payloads:
+            queue._RedisQueue__db.rpush(queue.key, json.dumps(item))
+
+        # fake visibility function that marks 2001 and 2003 as visible
+        def fake_pg_visible_in_snapshot():
+            def visibility(xmins):
+                return {2001: True, 2002: False, 2003: True}
+
+            return visibility
+
+        # call the method
+        result = queue.pop_visible_in_snapshot(fake_pg_visible_in_snapshot)
+
+        # assert correct visible items are returned
+        assert len(result) == 2
+        assert {r["xmin"] for r in result} == {2001, 2003}
+
+        # check Redis only has the invisible item left
+        remaining = queue._RedisQueue__db.lrange(queue.key, 0, -1)
+        assert len(remaining) == 1
+        assert json.loads(remaining[0])["xmin"] == 2002
+
+    def test_pop_visible_in_snapshot_none_visible(self):
+        queue: RedisQueue = RedisQueue("something")
+        queue.delete()
+        # insert 3 items that should NOT be visible
+        payloads: list[dict] = [
+            {"xmin": 3001, "data": "invisible1"},
+            {"xmin": 3002, "data": "invisible2"},
+            {"xmin": 3003, "data": "invisible3"},
+        ]
+        for item in payloads:
+            queue._RedisQueue__db.rpush(queue.key, json.dumps(item))
+
+        # fake visibility function: all xmins are NOT visible
+        def fake_pg_visible_in_snapshot():
+            def visibility(xmins):
+                return {xmin: False for xmin in xmins}
+
+            return visibility
+
+        # call method
+        result = queue.pop_visible_in_snapshot(fake_pg_visible_in_snapshot)
+        # expect no items to be returned
+        assert result == []
+        # all items should still be in Redis
+        remaining = queue._RedisQueue__db.lrange(queue.key, 0, -1)
+        assert len(remaining) == 3
+        xmins = [json.loads(i)["xmin"] for i in remaining]
+        assert set(xmins) == {3001, 3002, 3003}

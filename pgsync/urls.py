@@ -10,17 +10,20 @@ from .settings import (
     ELASTICSEARCH_PASSWORD,
     ELASTICSEARCH_PORT,
     ELASTICSEARCH_SCHEME,
+    ELASTICSEARCH_URL,
     ELASTICSEARCH_USER,
     PG_DRIVER,
     PG_HOST,
     PG_PASSWORD,
     PG_PORT,
+    PG_URL,
     PG_USER,
     REDIS_AUTH,
     REDIS_DB,
     REDIS_HOST,
     REDIS_PORT,
     REDIS_SCHEME,
+    REDIS_URL,
     REDIS_USER,
 )
 
@@ -73,10 +76,17 @@ def get_search_url(
         or password
         or ELASTICSEARCH_PASSWORD
     )
+    # override the default URL if ELASTICSEARCH_URL is set
+    if ELASTICSEARCH_URL:
+        return ELASTICSEARCH_URL.strip()
+
+    auth: str = ""
     if user and password:
-        return f"{scheme}://{user}:{quote_plus(password)}@{host}:{port}"
-    logger.debug("Connecting to Search without password.")
-    return f"{scheme}://{host}:{port}"
+        auth = f"{user}:{quote_plus(password)}@"
+    else:
+        logger.debug("Connecting to Search without password.")
+
+    return f"{scheme}://{auth}{host}:{port}"
 
 
 def get_postgres_url(
@@ -106,13 +116,15 @@ def get_postgres_url(
     password = _get_auth("PG_PASSWORD") or password or PG_PASSWORD
     port = port or PG_PORT
     driver = driver or PG_DRIVER
-    if password:
-        return (
-            f"postgresql+{driver}://{user}:{quote_plus(password)}@"
-            f"{host}:{port}/{database}"
-        )
-    logger.debug("Connecting to Postgres without password.")
-    return f"postgresql+{driver}://{user}@{host}:{port}/{database}"
+    # override the default URL if PG_URL is set
+    if PG_URL:
+        return PG_URL.strip()
+
+    auth: str = f"{user}:{quote_plus(password)}" if password else user
+    if not password:
+        logger.debug("Connecting to Postgres without password.")
+
+    return f"postgresql+{driver}://{auth}@{host}:{port}/{database}"
 
 
 def get_redis_url(
@@ -143,11 +155,18 @@ def get_redis_url(
     port = port or REDIS_PORT
     db = db or REDIS_DB
     scheme = scheme or REDIS_SCHEME
+    # override the default URL if REDIS_URL is set
+    if REDIS_URL:
+        return REDIS_URL.strip()
+
+    auth: str = ""
     if username and password:
+        auth = f"{quote_plus(username)}:{quote_plus(password)}@"
         logger.debug("Connecting to Redis with custom username and password.")
-        return f"{scheme}://{quote_plus(username)}:{quote_plus(password)}@{host}:{port}/{db}"
-    if password:
+    elif password:
+        auth = f":{quote_plus(password)}@"
         logger.debug("Connecting to Redis with default password.")
-        return f"{scheme}://:{quote_plus(password)}@{host}:{port}/{db}"
-    logger.debug("Connecting to Redis without password.")
-    return f"{scheme}://{host}:{port}/{db}"
+    else:
+        logger.debug("Connecting to Redis without password.")
+
+    return f"{scheme}://{auth}{host}:{port}/{db}"

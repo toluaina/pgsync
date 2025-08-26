@@ -40,7 +40,7 @@ of engineering and development.
 Other benefits of PGSync include:
 - Real-time analytics
 - Reliable primary datastore/source of truth
-- Scale on-demand
+- Scale on-demand (multiple consumers)
 - Easily join multiple nested tables
 
 #### Why?
@@ -66,7 +66,7 @@ the search capabilities of [Elasticsearch](https://www.elastic.co/products/elast
 
 #### How it works
 
-PGSync is written in Python (supporting version 3.9 onwards) and the stack is composed of: [Redis](https://redis.io), [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/), [Postgres](https://www.postgresql.org), and [SQlAlchemy](https://www.sqlalchemy.org).
+PGSync is written in Python (supporting version 3.9 onwards) and the stack is composed of: [Redis](https://redis.io), [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/), [Postgres](https://www.postgresql.org), and [SQLAlchemy](https://www.sqlalchemy.org).
 
 PGSync leverages the [logical decoding](https://www.postgresql.org/docs/current/logicaldecoding.html) feature of [Postgres](https://www.postgresql.org) (introduced in PostgreSQL 9.4) to capture a continuous stream of change events.
 This feature needs to be enabled in your [Postgres](https://www.postgresql.org) configuration file by setting in the postgresql.conf file:
@@ -93,9 +93,14 @@ There are several ways of installing and trying PGSync
  - [Manual configuration](#manual-configuration) 
 
 
-##### Running in Docker
+##### Running in Docker (Using Github Repository)
 
 To startup all services with docker.
+
+```
+$ git checkout https://github.com/toluaina/pgsync
+```
+
 Run:
 ```
 $ docker-compose up
@@ -105,6 +110,39 @@ Show the content in Elasticsearch/OpenSearch
 ```
 $ curl -X GET http://[Elasticsearch/OpenSearch host]:9201/reservations/_search?pretty=true
 ```
+
+
+##### Running with Docker (Using Image Repository)
+
+To start all services with Docker, follow these steps:
+
+1. Pull the Docker image:
+
+  ```
+  $ docker pull toluaina1/pgsync:latest
+  ```
+
+2. Run the container:
+
+  ```
+  $ docker run --rm -it \
+  -e REDIS_CHECKPOINT=true \
+  -e REDIS_HOST=<redis_host_address> \
+  -e PG_URL=postgres://<username>:<password>@<postgres_host>/<database> \
+  -e ELASTICSEARCH_URL=http://<elasticsearch_host>:9200 \
+  -v "$(pwd)/schema.json:/app/schema.json" \
+  toluaina1/pgsync:latest -c schema.json -d -b
+  ```
+
+Environment variable placeholders - full list [here](https://pgsync.com/env-vars):
+
+- redis_host_address — Address of the Redis server (e.g., host.docker.internal for local Docker setup)
+- username — PostgreSQL username
+- password — PostgreSQL password
+- postgres_host — Host address for PostgreSQL instance (e.g., host.docker.internal)
+- database — Name of PostgreSQL database
+- elasticsearch_host — Address of Elasticsearch/OpenSearch instance (e.g., host.docker.internal)
+
 
 ##### Manual configuration
 
@@ -156,7 +194,7 @@ Key features of PGSync are:
 - [Postgres](https://www.postgresql.org) 9.6+
 - [Redis](https://redis.io) 3.1.0+
 - [Elasticsearch](https://www.elastic.co/products/elastic-stack) 6.3.1+ or [OpenSearch](https://opensearch.org/) 1.3.7+
-- [SQlAlchemy](https://www.sqlalchemy.org) 1.3.4+
+- [SQLAlchemy](https://www.sqlalchemy.org) 1.3.4+
 
 
 #### Example

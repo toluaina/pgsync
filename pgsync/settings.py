@@ -21,7 +21,8 @@ env.read_env(path=os.path.join(os.getcwd(), ".env"))
 # page block size
 BLOCK_SIZE = env.int("BLOCK_SIZE", default=2048 * 10)
 CHECKPOINT_PATH = env.str("CHECKPOINT_PATH", default="./")
-JOIN_QUERIES = env.bool("JOIN_QUERIES", default=True)
+REDIS_CHECKPOINT = env.bool("REDIS_CHECKPOINT", default=False)
+JOIN_QUERIES = env.bool("JOIN_QUERIES", default=False)
 # batch size for LOGICAL_SLOT_CHANGES for minimizing tmp file disk usage
 LOGICAL_SLOT_CHUNK_SIZE = env.int("LOGICAL_SLOT_CHUNK_SIZE", default=5000)
 # stdout log interval (in secs)
@@ -42,10 +43,12 @@ REPLICATION_SLOT_CLEANUP_INTERVAL = env.float(
 )
 # path to the application schema config
 SCHEMA = env.str("SCHEMA", default=None)
+S3_SCHEMA_URL = env.str("S3_SCHEMA_URL", default=None)
 USE_ASYNC = env.bool("USE_ASYNC", default=False)
 STREAM_RESULTS = env.bool("STREAM_RESULTS", default=True)
 # db polling interval
 POLL_INTERVAL = env.float("POLL_INTERVAL", default=0.1)
+FORMAT_WITH_COMMAS = env.bool("FORMAT_WITH_COMMAS", default=True)
 
 # Elasticsearch/OpenSearch:
 ELASTICSEARCH_API_KEY = env.str("ELASTICSEARCH_API_KEY", default=None)
@@ -64,7 +67,7 @@ ELASTICSEARCH_CLIENT_CERT = env.str("ELASTICSEARCH_CLIENT_CERT", default=None)
 ELASTICSEARCH_CLIENT_KEY = env.str("ELASTICSEARCH_CLIENT_KEY", default=None)
 ELASTICSEARCH_CLOUD_ID = env.str("ELASTICSEARCH_CLOUD_ID", default=None)
 ELASTICSEARCH_HOST = env.str("ELASTICSEARCH_HOST", default="localhost")
-ELASTICSEARCH_HTTP_AUTH = env.list("ELASTICSEARCH_HTTP_AUTH", default=[])
+ELASTICSEARCH_HTTP_AUTH = env.list("ELASTICSEARCH_HTTP_AUTH", default=None)
 if ELASTICSEARCH_HTTP_AUTH:
     ELASTICSEARCH_HTTP_AUTH = tuple(ELASTICSEARCH_HTTP_AUTH)
 ELASTICSEARCH_HTTP_COMPRESS = env.bool(
@@ -150,14 +153,46 @@ OPENSEARCH_AWS_HOSTED = env.bool("OPENSEARCH_AWS_HOSTED", default=False)
 OPENSEARCH_AWS_SERVERLESS = env.bool(
     "OPENSEARCH_AWS_SERVERLESS", default=False
 )
+# full Elasticsearch/OpenSearch url including user, password, host, port and dbname
+ELASTICSEARCH_URL = env.str("ELASTICSEARCH_URL", default=None)
 
 # Postgres:
+# full database url including user, password, host, port and dbname
+PG_URL = env.str("PG_URL", default=None)
 PG_HOST = env.str("PG_HOST", default="localhost")
 PG_PASSWORD = env.str("PG_PASSWORD", default=None)
 PG_PORT = env.int("PG_PORT", default=5432)
 PG_SSLMODE = env.str("PG_SSLMODE", default=None)
 PG_SSLROOTCERT = env.str("PG_SSLROOTCERT", default=None)
-PG_USER = env.str("PG_USER")
+if PG_URL:
+    # If PG_URL is set, we don't need to use the other PG_* variables
+    PG_HOST = None
+    PG_PASSWORD = None
+    PG_PORT = None
+    PG_SSLMODE = None
+    PG_SSLROOTCERT = None
+    PG_USER = env.str("PG_USER", default=None)
+else:
+    # If PG_URL is not set, we need to use the other PG_* variables
+    PG_USER = env.str("PG_USER")
+
+# Read-only Postgres:
+# This is used for read-only consumers that do not require replication slots or triggers.
+# full database url including user, password, host, port and dbname
+PG_URL_RO = env.str("PG_URL_RO", default=None)
+PG_HOST_RO = env.str("PG_HOST_RO", default=None)
+PG_PASSWORD_RO = env.str("PG_PASSWORD_RO", default=None)
+PG_PORT_RO = env.int("PG_PORT_RO", default=None)
+PG_SSLMODE_RO = env.str("PG_SSLMODE_RO", default=None)
+PG_SSLROOTCERT_RO = env.str("PG_SSLROOTCERT_RO", default=None)
+PG_USER_RO = env.str("PG_USER_RO", default=None)
+if PG_URL_RO:
+    # If PG_URL_RO is set, we don't need to use the other PG_*_RO variables
+    PG_HOST_RO = None
+    PG_PASSWORD_RO = None
+    PG_PORT_RO = None
+    PG_SSLMODE_RO = None
+    PG_SSLROOTCERT_RO = None
 
 # Redis:
 REDIS_AUTH = env.str("REDIS_AUTH", default=None)
@@ -174,6 +209,11 @@ REDIS_SCHEME = env.str("REDIS_SCHEME", default="redis")
 REDIS_SOCKET_TIMEOUT = env.int("REDIS_SOCKET_TIMEOUT", default=5)
 # number of items to write to Redis at a time
 REDIS_WRITE_CHUNK_SIZE = env.int("REDIS_WRITE_CHUNK_SIZE", default=500)
+REDIS_URL = env.str("REDIS_URL", default=None)
+REDIS_RETRY_ON_TIMEOUT = env.bool(
+    "REDIS_RETRY_ON_TIMEOUT",
+    default=False,
+)
 
 
 # Logging:

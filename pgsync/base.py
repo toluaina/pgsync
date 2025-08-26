@@ -2,7 +2,10 @@
 
 import logging
 import os
+import threading
+import time
 import typing as t
+from contextlib import contextmanager
 
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql  # noqa
@@ -26,8 +29,13 @@ from .exc import (
     TableNotFoundError,
 )
 from .settings import (
+    PG_HOST_RO,
+    PG_PASSWORD_RO,
+    PG_PORT_RO,
     PG_SSLMODE,
     PG_SSLROOTCERT,
+    PG_URL_RO,
+    PG_USER_RO,
     QUERY_CHUNK_SIZE,
     STREAM_RESULTS,
 )
@@ -45,7 +53,6 @@ try:
     import geoalchemy2  # noqa
 except ImportError:
     pass
-
 
 logger = logging.getLogger(__name__)
 
@@ -77,20 +84,20 @@ class Payload(object):
 
     def __init__(
         self,
-        tg_op: str = t.Optional[None],
-        table: str = t.Optional[None],
-        schema: str = t.Optional[None],
-        old: dict = t.Optional[None],
-        new: dict = t.Optional[None],
-        xmin: int = t.Optional[None],
-        indices: t.List[str] = t.Optional[None],
+        tg_op: t.Optional[str] = None,
+        table: t.Optional[str] = None,
+        schema: t.Optional[str] = None,
+        old: t.Optional[t.Dict[str, t.Any]] = None,
+        new: t.Optional[t.Dict[str, t.Any]] = None,
+        xmin: t.Optional[int] = None,
+        indices: t.Optional[t.List[str]] = None,
     ):
-        self.tg_op: str = tg_op
-        self.table: str = table
-        self.schema: str = schema
-        self.old: dict = old or {}
-        self.new: dict = new or {}
-        self.xmin: str = xmin
+        self.tg_op: t.Optional[str] = tg_op
+        self.table: t.Optional[str] = table
+        self.schema: t.Optional[str] = schema
+        self.old: t.Dict[str, t.Any] = old or {}
+        self.new: t.Dict[str, t.Any] = new or {}
+        self.xmin: t.Optional[int] = xmin
         self.indices: t.List[str] = indices
 
     @property
@@ -151,6 +158,8 @@ class TupleIdentifierType(sa.types.UserDefinedType):
 
 
 class Base(object):
+    _thread_local = threading.local()
+
     INT_TYPES = (
         "bigint",
         "bigserial",
@@ -188,6 +197,26 @@ class Base(object):
         self.__engine: sa.engine.Engine = _pg_engine(
             database, echo=False, **kwargs
         )
+        self.__engine_ro: t.Optional[sa.engine.Engine] = None
+        if (
+            PG_USER_RO
+            or PG_HOST_RO
+            or PG_PASSWORD_RO
+            or PG_PORT_RO
+            or PG_URL_RO
+        ):
+            kwargs.update(
+                {
+                    "user": PG_USER_RO,
+                    "host": PG_HOST_RO,
+                    "password": PG_PASSWORD_RO,
+                    "port": PG_PORT_RO,
+                    "url": PG_URL_RO,
+                }
+            )
+            self.__engine_ro: sa.engine.Engine = _pg_engine(
+                database, echo=False, **kwargs
+            )
         self.__schemas: t.Optional[dict] = None
         # models is a dict of f'{schema}.{table}'
         self.__models: dict = {}
@@ -224,22 +253,27 @@ class Base(object):
 
     def _can_create_replication_slot(self, slot_name: str) -> None:
         """Check if the given user can create and destroy replication slots."""
-        if self.replication_slots(slot_name):
-            logger.exception(f"Replication slot {slot_name} already exists")
-            self.drop_replication_slot(slot_name)
+        with self.advisory_lock(
+            slot_name, max_retries=None, retry_interval=0.1
+        ):
+            if self.replication_slots(slot_name):
+                logger.exception(
+                    f"Replication slot {slot_name} already exists"
+                )
+                self.drop_replication_slot(slot_name)
 
-        try:
-            self.create_replication_slot(slot_name)
+            try:
+                self.create_replication_slot(slot_name)
 
-        except Exception as e:
-            logger.exception(f"{e}")
-            raise ReplicationSlotError(
-                f'PG_USER "{self.engine.url.username}" needs to be '
-                f"superuser or have permission to read, create and destroy "
-                f"replication slots to perform this action.\n{e}"
-            )
-        else:
-            self.drop_replication_slot(slot_name)
+            except Exception as e:
+                logger.exception(f"{e}")
+                raise ReplicationSlotError(
+                    f'PG_USER "{self.engine.url.username}" needs to be '
+                    f"superuser or have permission to read, create and destroy "
+                    f"replication slots to perform this action.\n{e}"
+                )
+            else:
+                self.drop_replication_slot(slot_name)
 
     # Tables...
     def models(self, table: str, schema: str) -> sa.sql.Alias:
@@ -300,6 +334,8 @@ class Base(object):
     @property
     def engine(self) -> sa.engine.Engine:
         """Get the database engine."""
+        if getattr(self._thread_local, "read_only", False):
+            return self.__engine_ro
         return self.__engine
 
     @property
@@ -413,20 +449,23 @@ class Base(object):
 
         SELECT * FROM PG_REPLICATION_SLOTS
         """
-        return self.fetchall(
-            sa.select("*")
-            .select_from(sa.text("PG_REPLICATION_SLOTS"))
-            .where(
-                sa.and_(
-                    *[
-                        sa.column("slot_name") == slot_name,
-                        sa.column("slot_type") == slot_type,
-                        sa.column("plugin") == plugin,
-                    ]
-                )
-            ),
-            label="replication_slots",
-        )
+        with self.advisory_lock(
+            slot_name, max_retries=None, retry_interval=0.1
+        ):
+            return self.fetchall(
+                sa.select("*")
+                .select_from(sa.text("PG_REPLICATION_SLOTS"))
+                .where(
+                    sa.and_(
+                        *[
+                            sa.column("slot_name") == slot_name,
+                            sa.column("slot_type") == slot_type,
+                            sa.column("plugin") == plugin,
+                        ]
+                    )
+                ),
+                label="replication_slots",
+            )
 
     def create_replication_slot(self, slot_name: str) -> None:
         """Create a replication slot.
@@ -439,14 +478,17 @@ class Base(object):
         """
         logger.debug(f"Creating replication slot: {slot_name}")
         try:
-            self.execute(
-                sa.select("*").select_from(
-                    sa.func.PG_CREATE_LOGICAL_REPLICATION_SLOT(
-                        slot_name,
-                        PLUGIN,
+            with self.advisory_lock(
+                slot_name, max_retries=None, retry_interval=0.1
+            ):
+                self.execute(
+                    sa.select("*").select_from(
+                        sa.func.PG_CREATE_LOGICAL_REPLICATION_SLOT(
+                            slot_name,
+                            PLUGIN,
+                        )
                     )
                 )
-            )
         except Exception as e:
             logger.exception(f"{e}")
             raise
@@ -457,15 +499,83 @@ class Base(object):
         logger.debug(f"Dropping replication slot: {slot_name}")
         if self.replication_slots(slot_name):
             try:
-                self.execute(
-                    sa.select("*").select_from(
-                        sa.func.PG_DROP_REPLICATION_SLOT(slot_name),
+                with self.advisory_lock(
+                    slot_name, max_retries=None, retry_interval=0.1
+                ):
+                    self.execute(
+                        sa.select("*").select_from(
+                            sa.func.PG_DROP_REPLICATION_SLOT(slot_name),
+                        )
                     )
-                )
             except Exception as e:
                 logger.exception(f"{e}")
                 raise
         logger.debug(f"Dropped replication slot: {slot_name}")
+
+    def advisory_key(self, slot_name: str) -> int:
+        """Compute a stable bigint advisory key from slot name."""
+        return self.fetchone(
+            sa.text("SELECT HASHTEXT(:slot)::BIGINT").bindparams(
+                slot=slot_name
+            )
+        )[0]
+
+    def pg_try_advisory_lock(self, key: int) -> bool:
+        """
+        Attempts to acquire an advisory lock based on a hashed slot name.
+
+        Returns:
+            bool: True if the lock was acquired, False otherwise.
+        """
+        result = self.fetchone(
+            sa.text("SELECT PG_TRY_ADVISORY_LOCK(:key)").bindparams(key=key)
+        )
+        return result[0] if result else False
+
+    def pg_advisory_unlock(self, key: int) -> bool:
+        """
+        Releases an advisory lock associated with the hashed slot name.
+
+        Returns:
+            bool: True if the lock was released, False if it was not held.
+        """
+        result = self.fetchone(
+            sa.text("SELECT PG_ADVISORY_UNLOCK(:key)").bindparams(key=key)
+        )
+        return result[0] if result else False
+
+    @contextmanager
+    def advisory_lock(
+        self,
+        slot_name: str,
+        max_retries: int = 5,
+        retry_interval: float = 1.0,
+        backoff_type: str = "fixed",  # or "exponential"
+        backoff_factor: float = 2.0,
+    ):
+        """Context manager to acquire a PostgreSQL advisory lock with optional retries."""
+        key: int = self.advisory_key(slot_name)
+        attempt: int = 0
+        delay: int = retry_interval
+        while True:
+            if self.pg_try_advisory_lock(key):
+                break
+
+            if max_retries is not None and attempt >= max_retries:
+                raise RuntimeError(
+                    f"Failed to acquire advisory lock for '{slot_name}' after {max_retries} retries."
+                )
+
+            time.sleep(delay)
+            if backoff_type == "exponential":
+                delay *= backoff_factor
+
+            attempt += 1
+
+        try:
+            yield
+        finally:
+            self.pg_advisory_unlock(key)
 
     def _logical_slot_changes(
         self,
@@ -555,17 +665,22 @@ class Base(object):
         To get ALL changes and data in existing replication slot:
         SELECT * FROM PG_LOGICAL_SLOT_GET_CHANGES('testdb', NULL, NULL)
         """
-        statement: sa.sql.Select = self._logical_slot_changes(
-            slot_name,
-            sa.func.PG_LOGICAL_SLOT_GET_CHANGES,
-            txmin=txmin,
-            txmax=txmax,
-            upto_lsn=upto_lsn,
-            upto_nchanges=upto_nchanges,
-            limit=limit,
-            offset=offset,
-        )
-        self.execute(statement, options=dict(stream_results=STREAM_RESULTS))
+        with self.advisory_lock(
+            slot_name, max_retries=None, retry_interval=0.1
+        ):
+            statement: sa.sql.Select = self._logical_slot_changes(
+                slot_name,
+                sa.func.PG_LOGICAL_SLOT_GET_CHANGES,
+                txmin=txmin,
+                txmax=txmax,
+                upto_lsn=upto_lsn,
+                upto_nchanges=upto_nchanges,
+                limit=limit,
+                offset=offset,
+            )
+            self.execute(
+                statement, options=dict(stream_results=STREAM_RESULTS)
+            )
 
     def logical_slot_peek_changes(
         self,
@@ -581,17 +696,20 @@ class Base(object):
 
         SELECT * FROM PG_LOGICAL_SLOT_PEEK_CHANGES('testdb', NULL, 1)
         """
-        statement: sa.sql.Select = self._logical_slot_changes(
-            slot_name,
-            sa.func.PG_LOGICAL_SLOT_PEEK_CHANGES,
-            txmin=txmin,
-            txmax=txmax,
-            upto_lsn=upto_lsn,
-            upto_nchanges=upto_nchanges,
-            limit=limit,
-            offset=offset,
-        )
-        return self.fetchall(statement)
+        with self.advisory_lock(
+            slot_name, max_retries=None, retry_interval=0.1
+        ):
+            statement: sa.sql.Select = self._logical_slot_changes(
+                slot_name,
+                sa.func.PG_LOGICAL_SLOT_PEEK_CHANGES,
+                txmin=txmin,
+                txmax=txmax,
+                upto_lsn=upto_lsn,
+                upto_nchanges=upto_nchanges,
+                limit=limit,
+                offset=offset,
+            )
+            return self.fetchall(statement)
 
     def logical_slot_count_changes(
         self,
@@ -615,6 +733,10 @@ class Base(object):
             ).scalar()
 
     # Views...
+
+    def view_exists(self, name: str, schema: str) -> bool:
+        return name in self.views(schema)
+
     def create_view(
         self,
         index: str,
@@ -636,7 +758,9 @@ class Base(object):
     def drop_view(self, schema: str) -> None:
         """Drop a view."""
         logger.debug(f"Dropping view: {schema}.{MATERIALIZED_VIEW}")
-        with self.engine.connect() as conn:
+        with self.engine.connect().execution_options(
+            isolation_level="AUTOCOMMIT"
+        ) as conn:
             conn.execute(DropView(schema, MATERIALIZED_VIEW))
         logger.debug(f"Dropped view: {schema}.{MATERIALIZED_VIEW}")
 
@@ -645,16 +769,44 @@ class Base(object):
     ) -> None:
         """Refresh a materialized view."""
         logger.debug(f"Refreshing view: {schema}.{name}")
-        with self.engine.connect() as conn:
+        with self.engine.connect().execution_options(
+            isolation_level="AUTOCOMMIT"
+        ) as conn:
             conn.execute(RefreshView(schema, name, concurrently=concurrently))
         logger.debug(f"Refreshed view: {schema}.{name}")
 
     # Triggers...
+
+    def trigger_exists(self, trigger: str, table: str, schema: str) -> bool:
+        """
+        Return True if the user-defined trigger is already present on table in schema.
+        """
+        sql: str = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM   pg_trigger     AS t
+                JOIN   pg_class       AS c  ON c.oid = t.tgrelid
+                JOIN   pg_namespace   AS n  ON n.oid = c.relnamespace
+                WHERE  NOT t.tgisinternal           -- exclude system triggers
+                AND  t.tgname   = :trigge
+                AND  c.relname  = :table
+                AND  n.nspname  = :schema
+            )
+        """
+        params: dict = dict(
+            trigger=trigger,
+            table=table,
+            schema=schema,
+        )
+        with self.engine.connect() as conn:
+            return bool(conn.execute(sa.text(sql), params).scalar())
+
     def create_triggers(
         self,
         schema: str,
         tables: t.Optional[t.List[str]] = None,
         join_queries: bool = False,
+        if_not_exists: bool = False,
     ) -> None:
         """Create a database triggers."""
         queries: t.List[str] = []
@@ -668,13 +820,18 @@ class Base(object):
                 ("notify", "ROW", ["INSERT", "UPDATE", "DELETE"]),
                 ("truncate", "STATEMENT", ["TRUNCATE"]),
             ]:
-                self.drop_triggers(schema, [table])
-                queries.append(
-                    f'CREATE TRIGGER "{schema}_{table}_{name}" '
-                    f'AFTER {" OR ".join(tg_op)} ON "{schema}"."{table}" '
-                    f"FOR EACH {level} EXECUTE PROCEDURE "
-                    f"{schema}.{TRIGGER_FUNC}()",
-                )
+
+                if if_not_exists or not self.view_exists(
+                    MATERIALIZED_VIEW, schema
+                ):
+
+                    self.drop_triggers(schema, [table])
+                    queries.append(
+                        f'CREATE TRIGGER "{schema}_{table}_{name}" '
+                        f'AFTER {" OR ".join(tg_op)} ON "{schema}"."{table}" '
+                        f"FOR EACH {level} EXECUTE PROCEDURE "
+                        f"{schema}.{TRIGGER_FUNC}()",
+                    )
         if join_queries:
             if queries:
                 self.execute(sa.text("; ".join(queries)))
@@ -705,6 +862,16 @@ class Base(object):
         else:
             for query in queries:
                 self.execute(sa.text(query))
+
+    def function_exists(self, schema: str) -> bool:
+        """Check if the trigger function exists."""
+        return self.exists(
+            sa.text(
+                f"SELECT 1 FROM pg_proc WHERE proname = :name "
+                f"AND pronamespace = (SELECT oid FROM pg_namespace "
+                f"WHERE nspname = :schema)"
+            ).bindparams(name=TRIGGER_FUNC, schema=schema),
+        )
 
     def create_function(self, schema: str) -> None:
         self.execute(
@@ -771,6 +938,37 @@ class Base(object):
             sa.select("*").select_from(sa.func.TXID_CURRENT()),
             label="txid_current",
         )[0]
+
+    def pg_visible_in_snapshot(
+        self, literal_binds: bool = False
+    ) -> t.Callable[[t.List[int]], dict]:
+        def _pg_visible_in_snapshot(xid8s: t.List[int]) -> dict:
+            if not xid8s:
+                return {}
+            # TODO: use the SQLAlchemy ORM to handle this query
+            statement = sa.text(
+                """
+                SELECT xid AS xid8,
+                PG_VISIBLE_IN_SNAPSHOT(xid::xid8, PG_CURRENT_SNAPSHOT()) AS visible
+                FROM UNNEST(CAST(:xid8s AS text[]))
+                WITH ORDINALITY AS t(xid, ord)
+                ORDER BY t.ord
+            """
+            )
+            if self.verbose:
+                compiled_query(
+                    statement,
+                    label="xmin_visibility",
+                    literal_binds=literal_binds,
+                )
+
+            # xid8s = list of xid8 strings
+            params: dict = {"xid8s": list(map(str, xid8s))}
+            with self.__engine_ro.connect() as conn:
+                result = conn.execute(statement, params)
+                return {int(row.xid8): row.visible for row in result}
+
+        return _pg_visible_in_snapshot
 
     def parse_value(self, type_: str, value: str) -> t.Optional[str]:
         """
@@ -895,6 +1093,20 @@ class Base(object):
         with self.engine.connect() as conn:
             return conn.execute(statement).fetchall()
 
+    def exists(
+        self,
+        statement: sa.sql.Select,
+        label: t.Optional[str] = None,
+        literal_binds: bool = False,
+    ) -> t.List[sa.engine.Row]:
+        if self.verbose:
+            compiled_query(statement, label=label, literal_binds=literal_binds)
+        with self.engine.connect() as conn:
+            result = conn.execute(statement).fetchone()
+            if result is None:
+                return False
+            return result[0] > 0
+
     def fetchmany(
         self,
         statement: sa.sql.Select,
@@ -1016,6 +1228,7 @@ def _pg_engine(
     echo: bool = False,
     sslmode: t.Optional[str] = None,
     sslrootcert: t.Optional[str] = None,
+    url: t.Optional[str] = None,
 ) -> sa.engine.Engine:
     connect_args: dict = {}
     sslmode = sslmode or PG_SSLMODE
@@ -1035,13 +1248,14 @@ def _pg_engine(
             )
         connect_args["sslrootcert"] = sslrootcert
 
-    url: str = get_postgres_url(
-        database,
-        user=user,
-        host=host,
-        password=password,
-        port=port,
-    )
+    if url is None:
+        url: str = get_postgres_url(
+            database,
+            user=user,
+            host=host,
+            password=password,
+            port=port,
+        )
     return sa.create_engine(url, echo=echo, connect_args=connect_args)
 
 

@@ -1,0 +1,64 @@
+# Stage 1: Build
+FROM python:3.11.10-slim-bullseye AS build
+
+WORKDIR /app
+
+# Install system dependencies and ensure system libraries are updated (e.g., glibc)
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y gcc libpq-dev && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Copy PGSync source code
+COPY \
+    pgsync/__init__.py \
+    pgsync/base.py \
+    pgsync/constants.py \
+    pgsync/exc.py \
+    pgsync/helper.py \
+    pgsync/node.py \
+    pgsync/plugin.py \
+    pgsync/querybuilder.py \
+    pgsync/redisqueue.py \
+    pgsync/search_client.py \
+    pgsync/settings.py \
+    pgsync/singleton.py \
+    pgsync/sync.py \
+    pgsync/transform.py \
+    pgsync/trigger.py \
+    pgsync/urls.py \
+    pgsync/utils.py \
+    pgsync/view.py /app/pgsync/
+
+COPY requirements/base.txt /app/requirements/
+COPY README.rst README.md LICENSE setup.cfg setup.py /app/
+COPY bin/bootstrap bin/parallel_sync bin/pgsync /app/bin/
+COPY \
+    scripts/pg_replication_slots.sh \
+    scripts/pg_locks.sh \
+    scripts/pg_temp_tables.sh \
+    scripts/migrate_schema_v2 /app/scripts/
+
+# Install PGSync and dependencies
+RUN pip install --no-cache-dir .
+
+# Stage 2: Runtime
+FROM python:3.11.10-slim-bullseye
+
+RUN apt-get update && apt-get upgrade -y && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Create non-root user
+RUN useradd --no-create-home --shell /bin/false pgsync
+USER pgsync
+
+COPY --from=build /usr/local/lib/python3.11 /usr/local/lib/python3.11
+COPY --from=build /usr/local/bin /usr/local/bin
+COPY --from=build /app /app
+
+# Add binaries to PATH
+ENV PATH="/usr/local/bin:${PATH}"
+
+# Entrypoint matches pgsync CLI behavior
+ENTRYPOINT ["pgsync"]

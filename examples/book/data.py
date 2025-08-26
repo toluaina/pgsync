@@ -25,7 +25,7 @@ from sqlalchemy.orm import sessionmaker
 from pgsync.base import pg_engine, subtransactions
 from pgsync.constants import DEFAULT_SCHEMA
 from pgsync.helper import teardown
-from pgsync.utils import config_loader, get_config
+from pgsync.utils import config_loader, validate_config
 
 
 @click.command()
@@ -37,7 +37,7 @@ from pgsync.utils import config_loader, get_config
 )
 @click.option("--nsize", "-n", default=1, help="Number of dummy data samples")
 def main(config: str, nsize: int):
-    config: str = get_config(config)
+    validate_config(config)
     teardown(drop_db=False, config=config)
 
     for doc in config_loader(config):

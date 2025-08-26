@@ -5,8 +5,14 @@ import logging
 
 import click
 
+from pgsync import settings
 from pgsync.sync import Sync
-from pgsync.utils import config_loader, get_config, show_settings
+from pgsync.utils import (
+    config_loader,
+    MutuallyExclusiveOption,
+    show_settings,
+    validate_config,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -17,17 +23,40 @@ logger = logging.getLogger(__name__)
     "-c",
     help="Schema config",
     type=click.Path(exists=True),
+    default=settings.SCHEMA,
+    show_default=True,
+    cls=MutuallyExclusiveOption,
+    mutually_exclusive=["s3_schema_url"],
 )
-@click.option("--host", "-h", help="PG_HOST overide")
+@click.option(
+    "--s3_schema_url",
+    help="S3 URL for schema config",
+    type=click.STRING,
+    default=settings.S3_SCHEMA_URL,
+    show_default=True,
+    cls=MutuallyExclusiveOption,
+    mutually_exclusive=["config"],
+)
+@click.option("--host", "-h", help="PG_HOST override")
 @click.option("--password", is_flag=True, help="Prompt for database password")
-@click.option("--port", "-p", help="PG_PORT overide", type=int)
+@click.option("--port", "-p", help="PG_PORT override", type=int)
 @click.option(
     "--teardown",
     "-t",
     is_flag=True,
     help="Teardown database triggers and replication slots",
 )
-@click.option("--user", "-u", help="PG_USER overide")
+@click.option(
+    "--no-create",
+    "-nc",
+    is_flag=True,
+    help=(
+        "Skip DDL statement for objects "
+        "(Functions, Views & Replication slots) creation"
+    ),
+    default=False,
+)
+@click.option("--user", "-u", help="PG_USER override")
 @click.option(
     "--verbose",
     "-v",
@@ -38,11 +67,13 @@ logger = logging.getLogger(__name__)
 def main(
     teardown: bool,
     config: str,
+    s3_schema_url: str,
     user: str,
     password: bool,
     host: str,
     port: int,
     verbose: bool,
+    no_create: bool = False,
 ) -> None:
     """Application onetime Bootstrap."""
     kwargs: dict = {
@@ -58,13 +89,13 @@ def main(
         )
     kwargs = {key: value for key, value in kwargs.items() if value is not None}
 
-    config: str = get_config(config)
+    validate_config(config=config, s3_schema_url=s3_schema_url)
 
-    show_settings(config)
+    show_settings(config=config, s3_schema_url=s3_schema_url)
 
     validate: bool = False if teardown else True
 
-    for doc in config_loader(config):
+    for doc in config_loader(config=config, s3_schema_url=s3_schema_url):
         sync: Sync = Sync(
             doc,
             verbose=verbose,
@@ -75,7 +106,7 @@ def main(
         if teardown:
             sync.teardown()
             continue
-        sync.setup()
+        sync.setup(no_create=no_create)
         logger.info(f"Bootstrap: {sync.database}")
 
 

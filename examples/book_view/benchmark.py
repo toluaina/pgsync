@@ -9,7 +9,7 @@ from sqlalchemy.orm import sessionmaker
 
 from pgsync.base import pg_engine
 from pgsync.constants import DELETE, INSERT, TG_OP, UPDATE
-from pgsync.utils import config_loader, get_config, show_settings, Timer
+from pgsync.utils import config_loader, show_settings, Timer, validate_config
 
 FIELDS = {
     "isbn": "isbn13",
@@ -128,9 +128,9 @@ def delete_op(session: sessionmaker, model, nsize: int) -> None:
     ),
 )
 def main(config, nsize, daemon, tg_op):
-    show_settings()
+    show_settings(config)
 
-    config: str = get_config(config)
+    validate_config(config)
     doc: dict = next(config_loader(config))
     database: str = doc.get("database", doc["index"])
     with pg_engine(database) as engine:

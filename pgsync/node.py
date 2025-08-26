@@ -133,6 +133,7 @@ class Node(object):
     relationship: t.Optional[dict] = None
     parent: t.Optional[Node] = None
     base_tables: t.Optional[list] = None
+    is_through: bool = False
 
     def __post_init__(self):
         self.model: sa.sql.Alias = self.models(self.table, self.schema)
@@ -328,8 +329,9 @@ class Tree(threading.local):
             self.root = node
 
         self.tables.add(node.table)
-        for through in node.relationship.throughs:
-            self.tables.add(through.table)
+        for through_node in node.relationship.throughs:
+            through_node.is_through = True
+            self.tables.add(through_node.table)
 
         for child in nodes.get("children", []):
             node.add_child(self.build(child))

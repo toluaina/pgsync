@@ -5,7 +5,7 @@ from sqlalchemy.schema import ForeignKeyConstraint, UniqueConstraint
 
 from pgsync.base import create_database, pg_engine
 from pgsync.helper import teardown
-from pgsync.utils import config_loader, get_config
+from pgsync.utils import config_loader, validate_config
 
 
 class Base(DeclarativeBase):
@@ -123,7 +123,7 @@ def setup(config: str) -> None:
     type=click.Path(exists=True),
 )
 def main(config: str) -> None:
-    config: str = get_config(config)
+    validate_config(config)
     teardown(config=config)
     setup(config)
 

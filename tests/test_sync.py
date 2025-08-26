@@ -72,34 +72,56 @@ class TestSync(object):
     def test_logical_slot_changes(self, mock_logger, sync):
         with patch("pgsync.sync.Sync.logical_slot_peek_changes") as mock_peek:
             mock_peek.side_effect = [
-                [ROW("BEGIN: blah", 1234)],
+                [ROW("BEGIN 72736", 1234)],
                 [],
             ]
             with patch("pgsync.sync.Sync.sync") as mock_sync:
                 sync.logical_slot_changes()
-                mock_peek.assert_any_call(
-                    "testdb_testdb",
-                    txmin=None,
-                    txmax=None,
-                    upto_nchanges=None,
-                    upto_lsn=None,
-                )
+                assert mock_peek.call_args_list == [
+                    call(
+                        slot_name="testdb_testdb",
+                        txmin=None,
+                        txmax=None,
+                        upto_lsn=None,
+                        limit=5000,
+                        offset=0,
+                    ),
+                    call(
+                        slot_name="testdb_testdb",
+                        txmin=None,
+                        txmax=None,
+                        upto_lsn=None,
+                        limit=5000,
+                        offset=5000,
+                    ),
+                ]
                 mock_sync.assert_not_called()
 
         with patch("pgsync.sync.Sync.logical_slot_peek_changes") as mock_peek:
             mock_peek.side_effect = [
-                [ROW("COMMIT: blah", 1234)],
+                [ROW("COMMIT 72736", 1234)],
                 [],
             ]
             with patch("pgsync.sync.Sync.sync") as mock_sync:
                 sync.logical_slot_changes()
-                mock_peek.assert_any_call(
-                    "testdb_testdb",
-                    txmin=None,
-                    txmax=None,
-                    upto_nchanges=None,
-                    upto_lsn=None,
-                )
+                assert mock_peek.call_args_list == [
+                    call(
+                        slot_name="testdb_testdb",
+                        txmin=None,
+                        txmax=None,
+                        upto_lsn=None,
+                        limit=5000,
+                        offset=0,
+                    ),
+                    call(
+                        slot_name="testdb_testdb",
+                        txmin=None,
+                        txmax=None,
+                        upto_lsn=None,
+                        limit=5000,
+                        offset=5000,
+                    ),
+                ]
                 mock_sync.assert_not_called()
 
         with patch("pgsync.sync.Sync.logical_slot_peek_changes") as mock_peek:
@@ -121,21 +143,30 @@ class TestSync(object):
             ) as mock_get:
                 with patch("pgsync.sync.Sync.sync") as mock_sync:
                     sync.logical_slot_changes()
-                    mock_peek.assert_any_call(
-                        "testdb_testdb",
-                        txmin=None,
-                        txmax=None,
-                        upto_nchanges=None,
-                        upto_lsn=None,
-                    )
+                    assert mock_peek.call_args_list == [
+                        call(
+                            slot_name="testdb_testdb",
+                            txmin=None,
+                            txmax=None,
+                            upto_lsn=None,
+                            limit=5000,
+                            offset=0,
+                        ),
+                        call(
+                            slot_name="testdb_testdb",
+                            txmin=None,
+                            txmax=None,
+                            upto_lsn=None,
+                            limit=5000,
+                            offset=5000,
+                        ),
+                    ]
                     mock_get.assert_called_once()
                     mock_sync.assert_called_once()
-                    calls = [
-                        call("txid: 1234"),
-                        call(ANY),
+                    assert mock_logger.debug.call_args_list == [
+                        call("op: INSERT tbl book - 1"),
                         call("tg_op: INSERT table: public.book"),
                     ]
-                    assert mock_logger.debug.call_args_list == calls
 
         with pytest.raises(Exception) as excinfo:
             with patch(
@@ -165,8 +196,94 @@ class TestSync(object):
                             sync.logical_slot_changes()
             assert "Error parsing row" in str(excinfo.value)
 
+    @patch("pgsync.sync.SearchClient.bulk")
+    @patch("pgsync.sync.logger")
+    def test_logical_slot_changes_groups(
+        self, mock_logger, mock_search_client, sync
+    ):
+        with patch(
+            "pgsync.sync.Sync.logical_slot_peek_changes"
+        ) as mock_logical_slot_peek_changes:
+            mock_logical_slot_peek_changes.side_effect = [
+                [
+                    ROW("BEGIN 76472", 76472),
+                    ROW(
+                        "table public.book: INSERT: id[integer]:187686 isbn[character varying]:'a1' title[character varying]:'foo' description[character varying]:'the foo' copyright[character varying]:null tags[jsonb]:null doc[jsonb]:null publisher_id[integer]:1 publish_date[timestamp without time zone]:null",
+                        76472,
+                    ),
+                    ROW("COMMIT 76472", 76472),
+                    ROW("BEGIN 76473", 76473),
+                    ROW(
+                        "table public.book: INSERT: id[integer]:187687 isbn[character varying]:'a2' title[character varying]:'bar' description[character varying]:'the bar' copyright[character varying]:null tags[jsonb]:null doc[jsonb]:null publisher_id[integer]:1 publish_date[timestamp without time zone]:null",
+                        76473,
+                    ),
+                    ROW("COMMIT 76473", 76473),
+                    ROW("BEGIN 76474", 76474),
+                    ROW(
+                        "table public.book: INSERT: id[integer]:187688 isbn[character varying]:'a3' title[character varying]:'bat' description[character varying]:'the bat' copyright[character varying]:null tags[jsonb]:null doc[jsonb]:null publisher_id[integer]:1 publish_date[timestamp without time zone]:null",
+                        76474,
+                    ),
+                    ROW("COMMIT 76474", 76474),
+                    ROW("BEGIN 76475", 76475),
+                    ROW(
+                        """
+                        table public.book: UPDATE: id[integer]:1 isbn[character varying]:'001' title[character varying]:'xyz' description[character varying]:'de' copyright[character varying]:null tags[jsonb]:'["a", "b", "c"]' doc[jsonb]:'{"a": {"b": {"c": [0, 1, 2, 3, 4]}}, "i": 73, "x": [{"y": 0, "z": 5}, {"y": 1, "z": 6}], "bool": true, "lastname": "Judye", "firstname": "Glenda", "generation": {"name": "X"}, "nick_names": ["Beatriz", "Jean", "Carilyn", "Carol-Jean", "Sara-Ann"], "coordinates": {"lat": 21.1, "lon": 32.9}}' publisher_id[integer]:1 publish_date[timestamp without time zone]:'1980-01-01 00:00:00'
+                        """,
+                        76475,
+                    ),
+                    ROW("COMMIT 76475", 76472),
+                    ROW("BEGIN 76476", 76472),
+                    ROW(
+                        """
+                        table public.book: UPDATE: id[integer]:2 isbn[character varying]:'002' title[character varying]:'abc' description[character varying]:'Lodsdcsdrem ipsum dodscdslor sit amet' copyright[character varying]:null tags[jsonb]:'["d", "e", "f"]' doc[jsonb]:'{"a": {"b": {"c": [2, 3, 4, 5, 6]}}, "i": 99, "x": [{"y": 2, "z": 3}, {"y": 7, "z": 2}], "bool": false, "lastname": "Jones", "firstname": "Jack", "generation": {"name": "X"}, "nick_names": ["Jack", "Jones", "Jay", "Jay-Jay", "Jackie"], "coordinates": {"lat": 25.1, "lon": 52.2}}' publisher_id[integer]:1 publish_date[timestamp without time zone]:'infinity'
+                        """,
+                        76472,
+                    ),
+                    ROW("COMMIT 76476", 76472),
+                    ROW("BEGIN 76477", 76472),
+                    ROW(
+                        "table public.book: INSERT: id[integer]:187689 isbn[character varying]:'a4' title[character varying]:'bax' description[character varying]:'the bax' copyright[character varying]:null tags[jsonb]:null doc[jsonb]:null publisher_id[integer]:1 publish_date[timestamp without time zone]:null",
+                        76472,
+                    ),
+                    ROW("COMMIT 76477", 76472),
+                    ROW("BEGIN 76478", 76472),
+                    ROW(
+                        "table public.book: INSERT: id[integer]:187690 isbn[character varying]:'a5' title[character varying]:'box' description[character varying]:'the box' copyright[character varying]:null tags[jsonb]:null doc[jsonb]:null publisher_id[integer]:1 publish_date[timestamp without time zone]:null",
+                        76472,
+                    ),
+                    ROW("COMMIT 76478", 76472),
+                ],
+                [],
+            ]
+            with patch("pgsync.sync.Sync.sync") as mock_sync:
+                sync.logical_slot_changes()
+                assert mock_logical_slot_peek_changes.call_args_list == [
+                    call(
+                        slot_name="testdb_testdb",
+                        txmin=None,
+                        txmax=None,
+                        upto_lsn=None,
+                        limit=5000,
+                        offset=0,
+                    ),
+                    call(
+                        slot_name="testdb_testdb",
+                        txmin=None,
+                        txmax=None,
+                        upto_lsn=None,
+                        limit=5000,
+                        offset=5000,
+                    ),
+                ]
+                assert mock_logger.debug.call_args_list == [
+                    call("op: INSERT tbl book - 3"),
+                    call("op: UPDATE tbl book - 2"),
+                    call("op: INSERT tbl book - 2"),
+                ]
+                assert mock_search_client.call_count == 3
+
     @patch("pgsync.sync.SearchClient")
-    def test_sync_validate(self, mock_es):
+    def test_sync_validate(self, mock_search_client):
         with pytest.raises(SchemaError) as excinfo:
             Sync(
                 doc={
@@ -335,10 +452,12 @@ class TestSync(object):
 
     @patch("pgsync.sync.logger")
     def test_truncate_slots(self, mock_logger, sync):
-        with patch("pgsync.sync.Sync.logical_slot_get_changes") as mock_get:
+        with patch(
+            "pgsync.sync.Sync.logical_slot_get_changes"
+        ) as mock_logical_slot_changes:
             sync._truncate = True
             sync._truncate_slots()
-            mock_get.assert_called_once_with(
+            mock_logical_slot_changes.assert_called_once_with(
                 "testdb_testdb", upto_nchanges=None
             )
             mock_logger.debug.assert_called_once_with(
@@ -348,14 +467,16 @@ class TestSync(object):
     @patch("pgsync.sync.SearchClient.bulk")
     @patch("pgsync.sync.logger")
     def test_pull(self, mock_logger, mock_es, sync):
-        with patch("pgsync.sync.Sync.logical_slot_changes") as mock_get:
+        with patch(
+            "pgsync.sync.Sync.logical_slot_changes"
+        ) as mock_logical_slot_changes:
             sync.pull()
             txmin = None
             txmax = sync.txid_current - 1
-            mock_get.assert_called_once_with(
+            mock_logical_slot_changes.assert_called_once_with(
                 txmin=txmin,
                 txmax=txmax,
-                upto_nchanges=settings.LOGICAL_SLOT_CHUNK_SIZE,
+                logical_slot_chunk_size=settings.LOGICAL_SLOT_CHUNK_SIZE,
                 upto_lsn=ANY,
             )
             mock_logger.debug.assert_called_once_with(
@@ -706,7 +827,7 @@ class TestSync(object):
             value: int = int(fp.read().split()[0])
             assert value == 1234
 
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(TypeError) as excinfo:
             sync.checkpoint = None
             assert "Cannot assign a None value to checkpoint" == str(
                 excinfo.value
@@ -773,55 +894,64 @@ class TestSync(object):
 
     @patch("pgsync.sync.Sync.teardown")
     def test_setup(self, mock_teardown, sync):
-        with patch("pgsync.sync.Base.create_function") as mock_create_function:
-            with patch("pgsync.sync.Base.create_view") as mock_create_view:
-                with patch(
-                    "pgsync.sync.Base.create_triggers"
-                ) as mock_create_triggers:
+        with override_env_var(JOIN_QUERIES="False"):
+            importlib.reload(settings)
+
+            with patch(
+                "pgsync.sync.Base.create_function"
+            ) as mock_create_function:
+                with patch("pgsync.sync.Base.create_view") as mock_create_view:
                     with patch(
-                        "pgsync.sync.Base.create_replication_slot"
-                    ) as mock_create_replication_slot:
-                        sync.setup()
-                        mock_create_replication_slot.assert_called_once_with(
-                            "testdb_testdb"
+                        "pgsync.sync.Base.create_triggers"
+                    ) as mock_create_triggers:
+                        with patch(
+                            "pgsync.sync.Base.create_replication_slot"
+                        ) as mock_create_replication_slot:
+                            sync.setup()
+                            mock_create_replication_slot.assert_called_once_with(
+                                "testdb_testdb"
+                            )
+                        mock_create_triggers.assert_called_once_with(
+                            "public",
+                            tables={"publisher", "book"},
+                            join_queries=False,
+                            if_not_exists=True,
                         )
-                    mock_create_triggers.assert_called_once_with(
+                    mock_create_view.assert_called_once_with(
+                        "testdb",
                         "public",
-                        tables={"publisher", "book"},
-                        join_queries=True,
+                        {"publisher", "book"},
+                        {"publisher": {"publisher_id", "id"}},
                     )
-                mock_create_view.assert_called_once_with(
-                    "testdb",
-                    "public",
-                    {"publisher", "book"},
-                    {"publisher": {"publisher_id", "id"}},
-                )
-            mock_create_function.assert_called_once_with("public")
-        mock_teardown.assert_called_once_with(drop_view=False)
+                mock_create_function.assert_called_once_with("public")
+            mock_teardown.assert_called_once_with(drop_view=False)
 
     @patch("pgsync.redisqueue.RedisQueue.delete")
     def test_teardown(self, mock_redis, sync):
-        with patch("pgsync.sync.Base.drop_function") as mock_drop_function:
-            with patch("pgsync.sync.Base.drop_view") as mock_drop_view:
-                with patch(
-                    "pgsync.sync.Base.drop_triggers"
-                ) as mock_drop_triggers:
+        with override_env_var(JOIN_QUERIES="False"):
+            importlib.reload(settings)
+
+            with patch("pgsync.sync.Base.drop_function") as mock_drop_function:
+                with patch("pgsync.sync.Base.drop_view") as mock_drop_view:
                     with patch(
-                        "pgsync.sync.Base.drop_replication_slot"
-                    ) as mock_drop_replication_slot:
-                        sync.teardown()
-                        mock_drop_replication_slot.assert_called_once_with(
-                            "testdb_testdb"
+                        "pgsync.sync.Base.drop_triggers"
+                    ) as mock_drop_triggers:
+                        with patch(
+                            "pgsync.sync.Base.drop_replication_slot"
+                        ) as mock_drop_replication_slot:
+                            sync.teardown()
+                            mock_drop_replication_slot.assert_called_once_with(
+                                "testdb_testdb"
+                            )
+                        mock_drop_triggers.assert_called_once_with(
+                            schema="public",
+                            tables={"publisher", "book"},
+                            join_queries=False,
                         )
-                    mock_drop_triggers.assert_called_once_with(
-                        schema="public",
-                        tables={"publisher", "book"},
-                        join_queries=True,
-                    )
-                mock_drop_view.assert_called_once_with("public")
-            mock_drop_function.assert_called_once_with("public")
-        mock_redis.assert_called_once()
-        assert os.path.exists(sync._checkpoint_file) is False
+                    mock_drop_view.assert_called_once_with("public")
+                mock_drop_function.assert_called_once_with("public")
+            mock_redis.assert_called_once()
+            assert os.path.exists(sync._checkpoint_file) is False
 
         with patch("pgsync.sync.logger") as mock_logger:
             with patch("pgsync.sync.Base.drop_replication_slot"):
