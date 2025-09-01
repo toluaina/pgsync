@@ -18,10 +18,10 @@ logger = logging.getLogger(__name__)
 
 
 class RedisQueue(object):
-    """Simple Queue with Redis Backend."""
+    """Simple Queue with Redis/Valkey Backend."""
 
     def __init__(self, name: str, namespace: str = "queue", **kwargs):
-        """Init Simple Queue with Redis Backend."""
+        """Init Simple Queue with Redis/Valkey Backend."""
         url: str = get_redis_url(**kwargs)
         self.key: str = f"{namespace}:{name}"
         self._meta_key: str = f"{self.key}:meta"

@@ -66,7 +66,7 @@ the search capabilities of [Elasticsearch](https://www.elastic.co/products/elast
 
 #### How it works
 
-PGSync is written in Python (supporting version 3.9 onwards) and the stack is composed of: [Redis](https://redis.io), [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/), [Postgres](https://www.postgresql.org), and [SQLAlchemy](https://www.sqlalchemy.org).
+PGSync is written in Python (supporting version 3.9 onwards) and the stack is composed of: [Redis](https://redis.io)/[Valkey](https://valkey.io), [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/), [Postgres](https://www.postgresql.org), and [SQLAlchemy](https://www.sqlalchemy.org).
 
 PGSync leverages the [logical decoding](https://www.postgresql.org/docs/current/logicaldecoding.html) feature of [Postgres](https://www.postgresql.org) (introduced in PostgreSQL 9.4) to capture a continuous stream of change events.
 This feature needs to be enabled in your [Postgres](https://www.postgresql.org) configuration file by setting in the postgresql.conf file:
@@ -136,7 +136,7 @@ To start all services with Docker, follow these steps:
 
 Environment variable placeholders - full list [here](https://pgsync.com/env-vars):
 
-- redis_host_address — Address of the Redis server (e.g., host.docker.internal for local Docker setup)
+- redis_host_address — Address of the Redis/Valkey server (e.g., host.docker.internal for local Docker setup)
 - username — PostgreSQL username
 - password — PostgreSQL password
 - postgres_host — Host address for PostgreSQL instance (e.g., host.docker.internal)
@@ -192,7 +192,7 @@ Key features of PGSync are:
 
 - [Python](https://www.python.org) 3.9+
 - [Postgres](https://www.postgresql.org) 9.6+
-- [Redis](https://redis.io) 3.1.0+
+- [Redis](https://redis.io) 3.1.0+ or [Valkey](https://valkey.io) 7.2.0+
 - [Elasticsearch](https://www.elastic.co/products/elastic-stack) 6.3.1+ or [OpenSearch](https://opensearch.org/) 1.3.7+
 - [SQLAlchemy](https://www.sqlalchemy.org) 1.3.4+
 

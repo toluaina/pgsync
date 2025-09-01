@@ -1155,9 +1155,9 @@ class Sync(Base, metaclass=Singleton):
     @property
     def txid_current(self) -> int:
         """
-        Get last committed transaction id from the database or redis.
+        Get last committed transaction id from the database or redis/valkey.
         """
-        # If we are in read-only mode, we can only get the txid from Redis
+        # If we are in read-only mode, we can only get the txid from Redis/Valkey
         if getattr(self._thread_local, "read_only", False):
             return self.redis.get_meta(default={}).get("txid_current", 0)
         # If we are not in read-only mode, we can get the txid from the database
@@ -1189,7 +1189,7 @@ class Sync(Base, metaclass=Singleton):
     @threaded
     @exception
     def poll_redis(self) -> None:
-        """Consumer which polls Redis continuously."""
+        """Consumer which polls Redis/Valkey continuously."""
         if settings.PG_HOST_RO or settings.PG_PORT_RO:
             logger.info("Setting read only consumer")
             self._thread_local.read_only = True
@@ -1210,7 +1210,7 @@ class Sync(Base, metaclass=Singleton):
 
     @exception
     async def async_poll_redis(self) -> None:
-        """Consumer which polls Redis continuously."""
+        """Consumer which polls Redis/Valkey continuously."""
         while True:
             await self._async_poll_redis()
 
@@ -1321,11 +1321,11 @@ class Sync(Base, metaclass=Singleton):
 
     def _on_publish(self, payloads: t.List[Payload]) -> None:
         """
-        Redis publish event handler.
+        Redis/Valkey publish event handler.
 
         This is triggered by poll_redis.
-        It is called when an event is received from Redis.
-        Deserialize the payload from Redis and sync to Elasticsearch/OpenSearch
+        It is called when an event is received from Redis/Valkey.
+        Deserialize the payload from Redis/Valkey and sync to Elasticsearch/OpenSearch
         """
         # this is used for the views.
         # we substitute the views for the base table here
@@ -1462,9 +1462,9 @@ class Sync(Base, metaclass=Singleton):
 
         NB: pulls as well as receives in order to avoid missing data.
 
-        1. Buffer all ongoing changes from db to Redis.
+        1. Buffer all ongoing changes from db to Redis/Valkey
         2. Pull everything so far and also replay replication logs.
-        3. Consume all changes from Redis.
+        3. Consume all changes from Redis/Valkey.
         """
         if settings.USE_ASYNC:
             self._conn = self.engine.connect().connection
@@ -1480,14 +1480,14 @@ class Sync(Base, metaclass=Singleton):
             ]
 
         else:
-            # sync up to and produce items in the Redis cache
+            # sync up to and produce items in the Redis/Valkey cache
             if self.producer:
                 self.poll_db()
                 # sync up to current transaction_id
                 self.pull()
 
             # start a background worker consumer thread to
-            # poll Redis and populate Elasticsearch/OpenSearch
+            # poll Redis/Valkey and populate Elasticsearch/OpenSearch
             if self.consumer:
                 for _ in range(self.num_workers):
                     self.poll_redis()

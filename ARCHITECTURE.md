@@ -27,7 +27,7 @@ SP -->|JSON with SQLAlchemy | QB[Query Builder]
 QB -->|Fetch Docs| DOC[JSON Documents]
 
 DOC -->|Bulk Index| ES[(Elasticsearch/OpenSearch)]
-SP -->|Checkpoint & Locking| REDIS[Redis]
+SP -->|Checkpoint & Locking| REDIS[(Redis/Valkey)]
 ```
 
 ---
@@ -35,7 +35,7 @@ SP -->|Checkpoint & Locking| REDIS[Redis]
 ## Core Components
 
 - **PostgreSQL**: The primary relational database. PGSync uses PostgreSQL's logical decoding to capture changes.
-- **Redis**: A message broker used to manage sync state and queues.
+- **Redis**/**Valkey**: A message broker used to manage sync state and queues.
 - **Elasticsearch/OpenSearch**: The destination search engine where documents are indexed.
 - **PGSync Daemon**: The core service that reads changes from PostgreSQL and indexes them into the search engine.
 
@@ -72,7 +72,7 @@ pgsync/
 ├── examples/ # example schema.json files
 ├── pgsync/ # core application source code
 │ ├── settings.py # configuration loading
-│ ├── redisqueue.py # Redis consumer logic
+│ ├── redisqueue.py # Redis/Valkey consumer logic
 │ ├── base.py # PostgreSQL connection and queries
 │ ├── search_client.py # Elasticsearch/OpenSearch indexing logic
 │ ├── sync.py # entry point for PGSync

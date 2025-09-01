@@ -29,7 +29,7 @@ def teardown(
     Args:
         drop_db (bool, optional): Whether to drop the database. Defaults to True.
         truncate_db (bool, optional): Whether to truncate the database. Defaults to True.
-        delete_redis (bool, optional): Whether to delete Redis. Defaults to True.
+        delete_redis (bool, optional): Whether to delete Redis/Valkey. Defaults to True.
         drop_index (bool, optional): Whether to drop the index. Defaults to True.
         delete_checkpoint (bool, optional): Whether to delete the checkpoint. Defaults to True.
         config (Optional[str], optional): The configuration file path. Defaults to None.

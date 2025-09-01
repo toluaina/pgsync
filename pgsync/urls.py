@@ -136,18 +136,18 @@ def get_redis_url(
     db: t.Optional[str] = None,
 ) -> str:
     """
-    Return the URL to connect to Redis.
+    Return the URL to connect to Redis/Valkey.
 
     Args:
-        scheme (Optional[str]): The scheme to use for the Redis connection. Defaults to None.
-        host (Optional[str]): The Redis host to connect to. Defaults to None.
-        username (Optional[str]): The Redis username to use for authentication. Defaults to None.
-        password (Optional[str]): The Redis password to use for authentication. Defaults to None.
-        port (Optional[int]): The Redis port to connect to. Defaults to None.
-        db (Optional[str]): The Redis database to connect to. Defaults to None.
+        scheme (Optional[str]): The scheme to use for the Redis/Valkey connection. Defaults to None.
+        host (Optional[str]): The Redis/Valkey host to connect to. Defaults to None.
+        username (Optional[str]): The Redis/Valkey username to use for authentication. Defaults to None.
+        password (Optional[str]): The Redis/Valkey password to use for authentication. Defaults to None.
+        port (Optional[int]): The Redis/Valkey port to connect to. Defaults to None.
+        db (Optional[str]): The Redis/Valkey database to connect to. Defaults to None.
 
     Returns:
-        str: The Redis connection URL.
+        str: The Redis/Valkey connection URL.
     """
     host = host or REDIS_HOST
     username = username or REDIS_USER

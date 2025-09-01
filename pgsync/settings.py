@@ -194,20 +194,20 @@ if PG_URL_RO:
     PG_SSLMODE_RO = None
     PG_SSLROOTCERT_RO = None
 
-# Redis:
+# Redis/Valkey
 REDIS_AUTH = env.str("REDIS_AUTH", default=None)
 REDIS_USER = env.str("REDIS_USER", default=None)
 REDIS_DB = env.int("REDIS_DB", default=0)
 REDIS_HOST = env.str("REDIS_HOST", default="localhost")
-# redis poll interval (in secs)
+# redis/valkey poll interval (in secs)
 REDIS_POLL_INTERVAL = env.float("REDIS_POLL_INTERVAL", default=0.01)
 REDIS_PORT = env.int("REDIS_PORT", default=6379)
-# number of items to read from Redis at a time
+# number of items to read from Redis/Valkey at a time
 REDIS_READ_CHUNK_SIZE = env.int("REDIS_READ_CHUNK_SIZE", default=1000)
 REDIS_SCHEME = env.str("REDIS_SCHEME", default="redis")
-# redis socket connection timeout
+# redis/valkey socket connection timeout
 REDIS_SOCKET_TIMEOUT = env.int("REDIS_SOCKET_TIMEOUT", default=5)
-# number of items to write to Redis at a time
+# number of items to write to Redis/Valkey at a time
 REDIS_WRITE_CHUNK_SIZE = env.int("REDIS_WRITE_CHUNK_SIZE", default=500)
 REDIS_URL = env.str("REDIS_URL", default=None)
 REDIS_RETRY_ON_TIMEOUT = env.bool(
