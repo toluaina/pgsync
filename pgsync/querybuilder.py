@@ -107,6 +107,46 @@ class QueryBuilder(threading.local):
 
         return expression
 
+    def get_foreign_keys_through_model(self, node_a: Node, node_b: Node) -> dict:
+        if (node_a, node_b) not in self._cache:
+            fkeys: dict = defaultdict(list)
+            if node_a.model.foreign_keys:
+                for key in node_a.model.original.foreign_keys:
+                    if key._table_key() == str(node_b.model.original):
+                        fkeys[
+                            f"{key.parent.table.schema}."
+                            f"{key.parent.table.name}"
+                        ].append(str(key.parent.name))
+                        fkeys[
+                            f"{key.column.table.schema}."
+                            f"{key.column.table.name}"
+                        ].append(str(key.column.name))
+            if not fkeys:
+                if node_b.model.original.foreign_keys:
+                    for key in node_b.model.original.foreign_keys:
+                        if key._table_key() == str(node_a.model.original):
+                            fkeys[
+                                f"{key.parent.table.schema}."
+                                f"{key.parent.table.name}"
+                            ].append(str(key.parent.name))
+                            fkeys[
+                                f"{key.column.table.schema}."
+                                f"{key.column.table.name}"
+                            ].append(str(key.column.name))
+            if not fkeys:
+                raise ForeignKeyError(
+                    f"No foreign key relationship between "
+                    f"{node_a.model.original} and {node_b.model.original}"
+                )
+
+            foreign_keys: dict = {}
+            for table, columns in fkeys.items():
+                foreign_keys[table] = columns
+
+            self._cache[(node_a, node_b)] = foreign_keys
+
+        return self._cache[(node_a, node_b)]
+
     # this is for handling non-through tables
     def get_foreign_keys(self, node_a: Node, node_b: Node) -> dict:
         if (node_a, node_b) not in self._cache:
@@ -130,42 +170,9 @@ class QueryBuilder(threading.local):
                     foreign_keys[node_b.name] = sorted(
                         node_b.relationship.foreign_key.child
                     )
-
+                self._cache[(node_a, node_b)] = foreign_keys
             else:
-                fkeys: dict = defaultdict(list)
-                if node_a.model.foreign_keys:
-                    for key in node_a.model.original.foreign_keys:
-                        if key._table_key() == str(node_b.model.original):
-                            fkeys[
-                                f"{key.parent.table.schema}."
-                                f"{key.parent.table.name}"
-                            ].append(str(key.parent.name))
-                            fkeys[
-                                f"{key.column.table.schema}."
-                                f"{key.column.table.name}"
-                            ].append(str(key.column.name))
-                if not fkeys:
-                    if node_b.model.original.foreign_keys:
-                        for key in node_b.model.original.foreign_keys:
-                            if key._table_key() == str(node_a.model.original):
-                                fkeys[
-                                    f"{key.parent.table.schema}."
-                                    f"{key.parent.table.name}"
-                                ].append(str(key.parent.name))
-                                fkeys[
-                                    f"{key.column.table.schema}."
-                                    f"{key.column.table.name}"
-                                ].append(str(key.column.name))
-                if not fkeys:
-                    raise ForeignKeyError(
-                        f"No foreign key relationship between "
-                        f"{node_a.model.original} and {node_b.model.original}"
-                    )
-
-                for table, columns in fkeys.items():
-                    foreign_keys[table] = columns
-
-            self._cache[(node_a, node_b)] = foreign_keys
+                self.get_foreign_keys_through_model(node_a, node_b)
 
         return self._cache[(node_a, node_b)]
 
@@ -462,9 +469,9 @@ class QueryBuilder(threading.local):
 
     def _through(self, node: Node) -> None:  # noqa: C901
         through: Node = node.relationship.throughs[0]
-        foreign_keys: dict = self.get_foreign_keys(node, through)
+        foreign_keys: dict = self.get_foreign_keys_through_model(node, through)
 
-        for key, values in self.get_foreign_keys(through, node.parent).items():
+        for key, values in self.get_foreign_keys_through_model(through, node.parent).items():
             if key in foreign_keys:
                 for value in values:
                     if value not in foreign_keys[key]:
@@ -672,7 +679,7 @@ class QueryBuilder(threading.local):
             sa.func.JSON_AGG(outer_subquery.c.anon).label(node.label),
         ]
 
-        foreign_keys: dict = self.get_foreign_keys(node.parent, through)
+        foreign_keys: dict = self.get_foreign_keys_through_model(node.parent, through)
 
         for column in foreign_keys[through.name]:
             columns.append(through.model.c[str(column)])
