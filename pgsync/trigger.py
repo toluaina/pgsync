@@ -1,4 +1,4 @@
-"""PGSync Trigger template.
+"""PGSync trigger template.
 
 This module contains a template for creating a PostgreSQL trigger function that notifies updates asynchronously.
 The trigger function constructs a notification as a JSON object and sends it to a channel using PG_NOTIFY.

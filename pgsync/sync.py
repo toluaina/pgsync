@@ -596,11 +596,15 @@ class Sync(Base, metaclass=Singleton):
                 node.parent,
                 node,
             )
+
+            # if the node is directly related to parent and share a common field name
             for payload in payloads:
-                for i, key in enumerate(foreign_keys[node.name]):
-                    filters[node.parent.table].append(
-                        {foreign_keys[node.parent.name][i]: payload.data[key]}
-                    )
+                columns = foreign_keys.get(node.name, [])
+                for column in columns:
+                    if column in payload.data:
+                        filters[node.parent.table].append(
+                            {column: payload.data[column]}
+                        )
 
             # find all Elasticsearch/OpenSearch docs with fields
             # that match the filters and add their root to the query filter
