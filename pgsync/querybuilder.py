@@ -108,66 +108,125 @@ class QueryBuilder(threading.local):
         return expression
 
     # this is for handling non-through tables
-    def get_foreign_keys(self, node_a: Node, node_b: Node) -> dict:
-        if (node_a, node_b) not in self._cache:
-            foreign_keys: dict = {}
-            # if either offers a foreign_key via relationship, use it!
-            if (
-                node_a.relationship.foreign_key.parent
-                or node_b.relationship.foreign_key.parent
-            ):
-                if node_a.relationship.foreign_key.parent:
-                    foreign_keys[node_a.parent.name] = sorted(
-                        node_a.relationship.foreign_key.parent
-                    )
-                    foreign_keys[node_a.name] = sorted(
-                        node_a.relationship.foreign_key.child
-                    )
-                if node_b.relationship.foreign_key.parent:
-                    foreign_keys[node_b.parent.name] = sorted(
-                        node_b.relationship.foreign_key.parent
-                    )
-                    foreign_keys[node_b.name] = sorted(
-                        node_b.relationship.foreign_key.child
-                    )
+    def get_foreign_keys(
+        self, node_a: Node, node_b: Node
+    ) -> t.Dict[str, t.List[str]]:
+        """
+        Return all FK columns between node_a and node_b, keyed by fully qualified table name.
+        Example:
+        {
+            "public.child":  ["child_fk1", "child_fk2"],
+            "public.parent": ["id1", "id2"],
+        }
+        """
+        cache_key: t.Tuple[t.Any, t.Any] = (node_a, node_b)
+        if cache_key in self._cache:
+            return self._cache[cache_key]
 
-            else:
-                fkeys: dict = defaultdict(list)
-                if node_a.model.foreign_keys:
-                    for key in node_a.model.original.foreign_keys:
-                        if key._table_key() == str(node_b.model.original):
-                            fkeys[
-                                f"{key.parent.table.schema}."
-                                f"{key.parent.table.name}"
-                            ].append(str(key.parent.name))
-                            fkeys[
-                                f"{key.column.table.schema}."
-                                f"{key.column.table.name}"
-                            ].append(str(key.column.name))
-                if not fkeys:
-                    if node_b.model.original.foreign_keys:
-                        for key in node_b.model.original.foreign_keys:
-                            if key._table_key() == str(node_a.model.original):
-                                fkeys[
-                                    f"{key.parent.table.schema}."
-                                    f"{key.parent.table.name}"
-                                ].append(str(key.parent.name))
-                                fkeys[
-                                    f"{key.column.table.schema}."
-                                    f"{key.column.table.name}"
-                                ].append(str(key.column.name))
-                if not fkeys:
-                    raise ForeignKeyError(
-                        f"No foreign key relationship between "
-                        f"{node_a.model.original} and {node_b.model.original}"
-                    )
+        fkeys: t.MutableMapping[str, t.List[str]] = defaultdict(list)
 
-                for table, columns in fkeys.items():
-                    foreign_keys[table] = columns
+        def add(table_key: t.Optional[str], col: t.Optional[str]) -> None:
+            if not table_key or not col:
+                return
+            if col not in fkeys[table_key]:
+                fkeys[table_key].append(col)
 
-            self._cache[(node_a, node_b)] = foreign_keys
+        def qname(sa_table: t.Any) -> t.Optional[str]:
+            """schema-qualified table name from a SQLAlchemy Table (or None)."""
+            if sa_table is None:
+                return None
+            schema = getattr(sa_table, "schema", None)
+            name = getattr(sa_table, "name", None) or getattr(
+                sa_table, "key", None
+            )
+            if not name:
+                return None
+            return f"{schema}.{name}" if schema else str(name)
 
-        return self._cache[(node_a, node_b)]
+        def node_table_key(
+            node: t.Any, *, prefer_parent: bool
+        ) -> t.Optional[str]:
+            """Best-effort table key from node or its parent; never raises."""
+            if prefer_parent:
+                parent = getattr(node, "parent", None)
+                parent_name = getattr(parent, "name", None)
+                if parent_name:
+                    return str(parent_name)
+            node_name = getattr(node, "name", None)
+            if node_name:
+                return str(node_name)
+            # fallback to sqlalchemy table
+            return qname(
+                getattr(getattr(node, "model", None), "original", None)
+            )
+
+        # merge relationship provided hints (if any); do NOT short-circuit
+        for node in (node_a, node_b):
+            rel_fk = getattr(
+                getattr(node, "relationship", None), "foreign_key", None
+            )
+            if not rel_fk:
+                continue
+
+            parent_tbl_key = node_table_key(node, prefer_parent=True)
+            child_tbl_key = node_table_key(node, prefer_parent=False)
+
+            def merge_side(
+                side_obj: t.Any, fallback_tbl_key: t.Optional[str]
+            ) -> None:
+                # accept dict[str, list[str]] (preferred), or an iterable[str], or a single str
+                if isinstance(side_obj, dict):
+                    for tbl, cols in side_obj.items():
+                        tkey = str(tbl)
+                        for c in cols or []:
+                            add(tkey, str(c))
+                elif isinstance(side_obj, (list, tuple, set)):
+                    for c in side_obj:
+                        add(fallback_tbl_key, str(c))
+                elif isinstance(side_obj, str):
+                    add(fallback_tbl_key, side_obj)
+
+            # parent table cols
+            merge_side(getattr(rel_fk, "parent", None), parent_tbl_key)
+            # child table cols
+            merge_side(getattr(rel_fk, "child", None), child_tbl_key)
+
+        # SQLAlchemy introspection in both directions (A -> B and B -> A)
+        A = getattr(getattr(node_a, "model", None), "original", None)
+        B = getattr(getattr(node_b, "model", None), "original", None)
+
+        A_q = qname(A)
+        B_q = qname(B)
+
+        # helper to compare tables
+        def same_table(t1: t.Any, t2: t.Any) -> bool:
+            return qname(t1) is not None and qname(t1) == qname(t2)
+
+        if A is not None and B is not None:
+            for fk in getattr(A, "foreign_keys", []):
+                # does A have an FK pointing to B?
+                if same_table(getattr(fk, "column", None).table, B):
+                    # child col in A
+                    add(qname(fk.parent.table), str(fk.parent.name))
+                    # parent col in B
+                    add(qname(fk.column.table), str(fk.column.name))
+
+            for fk in getattr(B, "foreign_keys", []):
+                # does B have an FK pointing to A?
+                if same_table(getattr(fk, "column", None).table, A):
+                    # child col in B
+                    add(qname(fk.parent.table), str(fk.parent.name))
+                    # parent col in A
+                    add(qname(fk.column.table), str(fk.column.name))
+
+        if not fkeys:
+            raise ForeignKeyError(
+                f"No foreign key relationship between {A_q or node_a} and {B_q or node_b}"
+            )
+
+        result: t.Dict[str, t.List[str]] = dict(fkeys)
+        self._cache[cache_key] = result
+        return result
 
     def _get_foreign_keys(self, node_a: Node, node_b: Node) -> dict:
         """This is for handling through nodes."""
@@ -462,15 +521,18 @@ class QueryBuilder(threading.local):
 
     def _through(self, node: Node) -> None:  # noqa: C901
         through: Node = node.relationship.throughs[0]
-        foreign_keys: dict = self.get_foreign_keys(node, through)
+        # base: fks from through -> node
+        base = self.get_foreign_keys(through, node)
+        foreign_keys: t.Dict[str, t.List[str]] = {
+            k: list(v) for k, v in base.items()
+        }
 
-        for key, values in self.get_foreign_keys(through, node.parent).items():
-            if key in foreign_keys:
-                for value in values:
-                    if value not in foreign_keys[key]:
-                        foreign_keys[key].append(value)
+        for table, cols in self.get_foreign_keys(through, node.parent).items():
+            if table not in foreign_keys:
                 continue
-            foreign_keys[key] = values
+            dst = foreign_keys[table]
+            # extend uniquely and preserve order
+            dst.extend([col for col in cols if col not in dst])
 
         foreign_key_columns: list = self._get_column_foreign_keys(
             node.model.columns,
