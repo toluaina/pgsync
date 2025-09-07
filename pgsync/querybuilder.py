@@ -724,7 +724,7 @@ class QueryBuilder(threading.local):
         left_foreign_keys = foreign_keys[node.name]
         right_foreign_keys: list = self._get_column_foreign_keys(
             through.columns,
-            foreign_keys,
+            base,
             table=through.table,
             schema=node.schema,
         )
