@@ -674,7 +674,7 @@ class QueryBuilder(threading.local):
 
         parent_foreign_key_columns: list = self._get_column_foreign_keys(
             through.columns,
-            foreign_keys,
+            base,
             schema=node.schema,
         )
         where: list = []
