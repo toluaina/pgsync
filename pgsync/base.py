@@ -805,21 +805,41 @@ class Base(object):
         self,
         schema: str,
         tables: t.Optional[t.List[str]] = None,
+        table_columns: t.Optional[t.Dict[str, t.List[str]]] = None,
         join_queries: bool = False,
         if_not_exists: bool = False,
     ) -> None:
-        """Create a database triggers."""
+        """Create database triggers with optional column filtering for updates."""
         queries: t.List[str] = []
+        table_columns = table_columns or {}
+
         for table in self.tables(schema):
-            if (tables and table not in tables) or (
-                table in self.views(schema)
-            ):
+            if (tables and table not in tables) or (table in self.views(schema)):
                 continue
+
             logger.debug(f"Creating trigger on table: {schema}.{table}")
+
+            # Get specific columns for this table (empty list or None means no filtering)
+            specific_cols = table_columns.get(table, [])
+
             for name, level, tg_op in [
                 ("notify", "ROW", ["INSERT", "UPDATE", "DELETE"]),
                 ("truncate", "STATEMENT", ["TRUNCATE"]),
             ]:
+
+                # If we have specific columns and this is the UPDATE operation,
+                # modify the UPDATE event to UPDATE OF col1, col2, ...
+                if tg_op == ["INSERT", "UPDATE", "DELETE"] and specific_cols:
+                    col_names = list(
+                        dict.fromkeys(  # preserves order while removing duplicates
+                            col.name if hasattr(col, "name") else str(col)
+                            for col in specific_cols
+                        )
+                    )
+                    update_event = "UPDATE OF " + ", ".join(col_names)
+                    events = ["INSERT", update_event, "DELETE"]
+                else:
+                    events = tg_op
 
                 if if_not_exists or not self.view_exists(
                     MATERIALIZED_VIEW, schema
@@ -828,7 +848,7 @@ class Base(object):
                     self.drop_triggers(schema, [table])
                     queries.append(
                         f'CREATE TRIGGER "{schema}_{table}_{name}" '
-                        f'AFTER {" OR ".join(tg_op)} ON "{schema}"."{table}" '
+                        f'AFTER {" OR ".join(events)} ON "{schema}"."{table}" '
                         f"FOR EACH {level} EXECUTE PROCEDURE "
                         f"{schema}.{TRIGGER_FUNC}()",
                     )
