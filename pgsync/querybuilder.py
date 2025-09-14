@@ -10,6 +10,9 @@ from .base import compiled_query, TupleIdentifierType
 from .constants import OBJECT, ONE_TO_MANY, ONE_TO_ONE, SCALAR
 from .exc import ForeignKeyError
 from .node import Node
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class QueryBuilder(threading.local):
@@ -440,7 +443,11 @@ class QueryBuilder(threading.local):
                     child.parent.model.columns,
                     foreign_keys,
                 )
-
+                logger.info(f"_children child: {child}")
+                logger.info(f"_children through: {through}")
+                logger.info(f"_children foreign_keys: {foreign_keys}")
+                logger.info(f"_children left_foreign_keys: {left_foreign_keys} right_foreign_keys {right_foreign_keys}")
+  
                 for i in range(len(right_foreign_keys)):
                     onclause.append(
                         child._subquery.c[left_foreign_keys[i]]
@@ -468,7 +475,12 @@ class QueryBuilder(threading.local):
                         child.parent.model.columns,
                         foreign_keys,
                     )
+                
+                logger.info(f"_children. child: {child}")
 
+                logger.info(f"_children. foreign_keys: {foreign_keys}")
+                logger.info(f"_children. left_foreign_keys: {left_foreign_keys} right_foreign_keys {right_foreign_keys}")
+                
                 for i in range(len(left_foreign_keys)):
                     onclause.append(
                         child._subquery.c[left_foreign_keys[i]]
@@ -507,8 +519,8 @@ class QueryBuilder(threading.local):
                                             _column[column._orig_key]
                                             == column.value
                                         )
-                if self.verbose:
-                    compiled_query(child._subquery, "child._subquery")
+                                        
+                compiled_query(child._subquery, "child._subquery", True)
 
             op = sa.and_
             if child.table == child.parent.table:
@@ -540,6 +552,7 @@ class QueryBuilder(threading.local):
             table=node.table,
             schema=node.schema,
         )
+        logger.info(f"node: {node} foreign_key_columns {foreign_key_columns}")
 
         params: list = []
         for foreign_key_column in foreign_key_columns:
@@ -677,6 +690,7 @@ class QueryBuilder(threading.local):
             base,
             schema=node.schema,
         )
+        logger.info(f"parent_foreign_key_columns: {parent_foreign_key_columns}")
         where: list = []
         for i in range(len(foreign_key_columns)):
             where.append(
@@ -728,6 +742,8 @@ class QueryBuilder(threading.local):
             table=through.table,
             schema=node.schema,
         )
+
+        logger.info(f"left_foreign_keys: {left_foreign_keys} right_foreign_keys {right_foreign_keys}")
 
         columns = [
             _keys,

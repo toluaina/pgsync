@@ -1054,8 +1054,7 @@ class Sync(Base, metaclass=Singleton):
                 logger.exception(f"Exception {e}")
                 raise
 
-        if self.verbose:
-            compiled_query(node._subquery, "Query")
+        compiled_query(node._subquery, "Query", True)
 
         for i, (keys, row, primary_keys) in enumerate(
             self.fetchmany(node._subquery)
