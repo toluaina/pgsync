@@ -128,9 +128,12 @@ ELASTICSEARCH_USE_SSL = env.bool("ELASTICSEARCH_USE_SSL", default=False)
 ELASTICSEARCH_VERIFY_CERTS = env.bool(
     "ELASTICSEARCH_VERIFY_CERTS", default=True
 )
-ELASTICSEARCH_POOL_MAXSIZE = env.int(
-    "ELASTICSEARCH_POOL_MAXSIZE", default=None
-)
+
+# Number of concurrent connections that are
+# able to be open at one time for this node.
+# Having multiple connections per node allows
+# for higher concurrency of requests
+ELASTICSEARCH_POOL_MAXSIZE = env.int("ELASTICSEARCH_POOL_MAXSIZE", default=10)
 
 # when using multiple threads for poll_db we need to account for other
 # threads performing deletions.

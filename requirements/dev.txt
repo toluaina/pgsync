@@ -10,9 +10,9 @@ backports-datetime-fromisoformat==2.0.3
     # via marshmallow
 black==25.9.0
     # via -r requirements/dev.in
-boto3==1.40.35
+boto3==1.40.40
     # via -r requirements/base.in
-botocore==1.40.35
+botocore==1.40.40
     # via
     #   boto3
     #   s3transfer
@@ -29,7 +29,7 @@ click==8.1.8
     # via
     #   -r requirements/base.in
     #   black
-coverage[toml]==7.10.6
+coverage[toml]==7.10.7
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -132,7 +132,7 @@ python-dotenv==1.1.1
     #   environs
 pytokens==0.1.10
     # via black
-pyyaml==6.0.2
+pyyaml==6.0.3
     # via pre-commit
 redis==6.4.0
     # via -r requirements/base.in
