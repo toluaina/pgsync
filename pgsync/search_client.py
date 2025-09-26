@@ -391,6 +391,7 @@ def get_search_client(
                 verify_certs=True,
                 connection_class=connection_class,
                 timeout=settings.ELASTICSEARCH_TIMEOUT,
+                pool_maxsize=settings.ELASTICSEARCH_POOL_MAXSIZE,
             )
         elif settings.ELASTICSEARCH:
             return client(
@@ -405,6 +406,7 @@ def get_search_client(
                 verify_certs=True,
                 node_class=node_class,
                 timeout=settings.ELASTICSEARCH_TIMEOUT,
+                connections_per_node=settings.ELASTICSEARCH_POOL_MAXSIZE,
             )
     else:
         hosts: t.List[str] = [url]
@@ -440,6 +442,7 @@ def get_search_client(
         ssl_version: t.Optional[int] = settings.ELASTICSEARCH_SSL_VERSION
         ssl_context: t.Optional[t.Any] = settings.ELASTICSEARCH_SSL_CONTEXT
         ssl_show_warn: bool = settings.ELASTICSEARCH_SSL_SHOW_WARN
+        pool_maxsize: int = settings.ELASTICSEARCH_POOL_MAXSIZE
         return client(
             hosts=hosts,
             http_auth=http_auth,
@@ -459,4 +462,9 @@ def get_search_client(
             ssl_context=ssl_context,
             ssl_show_warn=ssl_show_warn,
             timeout=settings.ELASTICSEARCH_TIMEOUT,
+            **(
+                {"connections_per_node": pool_maxsize}
+                if settings.ELASTICSEARCH
+                else {"pool_maxsize": pool_maxsize}
+            ),
         )

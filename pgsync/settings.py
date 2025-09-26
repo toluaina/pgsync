@@ -128,6 +128,9 @@ ELASTICSEARCH_USE_SSL = env.bool("ELASTICSEARCH_USE_SSL", default=False)
 ELASTICSEARCH_VERIFY_CERTS = env.bool(
     "ELASTICSEARCH_VERIFY_CERTS", default=True
 )
+ELASTICSEARCH_POOL_MAXSIZE = env.int(
+    "ELASTICSEARCH_POOL_MAXSIZE", default=None
+)
 
 # when using multiple threads for poll_db we need to account for other
 # threads performing deletions.

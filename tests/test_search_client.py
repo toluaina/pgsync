@@ -42,6 +42,7 @@ class TestSearchClient(object):
             ELASTICSEARCH="True",
             OPENSEARCH="False",
             ELASTICSEARCH_HTTP_AUTH="user,passwd",
+            ELASTICSEARCH_POOL_MAXSIZE="25",
         ):
             importlib.reload(settings)
             with mock.patch(
@@ -78,6 +79,7 @@ class TestSearchClient(object):
                     ssl_context=settings.ELASTICSEARCH_SSL_CONTEXT,
                     ssl_show_warn=settings.ELASTICSEARCH_SSL_SHOW_WARN,
                     timeout=settings.ELASTICSEARCH_TIMEOUT,
+                    connections_per_node=settings.ELASTICSEARCH_POOL_MAXSIZE,
                 )
 
             with override_env_var(
@@ -109,4 +111,5 @@ class TestSearchClient(object):
                                 verify_certs=True,
                                 node_class=elastic_transport.RequestsHttpNode,
                                 timeout=settings.ELASTICSEARCH_TIMEOUT,
+                                connections_per_node=settings.ELASTICSEARCH_POOL_MAXSIZE,
                             )
