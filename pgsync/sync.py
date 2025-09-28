@@ -543,7 +543,6 @@ class Sync(Base, metaclass=Singleton):
 
         def flush_chunk():
             """Execute search for the current chunk and reset buffers."""
-            nonlocal current_vals, current_seen, seen_docs, filters
             # Build fields only for PKs that have values in this chunk
             fields = {pk: vals for pk, vals in current_vals.items() if vals}
             if not fields:
