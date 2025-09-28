@@ -506,83 +506,213 @@ class Sync(Base, metaclass=Singleton):
         )
 
     def _root_primary_key_resolver(
-        self, node: Node, payload: Payload, filters: list
+        self,
+        node: Node,
+        payloads: t.Sequence[Payload],
+        filters: list,
     ) -> list:
-        fields: dict = defaultdict(list)
-        primary_values: list = [
-            payload.data[key]
-            for key in node.model.primary_keys
-            if key in payload.data
-        ]
-        primary_fields: dict = dict(
-            zip(node.model.primary_keys, primary_values)
+        """
+        Batched resolver for rows identifiable by the node's primary key(s).
+
+        - Accumulates distinct PK values across payloads
+        - Greedily chunks so no per-field 'terms' list exceeds max_terms_count
+        - Issues one search per chunk and de-dupes doc_ids
+        """
+        if not payloads:
+            return filters
+
+        pk_names = list(getattr(node.model, "primary_keys", []) or [])
+        if not pk_names:
+            return filters
+
+        # Respect index.max_terms_count; allow override at self or search_client level
+        max_terms = int(
+            getattr(
+                self,
+                "max_terms_count",
+                getattr(self.search_client, "max_terms_count", 65536),
+            )
         )
-        for key, value in primary_fields.items():
-            fields[key].append(value)
-        for doc_id in self.search_client._search(
-            self.index, node.table, fields
-        ):
-            where: dict = {}
-            params: dict = doc_id.split(PRIMARY_KEY_DELIMITER)
-            for i, key in enumerate(self.tree.root.model.primary_keys):
-                where[key] = params[i]
-            filters.append(where)
+        if max_terms <= 0:
+            max_terms = 65536
+
+        # Current chunk state: ordered unique values per PK
+        current_vals = {pk: [] for pk in pk_names}
+        current_seen = {pk: set() for pk in pk_names}
+        seen_docs = set()
+
+        def flush_chunk():
+            """Execute search for the current chunk and reset buffers."""
+            nonlocal current_vals, current_seen, seen_docs, filters
+            # Build fields only for PKs that have values in this chunk
+            fields = {pk: vals for pk, vals in current_vals.items() if vals}
+            if not fields:
+                return
+
+            for doc_id in self.search_client._search(
+                self.index, node.table, fields
+            ):
+                if doc_id in seen_docs:
+                    continue
+                seen_docs.add(doc_id)
+
+                parts = doc_id.split(PRIMARY_KEY_DELIMITER)
+                # Map root PKs in order
+                where = {}
+                for i, key in enumerate(self.tree.root.model.primary_keys):
+                    where[key] = parts[i]
+                filters.append(where)
+
+            # reset chunk
+            for pk in pk_names:
+                current_vals[pk].clear()
+                current_seen[pk].clear()
+
+        for payload in payloads:
+            data = getattr(payload, "data", {}) or {}
+            if not isinstance(data, dict):
+                continue
+
+            # Collect PK values present in this payload
+            pv = {}
+            for pk in pk_names:
+                if pk in data:
+                    v = data[pk]
+                    pv[pk] = v
+
+            if not pv:
+                continue
+
+            # If adding this payload's PK values would overflow any terms list, flush first
+            overflow = any(
+                (v not in current_seen[pk])
+                and (len(current_vals[pk]) + 1 > max_terms)
+                for pk, v in pv.items()
+            )
+            if overflow:
+                flush_chunk()
+
+            # Add this payload's PK values to the current chunk (deduped per field)
+            for pk, v in pv.items():
+                if v not in current_seen[pk]:
+                    current_seen[pk].add(v)
+                    current_vals[pk].append(v)
+
+        # Flush remaining
+        flush_chunk()
 
         return filters
 
     def _root_foreign_key_resolver(
-        self, node: Node, payload: Payload, foreign_keys: dict, filters: list
+        self,
+        node: Node,
+        payloads: t.Sequence[Payload],
+        foreign_keys: dict,
+        filters: list,
     ) -> list:
         """
-        Foreign key resolver logic:
-
-        This resolver handles n-tiers relationships (n > 3) where we
-        insert/update a new leaf node.
-        For the node's parent, get the primary keys values from the
-        incoming payload.
-        Lookup this value in the meta section of Elasticsearch/OpenSearch
-        Then get the root node returned and re-sync that root record.
-        Essentially, we want to lookup the root node affected by
-        our insert/update operation and sync the tree branch for that root.
+        Batched FK resolver with chunking to respect ES/OpenSearch terms limits.
+        Splits large value sets into chunks so that each field's terms list
+        is <= max_terms_count (defaults to 65536).
         """
-        fields: dict = defaultdict(list)
-        foreign_values: list = [
-            payload.new.get(key) for key in foreign_keys[node.name]
-        ]
-        for key in [key.name for key in node.primary_keys]:
-            for value in foreign_values:
-                if value:
-                    fields[key].append(value)
-        # TODO: we should combine this with the filter above
-        # so we only hit Elasticsearch/OpenSearch once
-        for doc_id in self.search_client._search(
-            self.index,
-            node.parent.table,
-            fields,
-        ):
-            where: dict = {}
-            params: dict = doc_id.split(PRIMARY_KEY_DELIMITER)
-            for i, key in enumerate(self.tree.root.model.primary_keys):
-                where[key] = params[i]
-            filters.append(where)
+        if not payloads:
+            return filters
+
+        fk_names = foreign_keys.get(node.name, [])
+        if not fk_names:
+            return filters
+
+        # Gather distinct FK values across payloads (preserve order).
+        seen_vals = set()
+        foreign_values = []
+        for p in payloads:
+            new_obj = getattr(p, "new", {}) or {}
+            for key in fk_names:
+                v = new_obj.get(key)
+                if v is not None and v not in seen_vals:
+                    seen_vals.add(v)
+                    foreign_values.append(v)
+
+        if not foreign_values:
+            return filters
+
+        # Determine max terms per field (allow override from instance/search client).
+        max_terms = int(
+            getattr(
+                self,
+                "max_terms_count",
+                getattr(self.search_client, "max_terms_count", 65536),
+            )
+        )
+        if max_terms <= 0:
+            max_terms = 65536  # sane fallback
+
+        seen_docs = set()
+
+        # For each chunk, build a fields dict mapping *each* PK name -> chunked values,
+        # mirroring your original semantics.
+        pk_names = [k.name for k in node.primary_keys]
+        for chunk in chunks(foreign_values, max_terms):
+            fields = {pk: list(chunk) for pk in pk_names}
+
+            for doc_id in self.search_client._search(
+                self.index, node.parent.table, fields
+            ):
+                if doc_id in seen_docs:
+                    continue
+                seen_docs.add(doc_id)
+
+                parts = doc_id.split(PRIMARY_KEY_DELIMITER)
+                # skip malformed doc_ids that don't match root PK arity
+                if len(parts) < len(self.tree.root.model.primary_keys):
+                    continue
+
+                where: dict = {}
+                for i, key in enumerate(self.tree.root.model.primary_keys):
+                    where[key] = parts[i]
+                filters.append(where)
 
         return filters
 
     def _through_node_resolver(
-        self, node: Node, payload: Payload, filters: list
+        self,
+        node: Node,
+        payloads: t.Sequence[Payload],
+        filters: list,
     ) -> list:
-        """Handle where node is a through table with a direct references to
-        root
         """
-        foreign_key_constraint = payload.foreign_key_constraint(node.model)
-        if self.tree.root.name in foreign_key_constraint:
-            filters.append(
-                {
-                    foreign_key_constraint[self.tree.root.name][
-                        "remote"
-                    ]: foreign_key_constraint[self.tree.root.name]["value"]
-                }
-            )
+        Handle where node is a through table with a direct references to root
+        Batched resolver for through tables that directly reference the root.
+
+        For each payload, if it carries a foreign key to the root, append a
+        {remote_field: value} filter. Deduplicates to avoid redundant entries.
+        """
+        if not payloads:
+            return filters
+
+        root_name = self.tree.root.name
+        seen = set()  # (remote, value)
+
+        for p in payloads:
+            try:
+                fkc = p.foreign_key_constraint(node.model) or {}
+            except Exception:
+                # if a payload can't produce constraints, skip it
+                continue
+
+            ref = fkc.get(root_name)
+            if not ref:
+                continue
+
+            remote = ref.get("remote")
+            value = ref.get("value")
+
+            if remote and value is not None:
+                key = (remote, value)
+                if key not in seen:
+                    seen.add(key)
+                    filters.append({remote: value})
+
         return filters
 
     def _insert_op(
@@ -630,14 +760,13 @@ class Sync(Base, metaclass=Singleton):
 
             """
             _filters: list = []
-            for payload in payloads:
+            _filters = self._root_primary_key_resolver(
+                node.parent, payloads, _filters
+            )
+            if node.parent.parent:
                 _filters = self._root_primary_key_resolver(
-                    node.parent, payload, _filters
+                    node.parent.parent, payloads, _filters
                 )
-                if node.parent.parent:
-                    _filters = self._root_primary_key_resolver(
-                        node.parent.parent, payload, _filters
-                    )
             if _filters:
                 filters[self.tree.root.table].extend(_filters)
 
@@ -673,7 +802,6 @@ class Sync(Base, metaclass=Singleton):
                         node,
                     )
 
-                _filters: list = []
                 for payload in payloads:
                     for node_key in foreign_keys[node.name]:
                         for parent_key in foreign_keys[node.parent.name]:
@@ -682,14 +810,15 @@ class Sync(Base, metaclass=Singleton):
                                     {parent_key: payload.data[node_key]}
                                 )
 
-                    _filters = self._root_foreign_key_resolver(
-                        node, payload, foreign_keys, _filters
-                    )
+                _filters: list = []
+                _filters = self._root_foreign_key_resolver(
+                    node, payloads, foreign_keys, _filters
+                )
 
-                    # also check through table with a direct references to root
-                    _filters = self._through_node_resolver(
-                        node, payload, _filters
-                    )
+                # also check through table with a direct references to root
+                _filters = self._through_node_resolver(
+                    node, payloads, _filters
+                )
 
                 if _filters:
                     filters[self.tree.root.table].extend(_filters)
@@ -756,30 +885,27 @@ class Sync(Base, metaclass=Singleton):
 
         else:
             # update the child tables
-            for payload in payloads:
-                _filters: list = []
-                _filters = self._root_primary_key_resolver(
-                    node, payload, _filters
-                )
-                # also handle foreign_keys
-                if node.parent:
-                    try:
-                        foreign_keys = self.query_builder.get_foreign_keys(
-                            node.parent,
-                            node,
-                        )
-                    except ForeignKeyError:
-                        foreign_keys = self.query_builder._get_foreign_keys(
-                            node.parent,
-                            node,
-                        )
-
-                    _filters = self._root_foreign_key_resolver(
-                        node, payload, foreign_keys, _filters
+            _filters: list = []
+            _filters = self._root_primary_key_resolver(
+                node, payloads, _filters
+            )
+            if node.parent:
+                try:
+                    foreign_keys = self.query_builder.get_foreign_keys(
+                        node.parent,
+                        node,
+                    )
+                except ForeignKeyError:
+                    foreign_keys = self.query_builder._get_foreign_keys(
+                        node.parent,
+                        node,
                     )
 
-                if _filters:
-                    filters[self.tree.root.table].extend(_filters)
+            _filters = self._root_foreign_key_resolver(
+                node, payloads, foreign_keys, _filters
+            )
+            if _filters:
+                filters[self.tree.root.table].extend(_filters)
 
         return filters
 
@@ -828,13 +954,12 @@ class Sync(Base, metaclass=Singleton):
             # when deleting the child node, find the doc _id where
             # the child keys match in private, then get the root doc_id and
             # re-sync the child tables
-            for payload in payloads:
-                _filters: list = []
-                _filters = self._root_primary_key_resolver(
-                    node, payload, _filters
-                )
-                if _filters:
-                    filters[self.tree.root.table].extend(_filters)
+            _filters: list = []
+            _filters = self._root_primary_key_resolver(
+                node, payloads, _filters
+            )
+            if _filters:
+                filters[self.tree.root.table].extend(_filters)
 
         return filters
 
@@ -1117,7 +1242,7 @@ class Sync(Base, metaclass=Singleton):
         if settings.REDIS_CHECKPOINT:
             raw = self.redis.get_meta(default={}).get("checkpoint")
         else:
-            path = Path(self._checkpoint_file)
+            path: Path = Path(self._checkpoint_file)
             raw = (
                 path.read_text(encoding="utf-8").split()[0]
                 if path.exists()

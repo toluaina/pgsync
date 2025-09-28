@@ -60,7 +60,7 @@ ELASTICSEARCH_BEARER_AUTH = env.str("ELASTICSEARCH_BEARER_AUTH", default=None)
 # provide a path to CA certs on disk
 ELASTICSEARCH_CA_CERTS = env.str("ELASTICSEARCH_CA_CERTS", default=None)
 # Elasticsearch index chunk size (how many documents to index at a time)
-ELASTICSEARCH_CHUNK_SIZE = env.int("ELASTICSEARCH_CHUNK_SIZE", default=2000)
+ELASTICSEARCH_CHUNK_SIZE = env.int("ELASTICSEARCH_CHUNK_SIZE", default=5000)
 # PEM formatted SSL client certificate
 ELASTICSEARCH_CLIENT_CERT = env.str("ELASTICSEARCH_CLIENT_CERT", default=None)
 # PEM formatted SSL client key
