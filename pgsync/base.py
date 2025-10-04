@@ -449,23 +449,20 @@ class Base(object):
 
         SELECT * FROM PG_REPLICATION_SLOTS
         """
-        with self.advisory_lock(
-            slot_name, max_retries=None, retry_interval=0.1
-        ):
-            return self.fetchall(
-                sa.select("*")
-                .select_from(sa.text("PG_REPLICATION_SLOTS"))
-                .where(
-                    sa.and_(
-                        *[
-                            sa.column("slot_name") == slot_name,
-                            sa.column("slot_type") == slot_type,
-                            sa.column("plugin") == plugin,
-                        ]
-                    )
-                ),
-                label="replication_slots",
-            )
+        return self.fetchall(
+            sa.select("*")
+            .select_from(sa.text("PG_REPLICATION_SLOTS"))
+            .where(
+                sa.and_(
+                    *[
+                        sa.column("slot_name") == slot_name,
+                        sa.column("slot_type") == slot_type,
+                        sa.column("plugin") == plugin,
+                    ]
+                )
+            ),
+            label="replication_slots",
+        )
 
     def create_replication_slot(self, slot_name: str) -> None:
         """Create a replication slot.

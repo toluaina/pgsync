@@ -126,7 +126,12 @@ class Sync(Base, metaclass=Singleton):
         self.tasks: t.List[asyncio.Task] = []
         self.lock = threading.Lock()
 
-    def validate(self, repl_slots: bool = True, polling=False) -> None:
+    @property
+    def slot_name(self) -> str:
+        """Return the replication slot name."""
+        return self.__name
+
+    def validate(self, repl_slots: bool = True, polling: bool = False) -> None:
         """Perform all validation right away."""
 
         # ensure v2 compatible schema
