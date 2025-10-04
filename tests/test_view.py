@@ -268,6 +268,7 @@ class TestView(object):
                 ["book", "publisher"],
                 user_defined_fkey_tables={},
                 views=[],
+                watched_columns_for_tables={"publisher": ["name"]},
             )
             assert mock_logger.debug.call_count == 2
             assert mock_logger.debug.call_args_list == [
@@ -288,6 +289,7 @@ class TestView(object):
                 set(["book", "publisher"]),
                 user_defined_fkey_tables=user_defined_fkey_tables,
                 views=[],
+                watched_columns_for_tables={"publisher": ["name"]},
             )
             assert mock_logger.debug.call_count == 2
             assert mock_logger.debug.call_args_list == [
