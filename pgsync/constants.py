@@ -42,6 +42,7 @@ NODE_ATTRIBUTES = [
     "schema",
     "table",
     "transform",
+    "watched_columns",
 ]
 
 # Relationship attributes
@@ -198,6 +199,7 @@ MATERIALIZED_VIEW_COLUMNS = [
     "indices",
     "primary_keys",
     "table_name",
+    "watched_columns",
 ]
 
 # Primary key delimiter

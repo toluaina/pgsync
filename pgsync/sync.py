@@ -125,6 +125,8 @@ class Sync(Base, metaclass=Singleton):
         self.count: dict = dict(xlog=0, db=0, redis=0)
         self.tasks: t.List[asyncio.Task] = []
         self.lock = threading.Lock()
+        self.skipped_xmins: t.List[int] = []
+        self.lock_skipped_xmins = threading.Lock()
 
     def validate(self, repl_slots: bool = True, polling=False) -> None:
         """Perform all validation right away."""
@@ -301,6 +303,7 @@ class Sync(Base, metaclass=Singleton):
                 tables: t.Set = set()
                 # tables with user defined foreign keys
                 user_defined_fkey_tables: dict = {}
+                watched_columns_for_table: dict = {}
 
                 for node in self.tree.traverse_breadth_first():
                     if node.schema != schema:
@@ -327,6 +330,8 @@ class Sync(Base, metaclass=Singleton):
                     if columns:
                         user_defined_fkey_tables.setdefault(node.table, set())
                         user_defined_fkey_tables[node.table] |= set(columns)
+
+                    watched_columns_for_table[node.table] = node.watched_columns
                 if tables:
                     if if_not_exists or not self.view_exists(
                         MATERIALIZED_VIEW, schema
@@ -337,6 +342,7 @@ class Sync(Base, metaclass=Singleton):
                             schema,
                             tables,
                             user_defined_fkey_tables,
+                            watched_columns_for_table,
                         )
 
                     self.create_triggers(
@@ -1398,7 +1404,13 @@ class Sync(Base, metaclass=Singleton):
                         and self.index in payload["indices"]
                         and payload["schema"] in self.tree.schemas
                     ):
-                        payloads.append(payload)
+                        if (payload["tg_op"] == UPDATE and payload["table"] in self.tree.watched_columns_tables
+                            and payload["old"] == payload["new"]):
+                            logger.info(f"Skipping payload due to no change: {payload['new']}")
+                            with self.lock_skipped_xmins:
+                                self.skipped_xmins.append(payload["xmin"])
+                        else:
+                            payloads.append(payload)
                         logger.debug(f"poll_db: {payload}")
                         with self.lock:
                             self.count["db"] += 1
@@ -1498,7 +1510,9 @@ class Sync(Base, metaclass=Singleton):
                     )
                     _payloads: list = []
 
-        txids: t.Set = set(map(lambda x: x.xmin, payloads))
+        with self.lock_skipped_xmins:
+            txids: t.Set = set(map(lambda x: x.xmin, payloads)) | set(self.skipped_xmins)
+            self.skipped_xmins = []
         # for truncate, tg_op txids is None so skip setting the checkpoint
         if txids != set([None]):
             self.checkpoint: int = min(min(txids), self.txid_current) - 1

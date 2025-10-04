@@ -340,6 +340,7 @@ def create_view(
     tables: t.Set,
     user_defined_fkey_tables: dict,
     views: t.List[str],
+    watched_columns_for_tables: t.Dict[str, t.List[str]],
 ) -> None:
     """
     This module defines a function `create_view` that creates a view describing primary_keys and foreign_keys for each table
@@ -371,18 +372,18 @@ def create_view(
         So if 'specie' was the only row before, and the next query returns
         'unit' and 'structure', we want to end up with the result below.
 
-         table_name | primary_keys | foreign_keys     | indices
-        ------------+--------------+------------------+------------
-         specie     | {id}         | {id, user_id}    | {foo, bar}
-         unit       | {id}         | {id, profile_id} | {foo, bar}
-         structure  | {id}         | {id}             | {foo, bar}
-         unit       | {id}         | {id, profile_id} | {foo, bar}
-         structure  | {id}         | {id}             | {foo, bar}
+         table_name | primary_keys | foreign_keys     | indices    | watched_columns
+        ------------+--------------+------------------+------------+----------------
+         specie     | {id}         | {id, user_id}    | {foo, bar} | {foo, bar}
+         unit       | {id}         | {id, profile_id} | {foo, bar} | {foo}
+         structure  | {id}         | {id}             | {foo, bar} | {bar}
+         unit       | {id}         | {id, profile_id} | {foo, bar} | {foo}
+         structure  | {id}         | {id}             | {foo, bar} | {bar}
     """
 
     rows: dict = {}
     if MATERIALIZED_VIEW in views:
-        for table_name, primary_keys, foreign_keys, indices in fetchall(
+        for table_name, primary_keys, foreign_keys, indices, watched_columns in fetchall(
             sa.select("*").select_from(
                 sa.text(f"{schema}.{MATERIALIZED_VIEW}")
             )
@@ -393,6 +394,7 @@ def create_view(
                     "primary_keys": set(),
                     "foreign_keys": set(),
                     "indices": set(),
+                    "watched_columns": set(),
                 },
             )
             if primary_keys:
@@ -401,6 +403,8 @@ def create_view(
                 rows[table_name]["foreign_keys"] = set(foreign_keys)
             if indices:
                 rows[table_name]["indices"] = set(indices)
+            if watched_columns:
+                rows[table_name]["watched_columns"] = set(watched_columns)
         with engine.connect().execution_options(
             isolation_level="AUTOCOMMIT"
         ) as conn:
@@ -413,7 +417,7 @@ def create_view(
     for table_name, columns in fetchall(_primary_keys(models, schema, tables)):
         rows.setdefault(
             table_name,
-            {"primary_keys": set(), "foreign_keys": set(), "indices": set()},
+            {"primary_keys": set(), "foreign_keys": set(), "indices": set(), "watched_columns": set()},
         )
         if columns:
             rows[table_name]["primary_keys"] |= set(columns)
@@ -422,7 +426,7 @@ def create_view(
     for table_name, columns in fetchall(_foreign_keys(models, schema, tables)):
         rows.setdefault(
             table_name,
-            {"primary_keys": set(), "foreign_keys": set(), "indices": set()},
+            {"primary_keys": set(), "foreign_keys": set(), "indices": set(), "watched_columns": set()},
         )
         if columns:
             rows[table_name]["foreign_keys"] |= set(columns)
@@ -436,6 +440,7 @@ def create_view(
                     "primary_keys": set(),
                     "foreign_keys": set(),
                     "indices": set(),
+                    "watched_columns": set(),
                 },
             )
             if columns:
@@ -445,8 +450,11 @@ def create_view(
     if not rows:
         rows.setdefault(
             None,
-            {"primary_keys": set(), "foreign_keys": set(), "indices": set()},
+            {"primary_keys": set(), "foreign_keys": set(), "indices": set(), "watched_columns": set()},
         )
+
+    for table_name, watched_columns in watched_columns_for_tables.items():
+        rows[table_name]["watched_columns"] = set(watched_columns)
 
     statement = sa.select(
         sa.sql.Values(
@@ -454,6 +462,7 @@ def create_view(
             sa.column("primary_keys"),
             sa.column("foreign_keys"),
             sa.column("indices"),
+            sa.column("watched_columns"),
         )
         .data(
             [
@@ -474,6 +483,11 @@ def create_view(
                         if fields.get("indices")
                         else None
                     ),
+                    (
+                        array(fields.get("watched_columns"))
+                        if fields.get("watched_columns")
+                        else None
+                    )
                 )
                 for table_name, fields in rows.items()
             ]
