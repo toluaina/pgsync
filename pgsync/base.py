@@ -2,6 +2,7 @@
 
 import logging
 import os
+import random
 import threading
 import time
 import typing as t
@@ -549,30 +550,65 @@ class Base(object):
         retry_interval: float = 1.0,
         backoff_type: str = "fixed",  # or "exponential"
         backoff_factor: float = 2.0,
+        jitter: str = "full",  # "none" | "full" | "equal" | "decorrelated"
+        max_delay: float = 30.0,  # cap for delay growth
     ):
-        """Context manager to acquire a PostgreSQL advisory lock with optional retries."""
+        """
+        Context manager to acquire a PostgreSQL advisory lock with optional retries.
+        Acquire a PostgreSQL advisory lock with retries, backoff, and jitter.
+        Jitter reduces lock-step contention so callers don't starve.
+        """
         key: int = self.advisory_key(slot_name)
         attempt: int = 0
-        delay: int = retry_interval
+
+        base_delay: float = float(retry_interval)
+        # current backoff window (seconds)
+        delay: float = base_delay
+
         while True:
             if self.pg_try_advisory_lock(key):
                 break
 
-            if max_retries is not None and attempt >= max_retries:
+            if (max_retries is not None) and (attempt >= max_retries):
                 raise RuntimeError(
                     f"Failed to acquire advisory lock for '{slot_name}' after {max_retries} retries."
                 )
 
-            time.sleep(delay)
-            if backoff_type == "exponential":
-                delay *= backoff_factor
+            # Compute sleep using jitter strategy
+            if jitter == "decorrelated":
+                # Decorrelated jitter chooses the *next* delay first.
+                delay = min(max_delay, random.uniform(base_delay, delay * 3))
+                sleep_for = delay
+            else:
+                # For other modes, sleep is derived from current delay.
+                if jitter == "full":
+                    sleep_for = random.uniform(0.0, delay)
+                elif jitter == "equal":
+                    sleep_for = (delay / 2.0) + random.uniform(
+                        0.0, delay / 2.0
+                    )
+                elif jitter == "none":
+                    sleep_for = delay
+                else:
+                    # Fallback to full jitter if an unknown option is passed
+                    sleep_for = random.uniform(0.0, delay)
+
+            time.sleep(max(0.0, sleep_for))
+
+            # Increase delay for next attempt (except decorrelated which already advanced)
+            if backoff_type == "exponential" and jitter != "decorrelated":
+                delay = min(max_delay, delay * backoff_factor)
+            # For fixed backoff, 'delay' stays at base_delay unless decorrelated changed it.
 
             attempt += 1
 
         try:
             yield
         finally:
-            self.pg_advisory_unlock(key)
+            try:
+                self.pg_advisory_unlock(key)
+            except Exception:
+                pass
 
     def _logical_slot_changes(
         self,
