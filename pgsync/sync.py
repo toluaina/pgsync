@@ -1348,6 +1348,19 @@ class Sync(Base, metaclass=Singleton):
         while True:
             await self._async_poll_redis()
 
+    def _should_skip_update_due_to_watched_columns(self, payload: dict) -> bool:
+        """
+        Returns True if this UPDATE payload should be skipped because none of the watched
+        columns changed; False otherwise.
+        """
+        if payload.get("tg_op") != UPDATE:
+            return False
+
+        if payload["table"] not in self.tree.watched_columns_tables:
+            return False
+
+        return payload["old"] == payload["new"]
+
     @threaded
     @exception
     def poll_db(self) -> None:
@@ -1404,8 +1417,7 @@ class Sync(Base, metaclass=Singleton):
                         and self.index in payload["indices"]
                         and payload["schema"] in self.tree.schemas
                     ):
-                        if (payload["tg_op"] == UPDATE and payload["table"] in self.tree.watched_columns_tables
-                            and payload["old"] == payload["new"]):
+                        if self._should_skip_update_due_to_watched_columns(payload):
                             logger.info(f"Skipping payload due to no change: {payload['new']}")
                             with self.lock_skipped_xmins:
                                 self.skipped_xmins.append(payload["xmin"])
