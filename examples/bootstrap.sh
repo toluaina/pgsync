@@ -33,4 +33,4 @@ fi
 
 bootstrap --config "$(pwd)/examples/$@/schema.json"
 
-pgsync --config "$(pwd)/examples/$@/schema.json"
+# pgsync --config "$(pwd)/examples/$@/schema.json"

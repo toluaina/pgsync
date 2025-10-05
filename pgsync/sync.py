@@ -146,42 +146,43 @@ class Sync(Base, metaclass=Singleton):
         if self.index is None:
             raise ValueError("Index is missing for doc")
 
-        if not polling:
-            max_replication_slots: t.Optional[str] = self.pg_settings(
-                "max_replication_slots"
-            )
-            try:
-                if int(max_replication_slots) < 1:
-                    raise TypeError
-            except TypeError:
-                raise RuntimeError(
-                    "Ensure there is at least one replication slot defined "
-                    "by setting max_replication_slots = 1"
+        if not self.is_mysql_compat:
+            if not polling:
+                max_replication_slots: t.Optional[str] = self.pg_settings(
+                    "max_replication_slots"
                 )
+                try:
+                    if int(max_replication_slots) < 1:
+                        raise TypeError
+                except TypeError:
+                    raise RuntimeError(
+                        "Ensure there is at least one replication slot defined "
+                        "by setting max_replication_slots = 1"
+                    )
 
-            wal_level: t.Optional[str] = self.pg_settings("wal_level")
-            if not wal_level or wal_level.lower() != "logical":
-                raise RuntimeError(
-                    "Enable logical decoding by setting wal_level = logical"
+                wal_level: t.Optional[str] = self.pg_settings("wal_level")
+                if not wal_level or wal_level.lower() != "logical":
+                    raise RuntimeError(
+                        "Enable logical decoding by setting wal_level = logical"
+                    )
+
+                self._can_create_replication_slot("_tmp_")
+
+                rds_logical_replication: t.Optional[str] = self.pg_settings(
+                    "rds.logical_replication"
                 )
+                if (
+                    rds_logical_replication
+                    and rds_logical_replication.lower() == "off"
+                ):
+                    raise RDSError("rds.logical_replication is not enabled")
 
-            self._can_create_replication_slot("_tmp_")
-
-            rds_logical_replication: t.Optional[str] = self.pg_settings(
-                "rds.logical_replication"
-            )
-            if (
-                rds_logical_replication
-                and rds_logical_replication.lower() == "off"
-            ):
-                raise RDSError("rds.logical_replication is not enabled")
-
-            # ensure we have run bootstrap and the replication slot exists
-            if repl_slots and not self.replication_slots(self.__name):
-                raise RuntimeError(
-                    f'Replication slot "{self.__name}" does not exist.\n'
-                    f'Make sure you have run the "bootstrap" command.'
-                )
+                # ensure we have run bootstrap and the replication slot exists
+                if repl_slots and not self.replication_slots(self.__name):
+                    raise RuntimeError(
+                        f'Replication slot "{self.__name}" does not exist.\n'
+                        f'Make sure you have run the "bootstrap" command.'
+                    )
 
         if not settings.REDIS_CHECKPOINT:
             # ensure the checkpoint dirpath is valid
@@ -210,10 +211,10 @@ class Sync(Base, metaclass=Singleton):
                         f"{MATERIALIZED_VIEW}. Please re-run bootstrap."
                     )
 
-            if node.schema not in self.schemas:
-                raise InvalidSchemaError(
-                    f"Unknown schema name(s): {node.schema}"
-                )
+            # if node.schema not in self.schemas:
+            #     raise InvalidSchemaError(
+            #         f"Unknown schema name(s): {node.schema}"
+            #     )
 
             # ensure all base tables have at least one primary_key
             for table in node.base_tables:
@@ -1515,6 +1516,8 @@ class Sync(Base, metaclass=Singleton):
         txmax: int = self.txid_current
         logical_slot_chunk_size: int = settings.LOGICAL_SLOT_CHUNK_SIZE
 
+        if self.is_mysql_compat:
+            txmax = txmin = None
         logger.debug(f"pull txmin: {txmin} - txmax: {txmax}")
         # forward pass sync
         self.search_client.bulk(
@@ -1523,20 +1526,21 @@ class Sync(Base, metaclass=Singleton):
 
         # this is the max lsn we should go upto
         upto_lsn: str = self.current_wal_lsn
-        try:
-            # now sync up to txmax to capture everything we may have missed
-            self.logical_slot_changes(
-                txmin=txmin,
-                txmax=txmax,
-                logical_slot_chunk_size=logical_slot_chunk_size,
-                upto_lsn=upto_lsn,
-            )
-        except Exception as e:
-            # if we are polling, we can just continue
-            if polling:
-                return
-            else:
-                raise
+        if not self.is_mysql_compat:
+            try:
+                # now sync up to txmax to capture everything we may have missed
+                self.logical_slot_changes(
+                    txmin=txmin,
+                    txmax=txmax,
+                    logical_slot_chunk_size=logical_slot_chunk_size,
+                    upto_lsn=upto_lsn,
+                )
+            except Exception as e:
+                # if we are polling, we can just continue
+                if polling:
+                    return
+                else:
+                    raise
 
         self.checkpoint: int = txmax or self.txid_current
         self._truncate = True

@@ -25,9 +25,15 @@ from .settings import (
     REDIS_SCHEME,
     REDIS_URL,
     REDIS_USER,
+    USE_UTF8MB4,
 )
 
 logger = logging.getLogger(__name__)
+
+DIALECT = {
+    "psycopg2": "postgresql",
+    "pymysql": "mysql",
+}
 
 
 def _get_auth(key: str) -> t.Optional[str]:
@@ -89,7 +95,7 @@ def get_search_url(
     return f"{scheme}://{auth}{host}:{port}"
 
 
-def get_postgres_url(
+def get_database_url(
     database: str,
     user: t.Optional[str] = None,
     host: t.Optional[str] = None,
@@ -98,7 +104,7 @@ def get_postgres_url(
     driver: t.Optional[str] = None,
 ) -> str:
     """
-    Return the URL to connect to Postgres.
+    Return the URL to connect to the database.
 
     Args:
         database (str): The name of the database to connect to.
@@ -109,7 +115,7 @@ def get_postgres_url(
         driver (str, optional): The name of the driver to use for the connection. Defaults to None.
 
     Returns:
-        str: The URL to connect to the Postgres database.
+        str: The URL to connect to the database.
     """
     user = user or PG_USER
     host = host or PG_HOST
@@ -122,9 +128,19 @@ def get_postgres_url(
 
     auth: str = f"{user}:{quote_plus(password)}" if password else user
     if not password:
-        logger.debug("Connecting to Postgres without password.")
+        logger.debug("Connecting to database without password.")
 
-    return f"postgresql+{driver}://{auth}@{host}:{port}/{database}"
+    protocol: str = DIALECT.get(PG_DRIVER)
+    if not protocol:
+        raise ValueError(
+            f"Unsupported PG_DRIVER={PG_DRIVER!r}; expected 'psycopg2' or 'pymysql'."
+        )
+
+    charset_qs: str = (
+        "?charset=utf8mb4" if (protocol == "mysql" and USE_UTF8MB4) else ""
+    )
+
+    return f"{protocol}+{driver}://{auth}@{host}:{port}/{database}{charset_qs}"
 
 
 def get_redis_url(

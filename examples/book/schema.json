@@ -61,12 +61,6 @@
                 "title",
                 "description",
                 "tags",
-                "doc->firstname",
-                "doc->coordinates",
-                "doc#>{a,b,c}->4",
-                "doc->x",
-                "doc->x->0->y",
-                "doc->x->1->z",
                 "publish_date"
             ],
             "transform": {

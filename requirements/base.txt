@@ -14,29 +14,26 @@ botocore==1.40.45
     # via
     #   boto3
     #   s3transfer
-certifi==2025.8.3
+certifi==2025.10.5
     # via
     #   elastic-transport
+    #   elasticsearch
     #   opensearch-py
     #   requests
 charset-normalizer==3.4.3
     # via requests
 click==8.1.8
     # via -r requirements/base.in
-elastic-transport==8.17.1
-    # via elasticsearch
-elasticsearch==8.19.1
+elasticsearch==7.17.12
     # via
     #   -r requirements/base.in
     #   elasticsearch-dsl
-elasticsearch-dsl==8.15.4
+elasticsearch-dsl==7.4.1
     # via -r requirements/base.in
 environs==14.3.0
     # via -r requirements/base.in
 events==0.5
     # via opensearch-py
-greenlet==3.2.4
-    # via sqlalchemy
 idna==3.10
     # via requests
 jmespath==1.0.1
@@ -50,6 +47,8 @@ opensearch-dsl==2.1.0
 opensearch-py==3.0.0
     # via opensearch-dsl
 psycopg2-binary==2.9.10
+    # via -r requirements/base.in
+pymysql==1.1.2
     # via -r requirements/base.in
 python-dateutil==2.9.0.post0
     # via
@@ -74,6 +73,7 @@ s3transfer==0.14.0
     # via boto3
 six==1.17.0
     # via
+    #   elasticsearch-dsl
     #   opensearch-dsl
     #   python-dateutil
 sqlalchemy==2.0.43
@@ -83,7 +83,6 @@ sqlparse==0.5.3
 typing-extensions==4.15.0
     # via
     #   elasticsearch
-    #   elasticsearch-dsl
     #   environs
     #   marshmallow
     #   sqlalchemy
@@ -91,5 +90,6 @@ urllib3==1.26.20
     # via
     #   botocore
     #   elastic-transport
+    #   elasticsearch
     #   opensearch-py
     #   requests

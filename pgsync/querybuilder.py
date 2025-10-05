@@ -89,15 +89,15 @@ class QueryBuilder(threading.local):
         while i < len(columns):
             chunk: t.List = columns[i : i + chunk_size]
             if i == 0:
-                expression = sa.cast(
-                    sa.func.JSON_BUILD_OBJECT(*chunk),
-                    sa.dialects.postgresql.JSONB,
+                expression = sa.type_coerce(
+                    sa.func.JSON_OBJECT(*chunk),
+                    sa.JSON,
                 )
             else:
                 expression = expression.concat(
-                    sa.cast(
-                        sa.func.JSON_BUILD_OBJECT(*chunk),
-                        sa.dialects.postgresql.JSONB,
+                    sa.type_coerce(
+                        sa.func.JSON_OBJECT(*chunk),
+                        sa.JSON,
                     )
                 )
             i += chunk_size
@@ -287,8 +287,8 @@ class QueryBuilder(threading.local):
                     return foreign_keys[table]
         else:
             # only return the intersection of columns that match
-            if not table.startswith(f"{schema}."):
-                table = f"{schema}.{table}"
+            # if not table.startswith(f"{schema}."):
+            # table = f"{schema}.{table}"
             for i, value in enumerate(foreign_keys[table]):
                 if value not in columns:
                     foreign_keys[table].pop(i)
@@ -297,12 +297,12 @@ class QueryBuilder(threading.local):
     def _get_child_keys(
         self, node: Node, params: dict
     ) -> sa.sql.elements.Label:
-        row = sa.cast(
-            sa.func.JSON_BUILD_OBJECT(
+        row = sa.type_coerce(
+            sa.func.JSON_OBJECT(
                 node.table,
                 params,
             ),
-            sa.dialects.postgresql.JSONB,
+            sa.JSON,
         )
         for child in node.children:
             if (
@@ -310,16 +310,16 @@ class QueryBuilder(threading.local):
                 and child.parent.relationship.type == ONE_TO_MANY
             ):
                 row = row.concat(
-                    sa.cast(
-                        sa.func.JSON_AGG(child._subquery.c._keys),
-                        sa.dialects.postgresql.JSONB,
+                    sa.type_coerce(
+                        sa.func.JSON_ARRAYAGG(child._subquery.c._keys),
+                        sa.JSON,
                     )
                 )
             else:
                 row = row.concat(
-                    sa.cast(
-                        sa.func.JSON_BUILD_ARRAY(child._subquery.c._keys),
-                        sa.dialects.postgresql.JSONB,
+                    sa.type_coerce(
+                        sa.func.JSON_ARRAY(child._subquery.c._keys),
+                        sa.JSON,
                     )
                 )
         return row.label("_keys")
@@ -332,7 +332,7 @@ class QueryBuilder(threading.local):
         ctid: t.Optional[dict] = None,
     ) -> None:
         columns = [
-            sa.func.JSON_BUILD_ARRAY(
+            sa.func.JSON_ARRAY(
                 *[
                     child._subquery.c._keys
                     for child in node.children
@@ -356,7 +356,7 @@ class QueryBuilder(threading.local):
                 subquery.append(
                     sa.select(
                         *[
-                            sa.cast(
+                            sa.type_coerce(
                                 sa.literal_column(f"'({page},'")
                                 .concat(sa.column("s"))
                                 .concat(")"),
@@ -384,8 +384,8 @@ class QueryBuilder(threading.local):
 
         if txmin:
             node._filters.append(
-                sa.cast(
-                    sa.cast(
+                sa.type_coerce(
+                    sa.type_coerce(
                         node.model.c.xmin,
                         sa.Text,
                     ),
@@ -395,8 +395,8 @@ class QueryBuilder(threading.local):
             )
         if txmax:
             node._filters.append(
-                sa.cast(
-                    sa.cast(
+                sa.type_coerce(
+                    sa.type_coerce(
                         node.model.c.xmin,
                         sa.Text,
                     ),
@@ -411,7 +411,7 @@ class QueryBuilder(threading.local):
         node._subquery = node._subquery.alias()
 
         if not node.is_root:
-            node._subquery = node._subquery.lateral()
+            node._subquery = node._subquery()
 
     def _children(self, node: Node) -> None:
         for child in node.children:
@@ -544,14 +544,14 @@ class QueryBuilder(threading.local):
         params: list = []
         for foreign_key_column in foreign_key_columns:
             params.append(
-                sa.func.JSON_BUILD_OBJECT(
+                sa.func.JSON_OBJECT(
                     str(foreign_key_column),
-                    sa.func.JSON_BUILD_ARRAY(node.model.c[foreign_key_column]),
+                    sa.func.JSON_ARRAY(node.model.c[foreign_key_column]),
                 )
             )
 
         _keys: sa.sql.elements.Label = self._get_child_keys(
-            node, sa.func.JSON_BUILD_ARRAY(*params).label("_keys")
+            node, sa.func.JSON_ARRAY(*params).label("_keys")
         )
 
         columns = [_keys]
@@ -562,7 +562,7 @@ class QueryBuilder(threading.local):
             if node.relationship.type == ONE_TO_ONE:
                 if not node.children:
                     columns.append(
-                        sa.func.JSON_BUILD_OBJECT(
+                        sa.func.JSON_OBJECT(
                             node.columns[0],
                             node.columns[1],
                         ).label("anon")
@@ -691,7 +691,7 @@ class QueryBuilder(threading.local):
         if from_obj is not None:
             outer_subquery = outer_subquery.select_from(from_obj)
 
-        outer_subquery = outer_subquery.alias().lateral()
+        outer_subquery = outer_subquery.alias()
 
         if self.verbose:
             compiled_query(outer_subquery, "Outer subquery")
@@ -699,25 +699,25 @@ class QueryBuilder(threading.local):
         params = []
         for primary_key in through.model.primary_keys:
             params.append(
-                sa.func.JSON_BUILD_OBJECT(
+                sa.func.JSON_OBJECT(
                     str(primary_key),
-                    sa.func.JSON_BUILD_ARRAY(through.model.c[primary_key]),
+                    sa.func.JSON_ARRAY(through.model.c[primary_key]),
                 )
             )
 
-        through_keys = sa.cast(
-            sa.func.JSON_BUILD_OBJECT(
+        through_keys = sa.type_coerce(
+            sa.func.JSON_OBJECT(
                 node.relationship.throughs[0].table,
-                sa.func.JSON_BUILD_ARRAY(*params),
+                sa.func.JSON_ARRAY(*params),
             ),
-            sa.dialects.postgresql.JSONB,
+            sa.JSON,
         )
 
         # book author through table
-        _keys = sa.func.JSON_AGG(
-            sa.cast(
+        _keys = sa.func.JSON_ARRAYAGG(
+            sa.type_coerce(
                 outer_subquery.c._keys,
-                sa.dialects.postgresql.JSONB,
+                sa.JSON,
             ).concat(through_keys)
         ).label("_keys")
 
@@ -731,7 +731,7 @@ class QueryBuilder(threading.local):
 
         columns = [
             _keys,
-            sa.func.JSON_AGG(outer_subquery.c.anon).label(node.label),
+            sa.func.JSON_ARRAYAGG(outer_subquery.c.anon).label(node.label),
         ]
 
         foreign_keys: dict = self.get_foreign_keys(node.parent, through)
@@ -776,7 +776,7 @@ class QueryBuilder(threading.local):
 
         node._subquery = node._subquery.alias()
         if not node.is_root:
-            node._subquery = node._subquery.lateral()
+            node._subquery = node._subquery
 
     def _non_through(self, node: Node) -> None:  # noqa: C901
         from_obj = None
@@ -857,9 +857,7 @@ class QueryBuilder(threading.local):
                 params.extend(
                     [
                         str(primary_key.name),
-                        sa.func.JSON_BUILD_ARRAY(
-                            node.model.c[primary_key.name]
-                        ),
+                        sa.func.JSON_ARRAY(node.model.c[primary_key.name]),
                     ]
                 )
         else:
@@ -875,7 +873,7 @@ class QueryBuilder(threading.local):
             _keys = self._get_child_keys(node, self._json_build_object(params))
         elif node.relationship.type == ONE_TO_MANY:
             _keys = self._get_child_keys(
-                node, sa.func.JSON_AGG(self._json_build_object(params))
+                node, sa.func.JSON_ARRAYAGG(self._json_build_object(params))
             )
 
         columns: t.List = [_keys]
@@ -886,7 +884,7 @@ class QueryBuilder(threading.local):
                 columns.append(node.model.c[node.columns[0]].label(node.label))
             elif node.relationship.type == ONE_TO_MANY:
                 columns.append(
-                    sa.func.JSON_AGG(node.model.c[node.columns[0]]).label(
+                    sa.func.JSON_ARRAYAGG(node.model.c[node.columns[0]]).label(
                         node.label
                     )
                 )
@@ -897,7 +895,7 @@ class QueryBuilder(threading.local):
                 )
             elif node.relationship.type == ONE_TO_MANY:
                 columns.append(
-                    sa.func.JSON_AGG(
+                    sa.func.JSON_ARRAYAGG(
                         self._json_build_object(node.columns)
                     ).label(node.label)
                 )
@@ -935,7 +933,7 @@ class QueryBuilder(threading.local):
         node._subquery = node._subquery.alias()
 
         if not node.is_root:
-            node._subquery = node._subquery.lateral()
+            node._subquery = node._subquery
 
     def build_queries(
         self,

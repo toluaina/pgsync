@@ -25,6 +25,7 @@ from sqlalchemy.orm import sessionmaker
 from pgsync.base import pg_engine, subtransactions
 from pgsync.constants import DEFAULT_SCHEMA
 from pgsync.helper import teardown
+from pgsync.settings import PG_DRIVER, POSTGRES_DRIVERS
 from pgsync.utils import config_loader, validate_config
 
 
@@ -44,8 +45,11 @@ def main(config: str, nsize: int):
         database: str = doc.get("database", doc["index"])
         with pg_engine(database) as engine:
             schema: str = doc.get("schema", DEFAULT_SCHEMA)
+            schema_translate_map: dict = {}
+            if PG_DRIVER in POSTGRES_DRIVERS:
+                schema_translate_map = {None: schema}
             connection = engine.connect().execution_options(
-                schema_translate_map={None: schema}
+                schema_translate_map=schema_translate_map
             )
             Session = sessionmaker(bind=connection, autoflush=True)
             session = Session()
@@ -213,7 +217,7 @@ def main(config: str, nsize: int):
                         "x": [{"y": 2, "z": 3}, {"y": 7, "z": 2}],
                         "generation": {"name": "X"},
                     },
-                    publish_date="infinity",
+                    # publish_date="infinity",
                 ),
                 "003": Book(
                     isbn="003",
@@ -238,7 +242,7 @@ def main(config: str, nsize: int):
                         "x": [{"y": 3, "z": 5}, {"y": 8, "z": 2}],
                         "generation": {"name": "X"},
                     },
-                    publish_date="-infinity",
+                    # publish_date="-infinity",
                 ),
                 "004": Book(
                     isbn="004",

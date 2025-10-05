@@ -19,7 +19,7 @@ import sqlalchemy as sa
 import sqlparse
 
 from . import settings
-from .urls import get_postgres_url, get_redis_url, get_search_url
+from .urls import get_database_url, get_redis_url, get_search_url
 
 logger = logging.getLogger(__name__)
 
@@ -123,9 +123,9 @@ def show_settings(
     logger.info("-" * 65)
     logger.info(f"{HIGHLIGHT_BEGIN}Checkpoint{HIGHLIGHT_END}")
     logger.info(f"Path: {settings.CHECKPOINT_PATH}")
-    logger.info(f"{HIGHLIGHT_BEGIN}Postgres{HIGHLIGHT_END}")
+    logger.info(f"{HIGHLIGHT_BEGIN}Database{HIGHLIGHT_END}")
 
-    url: str = get_postgres_url("postgres")
+    url: str = get_database_url("postgres")
     redacted_url: str = get_redacted_url(url)
     logger.info(f"URL: {redacted_url}")
 
@@ -303,3 +303,21 @@ class MutuallyExclusiveOption(click.Option):
         return super(MutuallyExclusiveOption, self).handle_parse_result(
             ctx, opts, args
         )
+
+
+def qname(engine_or_conn, schema: str = None, table: str = None) -> str:
+    """
+    Return a dialect-correct, quoted table name.
+
+    Examples:
+    Postgres:  qname(engine, "public", "users")  ->  "public"."users"
+    MySQL:     qname(engine, "mydb",  "users")   ->  `mydb`.`users`
+                (or just `users` if schema is None)
+    """
+    dialect = getattr(engine_or_conn, "dialect", engine_or_conn.engine.dialect)
+    prep = dialect.identifier_preparer
+    quote = prep.quote_identifier
+
+    if schema and schema.strip():
+        return f"{quote(schema)}.{quote(table)}"
+    return quote(table)

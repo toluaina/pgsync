@@ -9,6 +9,8 @@ from dataclasses import dataclass
 
 import sqlalchemy as sa
 
+from pgsync.settings import PG_DRIVER, POSTGRES_DRIVERS
+
 from .constants import (
     DEFAULT_SCHEMA,
     JSONB_OPERATORS,
@@ -149,8 +151,9 @@ class Node(object):
         ]
         if not self.column_names:
             self.column_names = [str(column) for column in self.table_columns]
-            for name in ("ctid", "oid", "xmin"):
-                self.column_names.remove(name)
+            if PG_DRIVER in POSTGRES_DRIVERS:
+                for name in ("ctid", "oid", "xmin"):
+                    self.column_names.remove(name)
 
         if self.label is None:
             self.label = self.table
@@ -237,7 +240,9 @@ class Node(object):
     @property
     def name(self) -> str:
         """Returns a fully qualified node name."""
-        return f"{self.schema}.{self.table}"
+        if PG_DRIVER in POSTGRES_DRIVERS:
+            return f"{self.schema}.{self.table}"
+        return f"{self.table}"
 
     def add_child(self, node: Node) -> None:
         """All nodes except the root node must have a relationship defined."""
@@ -255,7 +260,7 @@ class Node(object):
         print(
             prefix,
             " - " if leaf else "|- ",
-            f"{self.schema}.{self.label}",
+            f"{self.label}",
             sep="",
         )  # noqa T001
         prefix += "   " if leaf else "|  "
@@ -305,6 +310,9 @@ class Tree(threading.local):
             )
         table: str = nodes.get("table")
         schema: str = nodes.get("schema", DEFAULT_SCHEMA)
+        if PG_DRIVER not in POSTGRES_DRIVERS:
+            schema = None
+
         key: t.Tuple[str, str] = (schema, table)
 
         if table is None:

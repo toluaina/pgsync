@@ -30,6 +30,8 @@ from .exc import (
     TableNotFoundError,
 )
 from .settings import (
+    MYSQL_DRIVERS,
+    PG_DRIVER,
     PG_HOST_RO,
     PG_PASSWORD_RO,
     PG_PORT_RO,
@@ -37,12 +39,13 @@ from .settings import (
     PG_SSLROOTCERT,
     PG_URL_RO,
     PG_USER_RO,
+    POSTGRES_DRIVERS,
     QUERY_CHUNK_SIZE,
     STREAM_RESULTS,
 )
 from .trigger import CREATE_TRIGGER_TEMPLATE
-from .urls import get_postgres_url
-from .utils import compiled_query
+from .urls import get_database_url
+from .utils import compiled_query, qname
 from .view import create_view, DropView, is_view, RefreshView
 
 try:
@@ -252,6 +255,14 @@ class Base(object):
         except (TypeError, IndexError):
             return None
 
+    @property
+    def is_mysql_compat(self) -> bool:
+        """
+        True when running against a MySQL-family backend (MySQL or MariaDB),
+        regardless of the specific driver in use.
+        """
+        return PG_DRIVER in MYSQL_DRIVERS
+
     def _can_create_replication_slot(self, slot_name: str) -> None:
         """Check if the given user can create and destroy replication slots."""
         with self.advisory_lock(
@@ -277,44 +288,71 @@ class Base(object):
                 self.drop_replication_slot(slot_name)
 
     # Tables...
-    def models(self, table: str, schema: str) -> sa.sql.Alias:
-        """Get an SQLAlchemy model representation from a table.
+    def models(
+        self, table: str, schema: t.Optional[str] = None
+    ) -> sa.sql.Alias:
+        """Return an aliased SQLAlchemy Table model for `table`.
 
-        Args:
-            table (str): The tablename
-            schema (str): The database schema
-
-        Returns:
-            The SQLAlchemy aliased model representation
-
+        For PostgreSQL: `schema` is the true schema (e.g., 'public').
+        For MySQL: pass `schema=None` and ensure the engine is connected to the target database.
+                (If you *do* pass a database name, it will be used as the schema prefix.)
         """
-        name: str = f"{schema}.{table}"
+        dialect = self.engine.dialect.name  # 'postgresql', 'mysql', etc.
+        is_mysql = dialect == "mysql"
+
+        if is_mysql:
+            schema = None
+
+        # Key used for lookup/caching (MySQL commonly has no schema -> use table only)
+        name = f"{schema}.{table}" if schema else table
+        meta_key = schema or "__default__"
+
         if name not in self.__models:
-            if schema not in self.__metadata:
-                metadata = sa.MetaData(schema=schema)
-                metadata.reflect(self.engine, views=True)
-                self.__metadata[schema] = metadata
-            metadata = self.__metadata[schema]
+            if meta_key not in self.__metadata:
+                metadata = sa.MetaData()
+                # Reflect objects from the given schema/database (None => current DB)
+                metadata.reflect(
+                    self.engine, views=True, schema=schema or None
+                )
+                self.__metadata[meta_key] = metadata
+
+            metadata: sa.MetaData = self.__metadata[meta_key]
+
+            # print("metadata.tables ", metadata.tables)
+            # print("=====" * 100)
+
+            # Ensure the table is present; if not, try a targeted autoload
+            # if name not in metadata.tables:
+            #     try:
+            #         sa.Table(table, metadata, autoload_with=self.engine, schema=schema or None)
+            #     except Exception:
+            #         raise TableNotFoundError(f'Table "{name}" not found in registry')
+
             if name not in metadata.tables:
                 raise TableNotFoundError(
                     f'Table "{name}" not found in registry'
                 )
+
             model = metadata.tables[name]
-            model.append_column(sa.Column("xmin", sa.BigInteger))
-            model.append_column(sa.Column("ctid"), TupleIdentifierType)
-            # support SQLAlchemy/Postgres 14 which somehow now reflects
-            # the oid column
-            if "oid" not in [column.name for column in model.columns]:
-                model.append_column(
-                    sa.Column("oid", sa.dialects.postgresql.OID)
-                )
-            model = model.alias()
+
+            # Postgres-only helper columns; skip for MySQL
+            if not is_mysql:
+                if "xmin" not in model.c:
+                    model.append_column(sa.Column("xmin", sa.BigInteger))
+                if "ctid" not in model.c:
+                    model.append_column(sa.Column("ctid", TupleIdentifierType))
+                if "oid" not in [col.name for col in model.columns]:
+                    model.append_column(
+                        sa.Column("oid", sa.dialects.postgresql.OID)
+                    )
+
+            aliased = model.alias()
             setattr(
-                model,
+                aliased,
                 "primary_keys",
-                sorted([primary_key.key for primary_key in model.primary_key]),
+                sorted(pk.key for pk in aliased.original.primary_key),
             )
-            self.__models[f"{model.original}"] = model
+            self.__models[name] = aliased
 
         return self.__models[name]
 
@@ -365,6 +403,7 @@ class Base(object):
         return self.__views[schema]
 
     def _materialized_views(self, schema: str) -> list:
+        return []
         """Get all materialized views."""
         if schema not in self.__materialized_views:
             self.__materialized_views[schema] = []
@@ -415,9 +454,13 @@ class Base(object):
             schema (str): The database schema
 
         """
-        logger.debug(f"Truncating table: {schema}.{table}")
-        self.execute(sa.text(f'TRUNCATE TABLE "{schema}"."{table}" CASCADE'))
-        logger.debug(f"Truncated table: {schema}.{table}")
+        table_name: str = qname(self.engine, schema, table)
+        logger.debug(f"Truncating table: {table_name}")
+        if self.is_mysql_compat:
+            self.execute(sa.text(f"TRUNCATE TABLE {table_name}"))
+        else:
+            self.execute(sa.text(f"TRUNCATE TABLE {table_name} CASCADE"))
+        logger.debug(f"Truncated table: {table_name}")
 
     def truncate_tables(
         self, tables: t.List[str], schema: str = DEFAULT_SCHEMA
@@ -512,35 +555,65 @@ class Base(object):
 
     def advisory_key(self, slot_name: str) -> int:
         """Compute a stable bigint advisory key from slot name."""
-        return self.fetchone(
-            sa.text("SELECT HASHTEXT(:slot)::BIGINT").bindparams(
+        if self.is_mysql_compat:
+            # 'adv:' + 60 hex chars = 64 total; deterministic and safe for GET_LOCK
+            row = self.fetchone(
+                sa.text(
+                    "SELECT CONCAT('adv:', LEFT(SHA2(:slot, 256), 60))"
+                ).bindparams(slot=slot_name)
+            )
+            return row[0]
+        # PostgreSQL: stable bigint via hashtext
+        row = self.fetchone(
+            sa.text("SELECT hashtext(:slot)::bigint").bindparams(
                 slot=slot_name
             )
-        )[0]
+        )
+        return row[0]
 
-    def pg_try_advisory_lock(self, key: int) -> bool:
+    def pg_try_advisory_lock(
+        self, key: t.Union[int, str], timeout: int = 0
+    ) -> bool:
         """
-        Attempts to acquire an advisory lock based on a hashed slot name.
+        Attempts to acquire an dvisory/named lock based on a hashed slot name without blocking.
+
+        PostgreSQL: integer key -> PG_TRY_ADVISORY_LOCK(key) -> bool
+        MySQL/MariaDB: string name -> GET_LOCK(name, timeout) -> 1 on success
+                    (timeout defaults to 0 = non-blocking)
 
         Returns:
             bool: True if the lock was acquired, False otherwise.
         """
-        result = self.fetchone(
+        if self.is_mysql_compat:
+            row = self.fetchone(
+                sa.text("SELECT GET_LOCK(:name, :timeout)").bindparams(
+                    name=str(key), timeout=int(timeout)
+                )
+            )
+            return bool(row and row[0] == 1)
+
+        row = self.fetchone(
             sa.text("SELECT PG_TRY_ADVISORY_LOCK(:key)").bindparams(key=key)
         )
-        return result[0] if result else False
+        return bool(row and row[0])
 
-    def pg_advisory_unlock(self, key: int) -> bool:
+    def pg_advisory_unlock(self, key: t.Union[int, str]) -> bool:
         """
         Releases an advisory lock associated with the hashed slot name.
 
         Returns:
             bool: True if the lock was released, False if it was not held.
         """
-        result = self.fetchone(
+        if self.is_mysql_compat:
+            row = self.fetchone(
+                sa.text("SELECT RELEASE_LOCK(:name)").bindparams(name=str(key))
+            )
+            return bool(row and row[0] == 1)
+
+        row = self.fetchone(
             sa.text("SELECT PG_ADVISORY_UNLOCK(:key)").bindparams(key=key)
         )
-        return result[0] if result else False
+        return bool(row and row[0])
 
     @contextmanager
     def advisory_lock(
@@ -674,6 +747,8 @@ class Base(object):
 
     @property
     def current_wal_lsn(self) -> str:
+        if self.is_mysql_compat:
+            return
         return self.fetchone(
             sa.select(sa.func.MAX(sa.text("pg_current_wal_lsn"))).select_from(
                 sa.func.PG_CURRENT_WAL_LSN()
@@ -967,6 +1042,10 @@ class Base(object):
 
         SELECT txid_current()
         """
+        # TODO: add mysql support
+        if self.is_mysql_compat:
+            return 99
+
         return self.fetchone(
             sa.select("*").select_from(sa.func.TXID_CURRENT()),
             label="txid_current",
@@ -1282,7 +1361,7 @@ def _pg_engine(
         connect_args["sslrootcert"] = sslrootcert
 
     if url is None:
-        url: str = get_postgres_url(
+        url: str = get_database_url(
             database,
             user=user,
             host=host,
@@ -1307,19 +1386,25 @@ def pg_execute(
 
 def create_schema(database: str, schema: str, echo: bool = False) -> None:
     """Create database schema."""
-    logger.debug(f"Creating schema: {schema}")
-    with pg_engine(database, echo=echo) as engine:
-        pg_execute(engine, sa.text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
-    logger.debug(f"Created schema: {schema}")
+    if PG_DRIVER in POSTGRES_DRIVERS:
+        logger.debug(f"Creating schema: {schema}")
+        with pg_engine(database, echo=echo) as engine:
+            pg_execute(
+                engine, sa.text(f"CREATE SCHEMA IF NOT EXISTS {schema}")
+            )
+        logger.debug(f"Created schema: {schema}")
 
 
 def create_database(database: str, echo: bool = False) -> None:
     """Create a database."""
     logger.debug(f"Creating database: {database}")
-    with pg_engine("postgres", echo=echo) as engine:
+    with pg_engine(
+        "information_schema" if PG_DRIVER in MYSQL_DRIVERS else "postgres",
+        echo=echo,
+    ) as engine:
         pg_execute(
             engine,
-            sa.text(f'CREATE DATABASE "{database}"'),
+            sa.text(f"CREATE DATABASE {database}"),
             options={"isolation_level": "AUTOCOMMIT"},
         )
     logger.debug(f"Created database: {database}")
@@ -1328,10 +1413,13 @@ def create_database(database: str, echo: bool = False) -> None:
 def drop_database(database: str, echo: bool = False) -> None:
     """Drop a database."""
     logger.debug(f"Dropping database: {database}")
-    with pg_engine("postgres", echo=echo) as engine:
+    with pg_engine(
+        "information_schema" if PG_DRIVER in MYSQL_DRIVERS else "postgres",
+        echo=echo,
+    ) as engine:
         pg_execute(
             engine,
-            sa.text(f'DROP DATABASE IF EXISTS "{database}"'),
+            sa.text(f"DROP DATABASE IF EXISTS {database}"),
             options={"isolation_level": "AUTOCOMMIT"},
         )
     logger.debug(f"Dropped database: {database}")
@@ -1339,15 +1427,27 @@ def drop_database(database: str, echo: bool = False) -> None:
 
 def database_exists(database: str, echo: bool = False) -> bool:
     """Check if database is present."""
-    with pg_engine("postgres", echo=echo) as engine:
+    catalog = (
+        "information_schema" if PG_DRIVER in MYSQL_DRIVERS else "postgres"
+    )
+
+    with pg_engine(catalog, echo=echo) as engine:
         with engine.connect() as conn:
-            row = conn.execute(
-                sa.select(
-                    sa.text("1"),
+            if PG_DRIVER in MYSQL_DRIVERS:
+                sql = sa.text(
+                    "SELECT 1 FROM INFORMATION_SCHEMA.SCHEMATA "
+                    "WHERE SCHEMA_NAME = :db LIMIT 1"
                 )
-                .select_from(sa.text("pg_database"))
-                .where(sa.column("datname") == database),
-            ).fetchone()
+                return conn.execute(sql, {"db": database}).first() is not None
+
+            elif PG_DRIVER in POSTGRES_DRIVERS:
+                row = conn.execute(
+                    sa.select(
+                        sa.text("1"),
+                    )
+                    .select_from(sa.text("pg_database"))
+                    .where(sa.column("datname") == database),
+                ).fetchone()
         return row is not None
 
 

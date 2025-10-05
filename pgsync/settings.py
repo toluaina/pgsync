@@ -29,6 +29,7 @@ LOGICAL_SLOT_CHUNK_SIZE = env.int("LOGICAL_SLOT_CHUNK_SIZE", default=5000)
 LOG_INTERVAL = env.float("LOG_INTERVAL", default=0.5)
 # number of workers to spawn for handling events
 NUM_WORKERS = env.int("NUM_WORKERS", default=2)
+# database driver psycopg2 or pymysql
 PG_DRIVER = env.str("PG_DRIVER", default="psycopg2")
 # poll db interval (consider reducing this duration to increase throughput)
 POLL_TIMEOUT = env.float("POLL_TIMEOUT", default=0.1)
@@ -162,7 +163,7 @@ OPENSEARCH_AWS_SERVERLESS = env.bool(
 # full Elasticsearch/OpenSearch url including user, password, host, port and dbname
 ELASTICSEARCH_URL = env.str("ELASTICSEARCH_URL", default=None)
 
-# Postgres:
+# Postgres/MySQL/MariaDB:
 # full database url including user, password, host, port and dbname
 PG_URL = env.str("PG_URL", default=None)
 PG_HOST = env.str("PG_HOST", default="localhost")
@@ -199,6 +200,10 @@ if PG_URL_RO:
     PG_PORT_RO = None
     PG_SSLMODE_RO = None
     PG_SSLROOTCERT_RO = None
+USE_UTF8MB4 = env.bool("USE_UTF8MB4", default=False)
+
+MYSQL_DRIVERS = ("pymysql", "mysqldb", "mariadbconnector")
+POSTGRES_DRIVERS = ("psycopg3", "psycopg2", "psycopg", "asyncpg", "pg8000")
 
 # Redis/Valkey
 REDIS_AUTH = env.str("REDIS_AUTH", default=None)
