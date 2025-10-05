@@ -211,10 +211,10 @@ class Sync(Base, metaclass=Singleton):
                         f"{MATERIALIZED_VIEW}. Please re-run bootstrap."
                     )
 
-            # if node.schema not in self.schemas:
-            #     raise InvalidSchemaError(
-            #         f"Unknown schema name(s): {node.schema}"
-            #     )
+            if node.schema is not None and node.schema not in self.schemas:
+                raise InvalidSchemaError(
+                    f"Unknown schema name(s): {node.schema}"
+                )
 
             # ensure all base tables have at least one primary_key
             for table in node.base_tables:
@@ -287,6 +287,10 @@ class Sync(Base, metaclass=Singleton):
 
     def setup(self, no_create: bool = False) -> None:
         """Create the database triggers and replication slot."""
+        if self.is_mysql_compat:
+            raise NotImplementedError(
+                "Setup is not supported for MySQL-family backend (MySQL or MariaDB)"
+            )
 
         if_not_exists: bool = not no_create
 
@@ -359,6 +363,10 @@ class Sync(Base, metaclass=Singleton):
 
     def teardown(self, drop_view: bool = True) -> None:
         """Drop the database triggers and replication slot."""
+        if self.is_mysql_compat:
+            raise NotImplementedError(
+                "Teardown is not supported for MySQL-family backend (MySQL or MariaDB)"
+            )
 
         join_queries: bool = settings.JOIN_QUERIES
 
@@ -1158,7 +1166,7 @@ class Sync(Base, metaclass=Singleton):
         ctid: t.Optional[dict] = None,
     ) -> t.Generator:
         """
-        Synchronizes data from PostgreSQL to Elasticsearch.
+        Synchronizes data from PostgreSQL/MySQL/MariaDB to Elasticsearch/OpenSearch.
 
         Args:
             filters (Optional[dict]): A dictionary of filters to apply to the data.
@@ -1167,7 +1175,7 @@ class Sync(Base, metaclass=Singleton):
             ctid (Optional[dict]): A dictionary of ctid values to include in the synchronization.
 
         Yields:
-            dict: A dictionary representing a doc to be indexed in Elasticsearch.
+            dict: A dictionary representing a doc to be indexed in Elasticsearch/OpenSearch.
         """
         self.query_builder.isouter = True
         self.query_builder.from_obj = None
@@ -1437,10 +1445,12 @@ class Sync(Base, metaclass=Singleton):
                     self.count["db"] += 1
 
     def refresh_views(self) -> None:
-        self._refresh_views()
+        if not self.is_mysql_compat:
+            self._refresh_views()
 
     async def async_refresh_views(self) -> None:
-        self._refresh_views()
+        if not self.is_mysql_compat:
+            self._refresh_views()
 
     def _refresh_views(self) -> None:
         for node in self.tree.traverse_breadth_first():

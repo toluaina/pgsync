@@ -315,8 +315,7 @@ def qname(engine_or_conn, schema: str = None, table: str = None) -> str:
                 (or just `users` if schema is None)
     """
     dialect = getattr(engine_or_conn, "dialect", engine_or_conn.engine.dialect)
-    prep = dialect.identifier_preparer
-    quote = prep.quote_identifier
+    quote = dialect.identifier_preparer.quote_identifier
 
     if schema and schema.strip():
         return f"{quote(schema)}.{quote(table)}"

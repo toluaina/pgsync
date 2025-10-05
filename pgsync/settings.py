@@ -203,7 +203,7 @@ if PG_URL_RO:
 USE_UTF8MB4 = env.bool("USE_UTF8MB4", default=False)
 
 MYSQL_DRIVERS = ("pymysql", "mysqldb", "mariadbconnector")
-POSTGRES_DRIVERS = ("psycopg3", "psycopg2", "psycopg", "asyncpg", "pg8000")
+POSTGRES_DRIVERS = ("psycopg", "psycopg2", "psycopg3", "asyncpg", "pg8000")
 
 # Redis/Valkey
 REDIS_AUTH = env.str("REDIS_AUTH", default=None)

@@ -403,8 +403,10 @@ class Base(object):
         return self.__views[schema]
 
     def _materialized_views(self, schema: str) -> list:
-        return []
         """Get all materialized views."""
+        if self.is_mysql_compat:
+            return []
+
         if schema not in self.__materialized_views:
             self.__materialized_views[schema] = []
             for table in sa.inspect(self.engine).get_materialized_view_names(
