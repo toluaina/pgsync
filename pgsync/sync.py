@@ -107,7 +107,9 @@ class Sync(Base, metaclass=Singleton):
         self.consumer: bool = consumer
         self.num_workers: int = num_workers
         self.redis: RedisQueue = RedisQueue(self.__name)
-        self.tree: Tree = Tree(self.models, nodes=self.nodes)
+        self.tree: Tree = Tree(
+            self.models, nodes=self.nodes, database=doc["database"]
+        )
         if bootstrap:
             self.setup()
 
@@ -211,7 +213,7 @@ class Sync(Base, metaclass=Singleton):
                         f"{MATERIALIZED_VIEW}. Please re-run bootstrap."
                     )
 
-            if node.schema is not None and node.schema not in self.schemas:
+            if node.schema not in self.schemas:
                 raise InvalidSchemaError(
                     f"Unknown schema name(s): {node.schema}"
                 )

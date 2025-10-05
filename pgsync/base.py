@@ -300,8 +300,8 @@ class Base(object):
         dialect = self.engine.dialect.name  # 'postgresql', 'mysql', etc.
         is_mysql = dialect == "mysql"
 
-        if is_mysql:
-            schema = None
+        # if is_mysql:
+        #     schema = None
 
         # Key used for lookup/caching (MySQL commonly has no schema -> use table only)
         name = f"{schema}.{table}" if schema else table

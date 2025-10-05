@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 import sqlalchemy as sa
 
-from pgsync.settings import PG_DRIVER, POSTGRES_DRIVERS
+from pgsync.settings import MYSQL_DRIVERS, PG_DRIVER, POSTGRES_DRIVERS
 
 from .constants import (
     DEFAULT_SCHEMA,
@@ -240,9 +240,7 @@ class Node(object):
     @property
     def name(self) -> str:
         """Returns a fully qualified node name."""
-        if PG_DRIVER in POSTGRES_DRIVERS:
-            return f"{self.schema}.{self.table}"
-        return f"{self.table}"
+        return f"{self.schema}.{self.table}"
 
     def add_child(self, node: Node) -> None:
         """All nodes except the root node must have a relationship defined."""
@@ -286,6 +284,7 @@ class Node(object):
 class Tree(threading.local):
     models: t.Callable
     nodes: dict
+    database: str
 
     def __post_init__(self):
         self.tables: t.Set[str] = set()
@@ -308,10 +307,11 @@ class Tree(threading.local):
             raise SchemaError(
                 "Incompatible schema. Please run v2 schema migration"
             )
+
         table: str = nodes.get("table")
         schema: str = nodes.get("schema", DEFAULT_SCHEMA)
-        if PG_DRIVER not in POSTGRES_DRIVERS:
-            schema = None
+        if PG_DRIVER in MYSQL_DRIVERS:
+            schema = self.database
 
         key: t.Tuple[str, str] = (schema, table)
 

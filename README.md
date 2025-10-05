@@ -7,7 +7,7 @@
 [![codecov](https://codecov.io/gh/toluaina/pgsync/branch/main/graph/badge.svg?token=cvQzYkz6CV)](https://codecov.io/gh/toluaina/pgsync)
 
 
-## PostgreSQL to Elasticsearch/OpenSearch sync
+## PostgreSQL/MySQL/MariaDB to Elasticsearch/OpenSearch sync
 
 [PGSync](https://pgsync.com) is a middleware for syncing data from [Postgres](https://www.postgresql.org) to [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/) effortlessly.
 It allows you to keep [Postgres](https://www.postgresql.org) as your source of truth and
@@ -45,7 +45,7 @@ Other benefits of PGSync include:
 
 #### Why?
 
-At a high level, you have data in a Postgres database and you want to mirror it in Elasticsearch/OpenSearch.  
+At a high level, you have data in a Postgres/MySQL/MariaDB database and you want to mirror it in Elasticsearch/OpenSearch.  
 This means every change to your data (***Insert***, ***Update***, ***Delete*** and ***Truncate*** statements) needs to be replicated to Elasticsearch/OpenSearch. 
 At first, this seems easy and then it's not. Simply add some code to copy the data to Elasticsearch/OpenSearch after updating the database (or so called dual writes).
 Writing SQL queries spanning multiple tables and involving multiple relationships are hard to write.
@@ -137,10 +137,10 @@ To start all services with Docker, follow these steps:
 Environment variable placeholders - full list [here](https://pgsync.com/env-vars):
 
 - redis_host_address — Address of the Redis/Valkey server (e.g., host.docker.internal for local Docker setup)
-- username — PostgreSQL username
-- password — PostgreSQL password
-- postgres_host — Host address for PostgreSQL instance (e.g., host.docker.internal)
-- database — Name of PostgreSQL database
+- username — PostgreSQL/MySQL/MariaDB username
+- password — PostgreSQL/MySQL/MariaDB password
+- postgres_host — Host address for PostgreSQL/MySQL/MariaDB instance (e.g., host.docker.internal)
+- database — Name of PostgreSQL/MySQL/MariaDB database
 - elasticsearch_host — Address of Elasticsearch/OpenSearch instance (e.g., host.docker.internal)
 
 

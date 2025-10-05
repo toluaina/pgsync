@@ -287,8 +287,8 @@ class QueryBuilder(threading.local):
                     return foreign_keys[table]
         else:
             # only return the intersection of columns that match
-            # if not table.startswith(f"{schema}."):
-            # table = f"{schema}.{table}"
+            if not table.startswith(f"{schema}."):
+                table = f"{schema}.{table}"
             for i, value in enumerate(foreign_keys[table]):
                 if value not in columns:
                     foreign_keys[table].pop(i)
