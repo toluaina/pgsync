@@ -125,7 +125,12 @@ def show_settings(
     logger.info(f"Path: {settings.CHECKPOINT_PATH}")
     logger.info(f"{HIGHLIGHT_BEGIN}Database{HIGHLIGHT_END}")
 
-    url: str = get_database_url("postgres")
+    database: str = (
+        "postgres"
+        if settings.PG_DRIVER in settings.POSTGRES_DRIVERS
+        else "information_schema"
+    )
+    url: str = get_database_url(database)
     redacted_url: str = get_redacted_url(url)
     logger.info(f"URL: {redacted_url}")
 
