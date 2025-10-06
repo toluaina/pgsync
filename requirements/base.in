@@ -6,6 +6,7 @@ elasticsearch
 elasticsearch-dsl
 environs
 opensearch-dsl
+mysql-replication
 pymysql
 psycopg2-binary
 python-dotenv

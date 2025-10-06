@@ -26,6 +26,10 @@ logger = logging.getLogger(__name__)
 HIGHLIGHT_BEGIN = "\033[4m"
 HIGHLIGHT_END = "\033[0m:"
 
+_UNKNOWN_RE = re.compile(r"^UNKNOWN_COL(\d+)$")
+
+_col_cache: dict[tuple[str, str], list[str]] = {}
+
 
 def chunks(sequence: t.Sequence, size: int) -> t.Iterable[t.Sequence]:
     """Yield successive n-sized chunks from sequence"""
@@ -325,3 +329,36 @@ def qname(engine_or_conn, schema: str = None, table: str = None) -> str:
     if schema and schema.strip():
         return f"{quote(schema)}.{quote(table)}"
     return quote(table)
+
+
+# mysql related helper methods
+def _cols(engine: sa.Engine, schema: str, table: str) -> list[str]:
+    key = (schema, table)
+    if key in _col_cache:
+        return _col_cache[key]
+    insp = sa.inspect(engine)
+    cols = [c["name"] for c in insp.get_columns(table, schema=schema)]
+    _col_cache[key] = cols
+    return cols
+
+
+def remap_unknown(
+    engine: sa.Engine, schema: str, table: str, values: dict
+) -> dict:
+    if not values:
+        return values
+    # only remap if *all* keys are UNKNOWN_COL*
+    if not all(
+        isinstance(k, str) and _UNKNOWN_RE.match(k) for k in values.keys()
+    ):
+        return values
+    cols = _cols(engine, schema, table)
+    remapped: dict = {}
+    # keys may be 0-based (UNKNOWN_COL0), so use the numeric suffix
+    for k, v in values.items():
+        idx = int(_UNKNOWN_RE.match(k).group(1))  # type: ignore
+        if idx < len(cols):
+            remapped[cols[idx]] = v
+        else:
+            remapped[f"@{idx+1}"] = v  # fallback
+    return remapped

@@ -20,6 +20,14 @@ import sqlalchemy as sa
 import sqlparse
 from psycopg2 import OperationalError
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from pymysqlreplication import BinLogStreamReader
+from pymysqlreplication.event import QueryEvent
+from pymysqlreplication.row_event import (
+    DeleteRowsEvent,
+    TableMapEvent,
+    UpdateRowsEvent,
+    WriteRowsEvent,
+)
 
 from . import __version__, settings
 from .base import Base, Payload
@@ -56,6 +64,7 @@ from .utils import (
     exception,
     format_number,
     MutuallyExclusiveOption,
+    remap_unknown,
     show_settings,
     threaded,
     Timer,
@@ -63,6 +72,7 @@ from .utils import (
 )
 
 TX_BOUNDARY_RE = re.compile(r"^(BEGIN|COMMIT)\s+(\d+)", re.IGNORECASE)
+
 
 logger = logging.getLogger(__name__)
 
@@ -521,6 +531,161 @@ class Sync(Base, metaclass=Singleton):
             txmax=txmax,
             upto_lsn=upto_lsn,
         )
+
+    def _xlog_progress(self, current: int, total: t.Optional[int]) -> None:
+        try:
+            self.log_xlog_progress(current, total, bar_length=30)
+        except Exception:
+            pass
+
+    def binlog_changes(
+        self,
+        start_log: t.Optional[str] = None,
+        start_pos: t.Optional[int] = None,
+        server_id: int = 9991,
+        logical_slot_chunk_size: t.Optional[int] = None,
+        blocking: bool = False,  # True = stream; False = stop at end
+    ) -> None:
+        limit = logical_slot_chunk_size or getattr(
+            settings, "LOGICAL_SLOT_CHUNK_SIZE", 1000
+        )
+        allowed_schemas = set(
+            s.lower() for s in (getattr(self.tree, "schemas", []) or [])
+        )
+
+        # Build stream
+        stream: BinLogStreamReader = BinLogStreamReader(
+            connection_settings={
+                "host": self.engine.url.host,
+                "port": int(self.engine.url.port),
+                "user": self.engine.url.username,
+                "passwd": self.engine.url.password,
+            },
+            server_id=server_id,
+            log_file=start_log,  # None = current master status
+            log_pos=start_pos or 4,
+            resume_stream=True,  # continue from given pos
+            blocking=blocking,  # if False, returns when caught up
+            only_events=[WriteRowsEvent, UpdateRowsEvent, DeleteRowsEvent],
+            # only_events=[TableMapEvent, WriteRowsEvent, UpdateRowsEvent, DeleteRowsEvent, QueryEvent],
+            freeze_schema=False,  # faster, we don’t need metadata from server
+            skip_to_timestamp=None,  # keep simple; can be added later
+        )
+
+        # State for PG-like grouping
+        current = 0
+        total = None  # unknown cheaply (different from PG)
+        batch: list = []
+        last_key: t.Optional[tuple[str, str]] = None
+        batch_limit = limit
+
+        print(f"allowed_schemas {allowed_schemas}")
+
+        try:
+            for event in stream:
+                schema: str = (event.schema or "").lower()
+                table: str = (event.table or "").lower()
+
+                print(f"schema: {schema}")
+                print(f"table:  {table}")
+
+                if allowed_schemas and schema not in allowed_schemas:
+                    continue
+
+                # Build Payloads
+                if isinstance(event, WriteRowsEvent):
+                    for row in event.rows:
+                        values = remap_unknown(
+                            self.engine, schema, table, row.get("values")
+                        )
+                        payload: Payload = Payload(
+                            schema=schema,
+                            table=table,
+                            tg_op="INSERT",
+                            new=values,
+                        )
+                        key = (payload.tg_op, payload.table)
+                        if last_key is None or key == last_key:
+                            batch.append(payload)
+                        else:
+                            self._flush_batch(last_key, batch)
+                            batch = [payload]
+                        last_key = key
+                        current += 1
+                        self._xlog_progress(current, total)
+
+                elif isinstance(event, UpdateRowsEvent):
+                    for row in event.rows:
+                        old = remap_unknown(
+                            self.engine,
+                            schema,
+                            table,
+                            row.get("before_values"),
+                        )
+                        new = remap_unknown(
+                            self.engine, schema, table, row.get("after_values")
+                        )
+                        # print("update row ", row)
+                        payload: Payload = Payload(
+                            schema=schema,
+                            table=table,
+                            tg_op="UPDATE",
+                            old=old,
+                            new=new,
+                        )
+                        key = (payload.tg_op, payload.table)
+                        if last_key is None or key == last_key:
+                            batch.append(payload)
+                        else:
+                            self._flush_batch(last_key, batch)
+                            batch = [payload]
+                        last_key = key
+                        current += 1
+                        self._xlog_progress(current, total)
+
+                elif isinstance(event, DeleteRowsEvent):
+                    for row in event.rows:
+                        values = remap_unknown(
+                            self.engine,
+                            schema,
+                            table,
+                            row.get("before_values"),
+                        )
+                        payload: Payload = Payload(
+                            schema=schema,
+                            table=table,
+                            tg_op="DELETE",
+                            old=values,
+                        )
+                        key = (payload.tg_op, payload.table)
+                        if last_key is None or key == last_key:
+                            batch.append(payload)
+                        else:
+                            self._flush_batch(last_key, batch)
+                            batch = [payload]
+                        last_key = key
+                        current += 1
+                        self._xlog_progress(current, total)
+
+                # Page/bulk like PG after runs; also guard on size
+                if batch_limit and len(batch) >= batch_limit and last_key:
+                    self._flush_batch(last_key, batch)
+                    batch = []
+                    last_key = None
+
+        finally:
+            # Flush trailing
+            if last_key and batch:
+                self._flush_batch(last_key, batch)
+            stream.close()
+
+    def _flush_batch(self, last_key: tuple[str, str], batch: list) -> None:
+        if not batch:
+            return
+        print("_flush_batch ", [str(b.data) for b in batch])
+        print("-" * 80)
+        self.search_client.bulk(self.index, self._payloads(batch))
+        self.count["xlog"] = self.count.get("xlog", 0) + len(batch)
 
     def _root_primary_key_resolver(
         self,
@@ -1527,6 +1692,7 @@ class Sync(Base, metaclass=Singleton):
         txmin: int = self.checkpoint
         txmax: int = self.txid_current
         logical_slot_chunk_size: int = settings.LOGICAL_SLOT_CHUNK_SIZE
+        binlog_chunk_size: int = settings.LOGICAL_SLOT_CHUNK_SIZE
 
         if self.is_mysql_compat:
             txmax = txmin = None
@@ -1538,7 +1704,17 @@ class Sync(Base, metaclass=Singleton):
 
         # this is the max lsn we should go upto
         upto_lsn: str = self.current_wal_lsn
-        if not self.is_mysql_compat:
+        if self.is_mysql_compat:
+            start_log = "master.000033"
+            start_pos = 110748652
+            start_log = "master.000277"
+            start_pos = None
+            self.binlog_changes(
+                start_log=start_log,
+                start_pos=start_pos,
+                logical_slot_chunk_size=binlog_chunk_size,
+            )
+        else:
             try:
                 # now sync up to txmax to capture everything we may have missed
                 self.logical_slot_changes(
