@@ -1470,21 +1470,21 @@ class Sync(Base, metaclass=Singleton):
             return None
 
         if self.is_mysql_compat:
-            parts = [p.strip() for p in raw.split(",")]
+            parts: list[str] = [p.strip() for p in raw.split(",")]
             if len(parts) != 2:
                 raise ValueError(
                     f"Corrupt checkpoint value (expected 'log_file,log_pos'): {raw!r}"
                 )
 
-            log_file, pos_s = parts
+            log_file, pos = parts
             if not log_file:
                 raise ValueError("Corrupt checkpoint value: empty log file.")
 
             try:
-                log_pos = int(pos_s)
+                log_pos = int(pos)
             except ValueError as exc:
                 raise ValueError(
-                    f"Corrupt checkpoint value: non-integer log position {pos_s!r}"
+                    f"Corrupt checkpoint value: non-integer log position {pos!r}"
                 ) from exc
 
             if log_pos < 0:

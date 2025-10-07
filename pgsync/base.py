@@ -1429,11 +1429,10 @@ def drop_database(database: str, echo: bool = False) -> None:
 
 def database_exists(database: str, echo: bool = False) -> bool:
     """Check if database is present."""
-    catalog = (
-        "information_schema" if PG_DRIVER in MYSQL_DRIVERS else "postgres"
-    )
-
-    with pg_engine(catalog, echo=echo) as engine:
+    with pg_engine(
+        "information_schema" if PG_DRIVER in MYSQL_DRIVERS else "postgres",
+        echo=echo,
+    ) as engine:
         with engine.connect() as conn:
             if PG_DRIVER in MYSQL_DRIVERS:
                 sql = sa.text(
