@@ -334,16 +334,10 @@ PGSync addresses the following challenges:
 Contributions are very welcome! Check out the [Contribution](CONTRIBUTING.rst) Guidelines for instructions.
 
 
-#### Credits
-
-- This package was created with [Cookiecutter](https://github.com/audreyr/cookiecutter)
-- Elasticsearch is a trademark of Elasticsearch BV, registered in the U.S. and in other countries.
-
-
 #### License
 
 This project is licensed under the terms of the [MIT](https://opensource.org/license/mit/) license.
 Please see [LICENSE](LICENSE) for more details.
 
-You should have received a copy of the MIT License along with PGSync.  
+You should have received a copy of the MIT License along with **PGSync**.  
 If not, see https://opensource.org/license/mit/.
