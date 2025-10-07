@@ -29,6 +29,8 @@ from pymysqlreplication.row_event import (
     WriteRowsEvent,
 )
 
+from pgsync.settings import MYSQL_DRIVERS, PG_DRIVER
+
 from . import __version__, settings
 from .base import Base, Payload
 from .constants import (
@@ -544,13 +546,11 @@ class Sync(Base, metaclass=Singleton):
         start_log: t.Optional[str] = None,
         start_pos: t.Optional[int] = None,
         server_id: int = 9991,
-        logical_slot_chunk_size: t.Optional[int] = None,
+        binlog_chunk_size: t.Optional[int] = None,
         blocking: bool = False,
     ) -> None:
-        """Stream MySQL/MariaDB row events and process ."""
-        limit: int = logical_slot_chunk_size or getattr(
-            settings, "LOGICAL_SLOT_CHUNK_SIZE", 1000
-        )
+        """Stream MySQL/MariaDB row events and process."""
+        limit: int = binlog_chunk_size or settings.LOGICAL_SLOT_CHUNK_SIZE
         allowed_schemas: t.Set = {
             s.lower() for s in (getattr(self.tree, "schemas", []) or [])
         }
@@ -1753,14 +1753,14 @@ class Sync(Base, metaclass=Singleton):
         """Pull data from db."""
         txmin: int = None
         txmax: int = None
+        chunk_size: int = settings.LOGICAL_SLOT_CHUNK_SIZE
+
         if self.is_mysql_compat:
-            binlog_chunk_size: int = settings.LOGICAL_SLOT_CHUNK_SIZE
             start_log, start_pos = self.checkpoint or (None, None)
             logger.debug(
                 f"pull start_log: {start_log} - start_pos: {start_pos}"
             )
         else:
-            logical_slot_chunk_size: int = settings.LOGICAL_SLOT_CHUNK_SIZE
             txmin: int = self.checkpoint
             txmax: int = self.txid_current
             logger.debug(f"pull txmin: {txmin} - txmax: {txmax}")
@@ -1770,22 +1770,21 @@ class Sync(Base, metaclass=Singleton):
             self.index, self.sync(txmin=txmin, txmax=txmax)
         )
 
-        # this is the max lsn we should go upto
-        upto_lsn: str = self.current_wal_lsn
         if self.is_mysql_compat:
             self.binlog_changes(
                 start_log=start_log,
                 start_pos=start_pos,
-                logical_slot_chunk_size=binlog_chunk_size,
+                binlog_chunk_size=chunk_size,
             )
-
         else:
+            # this is the max lsn we should go upto
+            upto_lsn: str = self.current_wal_lsn
             try:
                 # now sync up to txmax to capture everything we may have missed
                 self.logical_slot_changes(
                     txmin=txmin,
                     txmax=txmax,
-                    logical_slot_chunk_size=logical_slot_chunk_size,
+                    logical_slot_chunk_size=chunk_size,
                     upto_lsn=upto_lsn,
                 )
             except Exception as e:
@@ -2049,6 +2048,11 @@ def main(
     validate_config(config=config, s3_schema_url=s3_schema_url)
 
     show_settings(config=config, s3_schema_url=s3_schema_url)
+
+    # MySQL and MaridDB are only supported for in polling mode
+    if daemon:
+        if PG_DRIVER in MYSQL_DRIVERS:
+            polling = True
 
     if producer:
         consumer = False
