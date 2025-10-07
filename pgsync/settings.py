@@ -143,18 +143,23 @@ ELASTICSEARCH_IGNORE_STATUS = env.list(
 )
 ELASTICSEARCH_IGNORE_STATUS = tuple(map(int, ELASTICSEARCH_IGNORE_STATUS))
 
-if env.bool("ELASTICSEARCH", default=None) and env.bool(
-    "OPENSEARCH", default=None
-):
-    raise ValueError("Cannot set both ELASTICSEARCH and OPENSEARCH to True")
+ELASTICSEARCH = env.bool("ELASTICSEARCH", default=None)
+OPENSEARCH = env.bool("OPENSEARCH", default=None)
 
-ELASTICSEARCH = env.bool("ELASTICSEARCH", default=True)
-OPENSEARCH = env.bool("OPENSEARCH", default=(not ELASTICSEARCH))
+if ELASTICSEARCH is None and OPENSEARCH is None:
+    ELASTICSEARCH, OPENSEARCH = True, False
+elif ELASTICSEARCH is None:
+    ELASTICSEARCH = not OPENSEARCH
+elif OPENSEARCH is None:
+    OPENSEARCH = not ELASTICSEARCH
 
-if OPENSEARCH:
-    ELASTICSEARCH = False
-elif ELASTICSEARCH:
-    OPENSEARCH = False
+if ELASTICSEARCH and OPENSEARCH:
+    raise ValueError("Cannot enable both ELASTICSEARCH and OPENSEARCH")
+if not ELASTICSEARCH and not OPENSEARCH:
+    raise ValueError("Enable one search backend: ELASTICSEARCH or OPENSEARCH")
+
+ELASTICSEARCH = bool(ELASTICSEARCH)
+OPENSEARCH = bool(OPENSEARCH)
 
 OPENSEARCH_AWS_HOSTED = env.bool("OPENSEARCH_AWS_HOSTED", default=False)
 OPENSEARCH_AWS_SERVERLESS = env.bool(
