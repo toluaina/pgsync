@@ -2054,10 +2054,9 @@ def main(
 
     show_settings(config=config, s3_schema_url=s3_schema_url)
 
-    # MySQL and MaridDB are only supported for in polling mode
-    if daemon:
-        if PG_DRIVER in MYSQL_DRIVERS:
-            polling = True
+    # MySQL and MaridDB are only supported in polling mode
+    if daemon and PG_DRIVER in MYSQL_DRIVERS:
+        polling = True
 
     if producer:
         consumer = False
