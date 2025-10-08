@@ -112,7 +112,7 @@ class Sync(Base, metaclass=Singleton):
         self.__name: str = re.sub(
             "[^0-9a-zA-Z_]+", "", f"{self.database.lower()}_{self.index}"
         )
-        self._checkpoint: int = None
+        self._checkpoint: t.Optional[t.Union[str, int]] = None
         self._plugins: Plugins = None
         self._truncate: bool = False
         self.producer: bool = producer
@@ -533,7 +533,7 @@ class Sync(Base, metaclass=Singleton):
             txmax=txmax,
             upto_lsn=upto_lsn,
         )
-        self.checkpoint: int = txmax or self.txid_current
+        self.checkpoint = txmax or self.txid_current
 
     def _xlog_progress(self, current: int, total: t.Optional[int]) -> None:
         try:
@@ -616,11 +616,11 @@ class Sync(Base, metaclass=Singleton):
 
                 # Handle rotation immediately
                 if isinstance(event, RotateEvent):
-                    nb = event.next_binlog
+                    next_binlog = event.next_binlog
                     save_file = (
-                        nb.decode()
-                        if isinstance(nb, (bytes, bytearray))
-                        else nb
+                        next_binlog.decode()
+                        if isinstance(next_binlog, (bytes, bytearray))
+                        else next_binlog
                     )
                     save_pos = int(getattr(event, "position", 4) or 4)
                     continue
@@ -1448,12 +1448,12 @@ class Sync(Base, metaclass=Singleton):
             yield doc
 
     @property
-    def checkpoint(self) -> int:
+    def checkpoint(self) -> t.Union[str, int]:
         """
-        Gets the current checkpoint value.
+        Gets the current checkpoint value from file or Redis/Valkey.
 
         :return: The current checkpoint value.
-        :rtype: int
+        :rtype: int or str
         """
         raw: t.Optional[str]
         if settings.REDIS_CHECKPOINT:
@@ -1492,7 +1492,7 @@ class Sync(Base, metaclass=Singleton):
                     f"Corrupt checkpoint value: negative log position {log_pos}"
                 )
 
-            self._checkpoint = (log_file, log_pos)
+            self._checkpoint = f"{log_file},{log_pos}"
 
         else:
             try:
@@ -1503,7 +1503,7 @@ class Sync(Base, metaclass=Singleton):
         return self._checkpoint
 
     @checkpoint.setter
-    def checkpoint(self, value: t.Optional[str] = None) -> None:
+    def checkpoint(self, value: t.Union[str, int]) -> None:
         """
         Sets the checkpoint value.
 
@@ -1751,18 +1751,23 @@ class Sync(Base, metaclass=Singleton):
 
     def pull(self, polling: bool = False) -> None:
         """Pull data from db."""
-        txmin: int = None
-        txmax: int = None
+        txmin: t.Optional[int] = None
+        txmax: t.Optional[int] = None
         chunk_size: int = settings.LOGICAL_SLOT_CHUNK_SIZE
 
         if self.is_mysql_compat:
-            start_log, start_pos = self.checkpoint or (None, None)
+            start_log: t.Optional[str] = None
+            start_pos: t.Optional[int] = None
+            if self.checkpoint:
+                start_log, start_pos = [
+                    p.strip() for p in self.checkpoint.split(",")
+                ]
             logger.debug(
                 f"pull start_log: {start_log} - start_pos: {start_pos}"
             )
         else:
-            txmin: int = self.checkpoint
-            txmax: int = self.txid_current
+            txmin = self.checkpoint
+            txmax = self.txid_current
             logger.debug(f"pull txmin: {txmin} - txmax: {txmax}")
 
         # forward pass sync

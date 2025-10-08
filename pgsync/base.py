@@ -1111,23 +1111,24 @@ class Base(object):
         return value
 
     def parse_logical_slot(self, row: str) -> Payload:
-        def _parse_logical_slot(data: str) -> t.Tuple[str, str]:
+
+        def _parse_logical_slot(data: str) -> t.Iterator[t.Tuple[str, t.Any]]:
+            pos: int = 0
             while True:
-                match = LOGICAL_SLOT_SUFFIX.search(data)
+                match = LOGICAL_SLOT_SUFFIX.search(data, pos)
                 if not match:
                     break
 
-                key: str = match.groupdict().get("key")
-                if key:
-                    key = key.replace('"', "")
-                value: str = match.groupdict().get("value")
-                type_: str = match.groupdict().get("type")
+                key = (match.groupdict().get("key") or "").replace('"', "")
+                raw_value = match.groupdict().get("value") or ""
+                type_ = match.groupdict().get("type") or ""
 
-                value = self.parse_value(type_, value)
+                parsed = self.parse_value(type_, raw_value)
+                yield key, parsed
 
-                # set data for next iteration of the loop
-                data = f"{data[match.span()[1]:]} "
-                yield key, value
+                start, end = match.span()
+                # advance safely even if the pattern can match zero-length
+                pos = end if end > start else end + 1
 
         match = LOGICAL_SLOT_PREFIX.search(row)
         if not match:

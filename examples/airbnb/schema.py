@@ -18,29 +18,33 @@ class User(Base):
     __tablename__ = "user"
     __table_args__ = (UniqueConstraint("email"),)
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-    email: Mapped[str] = mapped_column(sa.String, unique=True, nullable=False)
+    email: Mapped[str] = mapped_column(
+        sa.String(256), unique=True, nullable=False
+    )
 
 
 class Host(Base):
     __tablename__ = "host"
     __table_args__ = (UniqueConstraint("email"),)
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-    email: Mapped[str] = mapped_column(sa.String, unique=True, nullable=False)
+    email: Mapped[str] = mapped_column(
+        sa.String(256), unique=True, nullable=False
+    )
 
 
 class Country(Base):
     __tablename__ = "country"
     __table_args__ = (UniqueConstraint("name", "country_code"),)
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(sa.String, nullable=False)
-    country_code: Mapped[str] = mapped_column(sa.String, nullable=False)
+    name: Mapped[str] = mapped_column(sa.String(256), nullable=False)
+    country_code: Mapped[str] = mapped_column(sa.String(256), nullable=False)
 
 
 class City(Base):
     __tablename__ = "city"
     __table_args__ = (UniqueConstraint("name", "country_id"),)
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(sa.String, nullable=False)
+    name: Mapped[str] = mapped_column(sa.String(256), nullable=False)
     country_id: Mapped[int] = mapped_column(
         sa.Integer, sa.ForeignKey(Country.id)
     )
@@ -55,7 +59,7 @@ class Place(Base):
     __table_args__ = (UniqueConstraint("host_id", "address", "city_id"),)
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
     host_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey(Host.id))
-    address: Mapped[str] = mapped_column(sa.String, nullable=False)
+    address: Mapped[str] = mapped_column(sa.String(256), nullable=False)
     city_id: Mapped[int] = mapped_column(sa.Integer, sa.ForeignKey(City.id))
     host: Mapped[Host] = sa.orm.relationship(
         Host,
