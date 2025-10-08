@@ -1,6 +1,6 @@
 PGSync version: 
 
-Postgres version: 
+Postgres/MySQL/MariaDB version: 
 
 Elasticsearch/OpenSearch version: 
 
