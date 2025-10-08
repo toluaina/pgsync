@@ -749,8 +749,6 @@ class Base(object):
 
     @property
     def current_wal_lsn(self) -> str:
-        if self.is_mysql_compat:
-            return
         return self.fetchone(
             sa.select(sa.func.MAX(sa.text("pg_current_wal_lsn"))).select_from(
                 sa.func.PG_CURRENT_WAL_LSN()
@@ -1044,10 +1042,6 @@ class Base(object):
 
         SELECT txid_current()
         """
-        # TODO: add mysql support
-        if self.is_mysql_compat:
-            return 99
-
         return self.fetchone(
             sa.select("*").select_from(sa.func.TXID_CURRENT()),
             label="txid_current",

@@ -258,7 +258,7 @@ class Node(object):
         print(
             prefix,
             " - " if leaf else "|- ",
-            f"{self.label}",
+            f"{self.schema}.{self.label}",
             sep="",
         )  # noqa T001
         prefix += "   " if leaf else "|  "
