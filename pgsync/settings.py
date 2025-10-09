@@ -210,6 +210,9 @@ USE_UTF8MB4 = env.bool("USE_UTF8MB4", default=False)
 MYSQL_DRIVERS = ("pymysql", "mysqldb", "mariadbconnector")
 POSTGRES_DRIVERS = ("psycopg", "psycopg2", "psycopg3", "asyncpg", "pg8000")
 
+# True for MySQL or MariaDB drivers
+IS_MYSQL_COMPAT = PG_DRIVER in MYSQL_DRIVERS
+
 # Redis/Valkey
 REDIS_AUTH = env.str("REDIS_AUTH", default=None)
 REDIS_USER = env.str("REDIS_USER", default=None)

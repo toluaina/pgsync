@@ -10,9 +10,9 @@ backports-datetime-fromisoformat==2.0.3
     # via marshmallow
 black==25.9.0
     # via -r requirements/dev.in
-boto3==1.40.48
+boto3==1.40.49
     # via -r requirements/base.in
-botocore==1.40.48
+botocore==1.40.49
     # via
     #   boto3
     #   s3transfer
@@ -159,7 +159,7 @@ sqlalchemy==2.0.43
     # via -r requirements/base.in
 sqlparse==0.5.3
     # via -r requirements/base.in
-tomli==2.2.1
+tomli==2.3.0
     # via
     #   black
     #   coverage
@@ -182,7 +182,7 @@ urllib3==1.26.20
     #   elasticsearch
     #   opensearch-py
     #   requests
-virtualenv==20.35.0
+virtualenv==20.34.0
     # via pre-commit
 zipp==3.23.0
     # via importlib-metadata

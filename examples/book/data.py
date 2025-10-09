@@ -3,6 +3,7 @@ import random
 import typing as t
 
 import click
+import sqlalchemy as sa
 from faker import Faker
 from schema import (
     Author,
@@ -25,7 +26,7 @@ from sqlalchemy.orm import sessionmaker
 from pgsync.base import pg_engine, subtransactions
 from pgsync.constants import DEFAULT_SCHEMA
 from pgsync.helper import teardown
-from pgsync.settings import PG_DRIVER, POSTGRES_DRIVERS
+from pgsync.settings import IS_MYSQL_COMPAT
 from pgsync.utils import config_loader, validate_config
 
 
@@ -46,12 +47,16 @@ def main(config: str, nsize: int):
         with pg_engine(database) as engine:
             schema: str = doc.get("schema", DEFAULT_SCHEMA)
             schema_translate_map: dict = {}
-            if PG_DRIVER in POSTGRES_DRIVERS:
+            if not IS_MYSQL_COMPAT:
                 schema_translate_map = {None: schema}
-            connection = engine.connect().execution_options(
+            connection: (
+                sa.engine.base.Connection
+            ) = engine.connect().execution_options(
                 schema_translate_map=schema_translate_map
             )
-            Session = sessionmaker(bind=connection, autoflush=True)
+            Session: sa.orm.sessionmaker = sessionmaker(
+                bind=connection, autoflush=True
+            )
             session = Session()
 
             # Bootstrap

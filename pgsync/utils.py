@@ -130,9 +130,7 @@ def show_settings(
     logger.info(f"{HIGHLIGHT_BEGIN}Database{HIGHLIGHT_END}")
 
     database: str = (
-        "postgres"
-        if settings.PG_DRIVER in settings.POSTGRES_DRIVERS
-        else "information_schema"
+        "information_schema" if settings.IS_MYSQL_COMPAT else "postgres"
     )
     url: str = get_database_url(database)
     redacted_url: str = get_redacted_url(url)

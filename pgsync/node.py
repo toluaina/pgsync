@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 import sqlalchemy as sa
 
-from pgsync.settings import MYSQL_DRIVERS, PG_DRIVER, POSTGRES_DRIVERS
+from pgsync.settings import IS_MYSQL_COMPAT
 
 from .constants import (
     DEFAULT_SCHEMA,
@@ -151,7 +151,7 @@ class Node(object):
         ]
         if not self.column_names:
             self.column_names = [str(column) for column in self.table_columns]
-            if PG_DRIVER in POSTGRES_DRIVERS:
+            if not IS_MYSQL_COMPAT:
                 for name in ("ctid", "oid", "xmin"):
                     self.column_names.remove(name)
 
@@ -309,9 +309,11 @@ class Tree(threading.local):
             )
 
         table: str = nodes.get("table")
-        schema: str = nodes.get("schema", DEFAULT_SCHEMA)
-        if PG_DRIVER in MYSQL_DRIVERS:
-            schema = self.database
+        schema: str = (
+            self.database
+            if IS_MYSQL_COMPAT
+            else nodes.get("schema", DEFAULT_SCHEMA)
+        )
 
         key: t.Tuple[str, str] = (schema, table)
 

@@ -29,7 +29,7 @@ from pymysqlreplication.row_event import (
     WriteRowsEvent,
 )
 
-from pgsync.settings import MYSQL_DRIVERS, PG_DRIVER
+from pgsync.settings import IS_MYSQL_COMPAT
 
 from . import __version__, settings
 from .base import Base, Payload
@@ -1775,6 +1775,8 @@ class Sync(Base, metaclass=Singleton):
             self.index, self.sync(txmin=txmin, txmax=txmax)
         )
 
+        return
+
         if self.is_mysql_compat:
             self.binlog_changes(
                 start_log=start_log,
@@ -2055,7 +2057,7 @@ def main(
     show_settings(config=config, s3_schema_url=s3_schema_url)
 
     # MySQL and MaridDB are only supported in polling mode
-    if daemon and PG_DRIVER in MYSQL_DRIVERS:
+    if daemon and IS_MYSQL_COMPAT:
         polling = True
 
     if producer:

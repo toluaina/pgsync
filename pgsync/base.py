@@ -30,8 +30,7 @@ from .exc import (
     TableNotFoundError,
 )
 from .settings import (
-    MYSQL_DRIVERS,
-    PG_DRIVER,
+    IS_MYSQL_COMPAT,
     PG_HOST_RO,
     PG_PASSWORD_RO,
     PG_PORT_RO,
@@ -39,7 +38,6 @@ from .settings import (
     PG_SSLROOTCERT,
     PG_URL_RO,
     PG_USER_RO,
-    POSTGRES_DRIVERS,
     QUERY_CHUNK_SIZE,
     STREAM_RESULTS,
 )
@@ -261,7 +259,7 @@ class Base(object):
         True when running against a MySQL-family backend (MySQL or MariaDB),
         regardless of the specific driver in use.
         """
-        return PG_DRIVER in MYSQL_DRIVERS
+        return IS_MYSQL_COMPAT
 
     def _can_create_replication_slot(self, slot_name: str) -> None:
         """Check if the given user can create and destroy replication slots."""
@@ -1383,7 +1381,7 @@ def pg_execute(
 
 def create_schema(database: str, schema: str, echo: bool = False) -> None:
     """Create database schema."""
-    if PG_DRIVER in POSTGRES_DRIVERS:
+    if not IS_MYSQL_COMPAT:
         logger.debug(f"Creating schema: {schema}")
         with pg_engine(database, echo=echo) as engine:
             pg_execute(
@@ -1396,7 +1394,7 @@ def create_database(database: str, echo: bool = False) -> None:
     """Create a database."""
     logger.debug(f"Creating database: {database}")
     with pg_engine(
-        "information_schema" if PG_DRIVER in MYSQL_DRIVERS else "postgres",
+        "information_schema" if IS_MYSQL_COMPAT else "postgres",
         echo=echo,
     ) as engine:
         pg_execute(
@@ -1411,7 +1409,7 @@ def drop_database(database: str, echo: bool = False) -> None:
     """Drop a database."""
     logger.debug(f"Dropping database: {database}")
     with pg_engine(
-        "information_schema" if PG_DRIVER in MYSQL_DRIVERS else "postgres",
+        "information_schema" if IS_MYSQL_COMPAT else "postgres",
         echo=echo,
     ) as engine:
         pg_execute(
@@ -1425,18 +1423,18 @@ def drop_database(database: str, echo: bool = False) -> None:
 def database_exists(database: str, echo: bool = False) -> bool:
     """Check if database is present."""
     with pg_engine(
-        "information_schema" if PG_DRIVER in MYSQL_DRIVERS else "postgres",
+        "information_schema" if IS_MYSQL_COMPAT else "postgres",
         echo=echo,
     ) as engine:
         with engine.connect() as conn:
-            if PG_DRIVER in MYSQL_DRIVERS:
+            if IS_MYSQL_COMPAT:
                 sql = sa.text(
                     "SELECT 1 FROM INFORMATION_SCHEMA.SCHEMATA "
                     "WHERE SCHEMA_NAME = :db LIMIT 1"
                 )
                 return conn.execute(sql, {"db": database}).first() is not None
 
-            elif PG_DRIVER in POSTGRES_DRIVERS:
+            else:
                 row = conn.execute(
                     sa.select(
                         sa.text("1"),

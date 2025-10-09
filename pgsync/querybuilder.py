@@ -10,6 +10,63 @@ from .base import compiled_query, TupleIdentifierType
 from .constants import OBJECT, ONE_TO_MANY, ONE_TO_ONE, SCALAR
 from .exc import ForeignKeyError
 from .node import Node
+from .settings import IS_MYSQL_COMPAT
+
+
+def JSON_OBJECT(*args: t.Any) -> sa.sql.functions.Function:
+    """JSON object constructor."""
+    return (
+        sa.func.JSON_OBJECT(*args)
+        if IS_MYSQL_COMPAT
+        else sa.func.JSON_BUILD_OBJECT(*args)
+    )
+
+
+def JSON_ARRAY(*args: t.Any) -> sa.sql.functions.Function:
+    """JSON array constructor."""
+    return (
+        sa.func.JSON_ARRAY(*args)
+        if IS_MYSQL_COMPAT
+        else sa.func.JSON_BUILD_ARRAY(*args)
+    )
+
+
+def JSON_AGG(expr: t.Any) -> sa.sql.functions.Function:
+    """Aggregate into JSON array."""
+    return (
+        sa.func.JSON_ARRAYAGG(expr)
+        if IS_MYSQL_COMPAT
+        else sa.func.JSON_AGG(expr)
+    )
+
+
+def JSON_TYPE() -> t.Any:
+    """Resulting JSON type to annotate/cast."""
+    return sa.JSON if IS_MYSQL_COMPAT else sa.dialects.postgresql.JSONB
+
+
+def JSON_CAST(expr: t.Any) -> t.Any:
+    """
+    Ensure the expression is treated as JSON by SQLAlchemy.
+    - PG: emit CAST(... AS JSONB)
+    - MySQL/MariaDB: avoid emitting CAST; only annotate type
+    """
+    return (
+        sa.type_coerce(expr, sa.JSON)
+        if IS_MYSQL_COMPAT
+        else sa.cast(expr, sa.dialects.postgresql.JSONB)
+    )
+
+
+def JSON_CONCAT(a: t.Any, b: t.Any) -> t.Any:
+    """
+    Merge/concatenate JSON values (object-merge & array-append).
+    - PG: jsonb || jsonb
+    - MySQL/MariaDB: JSON_MERGE_PRESERVE(a,b) (keeps array elements)
+    """
+    return (
+        sa.func.JSON_MERGE_PRESERVE(a, b) if IS_MYSQL_COMPAT else a.op("||")(b)
+    )
 
 
 class QueryBuilder(threading.local):
@@ -21,6 +78,7 @@ class QueryBuilder(threading.local):
         self.isouter: bool = True
         self._cache: dict = {}
 
+    # TODO:
     def _eval_expression(
         self, expression: sa.sql.elements.BinaryExpression
     ) -> sa.sql.elements.BinaryExpression:
@@ -84,27 +142,18 @@ class QueryBuilder(threading.local):
         with the 100 arguments limit this implies we can only select 50 columns
         at a time.
         """
-        i: int = 0
-        expression: sa.sql.elements.BinaryExpression = None
+        i = 0
+        expression = None
         while i < len(columns):
-            chunk: t.List = columns[i : i + chunk_size]
-            if i == 0:
-                expression = sa.type_coerce(
-                    sa.func.JSON_OBJECT(*chunk),
-                    sa.JSON,
-                )
-            else:
-                expression = expression.concat(
-                    sa.type_coerce(
-                        sa.func.JSON_OBJECT(*chunk),
-                        sa.JSON,
-                    )
-                )
+            chunk = columns[i : i + chunk_size]
+            piece = JSON_CAST(JSON_OBJECT(*chunk))
+            expression = (
+                piece if expression is None else JSON_CONCAT(expression, piece)
+            )
             i += chunk_size
 
         if expression is None:
             raise RuntimeError("invalid expression")
-
         return expression
 
     # this is for handling non-through tables
@@ -297,31 +346,25 @@ class QueryBuilder(threading.local):
     def _get_child_keys(
         self, node: Node, params: dict
     ) -> sa.sql.elements.Label:
-        row = sa.type_coerce(
-            sa.func.JSON_OBJECT(
+        row = JSON_CAST(
+            JSON_OBJECT(
                 node.table,
                 params,
-            ),
-            sa.JSON,
+            )
         )
         for child in node.children:
             if (
                 not child.parent.relationship.throughs
                 and child.parent.relationship.type == ONE_TO_MANY
             ):
-                row = row.concat(
-                    sa.type_coerce(
-                        sa.func.JSON_ARRAYAGG(child._subquery.c._keys),
-                        sa.JSON,
-                    )
+                row = JSON_CONCAT(
+                    row, JSON_CAST(JSON_AGG(child._subquery.c._keys))
                 )
             else:
-                row = row.concat(
-                    sa.type_coerce(
-                        sa.func.JSON_ARRAY(child._subquery.c._keys),
-                        sa.JSON,
-                    )
+                row = JSON_CONCAT(
+                    row, JSON_CAST(JSON_ARRAY(child._subquery.c._keys))
                 )
+
         return row.label("_keys")
 
     def _root(
@@ -332,7 +375,7 @@ class QueryBuilder(threading.local):
         ctid: t.Optional[dict] = None,
     ) -> None:
         columns = [
-            sa.func.JSON_ARRAY(
+            JSON_ARRAY(
                 *[
                     child._subquery.c._keys
                     for child in node.children
@@ -356,7 +399,7 @@ class QueryBuilder(threading.local):
                 subquery.append(
                     sa.select(
                         *[
-                            sa.type_coerce(
+                            JSON_CAST(
                                 sa.literal_column(f"'({page},'")
                                 .concat(sa.column("s"))
                                 .concat(")"),
@@ -384,8 +427,8 @@ class QueryBuilder(threading.local):
 
         if txmin:
             node._filters.append(
-                sa.type_coerce(
-                    sa.type_coerce(
+                sa.cast(
+                    sa.cast(
                         node.model.c.xmin,
                         sa.Text,
                     ),
@@ -395,8 +438,8 @@ class QueryBuilder(threading.local):
             )
         if txmax:
             node._filters.append(
-                sa.type_coerce(
-                    sa.type_coerce(
+                sa.cast(
+                    sa.cast(
                         node.model.c.xmin,
                         sa.Text,
                     ),
@@ -411,7 +454,8 @@ class QueryBuilder(threading.local):
         node._subquery = node._subquery.alias()
 
         if not node.is_root:
-            node._subquery = node._subquery()
+            if not IS_MYSQL_COMPAT:
+                node._subquery = node._subquery.lateral()
 
     def _children(self, node: Node) -> None:
         for child in node.children:
@@ -544,14 +588,14 @@ class QueryBuilder(threading.local):
         params: list = []
         for foreign_key_column in foreign_key_columns:
             params.append(
-                sa.func.JSON_OBJECT(
+                JSON_OBJECT(
                     str(foreign_key_column),
-                    sa.func.JSON_ARRAY(node.model.c[foreign_key_column]),
+                    JSON_ARRAY(node.model.c[foreign_key_column]),
                 )
             )
 
         _keys: sa.sql.elements.Label = self._get_child_keys(
-            node, sa.func.JSON_ARRAY(*params).label("_keys")
+            node, JSON_ARRAY(*params).label("_keys")
         )
 
         columns = [_keys]
@@ -562,7 +606,7 @@ class QueryBuilder(threading.local):
             if node.relationship.type == ONE_TO_ONE:
                 if not node.children:
                     columns.append(
-                        sa.func.JSON_OBJECT(
+                        JSON_OBJECT(
                             node.columns[0],
                             node.columns[1],
                         ).label("anon")
@@ -691,7 +735,10 @@ class QueryBuilder(threading.local):
         if from_obj is not None:
             outer_subquery = outer_subquery.select_from(from_obj)
 
-        outer_subquery = outer_subquery.alias()
+        if IS_MYSQL_COMPAT:
+            outer_subquery = outer_subquery.alias()
+        else:
+            outer_subquery = outer_subquery.alias().lateral()
 
         if self.verbose:
             compiled_query(outer_subquery, "Outer subquery")
@@ -699,26 +746,22 @@ class QueryBuilder(threading.local):
         params = []
         for primary_key in through.model.primary_keys:
             params.append(
-                sa.func.JSON_OBJECT(
+                JSON_OBJECT(
                     str(primary_key),
-                    sa.func.JSON_ARRAY(through.model.c[primary_key]),
+                    JSON_ARRAY(through.model.c[primary_key]),
                 )
             )
 
-        through_keys = sa.type_coerce(
-            sa.func.JSON_OBJECT(
+        through_keys = JSON_CAST(
+            JSON_OBJECT(
                 node.relationship.throughs[0].table,
-                sa.func.JSON_ARRAY(*params),
+                JSON_ARRAY(*params),
             ),
-            sa.JSON,
         )
 
         # book author through table
-        _keys = sa.func.JSON_ARRAYAGG(
-            sa.type_coerce(
-                outer_subquery.c._keys,
-                sa.JSON,
-            ).concat(through_keys)
+        _keys = JSON_AGG(
+            JSON_CONCAT(JSON_CAST(outer_subquery.c._keys), through_keys)
         ).label("_keys")
 
         left_foreign_keys = foreign_keys[node.name]
@@ -731,7 +774,7 @@ class QueryBuilder(threading.local):
 
         columns = [
             _keys,
-            sa.func.JSON_ARRAYAGG(outer_subquery.c.anon).label(node.label),
+            JSON_AGG(outer_subquery.c.anon).label(node.label),
         ]
 
         foreign_keys: dict = self.get_foreign_keys(node.parent, through)
@@ -776,7 +819,8 @@ class QueryBuilder(threading.local):
 
         node._subquery = node._subquery.alias()
         if not node.is_root:
-            node._subquery = node._subquery
+            if not IS_MYSQL_COMPAT:
+                node._subquery = node._subquery.lateral()
 
     def _non_through(self, node: Node) -> None:  # noqa: C901
         from_obj = None
@@ -857,7 +901,7 @@ class QueryBuilder(threading.local):
                 params.extend(
                     [
                         str(primary_key.name),
-                        sa.func.JSON_ARRAY(node.model.c[primary_key.name]),
+                        JSON_ARRAY(node.model.c[primary_key.name]),
                     ]
                 )
         else:
@@ -873,7 +917,7 @@ class QueryBuilder(threading.local):
             _keys = self._get_child_keys(node, self._json_build_object(params))
         elif node.relationship.type == ONE_TO_MANY:
             _keys = self._get_child_keys(
-                node, sa.func.JSON_ARRAYAGG(self._json_build_object(params))
+                node, JSON_AGG(self._json_build_object(params))
             )
 
         columns: t.List = [_keys]
@@ -884,9 +928,7 @@ class QueryBuilder(threading.local):
                 columns.append(node.model.c[node.columns[0]].label(node.label))
             elif node.relationship.type == ONE_TO_MANY:
                 columns.append(
-                    sa.func.JSON_ARRAYAGG(node.model.c[node.columns[0]]).label(
-                        node.label
-                    )
+                    JSON_AGG(node.model.c[node.columns[0]]).label(node.label)
                 )
         elif node.relationship.variant == OBJECT:
             if node.relationship.type == ONE_TO_ONE:
@@ -895,9 +937,9 @@ class QueryBuilder(threading.local):
                 )
             elif node.relationship.type == ONE_TO_MANY:
                 columns.append(
-                    sa.func.JSON_ARRAYAGG(
-                        self._json_build_object(node.columns)
-                    ).label(node.label)
+                    JSON_AGG(self._json_build_object(node.columns)).label(
+                        node.label
+                    )
                 )
 
         for column in foreign_key_columns:
@@ -933,7 +975,8 @@ class QueryBuilder(threading.local):
         node._subquery = node._subquery.alias()
 
         if not node.is_root:
-            node._subquery = node._subquery
+            if not IS_MYSQL_COMPAT:
+                node._subquery = node._subquery.lateral()
 
     def build_queries(
         self,
