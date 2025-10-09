@@ -103,12 +103,9 @@ class Sync(Base, metaclass=Singleton):
         self._checkpoint: int = None
         self._plugins: Plugins = None
         self._truncate: bool = False
-        self.producer = producer
-        self.consumer = consumer
+        self.producer: bool = producer
+        self.consumer: bool = consumer
         self.num_workers: int = num_workers
-        self._checkpoint_file: str = os.path.join(
-            settings.CHECKPOINT_PATH, f".{self.__name}"
-        )
         self.redis: RedisQueue = RedisQueue(self.__name)
         self.tree: Tree = Tree(self.models, nodes=self.nodes)
         if bootstrap:
@@ -124,11 +121,20 @@ class Sync(Base, metaclass=Singleton):
         self.query_builder: QueryBuilder = QueryBuilder(verbose=verbose)
         self.count: dict = dict(xlog=0, db=0, redis=0)
         self.tasks: t.List[asyncio.Task] = []
-        self.lock = threading.Lock()
         self.skipped_xmins: t.List[int] = []
-        self.lock_skipped_xmins = threading.Lock()
+        self.lock_skipped_xmins: threading.Lock = threading.Lock()
+        self.lock: threading.Lock = threading.Lock()
 
-    def validate(self, repl_slots: bool = True, polling=False) -> None:
+    @property
+    def slot_name(self) -> str:
+        """Return the replication slot name."""
+        return self.__name
+
+    @property
+    def checkpoint_file(self) -> str:
+        return os.path.join(settings.CHECKPOINT_PATH, f".{self.__name}")
+
+    def validate(self, repl_slots: bool = True, polling: bool = False) -> None:
         """Perform all validation right away."""
 
         # ensure v2 compatible schema
@@ -365,10 +371,10 @@ class Sync(Base, metaclass=Singleton):
             self.database, max_retries=None, retry_interval=0.1
         ):
             try:
-                os.unlink(self._checkpoint_file)
+                os.unlink(self.checkpoint_file)
             except (OSError, FileNotFoundError):
                 logger.warning(
-                    f"Checkpoint file not found: {self._checkpoint_file}"
+                    f"Checkpoint file not found: {self.checkpoint_file}"
                 )
 
             self.redis.delete()
@@ -1247,7 +1253,7 @@ class Sync(Base, metaclass=Singleton):
         if settings.REDIS_CHECKPOINT:
             raw = self.redis.get_meta(default={}).get("checkpoint")
         else:
-            path: Path = Path(self._checkpoint_file)
+            path: Path = Path(self.checkpoint_file)
             raw = (
                 path.read_text(encoding="utf-8").split()[0]
                 if path.exists()
@@ -1279,7 +1285,7 @@ class Sync(Base, metaclass=Singleton):
         if settings.REDIS_CHECKPOINT:
             self.redis.set_meta({"checkpoint": value})
         else:
-            Path(self._checkpoint_file).write_text(
+            Path(self.checkpoint_file).write_text(
                 f"{value}\n", encoding="utf-8"
             )
 

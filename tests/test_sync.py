@@ -820,10 +820,10 @@ class TestSync(object):
         )
 
     def test_checkpoint(self, sync):
-        os.unlink(sync._checkpoint_file)
-        assert os.path.exists(sync._checkpoint_file) is False
+        os.unlink(sync.checkpoint_file)
+        assert os.path.exists(sync.checkpoint_file) is False
         sync.checkpoint = 1234
-        with open(sync._checkpoint_file, "r") as fp:
+        with open(sync.checkpoint_file, "r") as fp:
             value: int = int(fp.read().split()[0])
             assert value == 1234
 
@@ -952,11 +952,11 @@ class TestSync(object):
                     mock_drop_view.assert_called_once_with("public")
                 mock_drop_function.assert_called_once_with("public")
             mock_redis.assert_called_once()
-            assert os.path.exists(sync._checkpoint_file) is False
+            assert os.path.exists(sync.checkpoint_file) is False
 
         with patch("pgsync.sync.logger") as mock_logger:
             with patch("pgsync.sync.Base.drop_replication_slot"):
-                self._checkpoint_file = "foo"
+                self.checkpoint_file = "foo"
                 sync.teardown()
                 mock_logger.warning.assert_called_once_with(
                     "Checkpoint file not found: ./.testdb_testdb"
