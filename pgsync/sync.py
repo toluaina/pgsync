@@ -40,7 +40,7 @@ from .constants import (
     MATERIALIZED_VIEW_COLUMNS,
     META,
     PRIMARY_KEY_DELIMITER,
-    TG_OP,
+    TG_OPS,
     TRUNCATE,
     UPDATE,
 )
@@ -1243,7 +1243,7 @@ class Sync(Base, metaclass=Singleton):
 
         """
         payload: Payload = payloads[0]
-        if payload.tg_op not in TG_OP:
+        if payload.tg_op not in TG_OPS:
             logger.exception(f"Unknown tg_op {payload.tg_op}")
             raise InvalidTGOPError(f"Unknown tg_op {payload.tg_op}")
 

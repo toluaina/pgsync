@@ -34,7 +34,7 @@ def JSON_ARRAY(*args: t.Any) -> sa.sql.functions.Function:
 def JSON_AGG(expr: t.Any) -> sa.sql.functions.Function:
     """Aggregate into JSON array."""
     return (
-        sa.func.JSON_ARRAYAGG(expr)
+        sa.func.JSON_ARRAYAGG(sa.distinct(expr))
         if IS_MYSQL_COMPAT
         else sa.func.JSON_AGG(expr)
     )
@@ -45,16 +45,16 @@ def JSON_TYPE() -> t.Any:
     return sa.JSON if IS_MYSQL_COMPAT else sa.dialects.postgresql.JSONB
 
 
-def JSON_CAST(expr: t.Any) -> t.Any:
+def JSON_CAST(expression: t.Any) -> t.Any:
     """
     Ensure the expression is treated as JSON by SQLAlchemy.
     - PG: emit CAST(... AS JSONB)
     - MySQL/MariaDB: avoid emitting CAST; only annotate type
     """
     return (
-        sa.type_coerce(expr, sa.JSON)
+        sa.type_coerce(expression, sa.JSON)
         if IS_MYSQL_COMPAT
-        else sa.cast(expr, sa.dialects.postgresql.JSONB)
+        else sa.cast(expression, sa.dialects.postgresql.JSONB)
     )
 
 

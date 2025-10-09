@@ -20,7 +20,7 @@ from .constants import (
     LOGICAL_SLOT_SUFFIX,
     MATERIALIZED_VIEW,
     PLUGIN,
-    TG_OP,
+    TG_OPS,
     TRIGGER_FUNC,
     UPDATE,
 )
@@ -1154,7 +1154,7 @@ class Base(object):
                     payload.new[key] = value
         else:
             # this can be an INSERT, DELETE, UPDATE or TRUNCATE operation
-            if payload.tg_op not in TG_OP:
+            if payload.tg_op not in TG_OPS:
                 raise LogicalSlotParseError(
                     f"Unknown {payload.tg_op} operation for row: {row}"
                 )
