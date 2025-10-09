@@ -45,7 +45,7 @@ Other benefits of PGSync include:
 
 #### Why?
 
-At a high level, you have data in a Postgres database and you want to mirror it in Elasticsearch/OpenSearch. 
+At a high level, you have data in a Postgres database and you want to mirror it in Elasticsearch/OpenSearch.  
 This means every change to your data (***Insert***, ***Update***, ***Delete*** and ***Truncate*** statements) needs to be replicated to Elasticsearch/OpenSearch. 
 At first, this seems easy and then it's not. Simply add some code to copy the data to Elasticsearch/OpenSearch after updating the database (or so called dual writes).
 Writing SQL queries spanning multiple tables and involving multiple relationships are hard to write.
@@ -292,7 +292,7 @@ LEFT OUTER JOIN
           book_author_1.book_isbn AS book_isbn
    FROM book_author AS book_author_1
    LEFT OUTER JOIN
-     (SELECT
+     (SELECT 
              author_1.name AS anon,
              author_1.id AS id
       FROM author AS author_1) AS anon_2 ON anon_2.id = book_author_1.author_id
