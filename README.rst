@@ -15,8 +15,8 @@ expose structured denormalized documents in [Elasticsearch](https://www.elastic.
 - [SQLAlchemy](https://www.sqlalchemy.org) 1.3.4+
 
 ### Postgres setup
-
-  Enable [logical decoding](https://www.postgresql.org/docs/current/logicaldecoding.html) in your
+  
+  Enable [logical decoding](https://www.postgresql.org/docs/current/logicaldecoding.html) in your 
   Postgres setting.
 
   - You also need to set up two parameters in your Postgres config postgresql.conf
