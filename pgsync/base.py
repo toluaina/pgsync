@@ -1126,7 +1126,7 @@ class Base(object):
         if not match:
             raise LogicalSlotParseError(f"No match for row: {row}")
 
-        data = {"old": None, "new": None}
+        data: dict = {"old": None, "new": None}
         data.update(**match.groupdict())
         payload: Payload = Payload(**data)
 

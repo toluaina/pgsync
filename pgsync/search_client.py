@@ -226,7 +226,7 @@ class SearchClient(object):
             'uid': ['a002', 'a009'],
         }
         """
-        fields = fields or {}
+        fields: dict = fields or {}
         search = self.Search(using=self.__client, index=index)
         # explicitly exclude all fields since we only need the doc _id
         search = search.source(excludes=["*"])
