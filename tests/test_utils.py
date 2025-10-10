@@ -94,7 +94,7 @@ class TestUtils(object):
             call("Schema    : tests/fixtures/schema.json"),
             call("\x1b[4mCheckpoint\x1b[0m:"),
             call("Path: ./"),
-            call("\x1b[4mPostgres\x1b[0m:"),
+            call("\x1b[4mDatabase\x1b[0m:"),
             call("URL: {get_database_url}"),
             call("\x1b[4mElasticsearch\x1b[0m:"),
             call(f"URL: {get_search_url()}"),
