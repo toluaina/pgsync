@@ -470,8 +470,9 @@ class TestSync(object):
         with patch(
             "pgsync.sync.Sync.logical_slot_changes"
         ) as mock_logical_slot_changes:
+            sync.checkpoint = 1
             sync.pull()
-            txmin = None
+            txmin = 1
             txmax = sync.txid_current - 1
             mock_logical_slot_changes.assert_called_once_with(
                 txmin=txmin,
