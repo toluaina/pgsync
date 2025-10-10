@@ -39,17 +39,14 @@ class TestQueryBuilder(object):
         )
         assert expression is not None
         expected = (
-            "CAST(JSON_BUILD_OBJECT(:JSON_BUILD_OBJECT_1, book_1.isbn) AS "
-            "JSONB) || CAST(JSON_BUILD_OBJECT(:JSON_BUILD_OBJECT_2, "
-            "book_1.title) AS JSONB) || CAST(JSON_BUILD_OBJECT(:"
-            "JSON_BUILD_OBJECT_3, book_1.description) AS JSONB) || "
-            "CAST(JSON_BUILD_OBJECT(:JSON_BUILD_OBJECT_4, book_1.copyright) "
-            "AS JSONB) || CAST(JSON_BUILD_OBJECT(:JSON_BUILD_OBJECT_5, "
-            "book_1.publisher_id) AS JSONB) || CAST(JSON_BUILD_OBJECT("
-            ":JSON_BUILD_OBJECT_6, book_1.buyer_id) AS JSONB) || "
-            "CAST(JSON_BUILD_OBJECT(:JSON_BUILD_OBJECT_7, book_1.seller_id) "
-            "AS JSONB) || CAST(JSON_BUILD_OBJECT(:JSON_BUILD_OBJECT_8, "
-            "book_1.tags) AS JSONB)"
+            "((((((CAST(JSON_BUILD_OBJECT(:JSON_BUILD_OBJECT_1, book_1.isbn) AS JSONB) || "
+            "CAST(JSON_BUILD_OBJECT(:JSON_BUILD_OBJECT_2, book_1.title) AS JSONB)) || "
+            "CAST(JSON_BUILD_OBJECT(:JSON_BUILD_OBJECT_3, book_1.description) AS JSONB)) || "
+            "CAST(JSON_BUILD_OBJECT(:JSON_BUILD_OBJECT_4, book_1.copyright) AS JSONB)) || "
+            "CAST(JSON_BUILD_OBJECT(:JSON_BUILD_OBJECT_5, book_1.publisher_id) AS JSONB)) || "
+            "CAST(JSON_BUILD_OBJECT(:JSON_BUILD_OBJECT_6, book_1.buyer_id) AS JSONB)) || "
+            "CAST(JSON_BUILD_OBJECT(:JSON_BUILD_OBJECT_7, book_1.seller_id) AS JSONB)) || "
+            "CAST(JSON_BUILD_OBJECT(:JSON_BUILD_OBJECT_8, book_1.tags) AS JSONB)"
         )
         assert str(expression) == expected
 
