@@ -28,27 +28,26 @@ expose structured denormalized documents in [Elasticsearch](https://www.elastic.
 
 ### MySQL / MariaDB setup
 
-    Enable binary logging in your MySQL / MariaDB setting.
+- Enable binary logging in your MySQL / MariaDB setting.
 
-    - You also need to set up the following parameters in your MySQL / MariaDB config my.cnf, then restart the database server.
+- You also need to set up the following parameters in your MySQL / MariaDB config my.cnf, then restart the database server.
 
-        ```server-id = 1``` # any non-zero unique ID
+  ```server-id = 1``` # any non-zero unique ID
+
+  ```log_bin = mysql-bin```
+
+  ```binlog_row_image = FULL``` # recommended; if not supported on older MariaDB, omit
+
+- optional housekeeping:
+  ```binlog_expire_logs_seconds = 604800```   # 7 days
+
+- You need to create a replication user with REPLICATION SLAVE and REPLICATION CLIENT privileges
     
-        ```log_bin = mysql-bin```
-
-        ```binlog_row_image = FULL``` # recommended; if not supported on older MariaDB, omit
-
-        # optional housekeeping:
-        ```binlog_expire_logs_seconds = 604800   # 7 days
-        ```
-
-    - You need to create a replication user with REPLICATION SLAVE and REPLICATION CLIENT privileges
-    
-        ```sql
-        CREATE USER 'replicator'@'%' IDENTIFIED WITH mysql_native_password BY 'password';
-        GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'replicator'@'%';
-        FLUSH PRIVILEGES;
-        ```
+  ```sql
+  CREATE USER 'replicator'@'%' IDENTIFIED WITH mysql_native_password BY 'password';
+  GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'replicator'@'%';
+  FLUSH PRIVILEGES;
+  ```
 
 ### Installation
 
