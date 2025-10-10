@@ -10,9 +10,9 @@ backports-datetime-fromisoformat==2.0.3
     # via marshmallow
 black==25.9.0
     # via -r requirements/dev.in
-boto3==1.40.49
+boto3==1.40.50
     # via -r requirements/base.in
-botocore==1.40.49
+botocore==1.40.50
     # via
     #   boto3
     #   s3transfer
@@ -36,6 +36,8 @@ coverage[toml]==7.10.7
     #   pytest-cov
 distlib==0.4.0
     # via virtualenv
+elastic-transport==9.1.0
+    # via -r requirements/base.in
 elasticsearch==7.17.12
     # via
     #   -r requirements/base.in

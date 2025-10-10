@@ -4,6 +4,7 @@ boto3
 click
 elasticsearch
 elasticsearch-dsl
+elastic-transport 
 environs
 opensearch-dsl
 mysql-replication
