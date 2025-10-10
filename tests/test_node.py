@@ -122,7 +122,7 @@ class TestNode(object):
         assert str(node) == "Node: public.book_label"
 
     def test_traverse_breadth_first(self, sync, nodes):
-        root = Tree(sync.models, nodes=nodes)
+        root = Tree(sync.models, nodes=nodes, database="test")
         root.display()
         for i, node in enumerate(root.traverse_breadth_first()):
             if i == 0:
@@ -146,7 +146,7 @@ class TestNode(object):
         sync.search_client.close()
 
     def test_traverse_post_order(self, sync, nodes):
-        root: Tree = Tree(sync.models, nodes=nodes)
+        root: Tree = Tree(sync.models, nodes=nodes, database="test")
         root.display()
         for i, node in enumerate(root.traverse_post_order()):
             if i == 0:
@@ -183,7 +183,7 @@ class TestNode(object):
             ],
         }
         with pytest.raises(RelationshipAttributeError) as excinfo:
-            Tree(sync.models, nodes=nodes)
+            Tree(sync.models, nodes=nodes, database="test")
         assert "Relationship attribute " in str(excinfo.value)
         sync.search_client.close()
 
@@ -200,7 +200,7 @@ class TestNode(object):
                 },
             ],
         }
-        tree: Tree = Tree(sync.models, nodes=nodes)
+        tree: Tree = Tree(sync.models, nodes=nodes, database="test")
         node = tree.get_node("book", "public")
         assert str(node) == "Node: public.book"
 
@@ -217,6 +217,7 @@ class TestNode(object):
                 nodes={
                     "table": None,
                 },
+                database="test",
             )
 
         with pytest.raises(NodeAttributeError) as excinfo:
@@ -226,6 +227,7 @@ class TestNode(object):
                     "table": "book",
                     "foo": "bar",
                 },
+                database="test",
             )
         assert "Unknown node attribute(s):" in str(excinfo.value)
 
@@ -246,6 +248,7 @@ class TestNode(object):
                         },
                     ],
                 },
+                database="test",
             )
         assert "Unknown node attribute(s):" in str(excinfo.value)
 
@@ -264,6 +267,7 @@ class TestNode(object):
                         },
                     ],
                 },
+                database="test",
             )
         assert "Table not specified in node" in str(excinfo.value)
 
@@ -273,6 +277,7 @@ class TestNode(object):
                 "table": "book",
                 "columns": ["tags->0"],
             },
+            database="test",
         )
 
         sync.search_client.close()

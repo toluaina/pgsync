@@ -1775,8 +1775,6 @@ class Sync(Base, metaclass=Singleton):
             self.index, self.sync(txmin=txmin, txmax=txmax)
         )
 
-        return
-
         if self.is_mysql_compat:
             self.binlog_changes(
                 start_log=start_log,

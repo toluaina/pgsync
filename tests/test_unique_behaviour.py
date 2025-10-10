@@ -211,7 +211,7 @@ class TestUniqueBehaviour(object):
         Test regular sync produces the correct result
         """
         sync.tree.__nodes = {}
-        sync.tree = Tree(sync.models, nodes)
+        sync.tree = Tree(sync.models, nodes, database=sync.database)
         docs = [sort_list(doc) for doc in sync.sync()]
         docs = sorted(docs, key=lambda k: k["_id"])
         assert docs == [

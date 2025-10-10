@@ -159,8 +159,8 @@ class TestBase(object):
         pg_base = Base(connection.engine.url.database)
         pg_base.truncate_table("book")
         calls = [
-            call("Truncating table: public.book"),
-            call("Truncated table: public.book"),
+            call('Truncating table: "public"."book"'),
+            call('Truncated table: "public"."book"'),
         ]
         assert mock_logger.debug.call_args_list == calls
         mock_execute.assert_called_once()
