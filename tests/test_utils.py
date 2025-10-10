@@ -10,7 +10,7 @@ from mock import call, patch
 
 from pgsync.base import Base
 from pgsync.exc import SchemaError
-from pgsync.urls import get_postgres_url, get_redis_url, get_search_url
+from pgsync.urls import get_database_url, get_redis_url, get_search_url
 from pgsync.utils import (
     compiled_query,
     config_loader,
@@ -95,7 +95,7 @@ class TestUtils(object):
             call("\x1b[4mCheckpoint\x1b[0m:"),
             call("Path: ./"),
             call("\x1b[4mPostgres\x1b[0m:"),
-            call("URL: {get_postgres_url}"),
+            call("URL: {get_database_url}"),
             call("\x1b[4mElasticsearch\x1b[0m:"),
             call(f"URL: {get_search_url()}"),
             call("\x1b[4mRedis\x1b[0m:"),
@@ -172,7 +172,7 @@ class TestUtils(object):
 
     def test_get_redacted_url(self):
         url: str = get_redacted_url(
-            get_postgres_url("postgres", user="root", password="bar")
+            get_database_url("postgres", user="root", password="bar")
         )
         assert url == "postgresql+psycopg2://root:***@localhost:5432/postgres"
 

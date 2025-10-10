@@ -6,7 +6,7 @@ from mock import MagicMock, patch
 from pgsync.settings import ELASTICSEARCH_PORT
 from pgsync.urls import (
     _get_auth,
-    get_postgres_url,
+    get_database_url,
     get_redis_url,
     get_search_url,
 )
@@ -41,18 +41,18 @@ class TestUrls(object):
         )
         assert mock_logger.debug.call_count == 3
 
-    def test_get_postgres_url(self):
-        url = get_postgres_url("mydb")
+    def test_get_database_url(self):
+        url = get_database_url("mydb")
         assert url.endswith("@localhost:5432/mydb")
         assert (
-            get_postgres_url("mydb", user="kermit", password="12345")
+            get_database_url("mydb", user="kermit", password="12345")
             == "postgresql+psycopg2://kermit:12345@localhost:5432/mydb"
         )
-        url = get_postgres_url("mydb", port=9999)
+        url = get_database_url("mydb", port=9999)
         assert url.endswith("@localhost:9999/mydb")
         # with patch("pgsync.urls.logger") as mock_logger:
         #     assert (
-        #         get_postgres_url("mydb", user="kermit")
+        #         get_database_url("mydb", user="kermit")
         #         == "postgresql+psycopg2://kermit@localhost:5432/mydb"
         #     )
         #     mock_logger.debug.assert_called_once_with(
