@@ -68,7 +68,6 @@ jobs:
         PG_USER: postgres
         PYTHONPATH: $PYTHONPATH:./pgsync
         REDIS_CHECKPOINT: False
-        LOGSTASH_HOST: localhost
     - name: Upload coverage to Codecov  
       uses: codecov/codecov-action@v1
       with:
