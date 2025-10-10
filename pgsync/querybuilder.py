@@ -78,10 +78,11 @@ class QueryBuilder(threading.local):
         self.isouter: bool = True
         self._cache: dict = {}
 
-    # TODO:
     def _eval_expression(
         self, expression: sa.sql.elements.BinaryExpression
     ) -> sa.sql.elements.BinaryExpression:
+        if IS_MYSQL_COMPAT:
+            return expression
         if isinstance(
             expression.left.type, sa.dialects.postgresql.UUID
         ) or isinstance(expression.right.type, sa.dialects.postgresql.UUID):

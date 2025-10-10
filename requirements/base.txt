@@ -50,7 +50,7 @@ opensearch-py==3.0.0
     # via opensearch-dsl
 packaging==25.0
     # via mysql-replication
-psycopg2-binary==2.9.10
+psycopg2-binary==2.9.11
     # via -r requirements/base.in
 pymysql==1.1.2
     # via
@@ -82,7 +82,7 @@ six==1.17.0
     #   elasticsearch-dsl
     #   opensearch-dsl
     #   python-dateutil
-sqlalchemy==2.0.43
+sqlalchemy==2.0.44
     # via -r requirements/base.in
 sqlparse==0.5.3
     # via -r requirements/base.in

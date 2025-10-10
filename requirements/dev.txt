@@ -103,7 +103,7 @@ pluggy==1.6.0
     #   pytest-cov
 pre-commit==4.3.0
     # via -r requirements/dev.in
-psycopg2-binary==2.9.10
+psycopg2-binary==2.9.11
     # via -r requirements/base.in
 pycodestyle==2.14.0
     # via flake8
@@ -155,7 +155,7 @@ six==1.17.0
     #   elasticsearch-dsl
     #   opensearch-dsl
     #   python-dateutil
-sqlalchemy==2.0.43
+sqlalchemy==2.0.44
     # via -r requirements/base.in
 sqlparse==0.5.3
     # via -r requirements/base.in
@@ -182,7 +182,7 @@ urllib3==1.26.20
     #   elasticsearch
     #   opensearch-py
     #   requests
-virtualenv==20.34.0
+virtualenv==20.35.2
     # via pre-commit
 zipp==3.23.0
     # via importlib-metadata

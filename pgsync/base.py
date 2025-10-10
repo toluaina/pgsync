@@ -286,72 +286,44 @@ class Base(object):
                 self.drop_replication_slot(slot_name)
 
     # Tables...
-    # TODO:
-    def models(
-        self, table: str, schema: t.Optional[str] = None
-    ) -> sa.sql.Alias:
-        """Return an aliased SQLAlchemy Table model for `table`.
+    def models(self, table: str, schema: str) -> sa.sql.Alias:
+        """Get an SQLAlchemy model representation from a table.
 
-        For PostgreSQL: `schema` is the true schema (e.g., 'public').
-        For MySQL: pass `schema=None` and ensure the engine is connected to the target database.
-                (If you *do* pass a database name, it will be used as the schema prefix.)
+        Args:
+            table (str): The tablename
+            schema (str): The database schema
+
+        Returns:
+            The SQLAlchemy aliased model representation
+
         """
-        dialect = self.engine.dialect.name  # 'postgresql', 'mysql', etc.
-        is_mysql = dialect == "mysql"
-
-        # if is_mysql:
-        #     schema = None
-
-        # Key used for lookup/caching (MySQL commonly has no schema -> use table only)
-        name = f"{schema}.{table}" if schema else table
-        meta_key = schema or "__default__"
-
+        name: str = f"{schema}.{table}"
         if name not in self.__models:
-            if meta_key not in self.__metadata:
-                metadata = sa.MetaData()
-                # Reflect objects from the given schema/database (None => current DB)
-                metadata.reflect(
-                    self.engine, views=True, schema=schema or None
-                )
-                self.__metadata[meta_key] = metadata
-
-            metadata: sa.MetaData = self.__metadata[meta_key]
-
-            # print("metadata.tables ", metadata.tables)
-            # print("=====" * 100)
-
-            # Ensure the table is present; if not, try a targeted autoload
-            # if name not in metadata.tables:
-            #     try:
-            #         sa.Table(table, metadata, autoload_with=self.engine, schema=schema or None)
-            #     except Exception:
-            #         raise TableNotFoundError(f'Table "{name}" not found in registry')
-
+            if schema not in self.__metadata:
+                metadata = sa.MetaData(schema=schema)
+                metadata.reflect(self.engine, views=True)
+                self.__metadata[schema] = metadata
+            metadata = self.__metadata[schema]
             if name not in metadata.tables:
                 raise TableNotFoundError(
                     f'Table "{name}" not found in registry'
                 )
-
             model = metadata.tables[name]
-
-            # Postgres-only helper columns; skip for MySQL
-            if not is_mysql:
-                if "xmin" not in model.c:
-                    model.append_column(sa.Column("xmin", sa.BigInteger))
-                if "ctid" not in model.c:
-                    model.append_column(sa.Column("ctid", TupleIdentifierType))
-                if "oid" not in [col.name for col in model.columns]:
-                    model.append_column(
-                        sa.Column("oid", sa.dialects.postgresql.OID)
-                    )
-
-            aliased = model.alias()
+            model.append_column(sa.Column("xmin", sa.BigInteger))
+            model.append_column(sa.Column("ctid"), TupleIdentifierType)
+            # support SQLAlchemy/Postgres 14 which somehow now reflects
+            # the oid column
+            if "oid" not in [column.name for column in model.columns]:
+                model.append_column(
+                    sa.Column("oid", sa.dialects.postgresql.OID)
+                )
+            model = model.alias()
             setattr(
-                aliased,
+                model,
                 "primary_keys",
-                sorted(pk.key for pk in aliased.original.primary_key),
+                sorted([primary_key.key for primary_key in model.primary_key]),
             )
-            self.__models[name] = aliased
+            self.__models[f"{model.original}"] = model
 
         return self.__models[name]
 
