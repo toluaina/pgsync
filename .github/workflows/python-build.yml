@@ -93,7 +93,7 @@ jobs:
           MARIADB_USER: test
           MARIADB_PASSWORD: test
           MARIADB_ROOT_PASSWORD: root
-        ports: [3306:3306]
+        ports: 3306:3306
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot || exit 1"
           --health-interval=10s --health-timeout=5s --health-retries=5
