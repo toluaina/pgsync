@@ -116,6 +116,10 @@ class TestNode(object):
             ],
         }
 
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
     def test_node(self, connection):
         pg_base = Base(connection.engine.url.database)
         node = Node(
