@@ -184,7 +184,7 @@ urllib3==1.26.20
     #   elasticsearch
     #   opensearch-py
     #   requests
-virtualenv==20.35.2
+virtualenv==20.35.3
     # via pre-commit
 zipp==3.23.0
     # via importlib-metadata

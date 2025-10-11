@@ -16,6 +16,10 @@ class TestQueryBuilder(object):
     def setup_class(cls):
         cls.schema = "book" if IS_MYSQL_COMPAT else "public"
 
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
     def test__json_build_object(self, connection):
         pg_base = Base(connection.engine.url.database)
         query_builder = QueryBuilder()

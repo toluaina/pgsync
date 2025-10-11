@@ -138,10 +138,9 @@ def show_settings(
 
     url: str = get_search_url()
     redacted_url: str = get_redacted_url(url)
-    if settings.ELASTICSEARCH:
-        logger.info(f"{HIGHLIGHT_BEGIN}Elasticsearch{HIGHLIGHT_END}")
-    else:
-        logger.info(f"{HIGHLIGHT_BEGIN}OpenSearch{HIGHLIGHT_END}")
+    logger.info(
+        f"{HIGHLIGHT_BEGIN}{'Elasticsearch' if settings.ELASTICSEARCH else 'OpenSearch'}{HIGHLIGHT_END}"
+    )
     logger.info(f"URL: {redacted_url}")
     logger.info(f"{HIGHLIGHT_BEGIN}Redis{HIGHLIGHT_END}")
 

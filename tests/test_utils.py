@@ -9,8 +9,7 @@ from freezegun import freeze_time
 from mock import call, patch
 
 from pgsync.base import Base
-from pgsync.exc import SchemaError
-from pgsync.settings import IS_MYSQL_COMPAT
+from pgsync.settings import ELASTICSEARCH, IS_MYSQL_COMPAT
 from pgsync.urls import get_database_url, get_redis_url, get_search_url
 from pgsync.utils import (
     compiled_query,
@@ -101,7 +100,9 @@ class TestUtils(object):
             call("Path: ./"),
             call("\x1b[4mDatabase\x1b[0m:"),
             call("URL: {get_database_url}"),
-            call("\x1b[4mElasticsearch\x1b[0m:"),
+            call(
+                f"\x1b[4m{'Elasticsearch' if ELASTICSEARCH else 'OpenSearch'}\x1b[0m:"
+            ),
             call(f"URL: {get_search_url()}"),
             call("\x1b[4mRedis\x1b[0m:"),
             call(f"URL: {get_redis_url}"),
