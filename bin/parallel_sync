@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Parallel sync is an innovative, experimental feature designed to optimize
+Parallel sync is a feature designed to optimize
 throughput by utilizing available CPUs/threads, particularly beneficial
 in environments experiencing high network latency.
 
@@ -106,7 +106,7 @@ def logical_slot_changes(
     txmin: int = sync.checkpoint
     txmax: int = sync.txid_current
     sync.logical_slot_changes(txmin=txmin, txmax=txmax)
-    sync.checkpoint: int = txmax or sync.txid_current
+    sync.checkpoint = txmax or sync.txid_current
 
 
 @dataclass
