@@ -80,7 +80,7 @@ jobs:
 
   test-mariadb:
     runs-on: ubuntu-latest
-    needs: test-postgres
+    # needs: test-postgres
     strategy:
       max-parallel: 4
       matrix:
@@ -126,7 +126,7 @@ jobs:
           ELASTICSEARCH_SCHEME: http
           PATH: $PATH:./bin
           PG_HOST: localhost
-          PG_PORT: ${{ job.services.postgres.mariadb['3306'] }}
+          PG_PORT: ${{ job.services.mariadb.ports['3306'] }}
           PG_PASSWORD: test
           PG_USER: test
           PG_DRIVER: pymysql
