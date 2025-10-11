@@ -10,12 +10,17 @@ from pgsync.exc import (
     TableNotInNodeError,
 )
 from pgsync.node import Tree
+from pgsync.settings import IS_MYSQL_COMPAT
 from pgsync.singleton import Singleton
 from pgsync.sync import Sync
 
 from .testing_utils import assert_resync_empty, noop, search, sort_list
 
 
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
 @pytest.mark.usefixtures("table_creator")
 class TestRoot(object):
     """Root only node tests."""

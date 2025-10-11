@@ -3,7 +3,7 @@
 import pytest
 from mock import MagicMock, patch
 
-from pgsync.settings import ELASTICSEARCH_PORT
+from pgsync.settings import ELASTICSEARCH_PORT, IS_MYSQL_COMPAT
 from pgsync.urls import (
     _get_auth,
     get_database_url,
@@ -43,11 +43,18 @@ class TestUrls(object):
 
     def test_get_database_url(self):
         url = get_database_url("mydb")
-        assert url.endswith("@localhost:5432/mydb")
-        assert (
-            get_database_url("mydb", user="kermit", password="12345")
-            == "postgresql+psycopg2://kermit:12345@localhost:5432/mydb"
-        )
+        if IS_MYSQL_COMPAT:
+            assert url.endswith("@localhost:3306/mydb")
+            assert (
+                get_database_url("mydb", user="kermit", password="12345")
+                == "mysql+pymysql://kermit:12345@localhost:3306/mydb"
+            )
+        else:
+            assert url.endswith("@localhost:5432/mydb")
+            assert (
+                get_database_url("mydb", user="kermit", password="12345")
+                == "postgresql+psycopg2://kermit:12345@localhost:5432/mydb"
+            )
         url = get_database_url("mydb", port=9999)
         assert url.endswith("@localhost:9999/mydb")
         # with patch("pgsync.urls.logger") as mock_logger:

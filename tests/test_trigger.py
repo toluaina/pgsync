@@ -4,9 +4,14 @@ import pytest
 import sqlalchemy as sa
 
 from pgsync.base import Base
+from pgsync.settings import IS_MYSQL_COMPAT
 from pgsync.trigger import CREATE_TRIGGER_TEMPLATE
 
 
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
 @pytest.mark.usefixtures("table_creator")
 class TestTrigger(object):
     """Trigger tests."""

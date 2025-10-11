@@ -13,12 +13,17 @@ from pgsync.exc import (
     RelationshipVariantError,
 )
 from pgsync.node import Tree
+from pgsync.settings import IS_MYSQL_COMPAT
 from pgsync.singleton import Singleton
 from pgsync.sync import Sync
 
 from .testing_utils import assert_resync_empty, noop, search, sort_list
 
 
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
 @pytest.mark.usefixtures("table_creator")
 class TestParentSingleChildFkOnParent(object):
     """Root and single child node tests."""

@@ -10,6 +10,7 @@ from sqlalchemy.schema import UniqueConstraint
 
 from pgsync.base import Base, create_database, drop_database
 from pgsync.constants import DEFAULT_SCHEMA
+from pgsync.settings import IS_MYSQL_COMPAT
 from pgsync.singleton import Singleton
 from pgsync.sync import Sync
 from pgsync.urls import get_database_url
@@ -64,10 +65,11 @@ def sync():
         }
     )
     yield _sync
-    _sync.logical_slot_get_changes(
-        f"{_sync.database}_testdb",
-        upto_nchanges=None,
-    )
+    if not IS_MYSQL_COMPAT:
+        _sync.logical_slot_get_changes(
+            f"{_sync.database}_testdb",
+            upto_nchanges=None,
+        )
     _sync.engine.connect().close()
     _sync.engine.dispose()
     _sync.session.close()
@@ -287,9 +289,7 @@ def book_cls(base, publisher_cls, user_cls):
             backref=sa.orm.backref("sellers"),
             foreign_keys=[seller_id],
         )
-        tags: Mapped[sa.dialects.postgresql.JSONB] = mapped_column(
-            sa.dialects.postgresql.JSONB, nullable=True
-        )
+        tags: Mapped[sa.JSON] = mapped_column(sa.JSON, nullable=True)
 
     return Book
 
@@ -484,14 +484,22 @@ def table_creator(base, connection, model_mapping):
         base.metadata.create_all(connection.engine)
         conn.commit()
     pg_base = Base(connection.engine.url.database)
-    pg_base.create_triggers(
-        connection.engine.url.database,
-        DEFAULT_SCHEMA,
-    )
-    pg_base.drop_replication_slot(f"{connection.engine.url.database}_testdb")
-    pg_base.create_replication_slot(f"{connection.engine.url.database}_testdb")
+    if not IS_MYSQL_COMPAT:
+        pg_base.create_triggers(
+            connection.engine.url.database,
+            DEFAULT_SCHEMA,
+        )
+        pg_base.drop_replication_slot(
+            f"{connection.engine.url.database}_testdb"
+        )
+        pg_base.create_replication_slot(
+            f"{connection.engine.url.database}_testdb"
+        )
     yield
-    pg_base.drop_replication_slot(f"{connection.engine.url.database}_testdb")
+    if not IS_MYSQL_COMPAT:
+        pg_base.drop_replication_slot(
+            f"{connection.engine.url.database}_testdb"
+        )
     with connection.engine.connect() as conn:
         base.metadata.drop_all(connection.engine)
         conn.commit()

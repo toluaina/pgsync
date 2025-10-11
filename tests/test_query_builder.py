@@ -5,11 +5,16 @@ import pytest
 from pgsync.base import Base
 from pgsync.node import Node
 from pgsync.querybuilder import QueryBuilder
+from pgsync.settings import IS_MYSQL_COMPAT
 
 
 @pytest.mark.usefixtures("table_creator")
 class TestQueryBuilder(object):
     """QueryBuilder tests."""
+
+    @classmethod
+    def setup_class(cls):
+        cls.schema = "book" if IS_MYSQL_COMPAT else "public"
 
     def test__json_build_object(self, connection):
         pg_base = Base(connection.engine.url.database)
@@ -21,7 +26,7 @@ class TestQueryBuilder(object):
         node = Node(
             models=pg_base.models,
             table="book",
-            schema="public",
+            schema=self.schema,
         )
         expression = query_builder._json_build_object(node.columns)
         assert expression is not None
@@ -55,14 +60,14 @@ class TestQueryBuilder(object):
         query_builder = QueryBuilder()
 
         foreign_keys = {
-            "public.subject": ["column_a", "column_b", "column_X"],
-            "schema.table_b": ["column_x"],
+            f"{self.schema}.subject": ["column_a", "column_b", "column_X"],
+            f"{self.schema}.table_b": ["column_x"],
         }
 
         subject = Node(
             models=pg_base.models,
             table="subject",
-            schema="public",
+            schema=self.schema,
             relationship={
                 "type": "one_to_many",
                 "variant": "scalar",

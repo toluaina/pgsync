@@ -16,6 +16,7 @@ from pgsync.exc import (
     SchemaError,
 )
 from pgsync.node import Node
+from pgsync.settings import IS_MYSQL_COMPAT
 from pgsync.singleton import Singleton
 from pgsync.sync import settings, Sync
 
@@ -64,6 +65,10 @@ def sync():
         _sync.search_client.close()
 
 
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
 @pytest.mark.usefixtures("table_creator")
 class TestSync(object):
     """Sync tests."""

@@ -10,6 +10,7 @@ from mock import call, patch
 
 from pgsync.base import Base
 from pgsync.exc import SchemaError
+from pgsync.settings import IS_MYSQL_COMPAT
 from pgsync.urls import get_database_url, get_redis_url, get_search_url
 from pgsync.utils import (
     compiled_query,
@@ -27,6 +28,10 @@ from pgsync.utils import (
 @pytest.mark.usefixtures("table_creator")
 class TestUtils(object):
     """Utils tests."""
+
+    @classmethod
+    def setup_class(cls):
+        cls.schema = "book" if IS_MYSQL_COMPAT else "public"
 
     def test_validate_config(self):
         # Test: neither config nor s3_schema_url provided
@@ -147,12 +152,12 @@ class TestUtils(object):
         self, mock_logger, mock_sys, connection
     ):
         pg_base = Base(connection.engine.url.database)
-        model = pg_base.models("book", "public")
+        model = pg_base.models("book", self.schema)
         statement = sa.select(*[model.c.isbn]).select_from(model)
         compiled_query(statement, label="foo", literal_binds=True)
         mock_logger.debug.assert_called_once_with(
-            "\x1b[4mfoo:\x1b[0m\nSELECT book_1.isbn\n"
-            "FROM public.book AS book_1"
+            f"\x1b[4mfoo:\x1b[0m\nSELECT book_1.isbn\n"
+            f"FROM {self.schema}.book AS book_1"
         )
         assert mock_sys.stdout.write.call_count == 3
 
@@ -162,11 +167,11 @@ class TestUtils(object):
         self, mock_logger, mock_sys, connection
     ):
         pg_base = Base(connection.engine.url.database)
-        model = pg_base.models("book", "public")
+        model = pg_base.models("book", self.schema)
         statement = sa.select(*[model.c.isbn]).select_from(model)
         compiled_query(statement, literal_binds=True)
         mock_logger.debug.assert_called_once_with(
-            "SELECT book_1.isbn\nFROM public.book AS book_1"
+            f"SELECT book_1.isbn\nFROM {self.schema}.book AS book_1"
         )
         assert mock_sys.stdout.write.call_count == 3
 
@@ -174,7 +179,12 @@ class TestUtils(object):
         url: str = get_redacted_url(
             get_database_url("postgres", user="root", password="bar")
         )
-        assert url == "postgresql+psycopg2://root:***@localhost:5432/postgres"
+        if IS_MYSQL_COMPAT:
+            assert url == "mysql+pymysql://root:***@localhost:3306/postgres"
+        else:
+            assert (
+                url == "postgresql+psycopg2://root:***@localhost:5432/postgres"
+            )
 
     def test_threaded(self):
         @threaded

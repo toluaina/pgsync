@@ -20,13 +20,22 @@ from pgsync.exc import (
     ReplicationSlotError,
     TableNotFoundError,
 )
+from pgsync.settings import IS_MYSQL_COMPAT
 from pgsync.view import CreateView, DropView
 
 
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
 @pytest.mark.usefixtures("table_creator")
 class TestBase(object):
     """Base tests."""
 
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
     def test_pg_settings(self, connection):
         pg_base = Base(connection.engine.url.database)
         pg_base.verbose = False
@@ -34,6 +43,10 @@ class TestBase(object):
         assert int(value) > 0
         assert pg_base.pg_settings("xyz") is None
 
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
     @patch("pgsync.base.logger")
     def test__can_create_replication_slot(self, mock_logger, connection):
         pg_base = Base(connection.engine.url.database)
@@ -229,6 +242,10 @@ class TestBase(object):
         pg_base.truncate_schemas()
         mock_truncate_schema.assert_called_once_with("public")
 
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
     def test_replication_slots(self, connection):
         pg_base = Base(connection.engine.url.database)
         assert pg_base.replication_slots("noob") == []
@@ -237,6 +254,10 @@ class TestBase(object):
         )
         assert "testdb_testdb" == replication_slots[0][0]
 
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
     @patch("pgsync.base.logger")
     def test_create_replication_slot(self, mock_logger, connection):
         pg_base = Base(connection.engine.url.database)
@@ -253,6 +274,10 @@ class TestBase(object):
         with pytest.raises(sa.exc.ProgrammingError):
             pg_base.drop_replication_slot(1)
 
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
     @patch("pgsync.base.logger")
     def test_drop_replication_slot(self, mock_logger, connection):
         pg_base = Base(connection.engine.url.database)
@@ -266,6 +291,10 @@ class TestBase(object):
         ]
         assert mock_logger.debug.call_args_list == calls
 
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
     @patch("pgsync.base.logger")
     @patch("pgsync.base.Base.execute")
     def test_create_trigger(self, mock_execute, mock_logger, connection):
@@ -283,6 +312,10 @@ class TestBase(object):
         pg_base.drop_function(DEFAULT_SCHEMA)
         pg_base.drop_triggers(DEFAULT_SCHEMA, "book", join_queries=True)
 
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
     @patch("pgsync.base.pg_execute")
     @patch("pgsync.base.pg_engine")
     @patch("pgsync.base.logger")
@@ -343,6 +376,10 @@ class TestBase(object):
         calls = [call(mock_pg_engine, f'DROP DATABASE "{database}"')]
         mock_pg_execute.call_args_list == calls
 
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
     @patch("pgsync.base.pg_execute")
     @patch("pgsync.base.pg_engine")
     @patch("pgsync.base.logger")
@@ -364,6 +401,10 @@ class TestBase(object):
         ]
         mock_pg_execute.call_args_list == calls
 
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
     @patch("pgsync.base.pg_execute")
     @patch("pgsync.base.pg_engine")
     @patch("pgsync.base.logger")
@@ -383,6 +424,10 @@ class TestBase(object):
         calls = [call(mock_pg_engine, 'DROP EXTENSION IF NOT EXISTS "my_ext"')]
         mock_pg_execute.call_args_list == calls
 
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
     @patch("pgsync.base.logger")
     def test_drop_view(self, mock_logger, connection):
         pg_base = Base(connection.engine.url.database)
@@ -394,6 +439,10 @@ class TestBase(object):
             ]
             assert mock_logger.debug.call_args_list == calls
 
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
     @patch("pgsync.base.logger")
     def test_refresh_view(self, mock_logger, connection):
         pg_base = Base(connection.engine.url.database)
@@ -423,6 +472,10 @@ class TestBase(object):
             pg_base.parse_value("float4", "foo")
         assert "could not convert string to float: 'foo'" in str(excinfo.value)
 
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
     def test_parse_logical_slot(
         self,
         connection,
@@ -462,6 +515,10 @@ class TestBase(object):
             pg_base.parse_logical_slot(row)
             assert '"Unknown UNKNOWN operation for row:' in str(excinfo.value)
 
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
     def test_parse_logical_slot_with_double_precision(
         self,
         connection,
@@ -555,6 +612,10 @@ class TestBase(object):
             )
             conn.commit()
 
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
     def test_materialized_views(self, connection):
         pg_base = Base(connection.engine.url.database)
         with connection.engine.connect() as conn:
