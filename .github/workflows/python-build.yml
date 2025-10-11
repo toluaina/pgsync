@@ -97,12 +97,15 @@ jobs:
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot || exit 1"
           --health-interval=10s --health-timeout=5s --health-retries=5
-      redis:
+       redis:
         image: redis
-        ports: [6379:6379]
+        ports:
+          - 6379:6379
       elasticsearch:
         image: docker.elastic.co/elasticsearch/elasticsearch:7.17.13
-        ports: [9200:9200, 9300:9300]
+        ports:
+          - 9200:9200
+          - 9300:9300
         env:
           xpack.security.enabled: false
           network.host: 127.0.0.1
