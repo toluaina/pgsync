@@ -2054,7 +2054,7 @@ def main(
 
     show_settings(config=config, s3_schema_url=s3_schema_url)
 
-    # MySQL and MaridDB are only supported in polling mode
+    # MySQL and MariaDB are only supported in polling mode
     if daemon and IS_MYSQL_COMPAT:
         polling = True
 

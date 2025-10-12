@@ -143,8 +143,8 @@ class QueryBuilder(threading.local):
         with the 100 arguments limit this implies we can only select 50 columns
         at a time.
         """
-        i = 0
-        expression = None
+        i: int = 0
+        expression: t.Optional[sa.sql.elements.BinaryExpression] = None
         while i < len(columns):
             chunk = columns[i : i + chunk_size]
             piece = JSON_CAST(JSON_OBJECT(*chunk))
