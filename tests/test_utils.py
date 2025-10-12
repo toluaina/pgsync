@@ -1,7 +1,6 @@
 """Utils tests."""
 
 import os
-from urllib.parse import ParseResult, urlparse
 
 import pytest
 import sqlalchemy as sa
@@ -9,8 +8,8 @@ from freezegun import freeze_time
 from mock import call, patch
 
 from pgsync.base import Base
-from pgsync.exc import SchemaError
-from pgsync.urls import get_postgres_url, get_redis_url, get_search_url
+from pgsync.settings import ELASTICSEARCH, IS_MYSQL_COMPAT
+from pgsync.urls import get_database_url, get_redis_url, get_search_url
 from pgsync.utils import (
     compiled_query,
     config_loader,
@@ -27,6 +26,10 @@ from pgsync.utils import (
 @pytest.mark.usefixtures("table_creator")
 class TestUtils(object):
     """Utils tests."""
+
+    @classmethod
+    def setup_class(cls):
+        cls.schema = "testdb" if IS_MYSQL_COMPAT else "public"
 
     def test_validate_config(self):
         # Test: neither config nor s3_schema_url provided
@@ -94,9 +97,11 @@ class TestUtils(object):
             call("Schema    : tests/fixtures/schema.json"),
             call("\x1b[4mCheckpoint\x1b[0m:"),
             call("Path: ./"),
-            call("\x1b[4mPostgres\x1b[0m:"),
-            call("URL: {get_postgres_url}"),
-            call("\x1b[4mElasticsearch\x1b[0m:"),
+            call("\x1b[4mDatabase\x1b[0m:"),
+            call(f"URL: {get_database_url(self.schema)}"),
+            call(
+                f"\x1b[4m{'Elasticsearch' if ELASTICSEARCH else 'OpenSearch'}\x1b[0m:"
+            ),
             call(f"URL: {get_search_url()}"),
             call("\x1b[4mRedis\x1b[0m:"),
             call(f"URL: {get_redis_url}"),
@@ -147,12 +152,12 @@ class TestUtils(object):
         self, mock_logger, mock_sys, connection
     ):
         pg_base = Base(connection.engine.url.database)
-        model = pg_base.models("book", "public")
+        model = pg_base.models("book", self.schema)
         statement = sa.select(*[model.c.isbn]).select_from(model)
         compiled_query(statement, label="foo", literal_binds=True)
         mock_logger.debug.assert_called_once_with(
-            "\x1b[4mfoo:\x1b[0m\nSELECT book_1.isbn\n"
-            "FROM public.book AS book_1"
+            f"\x1b[4mfoo:\x1b[0m\nSELECT book_1.isbn\n"
+            f"FROM {self.schema}.book AS book_1"
         )
         assert mock_sys.stdout.write.call_count == 3
 
@@ -162,19 +167,24 @@ class TestUtils(object):
         self, mock_logger, mock_sys, connection
     ):
         pg_base = Base(connection.engine.url.database)
-        model = pg_base.models("book", "public")
+        model = pg_base.models("book", self.schema)
         statement = sa.select(*[model.c.isbn]).select_from(model)
         compiled_query(statement, literal_binds=True)
         mock_logger.debug.assert_called_once_with(
-            "SELECT book_1.isbn\nFROM public.book AS book_1"
+            f"SELECT book_1.isbn\nFROM {self.schema}.book AS book_1"
         )
         assert mock_sys.stdout.write.call_count == 3
 
     def test_get_redacted_url(self):
         url: str = get_redacted_url(
-            get_postgres_url("postgres", user="root", password="bar")
+            get_database_url("postgres", user="root", password="bar")
         )
-        assert url == "postgresql+psycopg2://root:***@localhost:5432/postgres"
+        if IS_MYSQL_COMPAT:
+            assert url == "mysql+pymysql://root:***@localhost:3306/postgres"
+        else:
+            assert (
+                url == "postgresql+psycopg2://root:***@localhost:5432/postgres"
+            )
 
     def test_threaded(self):
         @threaded

@@ -20,7 +20,7 @@ from .constants import (
     LOGICAL_SLOT_SUFFIX,
     MATERIALIZED_VIEW,
     PLUGIN,
-    TG_OP,
+    TG_OPS,
     TRIGGER_FUNC,
     UPDATE,
 )
@@ -30,6 +30,7 @@ from .exc import (
     TableNotFoundError,
 )
 from .settings import (
+    IS_MYSQL_COMPAT,
     PG_HOST_RO,
     PG_PASSWORD_RO,
     PG_PORT_RO,
@@ -41,8 +42,8 @@ from .settings import (
     STREAM_RESULTS,
 )
 from .trigger import CREATE_TRIGGER_TEMPLATE
-from .urls import get_postgres_url
-from .utils import compiled_query
+from .urls import get_database_url
+from .utils import compiled_query, qname
 from .view import create_view, DropView, is_view, RefreshView
 
 try:
@@ -252,6 +253,14 @@ class Base(object):
         except (TypeError, IndexError):
             return None
 
+    @property
+    def is_mysql_compat(self) -> bool:
+        """
+        True when running against a MySQL-family backend (MySQL or MariaDB),
+        regardless of the specific driver in use.
+        """
+        return IS_MYSQL_COMPAT
+
     def _can_create_replication_slot(self, slot_name: str) -> None:
         """Check if the given user can create and destroy replication slots."""
         with self.advisory_lock(
@@ -366,6 +375,9 @@ class Base(object):
 
     def _materialized_views(self, schema: str) -> list:
         """Get all materialized views."""
+        if self.is_mysql_compat:
+            return []
+
         if schema not in self.__materialized_views:
             self.__materialized_views[schema] = []
             for table in sa.inspect(self.engine).get_materialized_view_names(
@@ -415,9 +427,13 @@ class Base(object):
             schema (str): The database schema
 
         """
-        logger.debug(f"Truncating table: {schema}.{table}")
-        self.execute(sa.text(f'TRUNCATE TABLE "{schema}"."{table}" CASCADE'))
-        logger.debug(f"Truncated table: {schema}.{table}")
+        table_name: str = qname(self.engine, schema, table)
+        logger.debug(f"Truncating table: {table_name}")
+        if self.is_mysql_compat:
+            self.execute(sa.text(f"TRUNCATE TABLE {table_name}"))
+        else:
+            self.execute(sa.text(f"TRUNCATE TABLE {table_name} CASCADE"))
+        logger.debug(f"Truncated table: {table_name}")
 
     def truncate_tables(
         self, tables: t.List[str], schema: str = DEFAULT_SCHEMA
@@ -512,35 +528,65 @@ class Base(object):
 
     def advisory_key(self, slot_name: str) -> int:
         """Compute a stable bigint advisory key from slot name."""
-        return self.fetchone(
-            sa.text("SELECT HASHTEXT(:slot)::BIGINT").bindparams(
+        if self.is_mysql_compat:
+            # 'adv:' + 60 hex chars = 64 total; deterministic and safe for GET_LOCK
+            row = self.fetchone(
+                sa.text(
+                    "SELECT CONCAT('adv:', LEFT(SHA2(:slot, 256), 60))"
+                ).bindparams(slot=slot_name)
+            )
+            return row[0]
+        # PostgreSQL: stable bigint via hashtext
+        row = self.fetchone(
+            sa.text("SELECT hashtext(:slot)::bigint").bindparams(
                 slot=slot_name
             )
-        )[0]
+        )
+        return row[0]
 
-    def pg_try_advisory_lock(self, key: int) -> bool:
+    def pg_try_advisory_lock(
+        self, key: t.Union[int, str], timeout: int = 0
+    ) -> bool:
         """
-        Attempts to acquire an advisory lock based on a hashed slot name.
+        Attempts to acquire an dvisory/named lock based on a hashed slot name without blocking.
+
+        PostgreSQL: integer key -> PG_TRY_ADVISORY_LOCK(key) -> bool
+        MySQL/MariaDB: string name -> GET_LOCK(name, timeout) -> 1 on success
+                    (timeout defaults to 0 = non-blocking)
 
         Returns:
             bool: True if the lock was acquired, False otherwise.
         """
-        result = self.fetchone(
+        if self.is_mysql_compat:
+            row = self.fetchone(
+                sa.text("SELECT GET_LOCK(:name, :timeout)").bindparams(
+                    name=str(key), timeout=int(timeout)
+                )
+            )
+            return bool(row and row[0] == 1)
+
+        row = self.fetchone(
             sa.text("SELECT PG_TRY_ADVISORY_LOCK(:key)").bindparams(key=key)
         )
-        return result[0] if result else False
+        return bool(row and row[0])
 
-    def pg_advisory_unlock(self, key: int) -> bool:
+    def pg_advisory_unlock(self, key: t.Union[int, str]) -> bool:
         """
         Releases an advisory lock associated with the hashed slot name.
 
         Returns:
             bool: True if the lock was released, False if it was not held.
         """
-        result = self.fetchone(
+        if self.is_mysql_compat:
+            row = self.fetchone(
+                sa.text("SELECT RELEASE_LOCK(:name)").bindparams(name=str(key))
+            )
+            return bool(row and row[0] == 1)
+
+        row = self.fetchone(
             sa.text("SELECT PG_ADVISORY_UNLOCK(:key)").bindparams(key=key)
         )
-        return result[0] if result else False
+        return bool(row and row[0])
 
     @contextmanager
     def advisory_lock(
@@ -1030,29 +1076,30 @@ class Base(object):
         return value
 
     def parse_logical_slot(self, row: str) -> Payload:
-        def _parse_logical_slot(data: str) -> t.Tuple[str, str]:
+
+        def _parse_logical_slot(data: str) -> t.Iterator[t.Tuple[str, t.Any]]:
+            pos: int = 0
             while True:
-                match = LOGICAL_SLOT_SUFFIX.search(data)
+                match = LOGICAL_SLOT_SUFFIX.search(data, pos)
                 if not match:
                     break
 
-                key: str = match.groupdict().get("key")
-                if key:
-                    key = key.replace('"', "")
-                value: str = match.groupdict().get("value")
-                type_: str = match.groupdict().get("type")
+                key = (match.groupdict().get("key") or "").replace('"', "")
+                raw_value = match.groupdict().get("value") or ""
+                type_ = match.groupdict().get("type") or ""
 
-                value = self.parse_value(type_, value)
+                parsed = self.parse_value(type_, raw_value)
+                yield key, parsed
 
-                # set data for next iteration of the loop
-                data = f"{data[match.span()[1]:]} "
-                yield key, value
+                start, end = match.span()
+                # advance safely even if the pattern can match zero-length
+                pos = end if end > start else end + 1
 
         match = LOGICAL_SLOT_PREFIX.search(row)
         if not match:
             raise LogicalSlotParseError(f"No match for row: {row}")
 
-        data = {"old": None, "new": None}
+        data: dict = {"old": None, "new": None}
         data.update(**match.groupdict())
         payload: Payload = Payload(**data)
 
@@ -1080,7 +1127,7 @@ class Base(object):
                     payload.new[key] = value
         else:
             # this can be an INSERT, DELETE, UPDATE or TRUNCATE operation
-            if payload.tg_op not in TG_OP:
+            if payload.tg_op not in TG_OPS:
                 raise LogicalSlotParseError(
                     f"Unknown {payload.tg_op} operation for row: {row}"
                 )
@@ -1282,7 +1329,7 @@ def _pg_engine(
         connect_args["sslrootcert"] = sslrootcert
 
     if url is None:
-        url: str = get_postgres_url(
+        url: str = get_database_url(
             database,
             user=user,
             host=host,
@@ -1307,19 +1354,25 @@ def pg_execute(
 
 def create_schema(database: str, schema: str, echo: bool = False) -> None:
     """Create database schema."""
-    logger.debug(f"Creating schema: {schema}")
-    with pg_engine(database, echo=echo) as engine:
-        pg_execute(engine, sa.text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
-    logger.debug(f"Created schema: {schema}")
+    if not IS_MYSQL_COMPAT:
+        logger.debug(f"Creating schema: {schema}")
+        with pg_engine(database, echo=echo) as engine:
+            pg_execute(
+                engine, sa.text(f"CREATE SCHEMA IF NOT EXISTS {schema}")
+            )
+        logger.debug(f"Created schema: {schema}")
 
 
 def create_database(database: str, echo: bool = False) -> None:
     """Create a database."""
     logger.debug(f"Creating database: {database}")
-    with pg_engine("postgres", echo=echo) as engine:
+    with pg_engine(
+        "information_schema" if IS_MYSQL_COMPAT else "postgres",
+        echo=echo,
+    ) as engine:
         pg_execute(
             engine,
-            sa.text(f'CREATE DATABASE "{database}"'),
+            sa.text(f"CREATE DATABASE {database}"),
             options={"isolation_level": "AUTOCOMMIT"},
         )
     logger.debug(f"Created database: {database}")
@@ -1328,10 +1381,13 @@ def create_database(database: str, echo: bool = False) -> None:
 def drop_database(database: str, echo: bool = False) -> None:
     """Drop a database."""
     logger.debug(f"Dropping database: {database}")
-    with pg_engine("postgres", echo=echo) as engine:
+    with pg_engine(
+        "information_schema" if IS_MYSQL_COMPAT else "postgres",
+        echo=echo,
+    ) as engine:
         pg_execute(
             engine,
-            sa.text(f'DROP DATABASE IF EXISTS "{database}"'),
+            sa.text(f"DROP DATABASE IF EXISTS {database}"),
             options={"isolation_level": "AUTOCOMMIT"},
         )
     logger.debug(f"Dropped database: {database}")
@@ -1339,15 +1395,26 @@ def drop_database(database: str, echo: bool = False) -> None:
 
 def database_exists(database: str, echo: bool = False) -> bool:
     """Check if database is present."""
-    with pg_engine("postgres", echo=echo) as engine:
+    with pg_engine(
+        "information_schema" if IS_MYSQL_COMPAT else "postgres",
+        echo=echo,
+    ) as engine:
         with engine.connect() as conn:
-            row = conn.execute(
-                sa.select(
-                    sa.text("1"),
+            if IS_MYSQL_COMPAT:
+                sql = sa.text(
+                    "SELECT 1 FROM INFORMATION_SCHEMA.SCHEMATA "
+                    "WHERE SCHEMA_NAME = :db LIMIT 1"
                 )
-                .select_from(sa.text("pg_database"))
-                .where(sa.column("datname") == database),
-            ).fetchone()
+                return conn.execute(sql, {"db": database}).first() is not None
+
+            else:
+                row = conn.execute(
+                    sa.select(
+                        sa.text("1"),
+                    )
+                    .select_from(sa.text("pg_database"))
+                    .where(sa.column("datname") == database),
+                ).fetchone()
         return row is not None
 
 

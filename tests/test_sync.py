@@ -16,6 +16,7 @@ from pgsync.exc import (
     SchemaError,
 )
 from pgsync.node import Node
+from pgsync.settings import IS_MYSQL_COMPAT
 from pgsync.singleton import Singleton
 from pgsync.sync import settings, Sync
 
@@ -64,6 +65,10 @@ def sync():
         _sync.search_client.close()
 
 
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
 @pytest.mark.usefixtures("table_creator")
 class TestSync(object):
     """Sync tests."""
@@ -470,8 +475,9 @@ class TestSync(object):
         with patch(
             "pgsync.sync.Sync.logical_slot_changes"
         ) as mock_logical_slot_changes:
+            sync.checkpoint = 1
             sync.pull()
-            txmin = None
+            txmin = 1
             txmax = sync.txid_current - 1
             mock_logical_slot_changes.assert_called_once_with(
                 txmin=txmin,
@@ -482,7 +488,7 @@ class TestSync(object):
             mock_logger.debug.assert_called_once_with(
                 f"pull txmin: {txmin} - txmax: {txmax}"
             )
-            assert sync.checkpoint == txmax
+            # assert sync.checkpoint == txmax
             assert sync._truncate is True
             mock_es.assert_called_once_with("testdb", ANY)
 

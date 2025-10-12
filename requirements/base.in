@@ -4,8 +4,11 @@ boto3
 click
 elasticsearch
 elasticsearch-dsl
+elastic-transport 
 environs
 opensearch-dsl
+mysql-replication
+pymysql
 psycopg2-binary
 python-dotenv
 redis

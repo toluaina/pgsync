@@ -13,11 +13,16 @@ from pgsync.exc import (
     TableNotInNodeError,
 )
 from pgsync.node import ForeignKey, Node, Relationship, Tree
+from pgsync.settings import IS_MYSQL_COMPAT
 
 
 @pytest.mark.usefixtures("table_creator")
 class TestNode(object):
     """Node tests."""
+
+    @classmethod
+    def setup_class(cls):
+        cls.schema = "testdb" if IS_MYSQL_COMPAT else "public"
 
     @pytest.fixture(scope="function")
     def nodes(self):
@@ -116,13 +121,13 @@ class TestNode(object):
         node = Node(
             models=pg_base.models,
             table="book",
-            schema="public",
+            schema=self.schema,
             label="book_label",
         )
-        assert str(node) == "Node: public.book_label"
+        assert str(node) == f"Node: {self.schema}.book_label"
 
     def test_traverse_breadth_first(self, sync, nodes):
-        root = Tree(sync.models, nodes=nodes)
+        root = Tree(sync.models, nodes=nodes, database=self.schema)
         root.display()
         for i, node in enumerate(root.traverse_breadth_first()):
             if i == 0:
@@ -146,7 +151,7 @@ class TestNode(object):
         sync.search_client.close()
 
     def test_traverse_post_order(self, sync, nodes):
-        root: Tree = Tree(sync.models, nodes=nodes)
+        root: Tree = Tree(sync.models, nodes=nodes, database=self.schema)
         root.display()
         for i, node in enumerate(root.traverse_post_order()):
             if i == 0:
@@ -183,7 +188,7 @@ class TestNode(object):
             ],
         }
         with pytest.raises(RelationshipAttributeError) as excinfo:
-            Tree(sync.models, nodes=nodes)
+            Tree(sync.models, nodes=nodes, database=self.schema)
         assert "Relationship attribute " in str(excinfo.value)
         sync.search_client.close()
 
@@ -200,13 +205,13 @@ class TestNode(object):
                 },
             ],
         }
-        tree: Tree = Tree(sync.models, nodes=nodes)
-        node = tree.get_node("book", "public")
-        assert str(node) == "Node: public.book"
+        tree: Tree = Tree(sync.models, nodes=nodes, database=self.schema)
+        node = tree.get_node("book", self.schema)
+        assert str(node) == f"Node: {self.schema}.book"
 
         with pytest.raises(RuntimeError) as excinfo:
-            tree.get_node("xxx", "public")
-        assert "Node for public.xxx not found" in str(excinfo.value)
+            tree.get_node("xxx", self.schema)
+        assert f"Node for {self.schema}.xxx not found" in str(excinfo.value)
 
         sync.search_client.close()
 
@@ -217,6 +222,7 @@ class TestNode(object):
                 nodes={
                     "table": None,
                 },
+                database=self.schema,
             )
 
         with pytest.raises(NodeAttributeError) as excinfo:
@@ -226,6 +232,7 @@ class TestNode(object):
                     "table": "book",
                     "foo": "bar",
                 },
+                database=self.schema,
             )
         assert "Unknown node attribute(s):" in str(excinfo.value)
 
@@ -246,6 +253,7 @@ class TestNode(object):
                         },
                     ],
                 },
+                database=self.schema,
             )
         assert "Unknown node attribute(s):" in str(excinfo.value)
 
@@ -264,6 +272,7 @@ class TestNode(object):
                         },
                     ],
                 },
+                database=self.schema,
             )
         assert "Table not specified in node" in str(excinfo.value)
 
@@ -273,6 +282,7 @@ class TestNode(object):
                 "table": "book",
                 "columns": ["tags->0"],
             },
+            database=self.schema,
         )
 
         sync.search_client.close()

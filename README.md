@@ -7,10 +7,10 @@
 [![codecov](https://codecov.io/gh/toluaina/pgsync/branch/main/graph/badge.svg?token=cvQzYkz6CV)](https://codecov.io/gh/toluaina/pgsync)
 
 
-## PostgreSQL to Elasticsearch/OpenSearch sync
+## PostgreSQL/MySQL/MariaDB to Elasticsearch/OpenSearch sync
 
-[PGSync](https://pgsync.com) is a middleware for syncing data from [Postgres](https://www.postgresql.org) to [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/) effortlessly.
-It allows you to keep [Postgres](https://www.postgresql.org) as your source of truth and
+[PGSync](https://pgsync.com) is a middleware for syncing data from [Postgres](https://www.postgresql.org) or [MySQL](https://www.mysql.com/) or [MariaDB](https://mariadb.org/) to [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/) effortlessly.
+It allows you to keep [Postgres](https://www.postgresql.org) or [MySQL](https://www.mysql.com/) or [MariaDB](https://mariadb.org/) as your source of truth and
 expose structured denormalized documents in [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/).
 
 Changes to nested entities are propagated to [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/).
@@ -24,7 +24,7 @@ without writing any code.
 [PGSync](https://pgsync.com) transforms your relational data into a structured document format.
 
 It allows you to take advantage of the expressive power and scalability of 
-[Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/) directly from [Postgres](https://www.postgresql.org). 
+[Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/) directly from [Postgres](https://www.postgresql.org) or [MySQL](https://www.mysql.com/) or [MariaDB](https://mariadb.org/). 
 You don't have to write complex queries and transformation pipelines.
 PGSync is lightweight, flexible and fast.
 
@@ -45,7 +45,7 @@ Other benefits of PGSync include:
 
 #### Why?
 
-At a high level, you have data in a Postgres database and you want to mirror it in Elasticsearch/OpenSearch.  
+At a high level, you have data in a PostgreSQL/MySQL/MariaDB database and you want to mirror it in Elasticsearch/OpenSearch.  
 This means every change to your data (***Insert***, ***Update***, ***Delete*** and ***Truncate*** statements) needs to be replicated to Elasticsearch/OpenSearch. 
 At first, this seems easy and then it's not. Simply add some code to copy the data to Elasticsearch/OpenSearch after updating the database (or so called dual writes).
 Writing SQL queries spanning multiple tables and involving multiple relationships are hard to write.
@@ -53,12 +53,11 @@ Detecting changes within a nested document can also be quite hard.
 Of course, if your data never changed, then you could just take a snapshot in time and load it into Elasticsearch/OpenSearch as a one-off operation.
 
 PGSync is appropriate for you if:
-- [Postgres](https://www.postgresql.org) is your read/write source of truth whilst [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/) is your 
+- [Postgres](https://www.postgresql.org) or [MySQL](https://www.mysql.com/) or [MariaDB](https://mariadb.org/) is your read/write source of truth whilst [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/) is your 
 read-only search layer.
 - You need to denormalize relational data into a NoSQL data source.
 - Your data is constantly changing.
-- You have existing data in a relational database such as [Postgres](https://www.postgresql.org) and you need
-a secondary NoSQL database like [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/) for text-based queries or autocomplete queries to mirror the existing data without having your application perform dual writes.
+- You have existing data in a relational database such as [Postgres](https://www.postgresql.org) or [MySQL](https://www.mysql.com/) or [MariaDB](https://mariadb.org/) and you need a secondary NoSQL database like [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/) for text-based queries or autocomplete queries to mirror the existing data without having your application perform dual writes.
 - You want to keep your existing data untouched whilst taking advantage of
 the search capabilities of [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/) by exposing a view of your data without compromising the security of your relational data.
 - Or you simply want to expose a view of your relational data for search purposes.
@@ -66,7 +65,7 @@ the search capabilities of [Elasticsearch](https://www.elastic.co/products/elast
 
 #### How it works
 
-PGSync is written in Python (supporting version 3.9 onwards) and the stack is composed of: [Redis](https://redis.io)/[Valkey](https://valkey.io), [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/), [Postgres](https://www.postgresql.org), and [SQLAlchemy](https://www.sqlalchemy.org).
+PGSync is written in Python (supporting version 3.9 onwards) and the stack is composed of: [Redis](https://redis.io)/[Valkey](https://valkey.io), [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/), [Postgres](https://www.postgresql.org)/[MySQL](https://www.mysql.com/)/[MariaDB](https://mariadb.org/), and [SQLAlchemy](https://www.sqlalchemy.org).
 
 PGSync leverages the [logical decoding](https://www.postgresql.org/docs/current/logicaldecoding.html) feature of [Postgres](https://www.postgresql.org) (introduced in PostgreSQL 9.4) to capture a continuous stream of change events.
 This feature needs to be enabled in your [Postgres](https://www.postgresql.org) configuration file by setting in the postgresql.conf file:
@@ -137,16 +136,16 @@ To start all services with Docker, follow these steps:
 Environment variable placeholders - full list [here](https://pgsync.com/env-vars):
 
 - redis_host_address — Address of the Redis/Valkey server (e.g., host.docker.internal for local Docker setup)
-- username — PostgreSQL username
-- password — PostgreSQL password
-- postgres_host — Host address for PostgreSQL instance (e.g., host.docker.internal)
-- database — Name of PostgreSQL database
+- username — PostgreSQL/MySQL/MariaDB username
+- password — PostgreSQL/MySQL/MariaDB password
+- postgres_host — Host address for PostgreSQL/MySQL/MariaDB instance (e.g., host.docker.internal)
+- database — Name of PostgreSQL/MySQL/MariaDB database
 - elasticsearch_host — Address of Elasticsearch/OpenSearch instance (e.g., host.docker.internal)
 
 
 ##### Manual configuration
 
-- Setup
+### Postgres Setup
   - Ensure the database user is a superuser 
   - Enable logical decoding. You would also need to set up at least two parameters at postgresql.conf
 
@@ -159,7 +158,31 @@ Environment variable placeholders - full list [here](https://pgsync.com/env-vars
 
     ```max_slot_wal_keep_size = 100GB```
 
-- Installation
+### MySQL / MariaDB setup
+
+- Enable binary logging in your MySQL / MariaDB setting.
+
+- You also need to set up the following parameters in your MySQL / MariaDB config my.cnf, then restart the database server.
+
+  ```server-id = 1``` # any non-zero unique ID
+
+  ```log_bin = mysql-bin```
+
+  ```binlog_row_image = FULL``` # recommended; if not supported on older MariaDB, omit
+
+- optional housekeeping:
+  ```binlog_expire_logs_seconds = 604800```   # 7 days
+
+- You need to create a replication user with REPLICATION SLAVE and REPLICATION CLIENT privileges
+    
+  ```sql
+  CREATE USER 'replicator'@'%' IDENTIFIED WITH mysql_native_password BY 'password';
+  GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'replicator'@'%';
+  FLUSH PRIVILEGES;
+  ```
+
+### Installation
+
   - Install PGSync from pypi using pip
     - ```$ pip install pgsync``` 
   - Create a [schema.json](https://github.com/toluaina/pgsync/blob/main/examples/airbnb/schema.json) for your document representation
@@ -180,18 +203,18 @@ Key features of PGSync are:
 - Negligible impact on database performance.
 - Transactionally consistent output in Elasticsearch/OpenSearch. This means: writes appear only when they are committed to the database, insert, update and delete operations appear in the same order as they were committed (as opposed to eventual consistency).
 - Fault-tolerant: does not lose data, even if processes crash or a network interruption occurs, etc. The process can be recovered from the last checkpoint.
-- Returns the data directly as Postgres JSON from the database for speed.
+- Returns the data directly as Postgres/MySQL/MariaDB JSON from the database for speed.
 - Supports composite primary and foreign keys.
 - Supports Views and Materialized views.
 - Supports an arbitrary depth of nested entities i.e Tables having long chain of relationship dependencies.
-- Supports Postgres JSON data fields. This means: we can extract JSON fields in a database table as a separate field in the resulting document.
+- Supports PostgreSQL/MySQL/MariaDB JSON data fields. This means: we can extract JSON fields in a database table as a separate field in the resulting document.
 - Customizable document structure.
 
 
 #### Requirements
 
 - [Python](https://www.python.org) 3.9+
-- [Postgres](https://www.postgresql.org) 9.6+
+- [Postgres](https://www.postgresql.org) 9.6+ or [MySQL](https://www.mysql.com/) 5.7.22+ or [MariaDB](https://mariadb.org/) 10.5.0+ 
 - [Redis](https://redis.io) 3.1.0+ or [Valkey](https://valkey.io) 7.2.0+
 - [Elasticsearch](https://www.elastic.co/products/elastic-stack) 6.3.1+ or [OpenSearch](https://opensearch.org/) 1.3.7+
 - [SQLAlchemy](https://www.sqlalchemy.org) 1.3.4+
@@ -327,7 +350,7 @@ PGSync addresses the following challenges:
 - PGSync generates advanced queries matching your schema directly.
 - PGSync allows you to easily rebuild your indexes in case of a schema change.
 - You can expose only the data you require in Elasticsearch/OpenSearch.
-- Supports multiple Postgres schemas for multi-tennant applications.
+- Supports multiple Postgres/MySQL/MariaDB schemas for multi-tennant applications.
 
 
 #### Contributing
@@ -335,16 +358,10 @@ PGSync addresses the following challenges:
 Contributions are very welcome! Check out the [Contribution](CONTRIBUTING.rst) Guidelines for instructions.
 
 
-#### Credits
-
-- This package was created with [Cookiecutter](https://github.com/audreyr/cookiecutter)
-- Elasticsearch is a trademark of Elasticsearch BV, registered in the U.S. and in other countries.
-
-
 #### License
 
 This project is licensed under the terms of the [MIT](https://opensource.org/license/mit/) license.
 Please see [LICENSE](LICENSE) for more details.
 
-You should have received a copy of the MIT License along with PGSync.  
+You should have received a copy of the MIT License along with **PGSync**.  
 If not, see https://opensource.org/license/mit/.

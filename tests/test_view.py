@@ -6,6 +6,7 @@ from mock import call, patch
 
 from pgsync.base import Base, create_schema, subtransactions
 from pgsync.constants import DEFAULT_SCHEMA
+from pgsync.settings import IS_MYSQL_COMPAT
 from pgsync.view import (
     _foreign_keys,
     _primary_keys,
@@ -19,6 +20,10 @@ from pgsync.view import (
 )
 
 
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
 class TestView(object):
     """View tests."""
 

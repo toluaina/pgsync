@@ -16,10 +16,20 @@ from itertools import groupby
 from pathlib import Path
 
 import click
+import pymysql
 import sqlalchemy as sa
 import sqlparse
 from psycopg2 import OperationalError
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from pymysqlreplication import BinLogStreamReader
+from pymysqlreplication.event import FormatDescriptionEvent, RotateEvent
+from pymysqlreplication.row_event import (
+    DeleteRowsEvent,
+    UpdateRowsEvent,
+    WriteRowsEvent,
+)
+
+from pgsync.settings import IS_MYSQL_COMPAT
 
 from . import __version__, settings
 from .base import Base, Payload
@@ -30,7 +40,7 @@ from .constants import (
     MATERIALIZED_VIEW_COLUMNS,
     META,
     PRIMARY_KEY_DELIMITER,
-    TG_OP,
+    TG_OPS,
     TRUNCATE,
     UPDATE,
 )
@@ -56,6 +66,7 @@ from .utils import (
     exception,
     format_number,
     MutuallyExclusiveOption,
+    remap_unknown,
     show_settings,
     threaded,
     Timer,
@@ -63,6 +74,7 @@ from .utils import (
 )
 
 TX_BOUNDARY_RE = re.compile(r"^(BEGIN|COMMIT)\s+(\d+)", re.IGNORECASE)
+
 
 logger = logging.getLogger(__name__)
 
@@ -100,14 +112,16 @@ class Sync(Base, metaclass=Singleton):
         self.__name: str = re.sub(
             "[^0-9a-zA-Z_]+", "", f"{self.database.lower()}_{self.index}"
         )
-        self._checkpoint: int = None
+        self._checkpoint: t.Optional[t.Union[str, int]] = None
         self._plugins: Plugins = None
         self._truncate: bool = False
         self.producer: bool = producer
         self.consumer: bool = consumer
         self.num_workers: int = num_workers
         self.redis: RedisQueue = RedisQueue(self.__name)
-        self.tree: Tree = Tree(self.models, nodes=self.nodes)
+        self.tree: Tree = Tree(
+            self.models, nodes=self.nodes, database=doc["database"]
+        )
         if bootstrap:
             self.setup()
 
@@ -146,42 +160,43 @@ class Sync(Base, metaclass=Singleton):
         if self.index is None:
             raise ValueError("Index is missing for doc")
 
-        if not polling:
-            max_replication_slots: t.Optional[str] = self.pg_settings(
-                "max_replication_slots"
-            )
-            try:
-                if int(max_replication_slots) < 1:
-                    raise TypeError
-            except TypeError:
-                raise RuntimeError(
-                    "Ensure there is at least one replication slot defined "
-                    "by setting max_replication_slots = 1"
+        if not self.is_mysql_compat:
+            if not polling:
+                max_replication_slots: t.Optional[str] = self.pg_settings(
+                    "max_replication_slots"
                 )
+                try:
+                    if int(max_replication_slots) < 1:
+                        raise TypeError
+                except TypeError:
+                    raise RuntimeError(
+                        "Ensure there is at least one replication slot defined "
+                        "by setting max_replication_slots = 1"
+                    )
 
-            wal_level: t.Optional[str] = self.pg_settings("wal_level")
-            if not wal_level or wal_level.lower() != "logical":
-                raise RuntimeError(
-                    "Enable logical decoding by setting wal_level = logical"
+                wal_level: t.Optional[str] = self.pg_settings("wal_level")
+                if not wal_level or wal_level.lower() != "logical":
+                    raise RuntimeError(
+                        "Enable logical decoding by setting wal_level = logical"
+                    )
+
+                self._can_create_replication_slot("_tmp_")
+
+                rds_logical_replication: t.Optional[str] = self.pg_settings(
+                    "rds.logical_replication"
                 )
+                if (
+                    rds_logical_replication
+                    and rds_logical_replication.lower() == "off"
+                ):
+                    raise RDSError("rds.logical_replication is not enabled")
 
-            self._can_create_replication_slot("_tmp_")
-
-            rds_logical_replication: t.Optional[str] = self.pg_settings(
-                "rds.logical_replication"
-            )
-            if (
-                rds_logical_replication
-                and rds_logical_replication.lower() == "off"
-            ):
-                raise RDSError("rds.logical_replication is not enabled")
-
-            # ensure we have run bootstrap and the replication slot exists
-            if repl_slots and not self.replication_slots(self.__name):
-                raise RuntimeError(
-                    f'Replication slot "{self.__name}" does not exist.\n'
-                    f'Make sure you have run the "bootstrap" command.'
-                )
+                # ensure we have run bootstrap and the replication slot exists
+                if repl_slots and not self.replication_slots(self.__name):
+                    raise RuntimeError(
+                        f'Replication slot "{self.__name}" does not exist.\n'
+                        f'Make sure you have run the "bootstrap" command.'
+                    )
 
         if not settings.REDIS_CHECKPOINT:
             # ensure the checkpoint dirpath is valid
@@ -286,6 +301,10 @@ class Sync(Base, metaclass=Singleton):
 
     def setup(self, no_create: bool = False) -> None:
         """Create the database triggers and replication slot."""
+        if self.is_mysql_compat:
+            raise NotImplementedError(
+                "Setup is not supported for MySQL-family backend (MySQL or MariaDB)"
+            )
 
         if_not_exists: bool = not no_create
 
@@ -358,6 +377,10 @@ class Sync(Base, metaclass=Singleton):
 
     def teardown(self, drop_view: bool = True) -> None:
         """Drop the database triggers and replication slot."""
+        if self.is_mysql_compat:
+            raise NotImplementedError(
+                "Teardown is not supported for MySQL-family backend (MySQL or MariaDB)"
+            )
 
         join_queries: bool = settings.JOIN_QUERIES
 
@@ -510,6 +533,195 @@ class Sync(Base, metaclass=Singleton):
             txmax=txmax,
             upto_lsn=upto_lsn,
         )
+        self.checkpoint = txmax or self.txid_current
+
+    def _xlog_progress(self, current: int, total: t.Optional[int]) -> None:
+        try:
+            self.log_xlog_progress(current, total, bar_length=30)
+        except Exception:
+            pass
+
+    def binlog_changes(
+        self,
+        start_log: t.Optional[str] = None,
+        start_pos: t.Optional[int] = None,
+        server_id: int = 9991,
+        binlog_chunk_size: t.Optional[int] = None,
+        blocking: bool = False,
+    ) -> None:
+        """Stream MySQL/MariaDB row events and process."""
+        limit: int = binlog_chunk_size or settings.LOGICAL_SLOT_CHUNK_SIZE
+        allowed_schemas: t.Set = {
+            s.lower() for s in (getattr(self.tree, "schemas", []) or [])
+        }
+
+        # Detect MariaDB from SQLAlchemy engine
+        with self.engine.connect() as conn:
+            is_mariadb: bool = getattr(conn.dialect, "is_mariadb", False)
+
+        def _conn_settings_from_engine(engine: sa.Engine) -> dict:
+            url = engine.url
+            return {
+                "host": url.host,
+                "port": int(url.port),
+                "user": url.username,
+                "passwd": url.password or "",
+                "charset": "utf8mb4",
+                "autocommit": True,
+            }
+
+        base = _conn_settings_from_engine(self.engine)
+        connection_settings = dict(base)  # replication socket
+        ctl_connection_settings = dict(base)
+        ctl_connection_settings["cursorclass"] = (
+            pymysql.cursors.Cursor
+        )  # tuple rows
+
+        stream: BinLogStreamReader = BinLogStreamReader(
+            connection_settings=connection_settings,
+            ctl_connection_settings=ctl_connection_settings,  # separate control socket w/ tuple cursor
+            server_id=server_id,
+            is_mariadb=is_mariadb,
+            log_file=start_log,  # None => server current file
+            log_pos=int(start_pos or 4),  # must be the "next event" position
+            resume_stream=True,
+            blocking=blocking,
+            only_events=[
+                FormatDescriptionEvent,
+                RotateEvent,
+                WriteRowsEvent,
+                UpdateRowsEvent,
+                DeleteRowsEvent,
+            ],
+            freeze_schema=False,
+        )
+
+        current = 0
+        total = None
+        batch: list = []
+        last_key: t.Optional[tuple[str, str]] = None
+        batch_limit = limit
+
+        # Single-save checkpoint snapshot
+        save_file: t.Optional[str] = start_log
+        save_pos: int = int(start_pos or 4)
+
+        try:
+            for event in stream:
+                # Snapshot the stream cursor FIRST so skips still advance checkpoint
+                if getattr(stream, "log_file", None):
+                    save_file = stream.log_file
+                if getattr(stream, "log_pos", None):
+                    save_pos = int(stream.log_pos)
+
+                # Handle rotation immediately
+                if isinstance(event, RotateEvent):
+                    next_binlog = event.next_binlog
+                    save_file = (
+                        next_binlog.decode()
+                        if isinstance(next_binlog, (bytes, bytearray))
+                        else next_binlog
+                    )
+                    save_pos = int(getattr(event, "position", 4) or 4)
+                    continue
+
+                schema: str = (getattr(event, "schema", "") or "").lower()
+                table: str = (getattr(event, "table", "") or "").lower()
+                if allowed_schemas and schema not in allowed_schemas:
+                    continue
+
+                # Build payloads
+                if isinstance(event, WriteRowsEvent):
+                    for row in event.rows:
+                        payload = Payload(
+                            schema=schema,
+                            table=table,
+                            tg_op="INSERT",
+                            new=remap_unknown(
+                                self.engine, schema, table, row.get("values")
+                            ),
+                        )
+                        key = (payload.tg_op, payload.table)
+                        if last_key is None or key == last_key:
+                            batch.append(payload)
+                        else:
+                            self._flush_batch(last_key, batch)
+                            batch = [payload]
+                        last_key = key
+                        current += 1
+                        self._xlog_progress(current, total)
+
+                elif isinstance(event, UpdateRowsEvent):
+                    for row in event.rows:
+                        payload = Payload(
+                            schema=schema,
+                            table=table,
+                            tg_op="UPDATE",
+                            old=remap_unknown(
+                                self.engine,
+                                schema,
+                                table,
+                                row.get("before_values"),
+                            ),
+                            new=remap_unknown(
+                                self.engine,
+                                schema,
+                                table,
+                                row.get("after_values"),
+                            ),
+                        )
+                        key = (payload.tg_op, payload.table)
+                        if last_key is None or key == last_key:
+                            batch.append(payload)
+                        else:
+                            self._flush_batch(last_key, batch)
+                            batch = [payload]
+                        last_key = key
+                        current += 1
+                        self._xlog_progress(current, total)
+
+                elif isinstance(event, DeleteRowsEvent):
+                    for row in event.rows:
+                        payload = Payload(
+                            schema=schema,
+                            table=table,
+                            tg_op="DELETE",
+                            old=remap_unknown(
+                                self.engine, schema, table, row.get("values")
+                            ),
+                        )
+                        key = (payload.tg_op, payload.table)
+                        if last_key is None or key == last_key:
+                            batch.append(payload)
+                        else:
+                            self._flush_batch(last_key, batch)
+                            batch = [payload]
+                        last_key = key
+                        current += 1
+                        self._xlog_progress(current, total)
+
+                if batch_limit and last_key and len(batch) >= batch_limit:
+                    self._flush_batch(last_key, batch)
+                    batch = []
+                    last_key = None
+
+        finally:
+            if last_key and batch:
+                self._flush_batch(last_key, batch)
+            # Single checkpoint save using the stream’s authoritative cursor
+            if getattr(stream, "log_file", None):
+                save_file = stream.log_file
+            if getattr(stream, "log_pos", None):
+                save_pos = int(stream.log_pos)
+            stream.close()
+            if save_file:
+                self.checkpoint = f"{save_file},{save_pos}"
+
+    def _flush_batch(self, last_key: tuple[str, str], batch: list) -> None:
+        if not batch:
+            return
+        self.search_client.bulk(self.index, self._payloads(batch))
+        self.count["xlog"] = self.count.get("xlog", 0) + len(batch)
 
     def _root_primary_key_resolver(
         self,
@@ -1031,7 +1243,7 @@ class Sync(Base, metaclass=Singleton):
 
         """
         payload: Payload = payloads[0]
-        if payload.tg_op not in TG_OP:
+        if payload.tg_op not in TG_OPS:
             logger.exception(f"Unknown tg_op {payload.tg_op}")
             raise InvalidTGOPError(f"Unknown tg_op {payload.tg_op}")
 
@@ -1157,7 +1369,7 @@ class Sync(Base, metaclass=Singleton):
         ctid: t.Optional[dict] = None,
     ) -> t.Generator:
         """
-        Synchronizes data from PostgreSQL to Elasticsearch.
+        Synchronizes data from PostgreSQL/MySQL/MariaDB to Elasticsearch/OpenSearch.
 
         Args:
             filters (Optional[dict]): A dictionary of filters to apply to the data.
@@ -1166,7 +1378,7 @@ class Sync(Base, metaclass=Singleton):
             ctid (Optional[dict]): A dictionary of ctid values to include in the synchronization.
 
         Yields:
-            dict: A dictionary representing a doc to be indexed in Elasticsearch.
+            dict: A dictionary representing a doc to be indexed in Elasticsearch/OpenSearch.
         """
         self.query_builder.isouter = True
         self.query_builder.from_obj = None
@@ -1236,12 +1448,12 @@ class Sync(Base, metaclass=Singleton):
             yield doc
 
     @property
-    def checkpoint(self) -> int:
+    def checkpoint(self) -> t.Union[str, int]:
         """
-        Gets the current checkpoint value.
+        Gets the current checkpoint value from file or Redis/Valkey.
 
         :return: The current checkpoint value.
-        :rtype: int
+        :rtype: int or str
         """
         raw: t.Optional[str]
         if settings.REDIS_CHECKPOINT:
@@ -1257,15 +1469,41 @@ class Sync(Base, metaclass=Singleton):
         if raw is None:
             return None
 
-        try:
-            self._checkpoint = int(raw)
-        except ValueError as exc:
-            raise ValueError(f"Corrupt checkpoint value: {raw!r}") from exc
+        if self.is_mysql_compat:
+            parts: list[str] = [p.strip() for p in raw.split(",")]
+            if len(parts) != 2:
+                raise ValueError(
+                    f"Corrupt checkpoint value (expected 'log_file,log_pos'): {raw!r}"
+                )
+
+            log_file, pos = parts
+            if not log_file:
+                raise ValueError("Corrupt checkpoint value: empty log file.")
+
+            try:
+                log_pos = int(pos)
+            except ValueError as exc:
+                raise ValueError(
+                    f"Corrupt checkpoint value: non-integer log position {pos!r}"
+                ) from exc
+
+            if log_pos < 0:
+                raise ValueError(
+                    f"Corrupt checkpoint value: negative log position {log_pos}"
+                )
+
+            self._checkpoint = f"{log_file},{log_pos}"
+
+        else:
+            try:
+                self._checkpoint = int(raw)
+            except ValueError as exc:
+                raise ValueError(f"Corrupt checkpoint value: {raw!r}") from exc
 
         return self._checkpoint
 
     @checkpoint.setter
-    def checkpoint(self, value: t.Optional[str] = None) -> None:
+    def checkpoint(self, value: t.Union[str, int]) -> None:
         """
         Sets the checkpoint value.
 
@@ -1436,10 +1674,12 @@ class Sync(Base, metaclass=Singleton):
                     self.count["db"] += 1
 
     def refresh_views(self) -> None:
-        self._refresh_views()
+        if not self.is_mysql_compat:
+            self._refresh_views()
 
     async def async_refresh_views(self) -> None:
-        self._refresh_views()
+        if not self.is_mysql_compat:
+            self._refresh_views()
 
     def _refresh_views(self) -> None:
         for node in self.tree.traverse_breadth_first():
@@ -1511,34 +1751,54 @@ class Sync(Base, metaclass=Singleton):
 
     def pull(self, polling: bool = False) -> None:
         """Pull data from db."""
-        txmin: int = self.checkpoint
-        txmax: int = self.txid_current
-        logical_slot_chunk_size: int = settings.LOGICAL_SLOT_CHUNK_SIZE
+        txmin: t.Optional[int] = None
+        txmax: t.Optional[int] = None
+        chunk_size: int = settings.LOGICAL_SLOT_CHUNK_SIZE
 
-        logger.debug(f"pull txmin: {txmin} - txmax: {txmax}")
+        if self.is_mysql_compat:
+            start_log: t.Optional[str] = None
+            start_pos: t.Optional[int] = None
+            if self.checkpoint:
+                start_log, start_pos = [
+                    p.strip() for p in self.checkpoint.split(",")
+                ]
+            logger.debug(
+                f"pull start_log: {start_log} - start_pos: {start_pos}"
+            )
+        else:
+            txmin = self.checkpoint
+            txmax = self.txid_current
+            logger.debug(f"pull txmin: {txmin} - txmax: {txmax}")
+
         # forward pass sync
         self.search_client.bulk(
             self.index, self.sync(txmin=txmin, txmax=txmax)
         )
 
-        # this is the max lsn we should go upto
-        upto_lsn: str = self.current_wal_lsn
-        try:
-            # now sync up to txmax to capture everything we may have missed
-            self.logical_slot_changes(
-                txmin=txmin,
-                txmax=txmax,
-                logical_slot_chunk_size=logical_slot_chunk_size,
-                upto_lsn=upto_lsn,
+        if self.is_mysql_compat:
+            self.binlog_changes(
+                start_log=start_log,
+                start_pos=start_pos,
+                binlog_chunk_size=chunk_size,
             )
-        except Exception as e:
-            # if we are polling, we can just continue
-            if polling:
-                return
-            else:
-                raise
+        else:
+            # this is the max lsn we should go upto
+            upto_lsn: str = self.current_wal_lsn
+            try:
+                # now sync up to txmax to capture everything we may have missed
+                self.logical_slot_changes(
+                    txmin=txmin,
+                    txmax=txmax,
+                    logical_slot_chunk_size=chunk_size,
+                    upto_lsn=upto_lsn,
+                )
+            except Exception as e:
+                # if we are polling, we can just continue
+                if polling:
+                    return
+                else:
+                    raise
 
-        self.checkpoint: int = txmax or self.txid_current
         self._truncate = True
 
     @threaded
@@ -1793,6 +2053,10 @@ def main(
     validate_config(config=config, s3_schema_url=s3_schema_url)
 
     show_settings(config=config, s3_schema_url=s3_schema_url)
+
+    # MySQL and MariaDB are only supported in polling mode
+    if daemon and IS_MYSQL_COMPAT:
+        polling = True
 
     if producer:
         consumer = False

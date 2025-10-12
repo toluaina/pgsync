@@ -9,6 +9,8 @@ from dataclasses import dataclass
 
 import sqlalchemy as sa
 
+from pgsync.settings import IS_MYSQL_COMPAT
+
 from .constants import (
     DEFAULT_SCHEMA,
     JSONB_OPERATORS,
@@ -149,8 +151,9 @@ class Node(object):
         ]
         if not self.column_names:
             self.column_names = [str(column) for column in self.table_columns]
-            for name in ("ctid", "oid", "xmin"):
-                self.column_names.remove(name)
+            if not IS_MYSQL_COMPAT:
+                for name in ("ctid", "oid", "xmin"):
+                    self.column_names.remove(name)
 
         if self.label is None:
             self.label = self.table
@@ -186,39 +189,106 @@ class Node(object):
         self.columns = []
 
         for column_name in self.column_names:
-            tokens: t.Optional[list] = None
+            tokens = None
             if any(op in column_name for op in JSONB_OPERATORS):
                 tokens = re.split(
-                    f"({'|'.join(JSONB_OPERATORS)})",
-                    column_name,
+                    f"({'|'.join(JSONB_OPERATORS)})", column_name
                 )
 
             if tokens:
-                tokenized = self.model.c[tokens[0]]
-                for token in tokens[1:]:
-                    if token in JSONB_OPERATORS:
-                        tokenized = tokenized.op(token)
-                        continue
-                    if token.isdigit():
-                        token = int(token)
-                    tokenized = tokenized(token)
-                self.columns.append(
-                    "_".join(
-                        [
+                if IS_MYSQL_COMPAT:
+                    base_col = tokens[0].strip()
+                    if not base_col:
+                        raise ValueError(
+                            f"Invalid JSON column expression: {column_name!r}"
+                        )
+
+                    text_mode = any(
+                        tok in ("->>", "#>>")
+                        for tok in tokens
+                        if tok in JSONB_OPERATORS
+                    )
+
+                    path_parts = []
+
+                    def add_path_piece(tok: str):
+                        tok = tok.strip()
+                        if not tok:
+                            return
+                        if tok.startswith("{") and tok.endswith(
+                            "}"
+                        ):  # brace form: {a,b,0}
+                            inner = tok[1:-1]
+                            for part in [
+                                p.strip().strip('"').strip("'")
+                                for p in inner.split(",")
+                                if p.strip()
+                            ]:
+                                if part.isdigit():
+                                    path_parts.append(f"[{int(part)}]")
+                                else:
+                                    part = part.replace('"', r"\"")
+                                    path_parts.append(f'."{part}"')
+                        else:  # single key or index
+                            if tok.isdigit():
+                                path_parts.append(f"[{int(tok)}]")
+                            else:
+                                tok = (
+                                    tok.strip('"')
+                                    .strip("'")
+                                    .replace('"', r"\"")
+                                )
+                                path_parts.append(f'."{tok}"')
+
+                    for tok in tokens[1:]:
+                        if tok in JSONB_OPERATORS:
+                            continue
+                        add_path_piece(tok)
+
+                    json_path = "$" + "".join(path_parts)
+                    extracted = sa.func.JSON_EXTRACT(
+                        self.model.c[base_col], json_path
+                    )
+                    tokenized = (
+                        sa.func.JSON_UNQUOTE(extracted)
+                        if text_mode
+                        else extracted
+                    )
+
+                    # alias (same logic as your original)
+                    self.columns.append(
+                        "_".join(
                             x.replace("{", "").replace("}", "")
                             for x in tokens
                             if x not in JSONB_OPERATORS
-                        ]
+                        )
                     )
-                )
-                self.columns.append(tokenized)
-                # compiled_query(self.columns[-1], 'JSONB Query')
+                    self.columns.append(tokenized)
+
+                else:
+                    tokenized = self.model.c[tokens[0]]
+                    for token in tokens[1:]:
+                        if token in JSONB_OPERATORS:
+                            tokenized = tokenized.op(token)
+                            continue
+                        if token.isdigit():
+                            token = int(token)
+                        tokenized = tokenized(token)
+                    self.columns.append(
+                        "_".join(
+                            [
+                                x.replace("{", "").replace("}", "")
+                                for x in tokens
+                                if x not in JSONB_OPERATORS
+                            ]
+                        )
+                    )
+                    self.columns.append(tokenized)
 
             else:
                 if column_name not in self.table_columns:
                     raise ColumnNotFoundError(
-                        f'Column "{column_name}" not present on '
-                        f'table "{self.table}"'
+                        f'Column "{column_name}" not present on table "{self.table}"'
                     )
                 self.columns.append(column_name)
                 self.columns.append(self.model.c[column_name])
@@ -281,6 +351,7 @@ class Node(object):
 class Tree(threading.local):
     models: t.Callable
     nodes: dict
+    database: str
 
     def __post_init__(self):
         self.tables: t.Set[str] = set()
@@ -303,8 +374,14 @@ class Tree(threading.local):
             raise SchemaError(
                 "Incompatible schema. Please run v2 schema migration"
             )
+
         table: str = nodes.get("table")
-        schema: str = nodes.get("schema", DEFAULT_SCHEMA)
+        schema: str = (
+            self.database
+            if IS_MYSQL_COMPAT
+            else nodes.get("schema", DEFAULT_SCHEMA)
+        )
+
         key: t.Tuple[str, str] = (schema, table)
 
         if table is None:

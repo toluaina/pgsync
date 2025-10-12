@@ -4,10 +4,15 @@ import pytest
 
 from pgsync.base import subtransactions
 from pgsync.node import Tree
+from pgsync.settings import IS_MYSQL_COMPAT
 
 from .testing_utils import assert_resync_empty, sort_list
 
 
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
 @pytest.mark.usefixtures("table_creator")
 class TestUniqueBehaviour(object):
     """Unique behaviour tests."""
@@ -211,7 +216,7 @@ class TestUniqueBehaviour(object):
         Test regular sync produces the correct result
         """
         sync.tree.__nodes = {}
-        sync.tree = Tree(sync.models, nodes)
+        sync.tree = Tree(sync.models, nodes, database=sync.database)
         docs = [sort_list(doc) for doc in sync.sync()]
         docs = sorted(docs, key=lambda k: k["_id"])
         assert docs == [

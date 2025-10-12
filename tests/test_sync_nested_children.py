@@ -6,12 +6,17 @@ import pytest
 
 from pgsync.base import subtransactions
 from pgsync.node import Tree
+from pgsync.settings import IS_MYSQL_COMPAT
 from pgsync.singleton import Singleton
 from pgsync.sync import Sync
 
 from .testing_utils import assert_resync_empty, noop, search, sort_list
 
 
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
 @pytest.mark.usefixtures("table_creator")
 class TestNestedChildren(object):
     """Root and nested childred node tests."""
@@ -381,7 +386,7 @@ class TestNestedChildren(object):
 
     def test_sync(self, sync, nodes, data):
         """Test regular sync produces the correct result."""
-        sync.tree = Tree(sync.models, nodes)
+        sync.tree = Tree(sync.models, nodes, database=sync.database)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert len(docs) == 3
         docs = sorted(docs, key=lambda k: k["_id"])
@@ -996,7 +1001,7 @@ class TestNestedChildren(object):
                             sync.search_client.refresh("testdb")
 
         txmin = sync.checkpoint
-        sync.tree = Tree(sync.models, nodes)
+        sync.tree = Tree(sync.models, nodes, database=sync.database)
         docs = [sort_list(doc) for doc in sync.sync(txmin=txmin)]
         assert len(docs) == 0
 
@@ -1161,7 +1166,7 @@ class TestNestedChildren(object):
         }
 
         sync = Sync(doc)
-        sync.tree = Tree(sync.models, nodes)
+        sync.tree = Tree(sync.models, nodes, database=sync.database)
         session = sync.session
 
         with subtransactions(session):

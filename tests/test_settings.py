@@ -19,15 +19,15 @@ def test_redis_url(mocker):
     mock_get_redis_url.assert_called_once()
 
 
-def test_postgres_url(mocker):
-    """Test the postgres url is configured."""
-    mock_get_postgres_url = mocker.patch(
-        "pgsync.base.get_postgres_url",
+def test_database_url(mocker):
+    """Test the database url is configured."""
+    mock_get_database_url = mocker.patch(
+        "pgsync.base.get_database_url",
         return_value="postgresql://kermit:frog@some-host:5432/wheel",
     )
     mocker.patch("logging.config.dictConfig")
     engine = _pg_engine("wheel")
-    mock_get_postgres_url.assert_called_once()
+    mock_get_database_url.assert_called_once()
     url = "postgresql://kermit:***@some-host:5432/wheel"
     assert str(engine.engine.url) == url
 

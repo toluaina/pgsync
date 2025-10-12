@@ -75,7 +75,7 @@ def main(
     verbose: bool,
     no_create: bool = False,
 ) -> None:
-    """Application onetime Bootstrap."""
+    """Application onetime bootstrap."""
     kwargs: dict = {
         "user": user,
         "host": host,

@@ -10,9 +10,10 @@ from sqlalchemy.schema import UniqueConstraint
 
 from pgsync.base import Base, create_database, drop_database
 from pgsync.constants import DEFAULT_SCHEMA
+from pgsync.settings import IS_MYSQL_COMPAT
 from pgsync.singleton import Singleton
 from pgsync.sync import Sync
-from pgsync.urls import get_postgres_url
+from pgsync.urls import get_database_url
 
 logging.getLogger("faker").setLevel(logging.ERROR)
 
@@ -27,7 +28,7 @@ def base():
 
 @pytest.fixture(scope="session")
 def dns():
-    return get_postgres_url("testdb")
+    return get_database_url("testdb")
 
 
 @pytest.fixture(scope="session")
@@ -64,10 +65,11 @@ def sync():
         }
     )
     yield _sync
-    _sync.logical_slot_get_changes(
-        f"{_sync.database}_testdb",
-        upto_nchanges=None,
-    )
+    if not IS_MYSQL_COMPAT:
+        _sync.logical_slot_get_changes(
+            f"{_sync.database}_testdb",
+            upto_nchanges=None,
+        )
     _sync.engine.connect().close()
     _sync.engine.dispose()
     _sync.session.close()
@@ -101,7 +103,7 @@ def city_cls(base, country_cls):
         __tablename__ = "city"
         __table_args__ = (UniqueConstraint("name", "country_id"),)
         id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-        name: Mapped[str] = mapped_column(sa.String, nullable=False)
+        name: Mapped[str] = mapped_column(sa.String(256), nullable=False)
         country_id: Mapped[int] = mapped_column(
             sa.Integer, sa.ForeignKey(country_cls.id)
         )
@@ -118,7 +120,7 @@ def country_cls(base, continent_cls):
         __tablename__ = "country"
         __table_args__ = (UniqueConstraint("name", "continent_id"),)
         id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-        name: Mapped[str] = mapped_column(sa.String, nullable=False)
+        name: Mapped[str] = mapped_column(sa.String(256), nullable=False)
         continent_id: Mapped[int] = mapped_column(
             sa.Integer, sa.ForeignKey(continent_cls.id)
         )
@@ -136,7 +138,7 @@ def continent_cls(base):
         __tablename__ = "continent"
         __table_args__ = (UniqueConstraint("name"),)
         id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-        name: Mapped[str] = mapped_column(sa.String, nullable=False)
+        name: Mapped[str] = mapped_column(sa.String(256), nullable=False)
 
     return Continent
 
@@ -147,7 +149,7 @@ def publisher_cls(base):
         __tablename__ = "publisher"
         __table_args__ = (UniqueConstraint("name"),)
         id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-        name: Mapped[str] = mapped_column(sa.String, nullable=False)
+        name: Mapped[str] = mapped_column(sa.String(256), nullable=False)
 
     return Publisher
 
@@ -158,7 +160,7 @@ def author_cls(base, city_cls):
         __tablename__ = "author"
         __table_args__ = (UniqueConstraint("name"),)
         id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-        name: Mapped[str] = mapped_column(sa.String, nullable=False)
+        name: Mapped[str] = mapped_column(sa.String(256), nullable=False)
         birth_year: Mapped[int] = mapped_column(sa.Integer, nullable=True)
         city_id: Mapped[int] = mapped_column(
             sa.Integer, sa.ForeignKey(city_cls.id)
@@ -176,7 +178,7 @@ def shelf_cls(base):
         __tablename__ = "shelf"
         __table_args__ = (UniqueConstraint("shelf"),)
         id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-        shelf: Mapped[str] = mapped_column(sa.String, nullable=False)
+        shelf: Mapped[str] = mapped_column(sa.String(256), nullable=False)
 
     return Shelf
 
@@ -187,7 +189,7 @@ def subject_cls(base):
         __tablename__ = "subject"
         __table_args__ = (UniqueConstraint("name"),)
         id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-        name: Mapped[str] = mapped_column(sa.String, nullable=False)
+        name: Mapped[str] = mapped_column(sa.String(256), nullable=False)
 
     return Subject
 
@@ -198,7 +200,7 @@ def language_cls(base):
         __tablename__ = "language"
         __table_args__ = (UniqueConstraint("code"),)
         id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-        code: Mapped[str] = mapped_column(sa.String, nullable=False)
+        code: Mapped[str] = mapped_column(sa.String(256), nullable=False)
 
     return Language
 
@@ -209,7 +211,7 @@ def contact_cls(base):
         __tablename__ = "contact"
         __table_args__ = (UniqueConstraint("name"),)
         id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-        name: Mapped[str] = mapped_column(sa.String, nullable=False)
+        name: Mapped[str] = mapped_column(sa.String(256), nullable=False)
 
     return Contact
 
@@ -223,7 +225,7 @@ def contact_item_cls(base, contact_cls):
             UniqueConstraint("contact_id"),
         )
         id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-        name: Mapped[str] = mapped_column(sa.String, nullable=False)
+        name: Mapped[str] = mapped_column(sa.String(256), nullable=False)
         contact_id: Mapped[int] = mapped_column(
             sa.Integer, sa.ForeignKey(contact_cls.id)
         )
@@ -245,7 +247,7 @@ def user_cls(base, contact_cls):
         id: Mapped[int] = mapped_column(
             sa.Integer, primary_key=True, autoincrement=True
         )
-        name: Mapped[str] = mapped_column(sa.String, nullable=False)
+        name: Mapped[str] = mapped_column(sa.String(256), nullable=False)
         contact_id: Mapped[int] = mapped_column(
             sa.Integer, sa.ForeignKey(contact_cls.id)
         )
@@ -261,10 +263,10 @@ def book_cls(base, publisher_cls, user_cls):
     class Book(base):
         __tablename__ = "book"
         __table_args__ = (UniqueConstraint("isbn"),)
-        isbn: Mapped[str] = mapped_column(sa.String, primary_key=True)
-        title: Mapped[str] = mapped_column(sa.String, nullable=False)
-        description: Mapped[str] = mapped_column(sa.String, nullable=True)
-        copyright: Mapped[str] = mapped_column(sa.String, nullable=True)
+        isbn: Mapped[str] = mapped_column(sa.String(256), primary_key=True)
+        title: Mapped[str] = mapped_column(sa.String(256), nullable=False)
+        description: Mapped[str] = mapped_column(sa.String(256), nullable=True)
+        copyright: Mapped[str] = mapped_column(sa.String(256), nullable=True)
         publisher_id: Mapped[int] = mapped_column(
             sa.Integer, sa.ForeignKey(publisher_cls.id), nullable=True
         )
@@ -287,9 +289,7 @@ def book_cls(base, publisher_cls, user_cls):
             backref=sa.orm.backref("sellers"),
             foreign_keys=[seller_id],
         )
-        tags: Mapped[sa.dialects.postgresql.JSONB] = mapped_column(
-            sa.dialects.postgresql.JSONB, nullable=True
-        )
+        tags: Mapped[sa.JSON] = mapped_column(sa.JSON, nullable=True)
 
     return Book
 
@@ -301,7 +301,7 @@ def book_author_cls(base, book_cls, author_cls):
         __table_args__ = (UniqueConstraint("book_isbn", "author_id"),)
         id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
         book_isbn: Mapped[str] = mapped_column(
-            sa.String, sa.ForeignKey(book_cls.isbn)
+            sa.String(256), sa.ForeignKey(book_cls.isbn)
         )
         book: Mapped[book_cls] = sa.orm.relationship(
             book_cls, backref=sa.orm.backref("book_author_books")
@@ -323,7 +323,7 @@ def book_subject_cls(base, book_cls, subject_cls):
         __table_args__ = (UniqueConstraint("book_isbn", "subject_id"),)
         id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
         book_isbn: Mapped[str] = mapped_column(
-            sa.String, sa.ForeignKey(book_cls.isbn)
+            sa.String(256), sa.ForeignKey(book_cls.isbn)
         )
         book: Mapped[book_cls] = sa.orm.relationship(
             book_cls, backref=sa.orm.backref("book_subject_books")
@@ -345,7 +345,7 @@ def book_language_cls(base, book_cls, language_cls):
         __table_args__ = (UniqueConstraint("book_isbn", "language_id"),)
         id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
         book_isbn: Mapped[str] = mapped_column(
-            sa.String, sa.ForeignKey(book_cls.isbn)
+            sa.String(256), sa.ForeignKey(book_cls.isbn)
         )
         book: Mapped[book_cls] = sa.orm.relationship(
             book_cls, backref=sa.orm.backref("book_language_books")
@@ -367,7 +367,7 @@ def book_shelf_cls(base, book_cls, shelf_cls):
         __table_args__ = (UniqueConstraint("book_isbn", "shelf_id"),)
         id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
         book_isbn: Mapped[str] = mapped_column(
-            sa.String, sa.ForeignKey(book_cls.isbn)
+            sa.String(256), sa.ForeignKey(book_cls.isbn)
         )
         book: Mapped[book_cls] = sa.orm.relationship(
             book_cls, backref=sa.orm.backref("book_book_shelf_books")
@@ -389,7 +389,7 @@ def rating_cls(base, book_cls):
         __table_args__ = (UniqueConstraint("book_isbn"),)
         id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
         book_isbn: Mapped[str] = mapped_column(
-            sa.String, sa.ForeignKey(book_cls.isbn)
+            sa.String(256), sa.ForeignKey(book_cls.isbn)
         )
         book: Mapped[book_cls] = sa.orm.relationship(
             book_cls, backref=sa.orm.backref("book_rating_books")
@@ -405,7 +405,7 @@ def group_cls(base):
         __tablename__ = "group"
         __table_args__ = (UniqueConstraint("group_name"),)
         id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
-        group_name: Mapped[str] = mapped_column(sa.String, nullable=False)
+        group_name: Mapped[str] = mapped_column(sa.String(256), nullable=False)
 
     return Group
 
@@ -417,7 +417,7 @@ def book_group_cls(base, book_cls, group_cls):
         __table_args__ = (UniqueConstraint("book_isbn", "group_id"),)
         id: Mapped[int] = mapped_column(sa.Integer, primary_key=True)
         book_isbn: Mapped[str] = mapped_column(
-            sa.String, sa.ForeignKey(book_cls.isbn)
+            sa.String(256), sa.ForeignKey(book_cls.isbn)
         )
         book: Mapped[book_cls] = sa.orm.relationship(
             book_cls, backref=sa.orm.backref("book_book_group_books")
@@ -484,14 +484,22 @@ def table_creator(base, connection, model_mapping):
         base.metadata.create_all(connection.engine)
         conn.commit()
     pg_base = Base(connection.engine.url.database)
-    pg_base.create_triggers(
-        connection.engine.url.database,
-        DEFAULT_SCHEMA,
-    )
-    pg_base.drop_replication_slot(f"{connection.engine.url.database}_testdb")
-    pg_base.create_replication_slot(f"{connection.engine.url.database}_testdb")
+    if not IS_MYSQL_COMPAT:
+        pg_base.create_triggers(
+            connection.engine.url.database,
+            DEFAULT_SCHEMA,
+        )
+        pg_base.drop_replication_slot(
+            f"{connection.engine.url.database}_testdb"
+        )
+        pg_base.create_replication_slot(
+            f"{connection.engine.url.database}_testdb"
+        )
     yield
-    pg_base.drop_replication_slot(f"{connection.engine.url.database}_testdb")
+    if not IS_MYSQL_COMPAT:
+        pg_base.drop_replication_slot(
+            f"{connection.engine.url.database}_testdb"
+        )
     with connection.engine.connect() as conn:
         base.metadata.drop_all(connection.engine)
         conn.commit()

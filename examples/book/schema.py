@@ -21,7 +21,7 @@ class Continent(Base):
     id: Mapped[int] = mapped_column(
         sa.Integer, primary_key=True, autoincrement=True
     )
-    name: Mapped[str] = mapped_column(sa.String, nullable=False)
+    name: Mapped[str] = mapped_column(sa.String(256), nullable=False)
 
 
 class Country(Base):
@@ -30,7 +30,7 @@ class Country(Base):
     id: Mapped[int] = mapped_column(
         sa.Integer, primary_key=True, autoincrement=True
     )
-    name: Mapped[str] = mapped_column(sa.String, nullable=False)
+    name: Mapped[str] = mapped_column(sa.String(256), nullable=False)
     continent_id: Mapped[int] = mapped_column(
         sa.Integer, sa.ForeignKey(Continent.id, ondelete="CASCADE")
     )
@@ -45,7 +45,7 @@ class City(Base):
     id: Mapped[int] = mapped_column(
         sa.Integer, primary_key=True, autoincrement=True
     )
-    name: Mapped[str] = mapped_column(sa.String, nullable=False)
+    name: Mapped[str] = mapped_column(sa.String(256), nullable=False)
     country_id: Mapped[int] = mapped_column(
         sa.Integer,
         sa.ForeignKey(Country.id, ondelete="CASCADE"),
@@ -62,7 +62,7 @@ class Publisher(Base):
     id: Mapped[int] = mapped_column(
         sa.Integer, primary_key=True, autoincrement=True
     )
-    name: Mapped[str] = mapped_column(sa.String, nullable=False)
+    name: Mapped[str] = mapped_column(sa.String(256), nullable=False)
     is_active: Mapped[bool] = mapped_column(sa.Boolean, default=False)
 
 
@@ -72,7 +72,7 @@ class Author(Base):
     id: Mapped[int] = mapped_column(
         sa.Integer, primary_key=True, autoincrement=True
     )
-    name: Mapped[str] = mapped_column(sa.String, nullable=False)
+    name: Mapped[str] = mapped_column(sa.String(256), nullable=False)
     date_of_birth: Mapped[datetime] = mapped_column(sa.DateTime, nullable=True)
     city_id: Mapped[int] = mapped_column(
         sa.Integer, sa.ForeignKey(City.id, ondelete="CASCADE")
@@ -89,7 +89,7 @@ class Shelf(Base):
     id: Mapped[int] = mapped_column(
         sa.Integer, primary_key=True, autoincrement=True
     )
-    shelf: Mapped[str] = mapped_column(sa.String, nullable=False)
+    shelf: Mapped[str] = mapped_column(sa.String(256), nullable=False)
 
 
 class Subject(Base):
@@ -98,7 +98,7 @@ class Subject(Base):
     id: Mapped[int] = mapped_column(
         sa.Integer, primary_key=True, autoincrement=True
     )
-    name: Mapped[str] = mapped_column(sa.String, nullable=False)
+    name: Mapped[str] = mapped_column(sa.String(256), nullable=False)
 
 
 class Language(Base):
@@ -107,7 +107,7 @@ class Language(Base):
     id: Mapped[int] = mapped_column(
         sa.Integer, primary_key=True, autoincrement=True
     )
-    code: Mapped[str] = mapped_column(sa.String, nullable=False)
+    code: Mapped[str] = mapped_column(sa.String(256), nullable=False)
 
 
 class Book(Base):
@@ -116,16 +116,12 @@ class Book(Base):
     id: Mapped[int] = mapped_column(
         sa.Integer, primary_key=True, autoincrement=True
     )
-    isbn: Mapped[str] = mapped_column(sa.String, nullable=False)
-    title: Mapped[str] = mapped_column(sa.String, nullable=False)
-    description: Mapped[str] = mapped_column(sa.String, nullable=True)
-    copyright: Mapped[str] = mapped_column(sa.String, nullable=True)
-    tags: Mapped[dict] = mapped_column(
-        sa.dialects.postgresql.JSONB, nullable=True
-    )
-    doc: Mapped[dict] = mapped_column(
-        sa.dialects.postgresql.JSONB, nullable=True
-    )
+    isbn: Mapped[str] = mapped_column(sa.String(256), nullable=False)
+    title: Mapped[str] = mapped_column(sa.String(256), nullable=False)
+    description: Mapped[str] = mapped_column(sa.String(256), nullable=True)
+    copyright: Mapped[str] = mapped_column(sa.String(256), nullable=True)
+    tags: Mapped[dict] = mapped_column(sa.JSON, nullable=True)
+    doc: Mapped[dict] = mapped_column(sa.JSON, nullable=True)
     publisher_id: Mapped[int] = mapped_column(
         sa.Integer, sa.ForeignKey(Publisher.id, ondelete="CASCADE")
     )
@@ -143,7 +139,7 @@ class Rating(Base):
         sa.Integer, primary_key=True, autoincrement=True
     )
     book_isbn: Mapped[str] = mapped_column(
-        sa.String, sa.ForeignKey(Book.isbn, ondelete="CASCADE")
+        sa.String(256), sa.ForeignKey(Book.isbn, ondelete="CASCADE")
     )
     book: Mapped[Book] = sa.orm.relationship(
         Book, backref=sa.orm.backref("ratings")
@@ -158,7 +154,7 @@ class BookAuthor(Base):
         sa.Integer, primary_key=True, autoincrement=True
     )
     book_isbn: Mapped[str] = mapped_column(
-        sa.String, sa.ForeignKey(Book.isbn, ondelete="CASCADE")
+        sa.String(256), sa.ForeignKey(Book.isbn, ondelete="CASCADE")
     )
     book: Mapped[Book] = sa.orm.relationship(
         Book,
@@ -180,7 +176,7 @@ class BookSubject(Base):
         sa.Integer, primary_key=True, autoincrement=True
     )
     book_isbn: Mapped[str] = mapped_column(
-        sa.String, sa.ForeignKey(Book.isbn, ondelete="CASCADE")
+        sa.String(256), sa.ForeignKey(Book.isbn, ondelete="CASCADE")
     )
     book: Mapped[Book] = sa.orm.relationship(
         Book,
@@ -203,7 +199,7 @@ class BookLanguage(Base):
         sa.Integer, primary_key=True, autoincrement=True
     )
     book_isbn: Mapped[str] = mapped_column(
-        sa.String, sa.ForeignKey(Book.isbn, ondelete="CASCADE")
+        sa.String(256), sa.ForeignKey(Book.isbn, ondelete="CASCADE")
     )
     book: Mapped[Book] = sa.orm.relationship(
         Book,
@@ -226,7 +222,7 @@ class BookShelf(Base):
         sa.Integer, primary_key=True, autoincrement=True
     )
     book_isbn: Mapped[str] = mapped_column(
-        sa.String, sa.ForeignKey(Book.isbn, ondelete="CASCADE")
+        sa.String(256), sa.ForeignKey(Book.isbn, ondelete="CASCADE")
     )
     book: Mapped[Book] = sa.orm.relationship(
         Book,

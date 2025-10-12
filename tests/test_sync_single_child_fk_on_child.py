@@ -13,12 +13,17 @@ from pgsync.exc import (
     RelationshipVariantError,
 )
 from pgsync.node import Tree
+from pgsync.settings import IS_MYSQL_COMPAT
 from pgsync.singleton import Singleton
 from pgsync.sync import Sync
 
 from .testing_utils import assert_resync_empty, noop, search, sort_list
 
 
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
 @pytest.mark.usefixtures("table_creator")
 class TestParentSingleChildFkOnChild(object):
     """Root and single child node tests."""
@@ -112,7 +117,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.tree = Tree(sync.models, nodes)
+        sync.tree = Tree(sync.models, nodes, database=sync.database)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
@@ -157,7 +162,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.tree = Tree(sync.models, nodes)
+        sync.tree = Tree(sync.models, nodes, database=sync.database)
         docs = [sort_list(doc) for doc in sync.sync()]
         docs = sorted(docs, key=lambda k: k["_id"])
 
@@ -204,7 +209,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.tree = Tree(sync.models, nodes)
+        sync.tree = Tree(sync.models, nodes, database=sync.database)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
@@ -249,7 +254,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.tree = Tree(sync.models, nodes)
+        sync.tree = Tree(sync.models, nodes, database=sync.database)
         docs = [sort_list(doc) for doc in sync.sync()]
         docs = sorted(docs, key=lambda k: k["_id"])
         assert docs[0]["_id"] == "abc"
@@ -296,7 +301,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.tree = Tree(sync.models, nodes)
+        sync.tree = Tree(sync.models, nodes, database=sync.database)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
@@ -343,7 +348,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.tree = Tree(sync.models, nodes)
+        sync.tree = Tree(sync.models, nodes, database=sync.database)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
         assert docs[0]["_source"] == {
@@ -377,7 +382,7 @@ class TestParentSingleChildFkOnChild(object):
             ],
         }
         sync.nodes = nodes
-        sync.tree = Tree(sync.models, nodes)
+        sync.tree = Tree(sync.models, nodes, database=sync.database)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[0]["_id"] == "abc"
 
@@ -422,7 +427,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.tree = Tree(sync.models, nodes)
+        sync.tree = Tree(sync.models, nodes, database=sync.database)
         docs = [sort_list(doc) for doc in sync.sync()]
 
         fields = ["_meta", "description", "isbn", "rating", "title"]
@@ -449,7 +454,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.tree = Tree(sync.models, nodes)
+        sync.tree = Tree(sync.models, nodes, database=sync.database)
         docs = [sort_list(doc) for doc in sync.sync()]
         assert docs[2]["_source"] == {
             "_meta": {"book": {"isbn": ["ghi"]}, "rating": {"id": [3]}},
@@ -477,7 +482,7 @@ class TestParentSingleChildFkOnChild(object):
         }
         sync.search_client.close()
         with pytest.raises(RelationshipTypeError) as excinfo:
-            Tree(sync.models, nodes)
+            Tree(sync.models, nodes, database=sync.database)
         assert 'Relationship type "qwerty" is invalid' in str(excinfo.value)
 
     def test_invalid_relationship_variant(self, sync):
@@ -495,7 +500,7 @@ class TestParentSingleChildFkOnChild(object):
         }
         sync.search_client.close()
         with pytest.raises(RelationshipVariantError) as excinfo:
-            Tree(sync.models, nodes)
+            Tree(sync.models, nodes, database=sync.database)
         assert 'Relationship variant "abcdefg" is invalid' in str(
             excinfo.value
         )
@@ -512,7 +517,7 @@ class TestParentSingleChildFkOnChild(object):
         }
         sync.search_client.close()
         with pytest.raises(RelationshipAttributeError) as excinfo:
-            Tree(sync.models, nodes)
+            Tree(sync.models, nodes, database=sync.database)
         assert f"Relationship attribute {set(['foo'])} is invalid" in str(
             excinfo.value
         )
@@ -531,7 +536,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.tree = Tree(sync.models, nodes)
+        sync.tree = Tree(sync.models, nodes, database=sync.database)
         docs = [sort_list(doc) for doc in sync.sync()]
         sources = {doc["_id"]: doc["_source"] for doc in docs}
         assert sources["abc"]["_meta"] == {
@@ -562,7 +567,7 @@ class TestParentSingleChildFkOnChild(object):
                 }
             ],
         }
-        sync.tree = Tree(sync.models, nodes)
+        sync.tree = Tree(sync.models, nodes, database=sync.database)
         with pytest.raises(ForeignKeyError) as excinfo:
             [sort_list(doc) for doc in sync.sync()]
         msg = (

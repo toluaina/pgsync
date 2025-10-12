@@ -19,12 +19,18 @@ import sqlalchemy as sa
 import sqlparse
 
 from . import settings
-from .urls import get_postgres_url, get_redis_url, get_search_url
+from .urls import get_database_url, get_redis_url, get_search_url
 
 logger = logging.getLogger(__name__)
 
 HIGHLIGHT_BEGIN = "\033[4m"
 HIGHLIGHT_END = "\033[0m:"
+
+# Regular expression to match placeholder column names (e.g., "UNKNOWN_COL1") used for remapping
+_UNKNOWN_RE = re.compile(r"^UNKNOWN_COL(\d+)$")
+
+# Cache for storing column name mappings for (database, table) pairs, used in MySQL column remapping
+_col_cache: dict[tuple[str, str], list[str]] = {}
 
 
 def chunks(sequence: t.Sequence, size: int) -> t.Iterable[t.Sequence]:
@@ -123,18 +129,20 @@ def show_settings(
     logger.info("-" * 65)
     logger.info(f"{HIGHLIGHT_BEGIN}Checkpoint{HIGHLIGHT_END}")
     logger.info(f"Path: {settings.CHECKPOINT_PATH}")
-    logger.info(f"{HIGHLIGHT_BEGIN}Postgres{HIGHLIGHT_END}")
+    logger.info(f"{HIGHLIGHT_BEGIN}Database{HIGHLIGHT_END}")
 
-    url: str = get_postgres_url("postgres")
+    database: str = (
+        "information_schema" if settings.IS_MYSQL_COMPAT else "postgres"
+    )
+    url: str = get_database_url(database)
     redacted_url: str = get_redacted_url(url)
     logger.info(f"URL: {redacted_url}")
 
     url: str = get_search_url()
     redacted_url: str = get_redacted_url(url)
-    if settings.ELASTICSEARCH:
-        logger.info(f"{HIGHLIGHT_BEGIN}Elasticsearch{HIGHLIGHT_END}")
-    else:
-        logger.info(f"{HIGHLIGHT_BEGIN}OpenSearch{HIGHLIGHT_END}")
+    logger.info(
+        f"{HIGHLIGHT_BEGIN}{'Elasticsearch' if settings.ELASTICSEARCH else 'OpenSearch'}{HIGHLIGHT_END}"
+    )
     logger.info(f"URL: {redacted_url}")
     logger.info(f"{HIGHLIGHT_BEGIN}Redis{HIGHLIGHT_END}")
 
@@ -303,3 +311,53 @@ class MutuallyExclusiveOption(click.Option):
         return super(MutuallyExclusiveOption, self).handle_parse_result(
             ctx, opts, args
         )
+
+
+def qname(engine_or_conn, schema: str = None, table: str = None) -> str:
+    """
+    Return a dialect-correct, quoted table name.
+
+    Examples:
+    Postgres:  qname(engine, "public", "users")  ->  "public"."users"
+    MySQL:     qname(engine, "mydb",  "users")   ->  `mydb`.`users`
+                (or just `users` if schema is None)
+    """
+    dialect = getattr(engine_or_conn, "dialect", engine_or_conn.engine.dialect)
+    quote = dialect.identifier_preparer.quote_identifier
+
+    if schema and schema.strip():
+        return f"{quote(schema)}.{quote(table)}"
+    return quote(table)
+
+
+# mysql related helper methods
+def _cols(engine: sa.Engine, schema: str, table: str) -> list[str]:
+    key = (schema, table)
+    if key in _col_cache:
+        return _col_cache[key]
+    insp = sa.inspect(engine)
+    cols = [c["name"] for c in insp.get_columns(table, schema=schema)]
+    _col_cache[key] = cols
+    return cols
+
+
+def remap_unknown(
+    engine: sa.Engine, schema: str, table: str, values: dict
+) -> dict:
+    if not values:
+        return values
+    # only remap if *all* keys are UNKNOWN_COL*
+    if not all(
+        isinstance(k, str) and _UNKNOWN_RE.match(k) for k in values.keys()
+    ):
+        return values
+    cols = _cols(engine, schema, table)
+    remapped: dict = {}
+    # keys may be 0-based (UNKNOWN_COL0), so use the numeric suffix
+    for k, v in values.items():
+        idx = int(_UNKNOWN_RE.match(k).group(1))  # type: ignore
+        if idx < len(cols):
+            remapped[cols[idx]] = v
+        else:
+            remapped[f"@{idx+1}"] = v  # fallback
+    return remapped

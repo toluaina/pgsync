@@ -9,12 +9,12 @@ expose structured denormalized documents in [Elasticsearch](https://www.elastic.
 ### Requirements
 
 - [Python](https://www.python.org) 3.9+
-- [Postgres](https://www.postgresql.org) 9.6+
+- [Postgres](https://www.postgresql.org) 9.6+ or [MySQL](https://www.mysql.com/) 8.0.0+ or [MariaDB](https://mariadb.org/) 12.0.0+ 
 - [Redis](https://redis.io) 3.1.0+ or [Valkey](https://valkey.io) 7.2.0+
 - [Elasticsearch](https://www.elastic.co/products/elastic-stack) 6.3.1+ or [OpenSearch](https://opensearch.org/) 1.3.7+
 - [SQLAlchemy](https://www.sqlalchemy.org) 1.3.4+
 
-### Postgres setup
+### Postgres Setup
   
   Enable [logical decoding](https://www.postgresql.org/docs/current/logicaldecoding.html) in your 
   Postgres setting.
@@ -24,6 +24,30 @@ expose structured denormalized documents in [Elasticsearch](https://www.elastic.
     ```wal_level = logical```
 
     ```max_replication_slots = 1```
+
+
+### MySQL / MariaDB setup
+
+- Enable binary logging in your MySQL / MariaDB setting.
+
+- You also need to set up the following parameters in your MySQL / MariaDB config my.cnf, then restart the database server.
+
+  ```server-id = 1``` # any non-zero unique ID
+
+  ```log_bin = mysql-bin```
+
+  ```binlog_row_image = FULL``` # recommended; if not supported on older MariaDB, omit
+
+- optional housekeeping:
+  ```binlog_expire_logs_seconds = 604800```   # 7 days
+
+- You need to create a replication user with REPLICATION SLAVE and REPLICATION CLIENT privileges
+    
+  ```sql
+  CREATE USER 'replicator'@'%' IDENTIFIED WITH mysql_native_password BY 'password';
+  GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'replicator'@'%';
+  FLUSH PRIVILEGES;
+  ```
 
 ### Installation
 
