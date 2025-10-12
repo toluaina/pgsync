@@ -98,7 +98,7 @@ class TestUtils(object):
             call("\x1b[4mCheckpoint\x1b[0m:"),
             call("Path: ./"),
             call("\x1b[4mDatabase\x1b[0m:"),
-            call(f"URL: {get_database_url()}"),
+            call(f"URL: {get_database_url(self.schema)}"),
             call(
                 f"\x1b[4m{'Elasticsearch' if ELASTICSEARCH else 'OpenSearch'}\x1b[0m:"
             ),
