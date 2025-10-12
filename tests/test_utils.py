@@ -30,7 +30,7 @@ class TestUtils(object):
 
     @classmethod
     def setup_class(cls):
-        cls.schema = "book" if IS_MYSQL_COMPAT else "public"
+        cls.schema = "testdb" if IS_MYSQL_COMPAT else "public"
 
     def test_validate_config(self):
         # Test: neither config nor s3_schema_url provided

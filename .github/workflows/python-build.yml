@@ -89,7 +89,7 @@ jobs:
       mariadb:
         image: mariadb:11
         env:
-          MARIADB_DATABASE: book
+          MARIADB_DATABASE: testdb
           MARIADB_USER: mysql
           MARIADB_PASSWORD: mysql
           MARIADB_ROOT_PASSWORD: root

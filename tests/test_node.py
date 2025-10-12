@@ -22,7 +22,7 @@ class TestNode(object):
 
     @classmethod
     def setup_class(cls):
-        cls.schema = "book" if IS_MYSQL_COMPAT else "public"
+        cls.schema = "testdb" if IS_MYSQL_COMPAT else "public"
 
     @pytest.fixture(scope="function")
     def nodes(self):
@@ -116,10 +116,6 @@ class TestNode(object):
             ],
         }
 
-    @pytest.mark.skipif(
-        IS_MYSQL_COMPAT,
-        reason="Skipped because IS_MYSQL_COMPAT env var is set",
-    )
     def test_node(self, connection):
         pg_base = Base(connection.engine.url.database)
         node = Node(

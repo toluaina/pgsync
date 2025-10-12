@@ -14,7 +14,7 @@ class TestQueryBuilder(object):
 
     @classmethod
     def setup_class(cls):
-        cls.schema = "book" if IS_MYSQL_COMPAT else "public"
+        cls.schema = "testdb" if IS_MYSQL_COMPAT else "public"
 
     @pytest.mark.skipif(
         IS_MYSQL_COMPAT,
