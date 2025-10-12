@@ -1,7 +1,6 @@
 """Utils tests."""
 
 import os
-from urllib.parse import ParseResult, urlparse
 
 import pytest
 import sqlalchemy as sa
