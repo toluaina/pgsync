@@ -89,9 +89,9 @@ jobs:
       mariadb:
         image: mariadb:11
         env:
-          MARIADB_DATABASE: testdb
-          MARIADB_USER: test
-          MARIADB_PASSWORD: test
+          MARIADB_DATABASE: book
+          MARIADB_USER: mysql
+          MARIADB_PASSWORD: mysql
           MARIADB_ROOT_PASSWORD: root
         ports:
           - 3306:3306
@@ -129,8 +129,8 @@ jobs:
         PATH: $PATH:./bin
         PG_HOST: localhost
         PG_PORT: ${{ job.services.mariadb.ports['3306'] }}
-        PG_PASSWORD: test
-        PG_USER: test
+        PG_PASSWORD: mysql
+        PG_USER: mysql
         PG_DRIVER: pymysql
         PYTHONPATH: $PYTHONPATH:./pgsync
         REDIS_CHECKPOINT: False
