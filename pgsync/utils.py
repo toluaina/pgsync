@@ -26,8 +26,10 @@ logger = logging.getLogger(__name__)
 HIGHLIGHT_BEGIN = "\033[4m"
 HIGHLIGHT_END = "\033[0m:"
 
+# Regular expression to match placeholder column names (e.g., "UNKNOWN_COL1") used for remapping
 _UNKNOWN_RE = re.compile(r"^UNKNOWN_COL(\d+)$")
 
+# Cache for storing column name mappings for (database, table) pairs, used in MySQL column remapping
 _col_cache: dict[tuple[str, str], list[str]] = {}
 
 
