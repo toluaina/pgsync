@@ -69,10 +69,15 @@ class RedisQueue(object):
             return []
         payloads = [json.loads(i) for i in items]
         visible_map: dict = pg_visible_in_snapshot()(
-            [payload["xmin"] for payload in payloads]
+            [payload.get("xmin") for payload in payloads if "xmin" in payload]
         )
         visible: t.List[dict] = []
         for item, payload in zip(items, payloads):
+            if "xmin" not in payload:
+                logger.warning(
+                    f"Skipping payload without 'xmin' key: {payload}"
+                )
+                continue
             if visible_map.get(payload["xmin"]):
                 # Claim atomically
                 removed = self.__db.lrem(self.key, 1, item)

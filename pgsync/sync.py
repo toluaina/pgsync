@@ -776,9 +776,15 @@ class Sync(Base, metaclass=Singleton):
                 parts = doc_id.split(PRIMARY_KEY_DELIMITER)
                 # Map root PKs in order
                 where = {}
-                for i, key in enumerate(self.tree.root.model.primary_keys):
-                    where[key] = parts[i]
-                filters.append(where)
+                if len(parts) == len(self.tree.root.model.primary_keys):
+                    for i, key in enumerate(self.tree.root.model.primary_keys):
+                        where[key] = parts[i]
+                    filters.append(where)
+                else:
+                    logger.warning(
+                        f"Skipping malformed doc_id: {doc_id}. "
+                        f"Expected {len(self.tree.root.model.primary_keys)} parts, got {len(parts)}"
+                    )
 
             # reset chunk
             for pk in pk_names:
@@ -881,7 +887,11 @@ class Sync(Base, metaclass=Singleton):
 
                 parts = doc_id.split(PRIMARY_KEY_DELIMITER)
                 # skip malformed doc_ids that don't match root PK arity
-                if len(parts) < len(self.tree.root.model.primary_keys):
+                if len(parts) != len(self.tree.root.model.primary_keys):
+                    logger.warning(
+                        f"Skipping malformed doc_id: {doc_id}. "
+                        f"Expected {len(self.tree.root.model.primary_keys)} parts, got {len(parts)}"
+                    )
                     continue
 
                 where: dict = {}
@@ -1106,6 +1116,7 @@ class Sync(Base, metaclass=Singleton):
             _filters = self._root_primary_key_resolver(
                 node, payloads, _filters
             )
+            foreign_keys = []
             if node.parent:
                 try:
                     foreign_keys = self.query_builder.get_foreign_keys(
@@ -1203,9 +1214,15 @@ class Sync(Base, metaclass=Singleton):
             for doc_id in self.search_client._search(self.index, node.table):
                 where: dict = {}
                 params = doc_id.split(PRIMARY_KEY_DELIMITER)
-                for i, key in enumerate(self.tree.root.model.primary_keys):
-                    where[key] = params[i]
-                _filters.append(where)
+                if len(params) == len(self.tree.root.model.primary_keys):
+                    for i, key in enumerate(self.tree.root.model.primary_keys):
+                        where[key] = params[i]
+                    _filters.append(where)
+                else:
+                    logger.warning(
+                        f"Skipping malformed doc_id: {doc_id}. "
+                        f"Expected {len(self.tree.root.model.primary_keys)} parts, got {len(params)}"
+                    )
             if _filters:
                 filters[self.tree.root.table].extend(_filters)
 
@@ -1638,9 +1655,9 @@ class Sync(Base, metaclass=Singleton):
                         )
                         continue
                     if (
-                        payload["indices"]
-                        and self.index in payload["indices"]
-                        and payload["schema"] in self.tree.schemas
+                        payload.get("indices")
+                        and self.index in payload.get("indices", [])
+                        and payload.get("schema") in self.tree.schemas
                     ):
                         payloads.append(payload)
                         logger.debug(f"poll_db: {payload}")
@@ -1663,11 +1680,18 @@ class Sync(Base, metaclass=Singleton):
         while self.conn.notifies:
             notification: t.AnyStr = self.conn.notifies.pop(0)
             if notification.channel == self.database:
-                payload = json.loads(notification.payload)
+                try:
+                    payload = json.loads(notification.payload)
+                except json.JSONDecodeError as e:
+                    logger.exception(
+                        f"Error decoding JSON payload: {e}\n"
+                        f"Payload: {notification.payload}"
+                    )
+                    continue
                 if (
-                    payload["indices"]
-                    and self.index in payload["indices"]
-                    and payload["schema"] in self.tree.schemas
+                    payload.get("indices")
+                    and self.index in payload.get("indices", [])
+                    and payload.get("schema") in self.tree.schemas
                 ):
                     self.redis.push([payload])
                     logger.debug(f"async_poll: {payload}")

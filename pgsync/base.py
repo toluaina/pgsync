@@ -989,7 +989,7 @@ class Base(object):
             self.disable_trigger(schema, table)
             logger.debug(f"Disabled trigger on table: {schema}.{table}")
 
-    def enable_trigger(self, schema: str, table, str) -> None:
+    def enable_trigger(self, schema: str, table: str) -> None:
         """Enable a pgsync defined trigger."""
         for name in ("notify", "truncate"):
             self.execute(
@@ -1107,20 +1107,21 @@ class Base(object):
         # including trailing space below is deliberate
         suffix: str = f"{row[span[1]:]} "
 
-        if "old-key" and "new-tuple" in suffix:
+        if "old-key" in suffix and "new-tuple" in suffix:
             # this can only be an UPDATE operation
             if payload.tg_op != UPDATE:
                 msg = f"Unknown {payload.tg_op} operation for row: {row}"
                 raise LogicalSlotParseError(msg)
 
-            i: int = suffix.index("old-key:")
+            i: int = suffix.find("old-key:")
             if i > -1:
-                j: int = suffix.index("new-tuple:")
-                s: str = suffix[i + len("old-key:") : j]
-                for key, value in _parse_logical_slot(s):
-                    payload.old[key] = value
+                j: int = suffix.find("new-tuple:")
+                if j > -1:
+                    s: str = suffix[i + len("old-key:") : j]
+                    for key, value in _parse_logical_slot(s):
+                        payload.old[key] = value
 
-            i = suffix.index("new-tuple:")
+            i = suffix.find("new-tuple:")
             if i > -1:
                 s = suffix[i + len("new-tuple:") :]
                 for key, value in _parse_logical_slot(s):

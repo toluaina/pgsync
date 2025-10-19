@@ -10,21 +10,20 @@ backports-datetime-fromisoformat==2.0.3
     # via marshmallow
 black==25.9.0
     # via -r requirements/dev.in
-boto3==1.40.50
+boto3==1.40.55
     # via -r requirements/base.in
-botocore==1.40.50
+botocore==1.40.55
     # via
     #   boto3
     #   s3transfer
 certifi==2025.10.5
     # via
     #   elastic-transport
-    #   elasticsearch
     #   opensearch-py
     #   requests
 cfgv==3.4.0
     # via pre-commit
-charset-normalizer==3.4.3
+charset-normalizer==3.4.4
     # via requests
 click==8.1.8
     # via
@@ -36,13 +35,15 @@ coverage[toml]==7.10.7
     #   pytest-cov
 distlib==0.4.0
     # via virtualenv
-elastic-transport==9.1.0
-    # via -r requirements/base.in
-elasticsearch==7.17.12
+elastic-transport==8.17.1
+    # via
+    #   -r requirements/base.in
+    #   elasticsearch
+elasticsearch==8.19.1
     # via
     #   -r requirements/base.in
     #   elasticsearch-dsl
-elasticsearch-dsl==7.4.1
+elasticsearch-dsl==8.15.4
     # via -r requirements/base.in
 environs==14.3.0
     # via -r requirements/base.in
@@ -58,9 +59,11 @@ flake8==7.3.0
     # via -r requirements/dev.in
 freezegun==1.5.5
     # via -r requirements/dev.in
+greenlet==3.2.4
+    # via sqlalchemy
 identify==2.6.15
     # via pre-commit
-idna==3.10
+idna==3.11
     # via requests
 importlib-metadata==8.7.0
     # via isort
@@ -138,7 +141,7 @@ python-dotenv==1.1.1
     # via
     #   -r requirements/base.in
     #   environs
-pytokens==0.1.10
+pytokens==0.2.0
     # via black
 pyyaml==6.0.3
     # via pre-commit
@@ -154,7 +157,6 @@ s3transfer==0.14.0
     # via boto3
 six==1.17.0
     # via
-    #   elasticsearch-dsl
     #   opensearch-dsl
     #   python-dateutil
 sqlalchemy==2.0.44
@@ -170,6 +172,7 @@ typing-extensions==4.15.0
     # via
     #   black
     #   elasticsearch
+    #   elasticsearch-dsl
     #   environs
     #   exceptiongroup
     #   marshmallow
@@ -181,7 +184,6 @@ urllib3==1.26.20
     # via
     #   botocore
     #   elastic-transport
-    #   elasticsearch
     #   opensearch-py
     #   requests
 virtualenv==20.35.3
