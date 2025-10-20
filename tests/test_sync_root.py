@@ -89,8 +89,7 @@ class TestRoot(object):
             raise
 
         sync.redis.delete()
-        session.connection().engine.connect().close()
-        session.connection().engine.dispose()
+        session.connection().engine.dispose(close=True)
         sync.search_client.close()
 
     def test_sync2(self, sync, data):
@@ -474,6 +473,9 @@ class TestRoot(object):
         ]
         assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
+        sync.session.close()
+        sync.engine.dispose(close=True)
+        Singleton._instances = {}
 
     # TODO: Add another test like this and change
     # both primary key and non primary key column
@@ -566,6 +568,9 @@ class TestRoot(object):
         ]
         assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
+        sync.session.close()
+        sync.engine.dispose(close=True)
+        Singleton._instances = {}
 
     def test_insert_non_concurrent(self, data, book_cls):
         """Test sync insert and then sync in non-concurrent mode."""
@@ -635,6 +640,9 @@ class TestRoot(object):
         ]
         assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
+        sync.session.close()
+        sync.engine.dispose(close=True)
+        Singleton._instances = {}
 
     def test_update_non_concurrent(self, data, book_cls):
         """Test sync update and then sync in non-concurrent mode."""
@@ -700,6 +708,9 @@ class TestRoot(object):
         ]
         assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
+        sync.session.close()
+        sync.engine.dispose(close=True)
+        Singleton._instances = {}
 
     def test_update_concurrent(self, data, book_cls):
         """Test sync update and then sync in concurrent mode."""
@@ -786,6 +797,9 @@ class TestRoot(object):
         ]
         assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
+        sync.session.close()
+        sync.engine.dispose(close=True)
+        Singleton._instances = {}
 
     def test_delete_concurrent(self, data, book_cls):
         """Test sync delete and then sync in concurrent mode."""
@@ -865,6 +879,9 @@ class TestRoot(object):
         ]
         assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
+        sync.session.close()
+        sync.engine.dispose(close=True)
+        Singleton._instances = {}
 
     def test_truncate(self, data, book_cls):
         """Test truncate."""

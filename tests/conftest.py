@@ -6,6 +6,7 @@ import os
 import pytest
 import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
+from sqlalchemy.pool import NullPool
 from sqlalchemy.schema import UniqueConstraint
 
 from pgsync.base import Base, create_database, drop_database
@@ -33,11 +34,16 @@ def dns():
 
 @pytest.fixture(scope="session")
 def engine(dns):
-    engine = sa.create_engine(dns)
+    # Use NullPool for tests to avoid connection exhaustion
+
+    engine = sa.create_engine(
+        dns,
+        poolclass=NullPool,
+    )
     drop_database("testdb")
     create_database("testdb")
     yield engine
-    engine.dispose()
+    engine.dispose(close=True)
 
 
 @pytest.fixture(scope="session")
@@ -45,6 +51,8 @@ def connection(engine):
     conn = engine.connect()
     yield conn
     conn.close()
+    # Force cleanup of any remaining connections
+    engine.dispose(close=True)
 
 
 @pytest.fixture(scope="session")
@@ -52,7 +60,8 @@ def session(connection):
     Session = sessionmaker(bind=connection, autoflush=True)
     session = Session()
     yield session
-    session.close_all()
+    session.close()
+    Session.close_all()
 
 
 @pytest.fixture(scope="function")
@@ -65,14 +74,29 @@ def sync():
         }
     )
     yield _sync
-    if not IS_MYSQL_COMPAT:
-        _sync.logical_slot_get_changes(
-            f"{_sync.database}_testdb",
-            upto_nchanges=None,
-        )
-    _sync.engine.connect().close()
-    _sync.engine.dispose()
-    _sync.session.close()
+    # Cleanup
+    try:
+        if not IS_MYSQL_COMPAT:
+            _sync.logical_slot_get_changes(
+                f"{_sync.database}_testdb",
+                upto_nchanges=None,
+            )
+    except Exception:
+        pass
+
+    # Close all connections properly
+    try:
+        _sync.close_session()
+    except Exception:
+        pass
+
+    try:
+        # Don't create new connection, just dispose the engine
+        _sync.engine.dispose(close=True)
+    except Exception:
+        pass
+
+    # Clear singleton instances
     Singleton._instances = {}
 
 
@@ -497,15 +521,23 @@ def table_creator(base, connection, model_mapping):
         )
     yield
     if not IS_MYSQL_COMPAT:
-        pg_base.drop_replication_slot(
-            f"{connection.engine.url.database}_testdb"
-        )
+        try:
+            pg_base.drop_replication_slot(
+                f"{connection.engine.url.database}_testdb"
+            )
+        except Exception:
+            pass
     with connection.engine.connect() as conn:
         base.metadata.drop_all(connection.engine)
         conn.commit()
     try:
         os.unlink(f".{connection.engine.url.database}_testdb")
     except (OSError, FileNotFoundError):
+        pass
+    # Cleanup pg_base connections
+    try:
+        pg_base.engine.dispose(close=True)
+    except Exception:
         pass
 
 

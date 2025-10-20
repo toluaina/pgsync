@@ -32,6 +32,11 @@ class TestParentSingleChildFkOnChild(object):
     def data(self, sync, book_cls, rating_cls):
         session = sync.session
 
+        # Clean up any existing data first
+        with subtransactions(session):
+            session.execute(rating_cls.__table__.delete())
+            session.execute(book_cls.__table__.delete())
+
         books = [
             book_cls(
                 isbn="abc",
@@ -98,8 +103,7 @@ class TestParentSingleChildFkOnChild(object):
             raise
 
         sync.redis.delete()
-        session.connection().engine.connect().close()
-        session.connection().engine.dispose()
+        session.connection().engine.dispose(close=True)
         sync.search_client.close()
 
     def test_relationship_object_one_to_one(self, sync, data):
@@ -684,6 +688,9 @@ class TestParentSingleChildFkOnChild(object):
         ]
         assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
+        sync.session.close()
+        sync.engine.dispose(close=True)
+        Singleton._instances = {}
 
     # TODO: Add another test like this and change
     # both primary key and non pkey column
@@ -804,6 +811,9 @@ class TestParentSingleChildFkOnChild(object):
         ]
         assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
+        sync.session.close()
+        sync.engine.dispose(close=True)
+        Singleton._instances = {}
 
     def test_insert_non_concurrent(self, data, book_cls, rating_cls):
         """Test sync insert and then sync in non-concurrent mode."""
@@ -905,6 +915,9 @@ class TestParentSingleChildFkOnChild(object):
         ]
         assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
+        sync.session.close()
+        sync.engine.dispose(close=True)
+        Singleton._instances = {}
 
     def test_update_non_primary_key_non_concurrent(
         self, data, book_cls, rating_cls
@@ -995,6 +1008,9 @@ class TestParentSingleChildFkOnChild(object):
         ]
         assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
+        sync.session.close()
+        sync.engine.dispose(close=True)
+        Singleton._instances = {}
 
     def test_update_non_primary_key_concurrent(
         self, data, book_cls, rating_cls
@@ -1102,6 +1118,9 @@ class TestParentSingleChildFkOnChild(object):
         ]
         assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
+        sync.session.close()
+        sync.engine.dispose(close=True)
+        Singleton._instances = {}
 
     def test_delete_concurrent(self, data, book_cls, rating_cls):
         """Test sync delete and then sync in concurrent mode."""
@@ -1221,3 +1240,6 @@ class TestParentSingleChildFkOnChild(object):
         ]
         assert_resync_empty(sync, doc.get("node", {}))
         sync.search_client.close()
+        sync.session.close()
+        sync.engine.dispose(close=True)
+        Singleton._instances = {}

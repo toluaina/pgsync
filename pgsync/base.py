@@ -39,6 +39,12 @@ from .settings import (
     PG_URL_RO,
     PG_USER_RO,
     QUERY_CHUNK_SIZE,
+    SQLALCHEMY_MAX_OVERFLOW,
+    SQLALCHEMY_POOL_PRE_PING,
+    SQLALCHEMY_POOL_RECYCLE,
+    SQLALCHEMY_POOL_SIZE,
+    SQLALCHEMY_POOL_TIMEOUT,
+    SQLALCHEMY_USE_NULLPOOL,
     STREAM_RESULTS,
 )
 from .trigger import CREATE_TRIGGER_TEMPLATE
@@ -230,6 +236,7 @@ class Base(object):
         self.__columns: dict = {}
         self.verbose: bool = verbose
         self._conn = None
+        self._session = None
 
     def connect(self) -> None:
         """Connect to database."""
@@ -338,8 +345,19 @@ class Base(object):
 
     @property
     def session(self) -> sessionmaker:
-        Session = sessionmaker(bind=self.engine.connect(), autoflush=True)
-        return Session()
+        if self._session is None:
+            Session = sessionmaker(bind=self.engine, autoflush=True)
+            self._session = Session()
+        return self._session
+
+    def close_session(self) -> None:
+        """Close the cached session and reset it."""
+        if self._session is not None:
+            try:
+                self._session.close()
+            except Exception:
+                pass
+            self._session = None
 
     @property
     def engine(self) -> sa.engine.Engine:
@@ -1337,7 +1355,28 @@ def _pg_engine(
             password=password,
             port=port,
         )
-    return sa.create_engine(url, echo=echo, connect_args=connect_args)
+
+    # Use NullPool for testing to avoid connection exhaustion
+    if SQLALCHEMY_USE_NULLPOOL:
+        from sqlalchemy.pool import NullPool
+
+        return sa.create_engine(
+            url,
+            echo=echo,
+            connect_args=connect_args,
+            poolclass=NullPool,
+        )
+
+    return sa.create_engine(
+        url,
+        echo=echo,
+        connect_args=connect_args,
+        pool_size=SQLALCHEMY_POOL_SIZE,
+        max_overflow=SQLALCHEMY_MAX_OVERFLOW,
+        pool_pre_ping=SQLALCHEMY_POOL_PRE_PING,
+        pool_recycle=SQLALCHEMY_POOL_RECYCLE,
+        pool_timeout=SQLALCHEMY_POOL_TIMEOUT,
+    )
 
 
 def pg_execute(

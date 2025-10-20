@@ -100,8 +100,7 @@ class TestUniqueBehaviour(object):
             raise
 
         sync.redis.delete()
-        session.connection().engine.connect().close()
-        session.connection().engine.dispose()
+        session.connection().engine.dispose(close=True)
         sync.search_client.close()
 
     @pytest.fixture(scope="function")

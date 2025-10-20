@@ -44,8 +44,7 @@ class TestView(object):
         with subtransactions(session):
             session.query(book_cls).delete()
 
-        session.connection().engine.connect().close()
-        session.connection().engine.dispose()
+        session.connection().engine.dispose(close=True)
         sync.search_client.close()
 
     def test_create_materialized_view(self, connection):

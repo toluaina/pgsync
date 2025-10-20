@@ -51,6 +51,20 @@ STREAM_RESULTS = env.bool("STREAM_RESULTS", default=True)
 POLL_INTERVAL = env.float("POLL_INTERVAL", default=0.1)
 FORMAT_WITH_COMMAS = env.bool("FORMAT_WITH_COMMAS", default=True)
 
+# SQLAlchemy Settings:
+# Use NullPool (no connection pooling) - useful for testing or when you want to close connections immediately
+SQLALCHEMY_USE_NULLPOOL = env.bool("SQLALCHEMY_USE_NULLPOOL", default=False)
+# This is the number of connections that will be persistently maintained in the pool.
+SQLALCHEMY_POOL_SIZE = env.int("SQLALCHEMY_POOL_SIZE", default=5)
+# This is the number of connections that can be opened beyond the pool_size when all connections in the pool are in use.
+SQLALCHEMY_MAX_OVERFLOW = env.int("SQLALCHEMY_MAX_OVERFLOW", default=10)
+# When set to True, a "ping" will be performed on connections before they are checked out of the pool to ensure they are still live.
+SQLALCHEMY_POOL_PRE_PING = env.bool("SQLALCHEMY_POOL_PRE_PING", default=False)
+# This means connections are not recycled based on a timeout. If set to a positive integer, connections will be recycled after that many seconds. For example, 3600 recycles connections after one hour.
+SQLALCHEMY_POOL_RECYCLE = env.int("SQLALCHEMY_POOL_RECYCLE", default=-1)
+# This is the number of seconds to wait for a connection to become available from the pool before raising a TimeoutError.
+SQLALCHEMY_POOL_TIMEOUT = env.int("SQLALCHEMY_POOL_TIMEOUT", default=30)
+
 # Elasticsearch/OpenSearch:
 ELASTICSEARCH_API_KEY = env.str("ELASTICSEARCH_API_KEY", default=None)
 ELASTICSEARCH_API_KEY_ID = env.str("ELASTICSEARCH_API_KEY_ID", default=None)
