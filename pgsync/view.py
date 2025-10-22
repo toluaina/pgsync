@@ -434,6 +434,9 @@ def create_view(
         if columns:
             rows[table_name]["primary_keys"] |= set(columns)
             rows[table_name]["indices"] |= set([index])
+            # NB: add the primary key columns to the columns
+            # set as well in case its a through table
+            rows[table_name]["columns"] |= set(columns)
 
     for table_name, columns in fetchall(_foreign_keys(models, schema, tables)):
         rows.setdefault(
@@ -448,6 +451,9 @@ def create_view(
         if columns:
             rows[table_name]["foreign_keys"] |= set(columns)
             rows[table_name]["indices"] |= set([index])
+            # NB: add the foreign key columns to the columns
+            # set as well in case its a through table
+            rows[table_name]["columns"] |= set(columns)
 
     if user_defined_fkey_tables:
         for table_name, columns in user_defined_fkey_tables.items():

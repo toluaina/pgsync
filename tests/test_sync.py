@@ -928,6 +928,10 @@ class TestSync(object):
                         "public",
                         {"publisher", "book"},
                         {"publisher": {"publisher_id", "id"}},
+                        {
+                            "book": {"isbn", "title", "description"},
+                            "publisher": {"id", "name"},
+                        },
                     )
                 mock_create_function.assert_called_once_with("public")
             mock_teardown.assert_called_once_with(drop_view=False)
