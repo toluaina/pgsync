@@ -840,6 +840,7 @@ class Base(object):
         schema: str,
         tables: t.Set,
         user_defined_fkey_tables: dict,
+        node_columns: dict,
     ) -> None:
         create_view(
             self.engine,
@@ -850,6 +851,7 @@ class Base(object):
             tables,
             user_defined_fkey_tables,
             self._materialized_views(schema),
+            node_columns,
         )
 
     def drop_view(self, schema: str) -> None:
@@ -964,9 +966,9 @@ class Base(object):
         """Check if the trigger function exists."""
         return self.exists(
             sa.text(
-                f"SELECT 1 FROM pg_proc WHERE proname = :name "
-                f"AND pronamespace = (SELECT oid FROM pg_namespace "
-                f"WHERE nspname = :schema)"
+                "SELECT 1 FROM pg_proc WHERE proname = :name "
+                "AND pronamespace = (SELECT oid FROM pg_namespace "
+                "WHERE nspname = :schema)"
             ).bindparams(name=TRIGGER_FUNC, schema=schema),
         )
 
