@@ -18,6 +18,7 @@ DECLARE
   _indices TEXT [];
   _primary_keys TEXT [];
   _foreign_keys TEXT [];
+  _watched_columns TEXT [];
 
 BEGIN
     -- database is also the channel name.
@@ -40,8 +41,8 @@ BEGIN
     ELSE
         IF TG_OP <> 'TRUNCATE' THEN
 
-            SELECT primary_keys, foreign_keys, indices
-            INTO _primary_keys, _foreign_keys, _indices
+            SELECT primary_keys, foreign_keys, indices, watched_columns
+            INTO _primary_keys, _foreign_keys, _indices, _watched_columns
             FROM {MATERIALIZED_VIEW}
             WHERE table_name = TG_TABLE_NAME;
 
@@ -49,14 +50,14 @@ BEGIN
             new_row := (
                 SELECT JSONB_OBJECT_AGG(key, value)
                 FROM JSON_EACH(new_row)
-                WHERE key = ANY(_primary_keys || _foreign_keys)
+                WHERE key = ANY(_primary_keys || _foreign_keys || _watched_columns))
             );
             IF TG_OP = 'UPDATE' THEN
                 old_row = ROW_TO_JSON(OLD);
                 old_row := (
                     SELECT JSONB_OBJECT_AGG(key, value)
                     FROM JSON_EACH(old_row)
-                    WHERE key = ANY(_primary_keys || _foreign_keys)
+                    WHERE key = ANY(_primary_keys || _foreign_keys || _watched_columns))
                 );
             END IF;
             xmin := NEW.xmin;

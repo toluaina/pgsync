@@ -136,6 +136,7 @@ class Node(object):
     parent: t.Optional[Node] = None
     base_tables: t.Optional[list] = None
     is_through: bool = False
+    watched_columns: t.Optional[list] = None
 
     def __post_init__(self):
         self.model: sa.sql.Alias = self.models(self.table, self.schema)
@@ -355,6 +356,7 @@ class Tree(threading.local):
 
     def __post_init__(self):
         self.tables: t.Set[str] = set()
+        self.watched_columns_tables: t.Set[str] = set()
         self.__nodes: t.Dict[Node] = {}
         self.__schemas: t.Set[str] = set()
         self.root: t.Optional[Node] = None
@@ -401,11 +403,14 @@ class Tree(threading.local):
             columns=nodes.get("columns", []),
             relationship=nodes.get("relationship", {}),
             base_tables=nodes.get("base_tables", []),
+            watched_columns=nodes.get("watched_columns", []),
         )
         if self.root is None:
             self.root = node
 
         self.tables.add(node.table)
+        if node.watched_columns:
+            self.watched_columns_tables.add(node.table)
         for through_node in node.relationship.throughs:
             through_node.is_through = True
             self.tables.add(through_node.table)

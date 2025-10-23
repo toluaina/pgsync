@@ -100,7 +100,32 @@ Example spec
         }
     ]
 
-### Environment variables 
+#### Watched columns in config.
+
+If your system runs under high load and performs many SQL updates — for example, on many-to-many or related tables — that often don’t actually change any data, or if you have large tables that are frequently updated but you only need certain fields reflected in OpenSearch/Elasticsearch,
+you can use the watched_columns parameter to specify which columns should trigger document updates.
+
+This prevents unnecessary re-indexing and significantly reduces load on both the database and the search index.
+
+.. code-block::
+    {
+        "database": "[database name]",
+        "index": "[Elasticsearch or OpenSearch index]",
+        "nodes": {
+            "table": "[table A]",
+            "schema": "[table A schema]",
+            "columns": [
+                "column 1 from table A",
+                "column 2 from table A",
+                ],
+            "watched_columns": [
+                "column 1 from table A",
+                "column 2 from table A",
+                ],
+
+
+
+### Environment variables
 
 Setup environment variables required for the application
 

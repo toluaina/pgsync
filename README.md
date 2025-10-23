@@ -334,6 +334,39 @@ e.g
   }
 ```
 
+#### Performance bust via watches_columns
+
+If your system runs under high load and performs many SQL updates — for example, on many-to-many or related tables — that often don’t actually change any data, or if you have large tables that are frequently updated but you only need certain fields reflected in OpenSearch/Elasticsearch,
+you can use the watched_columns parameter to specify which columns should trigger document updates.
+
+This prevents unnecessary re-indexing and significantly reduces load on both the database and the search index.
+
+Imagine your table `author` has many columns and its often updating, but
+you need only `name` for searching, so this approach can help you.
+
+```json
+{
+    "table": "book",
+    "columns": [
+        "isbn",
+        "title",
+        "description"
+    ],
+    "children": [
+        {
+            "table": "author",
+            "columns": [
+                "name"
+            ],
+            "watched_columns": [
+                "name"
+            ]
+        }
+    ]
+}
+```
+
+
 PGSync addresses the following challenges:
 - What if we update the author's name in the database?
 - What if we wanted to add another author for an existing book?

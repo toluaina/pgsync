@@ -840,6 +840,7 @@ class Base(object):
         schema: str,
         tables: t.Set,
         user_defined_fkey_tables: dict,
+        watched_columns_for_table: t.Dict[str, t.List[str]]
     ) -> None:
         create_view(
             self.engine,
@@ -850,6 +851,7 @@ class Base(object):
             tables,
             user_defined_fkey_tables,
             self._materialized_views(schema),
+            watched_columns_for_table,
         )
 
     def drop_view(self, schema: str) -> None:

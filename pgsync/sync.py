@@ -135,6 +135,8 @@ class Sync(Base, metaclass=Singleton):
         self.query_builder: QueryBuilder = QueryBuilder(verbose=verbose)
         self.count: dict = dict(xlog=0, db=0, redis=0)
         self.tasks: t.List[asyncio.Task] = []
+        self.skipped_xmins: t.List[int] = []
+        self.lock_skipped_xmins: threading.Lock = threading.Lock()
         self.lock: threading.Lock = threading.Lock()
 
     @property
@@ -326,6 +328,7 @@ class Sync(Base, metaclass=Singleton):
                 tables: t.Set = set()
                 # tables with user defined foreign keys
                 user_defined_fkey_tables: dict = {}
+                watched_columns_for_table: dict = {}
 
                 for node in self.tree.traverse_breadth_first():
                     if node.schema != schema:
@@ -352,6 +355,8 @@ class Sync(Base, metaclass=Singleton):
                     if columns:
                         user_defined_fkey_tables.setdefault(node.table, set())
                         user_defined_fkey_tables[node.table] |= set(columns)
+
+                    watched_columns_for_table[node.table] = node.watched_columns
                 if tables:
                     if if_not_exists or not self.view_exists(
                         MATERIALIZED_VIEW, schema
@@ -362,6 +367,7 @@ class Sync(Base, metaclass=Singleton):
                             schema,
                             tables,
                             user_defined_fkey_tables,
+                            watched_columns_for_table,
                         )
 
                     self.create_triggers(
@@ -1603,6 +1609,19 @@ class Sync(Base, metaclass=Singleton):
         while True:
             await self._async_poll_redis()
 
+    def _should_skip_update_due_to_watched_columns(self, payload: dict) -> bool:
+        """
+        Returns True if this UPDATE payload should be skipped because none of the watched
+        columns changed; False otherwise.
+        """
+        if payload.get("tg_op") != UPDATE:
+            return False
+
+        if payload["table"] not in self.tree.watched_columns_tables:
+            return False
+
+        return payload["old"] == payload["new"]
+
     @threaded
     @exception
     def poll_db(self) -> None:
@@ -1659,7 +1678,12 @@ class Sync(Base, metaclass=Singleton):
                         and self.index in payload.get("indices", [])
                         and payload.get("schema") in self.tree.schemas
                     ):
-                        payloads.append(payload)
+                        if self._should_skip_update_due_to_watched_columns(payload):
+                            logger.info(f"Skipping payload due to no change: {payload['new']}")
+                            with self.lock_skipped_xmins:
+                                self.skipped_xmins.append(payload["xmin"])
+                        else:
+                            payloads.append(payload)
                         logger.debug(f"poll_db: {payload}")
                         with self.lock:
                             self.count["db"] += 1
@@ -1768,7 +1792,9 @@ class Sync(Base, metaclass=Singleton):
                     )
                     _payloads: list = []
 
-        txids: t.Set = set(map(lambda x: x.xmin, payloads))
+        with self.lock_skipped_xmins:
+            txids: t.Set = set(map(lambda x: x.xmin, payloads)) | set(self.skipped_xmins)
+            self.skipped_xmins = []
         # for truncate, tg_op txids is None so skip setting the checkpoint
         if txids != set([None]):
             self.checkpoint: int = min(min(txids), self.txid_current) - 1
