@@ -16,7 +16,7 @@ class Plugin(ABC):
     """Plugin base class."""
 
     @abstractmethod
-    def transform(self, doc: dict, **kwargs) -> dict:
+    def transform(self, doc: dict, **kwargs: t.Any) -> dict:
         """This must be implemented by all derived classes."""
         pass
 
@@ -90,7 +90,7 @@ class Plugins(object):
             ]:
                 self.walk(f"{package}.{pkg}")
 
-    def transform(self, docs: list) -> t.Generator:
+    def transform(self, docs: t.Iterable[dict]) -> t.Generator:
         """Applies all plugins to each doc."""
         for doc in docs:
             for plugin in self.plugins:
