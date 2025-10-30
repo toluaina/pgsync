@@ -148,6 +148,7 @@ class TestConstants(object):
                 "coerce",
                 "copy_to",
                 "doc_values",
+                "dimension",
                 "dynamic",
                 "eager_global_ordinals",
                 "enabled",
