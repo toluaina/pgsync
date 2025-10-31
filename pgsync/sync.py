@@ -1925,7 +1925,16 @@ class Sync(Base, metaclass=Singleton):
     default=settings.SCHEMA,
     show_default=True,
     cls=MutuallyExclusiveOption,
-    mutually_exclusive=["s3_schema_url"],
+    mutually_exclusive=["s3_schema_url", "schema_url"],
+)
+@click.option(
+    "--schema_url",
+    help="URL for schema config",
+    type=click.STRING,
+    default=settings.SCHEMA_URL,
+    show_default=True,
+    cls=MutuallyExclusiveOption,
+    mutually_exclusive=["config", "s3_schema_url"],
 )
 @click.option(
     "--s3_schema_url",
@@ -1934,7 +1943,7 @@ class Sync(Base, metaclass=Singleton):
     default=settings.S3_SCHEMA_URL,
     show_default=True,
     cls=MutuallyExclusiveOption,
-    mutually_exclusive=["config"],
+    mutually_exclusive=["config", "schema_url"],
 )
 @click.option(
     "--daemon",
@@ -2029,6 +2038,7 @@ class Sync(Base, metaclass=Singleton):
 )
 def main(
     config: str,
+    schema_url: str,
     s3_schema_url: str,
     daemon: bool,
     host: str,
@@ -2068,15 +2078,20 @@ def main(
         key: value for key, value in kwargs.items() if value is not None
     }
 
-    if not config and not s3_schema_url:
+    if not config and not schema_url and not s3_schema_url:
         raise click.UsageError(
             "You must provide either --config (or SCHEMA env var) or "
+            "--schema-url (or SCHEMA_URL env var) or "
             "--s3-schema-url (or S3_SCHEMA_URL env var)."
         )
 
-    validate_config(config=config, s3_schema_url=s3_schema_url)
+    validate_config(
+        config=config, schema_url=schema_url, s3_schema_url=s3_schema_url
+    )
 
-    show_settings(config=config, s3_schema_url=s3_schema_url)
+    show_settings(
+        config=config, schema_url=schema_url, s3_schema_url=s3_schema_url
+    )
 
     # MySQL and MariaDB are only supported in polling mode
     if daemon and IS_MYSQL_COMPAT:
@@ -2092,7 +2107,9 @@ def main(
     with Timer():
         if analyze:
             for doc in config_loader(
-                config=config, s3_schema_url=s3_schema_url
+                config=config,
+                schema_url=schema_url,
+                s3_schema_url=s3_schema_url,
             ):
                 sync: Sync = Sync(doc, verbose=verbose, **kwargs)
                 sync.analyze()
@@ -2104,7 +2121,9 @@ def main(
             kwargs["polling"] = True
             while True:
                 for doc in config_loader(
-                    config=config, s3_schema_url=s3_schema_url
+                    config=config,
+                    schema_url=schema_url,
+                    s3_schema_url=s3_schema_url,
                 ):
                     sync: Sync = Sync(doc, verbose=verbose, **kwargs)
                     sync.pull(polling=True)
@@ -2113,7 +2132,9 @@ def main(
         else:
             tasks: t.List[asyncio.Task] = []
             for doc in config_loader(
-                config=config, s3_schema_url=s3_schema_url
+                config=config,
+                schema_url=schema_url,
+                s3_schema_url=s3_schema_url,
             ):
                 sync: Sync = Sync(
                     doc,

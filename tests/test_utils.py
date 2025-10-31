@@ -36,7 +36,7 @@ class TestUtils(object):
         with pytest.raises(ValueError) as excinfo:
             validate_config()
         assert (
-            "You must provide either a local config path or an S3 schema URL."
+            "You must provide either a local config path, a valid URL or an S3 URL"
             in str(excinfo.value)
         )
 
@@ -54,6 +54,13 @@ class TestUtils(object):
             excinfo.value
         )
 
+        # Test: invalid URL
+        with pytest.raises(ValueError) as excinfo:
+            validate_config(schema_url="ftp://example.com/schema.json")
+        assert 'Invalid URL: "ftp://example.com/schema.json"' in str(
+            excinfo.value
+        )
+
         # Test: valid local config file (assumes it exists)
         test_config_path = "tests/fixtures/schema.json"
         assert os.path.exists(
@@ -65,6 +72,11 @@ class TestUtils(object):
         # Test: valid S3 URL
         validate_config(
             s3_schema_url="s3://bucket/schema.json"
+        )  # Should not raise
+
+        # Test: valid URL
+        validate_config(
+            schema_url="http://example.com/schema.json"
         )  # Should not raise
 
     def test_config_loader(self):

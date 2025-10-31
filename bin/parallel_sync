@@ -53,7 +53,13 @@ from threading import Thread
 import click
 import sqlalchemy as sa
 
-from pgsync.settings import BLOCK_SIZE, CHECKPOINT_PATH, S3_SCHEMA_URL, SCHEMA
+from pgsync.settings import (
+    BLOCK_SIZE,
+    CHECKPOINT_PATH,
+    S3_SCHEMA_URL,
+    SCHEMA,
+    SCHEMA_URL,
+)
 from pgsync.sync import Sync
 from pgsync.utils import (
     config_loader,
@@ -386,7 +392,16 @@ def run_task(
     default=SCHEMA,
     show_default=True,
     cls=MutuallyExclusiveOption,
-    mutually_exclusive=["s3_schema_url"],
+    mutually_exclusive=["s3_schema_url", "schema_url"],
+)
+@click.option(
+    "--schema_url",
+    help="URL for schema config",
+    type=click.STRING,
+    default=SCHEMA_URL,
+    show_default=True,
+    cls=MutuallyExclusiveOption,
+    mutually_exclusive=["config", "s3_schema_url"],
 )
 @click.option(
     "--s3_schema_url",
@@ -395,7 +410,7 @@ def run_task(
     default=S3_SCHEMA_URL,
     show_default=True,
     cls=MutuallyExclusiveOption,
-    mutually_exclusive=["config"],
+    mutually_exclusive=["config", "schema_url"],
 )
 @click.option(
     "--verbose",
@@ -428,7 +443,12 @@ def run_task(
     default="multiprocess_async",
 )
 def main(
-    config: str, s3_schema_url: str, nprocs: int, mode: str, verbose: bool
+    config: str,
+    schema_url: str,
+    s3_schema_url: str,
+    nprocs: int,
+    mode: str,
+    verbose: bool,
 ) -> None:
     """
     TODO:
@@ -436,11 +456,17 @@ def main(
     - Handle KeyboardInterrupt Exception
     """
 
-    validate_config(config=config, s3_schema_url=s3_schema_url)
+    validate_config(
+        config=config, schema_url=schema_url, s3_schema_url=s3_schema_url
+    )
 
-    show_settings(config=config, s3_schema_url=s3_schema_url)
+    show_settings(
+        config=config, schema_url=schema_url, s3_schema_url=s3_schema_url
+    )
 
-    for doc in config_loader(config=config, s3_schema_url=s3_schema_url):
+    for doc in config_loader(
+        config=config, schema_url=schema_url, s3_schema_url=s3_schema_url
+    ):
         tasks: t.Generator = fetch_tasks(doc)
         if mode == "synchronous":
             synchronous(tasks, doc, verbose=verbose)

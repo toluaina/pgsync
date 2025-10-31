@@ -26,7 +26,16 @@ logger = logging.getLogger(__name__)
     default=settings.SCHEMA,
     show_default=True,
     cls=MutuallyExclusiveOption,
-    mutually_exclusive=["s3_schema_url"],
+    mutually_exclusive=["s3_schema_url", "schema_url"],
+)
+@click.option(
+    "--schema_url",
+    help="URL for schema config",
+    type=click.STRING,
+    default=settings.SCHEMA_URL,
+    show_default=True,
+    cls=MutuallyExclusiveOption,
+    mutually_exclusive=["config", "s3_schema_url"],
 )
 @click.option(
     "--s3_schema_url",
@@ -35,7 +44,7 @@ logger = logging.getLogger(__name__)
     default=settings.S3_SCHEMA_URL,
     show_default=True,
     cls=MutuallyExclusiveOption,
-    mutually_exclusive=["config"],
+    mutually_exclusive=["config", "schema_url"],
 )
 @click.option("--host", "-h", help="PG_HOST override")
 @click.option("--password", is_flag=True, help="Prompt for database password")
@@ -67,6 +76,7 @@ logger = logging.getLogger(__name__)
 def main(
     teardown: bool,
     config: str,
+    schema_url: str,
     s3_schema_url: str,
     user: str,
     password: bool,
@@ -89,13 +99,24 @@ def main(
         )
     kwargs = {key: value for key, value in kwargs.items() if value is not None}
 
-    validate_config(config=config, s3_schema_url=s3_schema_url)
+    validate_config(
+        config=config,
+        schema_url=schema_url,
+        s3_schema_url=s3_schema_url,
+    )
 
-    show_settings(config=config, s3_schema_url=s3_schema_url)
+    show_settings(
+        config=config,
+        schema_url=schema_url,
+        s3_schema_url=s3_schema_url,
+        **kwargs,
+    )
 
     validate: bool = False if teardown else True
 
-    for doc in config_loader(config=config, s3_schema_url=s3_schema_url):
+    for doc in config_loader(
+        config=config, schema_url=schema_url, s3_schema_url=s3_schema_url
+    ):
         sync: Sync = Sync(
             doc,
             verbose=verbose,

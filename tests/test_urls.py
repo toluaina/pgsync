@@ -104,11 +104,11 @@ class TestUrls(object):
         # Valid file path should not raise (uses current file)
         validate_config(config=__file__)
 
-        # Missing both config and s3_schema_url -> ValueError
+        # Missing all config, url and s3_schema_url -> ValueError
         with pytest.raises(ValueError) as excinfo:
             validate_config()
         assert (
-            "You must provide either a local config path or an S3 schema URL."
+            "You must provide either a local config path, a valid URL or an S3 URL"
             in str(excinfo.value)
         )
 

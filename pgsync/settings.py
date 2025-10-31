@@ -45,6 +45,7 @@ REPLICATION_SLOT_CLEANUP_INTERVAL = env.float(
 # path to the application schema config
 SCHEMA = env.str("SCHEMA", default=None)
 S3_SCHEMA_URL = env.str("S3_SCHEMA_URL", default=None)
+SCHEMA_URL = env.str("SCHEMA_URL", default=None)
 USE_ASYNC = env.bool("USE_ASYNC", default=False)
 STREAM_RESULTS = env.bool("STREAM_RESULTS", default=True)
 # db polling interval
