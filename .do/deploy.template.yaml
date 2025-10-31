@@ -1,3 +1,5 @@
+# This is a template deployment file for deploying pgsync on
+# DigitalOcean App Platform.
 spec:
   name: pgsync-demo
   services:
@@ -7,28 +9,33 @@ spec:
         repo: toluaina/pgsync
         branch: main
         deploy_on_push: false
-      instance_size_slug: apps-s-1vcpu-1gb
-      internal_ports:
-        - 8080
+      # keep only an internal health port
+      internal_ports: [9090]
+      health_check:
+        port: 9090
+
       build_command: pip install --no-cache-dir pgsync
       run_command: >-
-        bash -lc '
-        pgsync -c ${SCHEMA:-examples/book/schema.json} -b -d &
-        python -m http.server 8080
-        '
+        bash -lc 'pgsync --schema_url "${SCHEMA_URL}" -b -d &
+        python -m http.server 9090'
+
       envs:
-        - key: SCHEMA
-          value: examples/book/schema.json
+        - key: SCHEMA_URL
+          value: https://raw.githubusercontent.com/toluaina/pgsync/main/examples/book/schema.json
           scope: RUN_TIME
+
         - key: PG_URL
           value: ${pg.DATABASE_URL}
           scope: RUN_TIME
-        - key: ELASTICSEARCH_URL
+        # Fill these during the wizard (OpenSearch + Redis/Valkey)
+        - key: ELASTICSEARCH_URL    # e.g. https://user:pass@os-host:443
           scope: RUN_TIME
-        - key: REDIS_URL
+        - key: REDIS_URL           # e.g. rediss://default:pass@host:port/0
           scope: RUN_TIME
         - key: REDIS_CHECKPOINT
           value: "true"
           scope: RUN_TIME
+
+  # NB: README button can add exactly one Dev Postgres :(
   databases:
     - name: pg
