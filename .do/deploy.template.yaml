@@ -1,0 +1,34 @@
+name: pgsync-demo
+databases:
+  - name: pgsync-db
+    engine: PG
+    version: "15"
+  - name: pgsync-redis
+    engine: VALKEY
+    version: "7"
+  - name: pgsync-os
+    engine: OPENSEARCH
+    version: "2"
+workers:
+  - name: pgsync
+    image:
+      registry_type: DOCKER_HUB
+      repository: toluaina1/pgsync
+      tag: latest
+    run_command: pgsync -c examples/book/schema.json -d -b
+    envs:
+      - key: PG_URL
+        value: ${pg.DATABASE_URL}
+        scope: RUN_TIME
+      - key: REDIS_URL
+        value: ${pgsync-redis.DATABASE_URL}
+        scope: RUN_TIME
+      - key: ELASTICSEARCH_URL
+        value: ${pgsync-os.DATABASE_URL}
+        scope: RUN_TIME
+      - key: REDIS_CHECKPOINT
+        value: "true"
+        scope: RUN_TIME
+      - key: SCHEMA
+        value: examples/book/schema.json
+        scope: RUN_TIME
