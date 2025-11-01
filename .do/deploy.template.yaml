@@ -45,6 +45,9 @@ spec:
         - key: PG_DATABASE
           value: "defaultdb"
           scope: RUN_TIME
+        - key: CONSOLE_LOGGING_HANDLER_MIN_LEVEL
+          value: "INFO"
+          scope: RUN_TIME
 
   # NB: README button can add exactly one Dev Postgres :(
   databases:
