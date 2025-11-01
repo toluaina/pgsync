@@ -12,7 +12,7 @@ spec:
       internal_ports: [9090]
       health_check:
         port: 9090
-      build_command: pip install --no-cache-dir pgsync
+      build_command: pip install --no-cache-dir pgsync && pip install -r requirements/dev.txt
       run_command: >-
         bash -lc '
         python examples/book/schema.py --schema_url "${SCHEMA_URL}" &&
