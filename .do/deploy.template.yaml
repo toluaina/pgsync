@@ -1,5 +1,5 @@
-# This is a template deployment file for deploying pgsync on
-# DigitalOcean App Platform.
+# This is a template deployment file for deploying PGSync on
+# DigitalOcean's App Platform.
 spec:
   name: pgsync-demo
   services:
@@ -27,12 +27,15 @@ spec:
         - key: PG_URL
           value: ${pg.DATABASE_URL}
           scope: RUN_TIME
-        # Fill these during the wizard (OpenSearch + Redis/Valkey)
+        # Fill these during the wizard (OpenSearch + Valkey)
         - key: ELASTICSEARCH_URL    # e.g. https://user:pass@os-host:443
           scope: RUN_TIME
         - key: REDIS_URL           # e.g. rediss://default:pass@host:port/0
           scope: RUN_TIME
         - key: REDIS_CHECKPOINT
+          value: "true"
+          scope: RUN_TIME
+        - key: OPENSEARCH
           value: "true"
           scope: RUN_TIME
 
