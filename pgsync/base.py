@@ -1422,8 +1422,7 @@ def drop_database(database: str, echo: bool = False) -> None:
     """Drop a database."""
     logger.debug(f"Dropping database: {database}")
     with pg_engine(
-        "information_schema" if IS_MYSQL_COMPAT else "postgres",
-        echo=echo,
+        "information_schema" if IS_MYSQL_COMPAT else "postgres", echo=echo
     ) as engine:
         pg_execute(
             engine,

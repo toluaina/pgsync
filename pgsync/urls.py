@@ -2,7 +2,7 @@
 
 import logging
 import typing as t
-from urllib.parse import quote_plus
+from urllib.parse import ParseResult, quote, quote_plus, urlparse, urlunparse
 
 from .plugin import Plugins
 from .settings import (
@@ -124,7 +124,19 @@ def get_database_url(
     driver = driver or PG_DRIVER
     # override the default URL if PG_URL is set
     if PG_URL:
-        return PG_URL.strip()
+        parsed_url: ParseResult = urlparse(PG_URL.strip())
+        # keep existing scheme/netloc/query/fragment; swap just the path
+        new_path: str = "/" + quote(database)
+        return urlunparse(
+            (
+                parsed_url.scheme,
+                parsed_url.netloc,
+                new_path,
+                parsed_url.params,
+                parsed_url.query,
+                parsed_url.fragment,
+            )
+        )
 
     auth: str = f"{user}:{quote_plus(password)}" if password else user
     if not password:

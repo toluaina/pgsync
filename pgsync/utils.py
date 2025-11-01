@@ -225,18 +225,18 @@ def config_loader(
         return temp_file.name
 
     def is_url(url: str) -> bool:
-        parsed = urlparse(url)
-        return parsed.scheme in ("http", "https")
+        parsed_url: ParseResult = urlparse(url)
+        return parsed_url.scheme in ("http", "https")
 
     def download_from_url(url: str) -> str:
         """Download JSON from a URL, save to a temp .json file, and return its path."""
-        response = requests.get(
+        response: requests.Response = requests.get(
             url, headers={"Accept": "application/json"}, timeout=(10, 60)
         )
         response.raise_for_status()
         # Ensure it's valid JSON (raises ValueError if not)
         try:
-            data = response.json()
+            data: dict = response.json()
         except ValueError as e:
             content_type = response.headers.get("Content-Type", "unknown")
             raise ValueError(

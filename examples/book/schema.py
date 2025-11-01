@@ -1,3 +1,4 @@
+import typing as t
 from datetime import datetime
 
 import click
@@ -8,7 +9,12 @@ from sqlalchemy.schema import UniqueConstraint
 from pgsync.base import create_database, create_schema, pg_engine
 from pgsync.constants import DEFAULT_SCHEMA
 from pgsync.helper import teardown
-from pgsync.utils import config_loader, validate_config
+from pgsync.settings import S3_SCHEMA_URL, SCHEMA_URL
+from pgsync.utils import (
+    config_loader,
+    MutuallyExclusiveOption,
+    validate_config,
+)
 
 
 class Base(DeclarativeBase):
@@ -236,8 +242,14 @@ class BookShelf(Base):
     )
 
 
-def setup(config: str) -> None:
-    for doc in config_loader(config):
+def setup(
+    config: str,
+    schema_url: t.Optional[str] = None,
+    s3_schema_url: t.Optional[str] = None,
+) -> None:
+    for doc in config_loader(
+        config, schema_url=schema_url, s3_schema_url=s3_schema_url
+    ):
         database: str = doc.get("database", doc["index"])
         schema: str = doc.get("schema", DEFAULT_SCHEMA)
         create_database(database)
@@ -255,10 +267,40 @@ def setup(config: str) -> None:
     help="Schema config",
     type=click.Path(exists=True),
 )
-def main(config: str) -> None:
-    validate_config(config)
-    teardown(config=config)
-    setup(config)
+@click.option(
+    "--schema_url",
+    help="URL for schema config",
+    type=click.STRING,
+    default=SCHEMA_URL,
+    show_default=True,
+    cls=MutuallyExclusiveOption,
+    mutually_exclusive=["config", "s3_schema_url"],
+)
+@click.option(
+    "--s3_schema_url",
+    help="S3 URL for schema config",
+    type=click.STRING,
+    default=S3_SCHEMA_URL,
+    show_default=True,
+    cls=MutuallyExclusiveOption,
+    mutually_exclusive=["config", "schema_url"],
+)
+def main(config: str, schema_url: str, s3_schema_url: str) -> None:
+    validate_config(
+        config,
+        schema_url=schema_url,
+        s3_schema_url=s3_schema_url,
+    )
+    teardown(
+        config=config,
+        schema_url=schema_url,
+        s3_schema_url=s3_schema_url,
+    )
+    setup(
+        config,
+        schema_url=schema_url,
+        s3_schema_url=s3_schema_url,
+    )
 
 
 if __name__ == "__main__":
