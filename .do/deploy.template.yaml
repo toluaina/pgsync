@@ -1,5 +1,5 @@
-# This is a template deployment file for deploying PGSync books Demo on
-# DigitalOcean's App Platform.
+# This is a template deployment file for deploying 
+# PGSync books Demo on DigitalOcean's App Platform.
 spec:
   name: pgsync-demo
   services:
@@ -15,11 +15,10 @@ spec:
       build_command: pip install --no-cache-dir pgsync && pip install -r requirements/dev.txt
       run_command: >-
         bash -lc '
-        echo "Schema URL: ${SCHEMA_URL}" &&
-        echo "Setting up schema..." &&
+        echo "Schema URL: ${SCHEMA_URL}..." &&
         python examples/book/schema.py --schema_url "${SCHEMA_URL}" &&
         sleep 5 &&
-        echo "Seeding data..." &&
+        echo "Seeding example book data..." &&
         python examples/book/data.py --schema_url "${SCHEMA_URL}" &&
         pgsync --schema_url "${SCHEMA_URL}" --polling &
         python -m http.server 9090
@@ -37,7 +36,7 @@ spec:
         - key: REDIS_URL           # e.g. rediss://default:pass@host:port/0
           scope: RUN_TIME
         - key: REDIS_CHECKPOINT
-          value: "false"
+          value: "true"
           scope: RUN_TIME
         - key: OPENSEARCH
           value: "true"
@@ -49,6 +48,6 @@ spec:
           value: "INFO"
           scope: RUN_TIME
 
-  # NB: README button can add exactly one Dev Postgres :(
+  # README button can only add exactly one Dev Postgres :(
   databases:
     - name: pg
