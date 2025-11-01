@@ -17,7 +17,7 @@ spec:
         bash -lc '
         python examples/book/schema.py --schema_url "${SCHEMA_URL}" &&
         python examples/book/data.py --schema_url "${SCHEMA_URL}" &&
-        pgsync --schema_url "${SCHEMA_URL}" -b -d &
+        pgsync --schema_url "${SCHEMA_URL}" --polling &
         python -m http.server 9090
         '
       envs:
