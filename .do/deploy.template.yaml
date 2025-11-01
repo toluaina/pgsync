@@ -37,7 +37,7 @@ spec:
         - key: REDIS_URL           # e.g. rediss://default:pass@host:port/0
           scope: RUN_TIME
         - key: REDIS_CHECKPOINT
-          value: "true"
+          value: "false"
           scope: RUN_TIME
         - key: OPENSEARCH
           value: "true"
