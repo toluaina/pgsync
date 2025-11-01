@@ -5,10 +5,9 @@ spec:
   services:
     - name: pgsync
       environment_slug: python
-      github:
-        repo: toluaina/pgsync
+      git:
+        repo_clone_url: https://github.com/toluaina/pgsync.git
         branch: main
-        deploy_on_push: false
       # keep only an internal health port
       internal_ports: [9090]
       health_check:
