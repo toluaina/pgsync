@@ -38,6 +38,9 @@ spec:
         - key: OPENSEARCH
           value: "true"
           scope: RUN_TIME
+        - key: PG_DATABASE
+          value: "defaultdb"
+          scope: RUN_TIME
 
   # NB: README button can add exactly one Dev Postgres :(
   databases:

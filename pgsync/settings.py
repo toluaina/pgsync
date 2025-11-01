@@ -202,6 +202,9 @@ if PG_URL:
 else:
     # If PG_URL is not set, we need to use the other PG_* variables
     PG_USER = env.str("PG_USER")
+# The default database name e.g postges or defaultdb
+PG_DATABASE = env.str("PG_DATABASE", default="postgres")
+MYSQL_DATABASE = env.str("MYSQL_DATABASE", default="information_schema")
 
 # Read-only Postgres:
 # This is used for read-only consumers that do not require replication slots or triggers.
