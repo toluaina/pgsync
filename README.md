@@ -109,6 +109,14 @@ There are several ways of installing and trying PGSync
  - [Running in Docker](#running-in-docker) is the easiest way to get up and running.
  - [Manual configuration](#manual-configuration) 
 
+#### Book Demo Example (requires a DigitalOcean account)
+
+[![Deploy to DO](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/toluaina/pgsync/tree/main)
+
+Fill in the following during the setup
+ - `ELASTICSEARCH_URL` e.g. https://user:pass@os-host:443
+ - `REDIS_URL` e.g. rediss://default:pass@host:port/0
+
 
 ##### Running in Docker (Using Github Repository)
 
