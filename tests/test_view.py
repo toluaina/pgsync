@@ -272,7 +272,7 @@ class TestView(object):
                 ["book", "publisher"],
                 user_defined_fkey_tables={},
                 views=[],
-                node_columns={DEFAULT_SCHEMA: {"book": ["node_id"]}},
+                node_columns={"book": ["node_id"]},
             )
             assert mock_logger.debug.call_count == 2
             assert mock_logger.debug.call_args_list == [
@@ -293,7 +293,7 @@ class TestView(object):
                 set(["book", "publisher"]),
                 user_defined_fkey_tables=user_defined_fkey_tables,
                 views=[],
-                node_columns={DEFAULT_SCHEMA: {"book": ["node_id"]}},
+                node_columns={"book": ["node_id"]},
             )
             assert mock_logger.debug.call_count == 2
             assert mock_logger.debug.call_args_list == [

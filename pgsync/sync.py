@@ -341,11 +341,12 @@ class Sync(Base, metaclass=Singleton):
                     tables |= set([node.table])
                     # we also need to bootstrap the base tables
                     tables |= set(node.base_tables)
-                    # node_columns[node.table] = node.column_names
                     node_columns[node.table] = set(
                         [
                             re.split(
-                                rf"\s*{JSONB_OPERATORS}\s*", c, maxsplit=1
+                                rf"\s*({'|'.join(re.escape(op) for op in JSONB_OPERATORS)})\s*",
+                                c,
+                                maxsplit=1,
                             )[0]
                             for c in node.column_names
                         ]
