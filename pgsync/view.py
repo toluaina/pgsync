@@ -340,6 +340,7 @@ def create_view(
     tables: t.Set,
     user_defined_fkey_tables: dict,
     views: t.List[str],
+    node_columns: dict,
 ) -> None:
     """
     This module defines a function `create_view` that creates a view describing primary_keys and foreign_keys for each table
@@ -354,6 +355,7 @@ def create_view(
         tables (Set): A set of table names.
         user_defined_fkey_tables (dict): A dictionary containing user-defined foreign key tables.
         views (List[str]): A list of views.
+        node_columns (dict): A dictionary containing node columns.
 
     Returns:
         None
@@ -371,18 +373,24 @@ def create_view(
         So if 'specie' was the only row before, and the next query returns
         'unit' and 'structure', we want to end up with the result below.
 
-         table_name | primary_keys | foreign_keys     | indices
-        ------------+--------------+------------------+------------
-         specie     | {id}         | {id, user_id}    | {foo, bar}
-         unit       | {id}         | {id, profile_id} | {foo, bar}
-         structure  | {id}         | {id}             | {foo, bar}
-         unit       | {id}         | {id, profile_id} | {foo, bar}
-         structure  | {id}         | {id}             | {foo, bar}
+         table_name | primary_keys | foreign_keys     | indices    | columns
+        ------------+--------------+------------------+------------+--------------
+         specie     | {id}         | {id, user_id}    | {foo, bar} | {name, age}
+         unit       | {id}         | {id, profile_id} | {foo, bar} | {name, description}
+         structure  | {id}         | {id}             | {foo, bar} | {name, type}
+         unit       | {id}         | {id, profile_id} | {foo, bar} | {name, description}
+         structure  | {id}         | {id}             | {foo, bar} | {name, type}
     """
 
     rows: dict = {}
     if MATERIALIZED_VIEW in views:
-        for table_name, primary_keys, foreign_keys, indices in fetchall(
+        for (
+            table_name,
+            primary_keys,
+            foreign_keys,
+            indices,
+            columns,
+        ) in fetchall(
             sa.select("*").select_from(
                 sa.text(f"{schema}.{MATERIALIZED_VIEW}")
             )
@@ -393,6 +401,7 @@ def create_view(
                     "primary_keys": set(),
                     "foreign_keys": set(),
                     "indices": set(),
+                    "columns": set(),
                 },
             )
             if primary_keys:
@@ -401,6 +410,8 @@ def create_view(
                 rows[table_name]["foreign_keys"] = set(foreign_keys)
             if indices:
                 rows[table_name]["indices"] = set(indices)
+            if columns:
+                rows[table_name]["columns"] = set(columns)
         with engine.connect().execution_options(
             isolation_level="AUTOCOMMIT"
         ) as conn:
@@ -413,20 +424,36 @@ def create_view(
     for table_name, columns in fetchall(_primary_keys(models, schema, tables)):
         rows.setdefault(
             table_name,
-            {"primary_keys": set(), "foreign_keys": set(), "indices": set()},
+            {
+                "primary_keys": set(),
+                "foreign_keys": set(),
+                "indices": set(),
+                "columns": set(),
+            },
         )
         if columns:
             rows[table_name]["primary_keys"] |= set(columns)
             rows[table_name]["indices"] |= set([index])
+            # NB: add the primary key columns to the columns
+            # set as well in case its a through table
+            rows[table_name]["columns"] |= set(columns)
 
     for table_name, columns in fetchall(_foreign_keys(models, schema, tables)):
         rows.setdefault(
             table_name,
-            {"primary_keys": set(), "foreign_keys": set(), "indices": set()},
+            {
+                "primary_keys": set(),
+                "foreign_keys": set(),
+                "indices": set(),
+                "columns": set(),
+            },
         )
         if columns:
             rows[table_name]["foreign_keys"] |= set(columns)
             rows[table_name]["indices"] |= set([index])
+            # NB: add the foreign key columns to the columns
+            # set as well in case its a through table
+            rows[table_name]["columns"] |= set(columns)
 
     if user_defined_fkey_tables:
         for table_name, columns in user_defined_fkey_tables.items():
@@ -436,16 +463,37 @@ def create_view(
                     "primary_keys": set(),
                     "foreign_keys": set(),
                     "indices": set(),
+                    "columns": set(),
                 },
             )
             if columns:
                 rows[table_name]["foreign_keys"] |= set(columns)
                 rows[table_name]["indices"] |= set([index])
 
+    if node_columns:
+        for table_name, columns in node_columns.items():
+            rows.setdefault(
+                table_name,
+                {
+                    "primary_keys": set(),
+                    "foreign_keys": set(),
+                    "indices": set(),
+                    "columns": set(),
+                },
+            )
+            if columns:
+                rows[table_name]["columns"] |= set(columns)
+                rows[table_name]["indices"] |= set([index])
+
     if not rows:
         rows.setdefault(
             None,
-            {"primary_keys": set(), "foreign_keys": set(), "indices": set()},
+            {
+                "primary_keys": set(),
+                "foreign_keys": set(),
+                "indices": set(),
+                "columns": set(),
+            },
         )
 
     statement = sa.select(
@@ -454,6 +502,7 @@ def create_view(
             sa.column("primary_keys"),
             sa.column("foreign_keys"),
             sa.column("indices"),
+            sa.column("columns"),
         )
         .data(
             [
@@ -472,6 +521,11 @@ def create_view(
                     (
                         array(fields.get("indices"))
                         if fields.get("indices")
+                        else None
+                    ),
+                    (
+                        array(fields.get("columns"))
+                        if fields.get("columns")
                         else None
                     ),
                 )

@@ -85,7 +85,7 @@ class RedisQueue(object):
                     visible.append(payload)
         return visible
 
-    def push(self, items: t.List) -> None:
+    def push(self, items: t.Iterable[dict]) -> None:
         """Push multiple items onto the queue."""
         self.__db.rpush(self.key, *map(json.dumps, items))
 
@@ -102,5 +102,5 @@ class RedisQueue(object):
 
     def get_meta(self, default: t.Any = None) -> t.Any:
         """Retrieve the stored value (or *default* if nothing is set)."""
-        raw = self.__db.get(self._meta_key)
+        raw: t.Optional[str] = self.__db.get(self._meta_key)
         return json.loads(raw) if raw is not None else default

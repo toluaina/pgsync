@@ -32,7 +32,7 @@ if [ -f "examples/$@/data.py" ]; then
 fi
 
 # Only run bootstrap for Postgres compatible backend
-if [[ "${PG_DRIVER:-}" =~ ^(psycopg|psycopg2|psycopg3|asyncpg|pg8000)$ ]]; then
+if [[ -z "${PG_DRIVER:-}" || "${PG_DRIVER:-}" =~ ^(psycopg|psycopg2|psycopg3|asyncpg|pg8000)$ ]]; then
   bootstrap --config "$(pwd)/examples/$1/schema.json"
 fi
 

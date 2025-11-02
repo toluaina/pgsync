@@ -199,6 +199,7 @@ MATERIALIZED_VIEW_COLUMNS = [
     "indices",
     "primary_keys",
     "table_name",
+    "columns",
 ]
 
 # Primary key delimiter

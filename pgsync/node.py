@@ -294,7 +294,7 @@ class Node(object):
                 self.columns.append(self.model.c[column_name])
 
     @property
-    def primary_keys(self):
+    def primary_keys(self) -> t.List[sa.sql.ColumnElement]:
         return [
             self.model.c[str(sa.text(primary_key))]
             for primary_key in self.model.primary_keys
@@ -311,7 +311,7 @@ class Node(object):
 
     def add_child(self, node: Node) -> None:
         """All nodes except the root node must have a relationship defined."""
-        node.parent: Node = self
+        node.parent = self
         if not node.is_root and (
             not node.relationship.type or not node.relationship.variant
         ):
@@ -388,7 +388,9 @@ class Tree(threading.local):
             raise TableNotInNodeError(f"Table not specified in node: {nodes}")
 
         if not set(nodes.keys()).issubset(set(NODE_ATTRIBUTES)):
-            attrs = set(nodes.keys()).difference(set(NODE_ATTRIBUTES))
+            attrs: t.Set[str] = set(nodes.keys()).difference(
+                set(NODE_ATTRIBUTES)
+            )
             raise NodeAttributeError(f"Unknown node attribute(s): {attrs}")
 
         node: Node = Node(

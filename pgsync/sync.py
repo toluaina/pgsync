@@ -36,6 +36,7 @@ from .base import Base, Payload
 from .constants import (
     DELETE,
     INSERT,
+    JSONB_OPERATORS,
     MATERIALIZED_VIEW,
     MATERIALIZED_VIEW_COLUMNS,
     META,
@@ -217,8 +218,8 @@ class Sync(Base, metaclass=Singleton):
         for node in self.tree.traverse_breadth_first():
             # ensure internal materialized view compatibility
             if MATERIALIZED_VIEW in self._materialized_views(node.schema):
-                if MATERIALIZED_VIEW_COLUMNS != self.columns(
-                    node.schema, MATERIALIZED_VIEW
+                if set(MATERIALIZED_VIEW_COLUMNS) != set(
+                    self.columns(node.schema, MATERIALIZED_VIEW)
                 ):
                     raise RuntimeError(
                         f"Required materialized view columns not present on "
@@ -326,6 +327,7 @@ class Sync(Base, metaclass=Singleton):
                 tables: t.Set = set()
                 # tables with user defined foreign keys
                 user_defined_fkey_tables: dict = {}
+                node_columns: dict = {}
 
                 for node in self.tree.traverse_breadth_first():
                     if node.schema != schema:
@@ -339,7 +341,16 @@ class Sync(Base, metaclass=Singleton):
                     tables |= set([node.table])
                     # we also need to bootstrap the base tables
                     tables |= set(node.base_tables)
-
+                    node_columns[node.table] = set(
+                        [
+                            re.split(
+                                rf"\s*({'|'.join(re.escape(op) for op in JSONB_OPERATORS)})\s*",
+                                c,
+                                maxsplit=1,
+                            )[0]
+                            for c in node.column_names
+                        ]
+                    )
                     # we want to get both the parent and the child keys here
                     # even though only one of them is the foreign_key.
                     # this is because we define both in the schema but
@@ -356,12 +367,12 @@ class Sync(Base, metaclass=Singleton):
                     if if_not_exists or not self.view_exists(
                         MATERIALIZED_VIEW, schema
                     ):
-
                         self.create_view(
                             self.index,
                             schema,
                             tables,
                             user_defined_fkey_tables,
+                            node_columns,
                         )
 
                     self.create_triggers(
@@ -1434,7 +1445,7 @@ class Sync(Base, metaclass=Singleton):
                 }
 
             if self.verbose:
-                print(f"{(i+1)})")
+                print(f"{(i + 1)})")
                 print(f"pkeys: {primary_keys}")
                 pprint.pprint(row)
                 print("-" * 10)
@@ -1816,7 +1827,7 @@ class Sync(Base, metaclass=Singleton):
                     logical_slot_chunk_size=chunk_size,
                     upto_lsn=upto_lsn,
                 )
-            except Exception as e:
+            except Exception:
                 # if we are polling, we can just continue
                 if polling:
                     return

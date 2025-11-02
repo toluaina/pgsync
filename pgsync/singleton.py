@@ -14,7 +14,7 @@ class Singleton(type):
 
     _instances: dict = {}
 
-    def __call__(cls, *args, **kwargs):
+    def __call__(cls, *args: t.Any, **kwargs: t.Any) -> t.Any:
         """
         If an instance of the class has already been created with the same arguments,
         return that instance. Otherwise, create a new instance and return it.
