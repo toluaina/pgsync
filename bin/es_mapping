@@ -11,6 +11,7 @@ from pgsync.settings import (
     ELASTICSEARCH_VERIFY_CERTS,
     S3_SCHEMA_URL,
     SCHEMA,
+    SCHEMA_URL,
 )
 from pgsync.urls import get_search_url
 from pgsync.utils import (
@@ -122,7 +123,16 @@ def create_es_mapping(index: str) -> None:
     default=SCHEMA,
     show_default=True,
     cls=MutuallyExclusiveOption,
-    mutually_exclusive=["s3_schema_url"],
+    mutually_exclusive=["s3_schema_url", "schema_url"],
+)
+@click.option(
+    "--schema_url",
+    help="URL for schema config",
+    type=click.STRING,
+    default=SCHEMA_URL,
+    show_default=True,
+    cls=MutuallyExclusiveOption,
+    mutually_exclusive=["config", "s3_schema_url"],
 )
 @click.option(
     "--s3_schema_url",
@@ -131,17 +141,21 @@ def create_es_mapping(index: str) -> None:
     default=S3_SCHEMA_URL,
     show_default=True,
     cls=MutuallyExclusiveOption,
-    mutually_exclusive=["config"],
+    mutually_exclusive=["config", "schema_url"],
 )
-def main(config: str, s3_schema_url: str) -> None:
+def main(config: str, schema_url: str, s3_schema_url: str) -> None:
     """Create custom NGram analyzer for the default mapping."""
 
-    validate_config(config=config, s3_schema_url=s3_schema_url)
+    validate_config(
+        config=config, schema_url=schema_url, s3_schema_url=s3_schema_url
+    )
     for index in set(
         [
             doc["index"]
             for doc in config_loader(
-                config=config, s3_schema_url=s3_schema_url
+                config=config,
+                schema_url=schema_url,
+                s3_schema_url=s3_schema_url,
             )
         ]
     ):

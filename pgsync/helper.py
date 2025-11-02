@@ -20,6 +20,7 @@ def teardown(
     drop_index: bool = True,
     delete_checkpoint: bool = True,
     config: t.Optional[str] = None,
+    schema_url: t.Optional[str] = None,
     s3_schema_url: t.Optional[str] = None,
     validate: bool = False,
 ) -> None:
@@ -33,11 +34,17 @@ def teardown(
         drop_index (bool, optional): Whether to drop the index. Defaults to True.
         delete_checkpoint (bool, optional): Whether to delete the checkpoint. Defaults to True.
         config (Optional[str], optional): The configuration file path. Defaults to None.
+        schema_url (Optional[str], optional): The schema URL. Defaults to None.
+        s3_schema_url (Optional[str], optional): The S3 schema URL. Defaults to
         validate (bool, optional): Whether to validate the configuration. Defaults to False.
     """
-    validate_config(config=config, s3_schema_url=s3_schema_url)
+    validate_config(
+        config=config, schema_url=schema_url, s3_schema_url=s3_schema_url
+    )
 
-    for doc in config_loader(config=config, s3_schema_url=s3_schema_url):
+    for doc in config_loader(
+        config=config, schema_url=schema_url, s3_schema_url=s3_schema_url
+    ):
         if not database_exists(doc["database"]):
             logger.warning(f'Database {doc["database"]} does not exist')
             continue

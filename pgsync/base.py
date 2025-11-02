@@ -31,6 +31,8 @@ from .exc import (
 )
 from .settings import (
     IS_MYSQL_COMPAT,
+    MYSQL_DATABASE,
+    PG_DATABASE,
     PG_HOST_RO,
     PG_PASSWORD_RO,
     PG_PORT_RO,
@@ -1409,7 +1411,7 @@ def create_database(database: str, echo: bool = False) -> None:
     """Create a database."""
     logger.debug(f"Creating database: {database}")
     with pg_engine(
-        "information_schema" if IS_MYSQL_COMPAT else "postgres",
+        MYSQL_DATABASE if IS_MYSQL_COMPAT else PG_DATABASE,
         echo=echo,
     ) as engine:
         pg_execute(
@@ -1424,8 +1426,7 @@ def drop_database(database: str, echo: bool = False) -> None:
     """Drop a database."""
     logger.debug(f"Dropping database: {database}")
     with pg_engine(
-        "information_schema" if IS_MYSQL_COMPAT else "postgres",
-        echo=echo,
+        MYSQL_DATABASE if IS_MYSQL_COMPAT else PG_DATABASE, echo=echo
     ) as engine:
         pg_execute(
             engine,
@@ -1438,7 +1439,7 @@ def drop_database(database: str, echo: bool = False) -> None:
 def database_exists(database: str, echo: bool = False) -> bool:
     """Check if database is present."""
     with pg_engine(
-        "information_schema" if IS_MYSQL_COMPAT else "postgres",
+        MYSQL_DATABASE if IS_MYSQL_COMPAT else PG_DATABASE,
         echo=echo,
     ) as engine:
         with engine.connect() as conn:

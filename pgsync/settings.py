@@ -45,6 +45,7 @@ REPLICATION_SLOT_CLEANUP_INTERVAL = env.float(
 # path to the application schema config
 SCHEMA = env.str("SCHEMA", default=None)
 S3_SCHEMA_URL = env.str("S3_SCHEMA_URL", default=None)
+SCHEMA_URL = env.str("SCHEMA_URL", default=None)
 USE_ASYNC = env.bool("USE_ASYNC", default=False)
 STREAM_RESULTS = env.bool("STREAM_RESULTS", default=True)
 # db polling interval
@@ -201,6 +202,9 @@ if PG_URL:
 else:
     # If PG_URL is not set, we need to use the other PG_* variables
     PG_USER = env.str("PG_USER")
+# The default database name e.g postges or defaultdb
+PG_DATABASE = env.str("PG_DATABASE", default="postgres")
+MYSQL_DATABASE = env.str("MYSQL_DATABASE", default="information_schema")
 
 # Read-only Postgres:
 # This is used for read-only consumers that do not require replication slots or triggers.

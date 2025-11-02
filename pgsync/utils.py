@@ -15,6 +15,7 @@ from urllib.parse import ParseResult, urlparse
 
 import boto3
 import click
+import requests
 import sqlalchemy as sa
 import sqlparse
 
@@ -121,11 +122,13 @@ def get_redacted_url(url: str) -> str:
 
 
 def show_settings(
-    config: t.Optional[str] = None, s3_schema_url: t.Optional[str] = None
+    config: t.Optional[str] = None,
+    schema_url: t.Optional[str] = None,
+    s3_schema_url: t.Optional[str] = None,
 ) -> None:
     """Show settings."""
     logger.info(f"{HIGHLIGHT_BEGIN}Settings{HIGHLIGHT_END}")
-    logger.info(f'{"Schema":<10s}: {config or s3_schema_url}')
+    logger.info(f'{"Schema":<10s}: {config or schema_url or s3_schema_url}')
     logger.info("-" * 65)
     logger.info(f"{HIGHLIGHT_BEGIN}Checkpoint{HIGHLIGHT_END}")
     logger.info(f"Path: {settings.CHECKPOINT_PATH}")
@@ -152,8 +155,16 @@ def show_settings(
     logger.info("-" * 65)
 
     logger.info(f"{HIGHLIGHT_BEGIN}Replication slots{HIGHLIGHT_END}")
-    if config is not None and s3_schema_url is not None:
-        for doc in config_loader(config=config, s3_schema_url=s3_schema_url):
+    if (
+        config is not None
+        and schema_url is not None
+        and s3_schema_url is not None
+    ):
+        for doc in config_loader(
+            config=config,
+            schema_url=schema_url,
+            s3_schema_url=s3_schema_url,
+        ):
             index: str = doc.get("index") or doc["database"]
             database: str = doc.get("database", index)
             slot_name: str = re.sub(
@@ -165,7 +176,9 @@ def show_settings(
 
 
 def validate_config(
-    config: t.Optional[str] = None, s3_schema_url: t.Optional[str] = None
+    config: t.Optional[str] = None,
+    schema_url: t.Optional[str] = None,
+    s3_schema_url: t.Optional[str] = None,
 ) -> str:
     """Ensure there is a valid schema config."""
 
@@ -173,21 +186,28 @@ def validate_config(
         if not os.path.exists(config):
             raise FileNotFoundError(f'Schema config "{config}" not found')
 
+    if schema_url:
+        parsed = urlparse(schema_url)
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError(f'Invalid URL: "{schema_url}"')
+
     if s3_schema_url:
         if not s3_schema_url.startswith("s3://"):
             raise ValueError(f'Invalid S3 URL: "{s3_schema_url}"')
 
-    if not config and not s3_schema_url:
+    if not config and not schema_url and not s3_schema_url:
         raise ValueError(
-            "You must provide either a local config path or an S3 schema URL."
+            "You must provide either a local config path, a valid URL or an S3 URL"
         )
 
 
 def config_loader(
-    config: t.Optional[str] = None, s3_schema_url: t.Optional[str] = None
+    config: t.Optional[str] = None,
+    schema_url: t.Optional[str] = None,
+    s3_schema_url: t.Optional[str] = None,
 ) -> t.Generator[dict, None, None]:
     """
-    Loads a configuration file from a local path or S3 URL and yields each document.
+    Loads a configuration file from a local path or S3 URL or URL and yields each document.
     """
 
     def is_s3_url(url: str) -> bool:
@@ -204,9 +224,40 @@ def config_loader(
         s3.download_file(bucket, key, temp_file.name)
         return temp_file.name
 
-    if not config and not s3_schema_url:
+    def is_url(url: str) -> bool:
+        parsed_url: ParseResult = urlparse(url)
+        return parsed_url.scheme in ("http", "https")
+
+    def download_from_url(url: str) -> str:
+        """Download JSON from a URL, save to a temp .json file, and return its path."""
+        response: requests.Response = requests.get(
+            url, headers={"Accept": "application/json"}, timeout=(10, 60)
+        )
+        response.raise_for_status()
+        # Ensure it's valid JSON (raises ValueError if not)
+        try:
+            data: dict = response.json()
+        except ValueError as e:
+            content_type = response.headers.get("Content-Type", "unknown")
+            raise ValueError(
+                f"Expected JSON from {url} (got Content-Type: {content_type})"
+            ) from e
+
+        fd, path = tempfile.mkstemp(suffix=".json")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
+            return path
+        except Exception:
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
+            raise
+
+    if not config and not schema_url and not s3_schema_url:
         raise ValueError(
-            "You must provide either a local config path or an S3 URL."
+            "You must provide either a local config path, a valid URL or an S3 URL"
         )
 
     config_path: str = None
@@ -216,12 +267,15 @@ def config_loader(
         if not os.path.exists(config):
             raise FileNotFoundError(f'Local config "{config}" not found')
         config_path = config
+    elif schema_url and is_url(schema_url):
+        config_path = download_from_url(schema_url)
+        is_temp_file = True
     elif s3_schema_url and is_s3_url(s3_schema_url):
         config_path = download_from_s3(s3_schema_url)
         is_temp_file = True
     else:
         raise ValueError(
-            "Invalid input: schema must be a file path or a valid S3 URL"
+            "Invalid input: schema must be a file path, a valid S3 URL or a valid URL."
         )
 
     try:

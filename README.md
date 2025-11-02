@@ -5,6 +5,7 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/pgsync)](https://pypi.org/project/pgsync)
 [![Downloads](https://img.shields.io/pypi/dm/pgsync)](https://pypi.org/project/pgsync)
 [![codecov](https://codecov.io/gh/toluaina/pgsync/branch/main/graph/badge.svg?token=cvQzYkz6CV)](https://codecov.io/gh/toluaina/pgsync)
+[![Sponsored by DigitalOcean](https://img.shields.io/badge/Sponsored%20by-DigitalOcean-0080FF?logo=digitalocean&logoColor=white)](https://www.digitalocean.com/?utm_medium=opensource&utm_source=pgsync)
 
 
 ## PostgreSQL/MySQL/MariaDB to Elasticsearch/OpenSearch sync
@@ -42,6 +43,23 @@ Other benefits of PGSync include:
 - Reliable primary datastore/source of truth
 - Scale on-demand (multiple consumers)
 - Easily join multiple nested tables
+
+## Sponsors
+
+[PGSync](https://pgsync.com) is made possible with support from [DigitalOcean](https://www.digitalocean.com/?utm_medium=opensource&utm_source=pgsync).
+
+<p>
+  <a href="https://www.digitalocean.com/?utm_medium=opensource&utm_source=pgsync" rel="sponsored noopener noreferrer">
+    <img
+      src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg"
+      alt="DigitalOcean"
+      width="210"
+      loading="lazy"
+      decoding="async"
+    >
+  </a>
+</p>
+
 
 #### Why?
 
@@ -90,6 +108,14 @@ There are plans to support zero-downtime migrations to streamline this process.
 There are several ways of installing and trying PGSync
  - [Running in Docker](#running-in-docker) is the easiest way to get up and running.
  - [Manual configuration](#manual-configuration) 
+
+#### Book Demo Example (requires a DigitalOcean account)
+
+[![Deploy to DO](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/toluaina/pgsync/tree/main)
+
+Fill in the following during the setup
+ - `ELASTICSEARCH_URL` e.g. https://user:pass@os-host:443
+ - `REDIS_URL` e.g. rediss://default:pass@host:port/0
 
 
 ##### Running in Docker (Using Github Repository)
