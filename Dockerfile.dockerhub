@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM python:3.11.10-slim-bullseye AS build
+FROM python:3.12.12-slim AS build
 
 WORKDIR /app
 
@@ -37,13 +37,13 @@ COPY \
     scripts/pg_replication_slots.sh \
     scripts/pg_locks.sh \
     scripts/pg_temp_tables.sh \
-    scripts/migrate_schema_v2 /app/scripts/
+    /app/scripts/
 
 # Install PGSync and dependencies
 RUN pip install --no-cache-dir .
 
 # Stage 2: Runtime
-FROM python:3.11.10-slim-bullseye
+FROM python:3.12.12-slim AS runtime
 
 RUN apt-get update && apt-get upgrade -y && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -53,7 +53,7 @@ WORKDIR /app
 RUN useradd --no-create-home --shell /bin/false pgsync
 USER pgsync
 
-COPY --from=build /usr/local/lib/python3.11 /usr/local/lib/python3.11
+COPY --from=build /usr/local/lib/python3.12 /usr/local/lib/python3.12
 COPY --from=build /usr/local/bin /usr/local/bin
 COPY --from=build /app /app
 
