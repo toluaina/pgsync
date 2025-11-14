@@ -99,7 +99,8 @@ PGSync operates in an event-driven model by creating triggers for tables in your
 
 *This is the only time PGSync will ever make any changes to your database.*
 
-**NOTE**: **If you change the structure of your PGSync schema config, it's recommended and in most cases necessary to rebuild your Elasticsearch/OpenSearch indices.**
+>**NOTE**: **If you change the structure of your PGSync schema config, it's recommended and in most cases necessary to rebuild your Elasticsearch/OpenSearch indices.**
+
 There are plans to support zero-downtime migrations to streamline this process.
 
 
@@ -187,7 +188,6 @@ Environment variable placeholders - full list [here](https://pgsync.com/env-vars
 ### MySQL / MariaDB setup
 
 - Enable binary logging in your MySQL / MariaDB setting.
-
 - You also need to set up the following parameters in your MySQL / MariaDB config my.cnf, then restart the database server.
 
   ```server-id = 1``` # any non-zero unique ID
@@ -195,10 +195,8 @@ Environment variable placeholders - full list [here](https://pgsync.com/env-vars
   ```log_bin = mysql-bin```
 
   ```binlog_row_image = FULL``` # recommended; if not supported on older MariaDB, omit
-
 - optional housekeeping:
   ```binlog_expire_logs_seconds = 604800```   # 7 days
-
 - You need to create a replication user with REPLICATION SLAVE and REPLICATION CLIENT privileges
     
   ```sql
@@ -224,17 +222,19 @@ Environment variable placeholders - full list [here](https://pgsync.com/env-vars
 
 Key features of PGSync are:
 
-- Easily denormalize relational data. 
-- Works with any PostgreSQL database (version 9.6 or later). 
-- Negligible impact on database performance.
-- Transactionally consistent output in Elasticsearch/OpenSearch. This means: writes appear only when they are committed to the database, insert, update and delete operations appear in the same order as they were committed (as opposed to eventual consistency).
-- Fault-tolerant: does not lose data, even if processes crash or a network interruption occurs, etc. The process can be recovered from the last checkpoint.
-- Returns the data directly as Postgres/MySQL/MariaDB JSON from the database for speed.
-- Supports composite primary and foreign keys.
-- Supports Views and Materialized views.
-- Supports an arbitrary depth of nested entities i.e Tables having long chain of relationship dependencies.
-- Supports PostgreSQL/MySQL/MariaDB JSON data fields. This means: we can extract JSON fields in a database table as a separate field in the resulting document.
-- Customizable document structure.
+- Easily denormalize relational data
+- Works with any PostgreSQL database (9.6 or later)
+- Negligible impact on database performance
+- Transactionally consistent output in Elasticsearch/OpenSearch:
+  - Writes appear only after they’re committed
+  - Inserts, updates, and deletes appear in commit order (not eventually)
+- Fault-tolerant: no data loss even on crashes or network issues; processing resumes from the last checkpoint
+- Returns data directly as PostgreSQL/MySQL/MariaDB JSON for speed
+- Supports composite primary and foreign keys
+- Supports views and materialized views
+- Handles arbitrarily deep nesting of related tables
+- Supports PostgreSQL/MySQL/MariaDB JSON fields, allowing JSON properties to be extracted as separate document fields
+- Customizable document structure
 
 
 #### Requirements
