@@ -1,4 +1,4 @@
-# PostgreSQL to Elasticsearch/OpenSearch sync
+# PostgreSQL/MySQL/MariaDB to Elasticsearch/OpenSearch sync
 
 
 - [PGSync](https://pgsync.com) is a middleware for syncing data from [Postgres](https://www.postgresql.org) to [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/) or [OpenSearch](https://opensearch.org/).

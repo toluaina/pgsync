@@ -73,7 +73,7 @@ Of course, if your data never changed, then you could just take a snapshot in ti
 PGSync is appropriate for you if:
 - [Postgres](https://www.postgresql.org) or [MySQL](https://www.mysql.com/) or [MariaDB](https://mariadb.org/) is your read/write source of truth whilst [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/) is your 
 read-only search layer.
-- You need to denormalize relational data into a NoSQL data source.
+- You need to denormalize relational data into a NoSQL data source like [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/).
 - Your data is constantly changing.
 - You have existing data in a relational database such as [Postgres](https://www.postgresql.org) or [MySQL](https://www.mysql.com/) or [MariaDB](https://mariadb.org/) and you need a secondary NoSQL database like [Elasticsearch](https://www.elastic.co/products/elastic-stack)/[OpenSearch](https://opensearch.org/) for text-based queries or autocomplete queries to mirror the existing data without having your application perform dual writes.
 - You want to keep your existing data untouched whilst taking advantage of
@@ -99,7 +99,7 @@ PGSync operates in an event-driven model by creating triggers for tables in your
 
 *This is the only time PGSync will ever make any changes to your database.*
 
-**NOTE**: **If you change the structure of your PGSync's schema config, you would need to rebuild your Elasticsearch/OpenSearch indices.**
+**NOTE**: **If you change the structure of your PGSync schema config, it's recommended and in most cases necessary to rebuild your Elasticsearch/OpenSearch indices.**
 There are plans to support zero-downtime migrations to streamline this process.
 
 
@@ -360,23 +360,26 @@ e.g
   }
 ```
 
-PGSync addresses the following challenges:
-- What if we update the author's name in the database?
-- What if we wanted to add another author for an existing book?
-- What if we have lots of documents already with the same author we wanted to change the author name?
-- What if we delete or update an author?
-- What if we truncate an entire table?
+PGSync addresses common data consistency challenges, such as:
+
+- Updating an author's name in the database
+- Adding an additional author to an existing book
+- Changing an author's name across many existing documents
+- Deleting or updating an author record
+- Truncating an entire table and keeping indexes in sync
 
 
 #### Benefits
 
-- PGSync is a simple to use out of the box solution for Change data capture.
-- PGSync handles data deletions.
-- PGSync requires little development effort. You simply define a schema config describing your data.
-- PGSync generates advanced queries matching your schema directly.
-- PGSync allows you to easily rebuild your indexes in case of a schema change.
-- You can expose only the data you require in Elasticsearch/OpenSearch.
-- Supports multiple Postgres/MySQL/MariaDB schemas for multi-tennant applications.
+PGSync is a simple, out-of-the-box solution for change data capture, designed to minimize development effort and keep your search indexes in sync.
+
+- Handles data deletions automatically.
+- Requires minimal setup. Just define a schema config that describes your data.
+- Generates advanced queries directly from your schema.
+- Makes it easy to rebuild indexes after schema changes.
+- Lets you expose only the data you need in Elasticsearch/OpenSearch.
+- Supports multiple Postgres/MySQL/MariaDB schemas for multi-tenant applications.
+
 
 
 #### Contributing

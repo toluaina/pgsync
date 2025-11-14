@@ -8,37 +8,34 @@ async-timeout==5.0.1
     # via redis
 backports-datetime-fromisoformat==2.0.3
     # via marshmallow
-boto3==1.40.65
+boto3==1.40.73
     # via -r requirements/base.in
-botocore==1.40.65
+botocore==1.40.73
     # via
     #   boto3
     #   s3transfer
-certifi==2025.10.5
+certifi==2025.11.12
     # via
     #   elastic-transport
+    #   elasticsearch
     #   opensearch-py
     #   requests
 charset-normalizer==3.4.4
     # via requests
 click==8.1.8
     # via -r requirements/base.in
-elastic-transport==8.17.1
-    # via
-    #   -r requirements/base.in
-    #   elasticsearch
-elasticsearch==8.19.2
+elastic-transport==9.1.0
+    # via -r requirements/base.in
+elasticsearch==7.17.12
     # via
     #   -r requirements/base.in
     #   elasticsearch-dsl
-elasticsearch-dsl==8.15.4
+elasticsearch-dsl==7.4.1
     # via -r requirements/base.in
 environs==14.4.0
     # via -r requirements/base.in
 events==0.5
     # via opensearch-py
-greenlet==3.2.4
-    # via sqlalchemy
 idna==3.11
     # via requests
 jmespath==1.0.1
@@ -84,6 +81,7 @@ s3transfer==0.14.0
     # via boto3
 six==1.17.0
     # via
+    #   elasticsearch-dsl
     #   opensearch-dsl
     #   python-dateutil
 sqlalchemy==2.0.44
@@ -93,7 +91,6 @@ sqlparse==0.5.3
 typing-extensions==4.15.0
     # via
     #   elasticsearch
-    #   elasticsearch-dsl
     #   environs
     #   marshmallow
     #   sqlalchemy
@@ -101,5 +98,6 @@ urllib3==1.26.20
     # via
     #   botocore
     #   elastic-transport
+    #   elasticsearch
     #   opensearch-py
     #   requests
