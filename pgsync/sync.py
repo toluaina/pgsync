@@ -137,6 +137,8 @@ class Sync(Base, metaclass=Singleton):
         self.count: dict = dict(xlog=0, db=0, redis=0)
         self.tasks: t.List[asyncio.Task] = []
         self.lock: threading.Lock = threading.Lock()
+        # holds Payload objects across multiple consume() calls
+        self._buffer: list["Payload"] = []
 
     @property
     def slot_name(self) -> str:
@@ -1836,6 +1838,94 @@ class Sync(Base, metaclass=Singleton):
 
         self._truncate = True
 
+    def _flush_buffer(
+        self,
+        cursor: t.Any,
+        flush_lsn: t.Optional[str] = None,
+        force_ack: bool = False,
+    ) -> None:
+        # If we have buffered docs, send them
+        if self._buffer:
+            docs: list = []
+            for (op, tbl), run in groupby(
+                self._buffer,
+                key=lambda payload: (payload.tg_op, payload.table),
+            ):
+                batch: list = list(run)
+                logger.debug(f"bulk group op={op} tbl={tbl} size={len(batch)}")
+                docs.extend(self._payloads(batch))
+
+            if docs:
+                processed: int = len(self._buffer)
+                logger.debug(f"sending bulk of {len(docs)} docs")
+                self.search_client.bulk(self.index, docs)
+                self.count["xlog"] += processed
+
+            # if caller didn't provide a flush_lsn, then fall back to last buffered row
+            if flush_lsn is None:
+                flush_lsn = self._buffer_last_lsn
+
+            # clear buffer after successful bulk
+            self._buffer.clear()
+            self._buffer_last_lsn = None
+
+        # Even if buffer was empty, we may want to ACK a COMMIT LSN
+        if flush_lsn is not None and (force_ack or not self._buffer):
+            cursor.send_feedback(flush_lsn=flush_lsn)
+
+    def consume(self, message: t.Any) -> None:
+        raw: t.Any = message.payload
+        lsn: t.Optional[str] = message.data_start
+        chunk_size: int = settings.LOGICAL_SLOT_CHUNK_SIZE
+
+        logger.debug(f"[LSN {lsn}] {raw}")
+
+        match = TX_BOUNDARY_RE.match(raw)
+        if match:
+            kind: str = match.group(1).upper()
+            if kind == "COMMIT":
+                # Flush any buffered docs, and ACK this COMMIT LSN
+                self._flush_buffer(
+                    cursor=message.cursor,
+                    flush_lsn=lsn,
+                    force_ack=True,  # ACK even if buffer empty
+                )
+            # BEGIN/COMMIT don't include rows by themselves
+            return
+
+        # Not BEGIN/COMMIT -> row change
+        try:
+            payload: Payload = self.parse_logical_slot(raw)
+        except Exception:
+            logger.exception(f"Error parsing row: {raw}")
+            raise
+
+        # Filter by schema
+        if payload.schema not in self.tree.schemas:
+            # we still saw this LSN; it will be ACKed at COMMIT
+            return
+
+        # Buffer across transactions
+        self._buffer.append(payload)
+        self._buffer_last_lsn = lsn
+
+        # Flush when big enough
+        if len(self._buffer) >= chunk_size:
+            self._flush_buffer(message.cursor)
+
+    def wal_consumer(self) -> None:
+        # open a replication‐mode connection
+        conn = self.get_replication_connection(self.engine)
+        cursor = conn.cursor()
+        # start streaming; include XIDs so you see BEGIN/COMMIT markers
+        cursor.start_replication(
+            slot_name=self.__name,
+            options={"include-xids": "1", "skip-empty-xacts": "1"},
+            decode=True,  # gets you str instead of bytes
+        )
+        logger.info("Starting logical replication stream (test_decoding)...")
+        cursor.consume_stream(self.consume)
+
     @threaded
     @exception
     def truncate_slots(self) -> None:
@@ -1962,7 +2052,7 @@ class Sync(Base, metaclass=Singleton):
     is_flag=True,
     help="Run as a daemon (Incompatible with --polling)",
     cls=MutuallyExclusiveOption,
-    mutually_exclusive=["polling"],
+    mutually_exclusive=["polling", "wal"],
 )
 @click.option(
     "--producer",
@@ -1985,7 +2075,19 @@ class Sync(Base, metaclass=Singleton):
     is_flag=True,
     help="Polling mode (Incompatible with -d)",
     cls=MutuallyExclusiveOption,
-    mutually_exclusive=["daemon"],
+    mutually_exclusive=["daemon", "wal"],
+)
+@click.option(
+    "--wal",
+    "-w",
+    is_flag=True,
+    default=False,
+    help="Use WAL for replication",
+    cls=MutuallyExclusiveOption,
+    mutually_exclusive=[
+        "daemon",
+        "polling",
+    ],
 )
 @click.option("--host", "-h", help="PG_HOST override")
 @click.option("--password", is_flag=True, help="Prompt for database password")
@@ -2066,6 +2168,7 @@ def main(
     producer: bool,
     consumer: bool,
     bootstrap: bool,
+    wal: bool,
 ) -> None:
     """Main application syncer."""
     if version:
@@ -2139,7 +2242,22 @@ def main(
                     sync: Sync = Sync(doc, verbose=verbose, **kwargs)
                     sync.pull(polling=True)
                 time.sleep(settings.POLL_INTERVAL)
-
+        elif wal:
+            for doc in config_loader(
+                config=config,
+                schema_url=schema_url,
+                s3_schema_url=s3_schema_url,
+            ):
+                sync: Sync = Sync(
+                    doc,
+                    verbose=verbose,
+                    num_workers=num_workers,
+                    producer=producer,
+                    consumer=consumer,
+                    bootstrap=bootstrap,
+                    **kwargs,
+                )
+                sync.wal_consumer()
         else:
             tasks: t.List[asyncio.Task] = []
             for doc in config_loader(

@@ -8,8 +8,11 @@ import time
 import typing as t
 from contextlib import contextmanager
 
+import psycopg2
 import sqlalchemy as sa
+from psycopg2.extras import LogicalReplicationConnection
 from sqlalchemy.dialects import postgresql  # noqa
+from sqlalchemy.engine.url import make_url
 from sqlalchemy.orm import sessionmaker
 
 from .constants import (
@@ -745,6 +748,21 @@ class Base(object):
                 sa.func.PG_CURRENT_WAL_LSN()
             )
         )[0]
+
+    def get_replication_connection(
+        self, engine: sa.engine.Engine
+    ) -> psycopg2.extensions.connection:
+        url: sa.engine.URL = make_url(str(engine.url))
+        # Build a libpq-style connection by keyword args
+        conn: psycopg2.extensions.connection = psycopg2.connect(
+            host=url.host,
+            port=url.port or 5432,
+            user=url.username,
+            password=url.password,
+            dbname=url.database,
+            connection_factory=LogicalReplicationConnection,
+        )
+        return conn
 
     def logical_slot_get_changes(
         self,
