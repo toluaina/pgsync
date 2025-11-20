@@ -95,6 +95,7 @@ class Sync(Base, metaclass=Singleton):
         producer: bool = True,
         consumer: bool = True,
         bootstrap: bool = False,
+        wal: bool = False,
         **kwargs,
     ) -> None:
         """Constructor."""
@@ -119,12 +120,13 @@ class Sync(Base, metaclass=Singleton):
         self.producer: bool = producer
         self.consumer: bool = consumer
         self.num_workers: int = num_workers
-        self.redis: RedisQueue = RedisQueue(self.__name)
+        # Redis not required in wal or polling mode
+        self._redis: t.Optional[RedisQueue] = None
         self.tree: Tree = Tree(
             self.models, nodes=self.nodes, database=doc["database"]
         )
         if bootstrap:
-            self.setup()
+            self.setup(wal, polling)
 
         if validate:
             self.validate(repl_slots=repl_slots, polling=polling)
@@ -149,6 +151,16 @@ class Sync(Base, metaclass=Singleton):
     def checkpoint_file(self) -> str:
         return os.path.join(settings.CHECKPOINT_PATH, f".{self.__name}")
 
+    @property
+    def redis(self) -> t.Optional[RedisQueue]:
+        """Return the Redis queue instance."""
+        if self._redis is None:
+            try:
+                self._redis = RedisQueue(self.__name)
+            except Exception:
+                pass
+        return self._redis
+
     def validate(self, repl_slots: bool = True, polling: bool = False) -> None:
         """Perform all validation right away."""
 
@@ -163,45 +175,51 @@ class Sync(Base, metaclass=Singleton):
         if self.index is None:
             raise ValueError("Index is missing for doc")
 
-        if not self.is_mysql_compat:
-            if not polling:
-                max_replication_slots: t.Optional[str] = self.pg_settings(
-                    "max_replication_slots"
+        # replication slot not needed in polling or mysql
+        if not self.is_mysql_compat and not polling:
+            max_replication_slots: t.Optional[str] = self.pg_settings(
+                "max_replication_slots"
+            )
+            try:
+                if int(max_replication_slots) < 1:
+                    raise TypeError
+            except TypeError:
+                raise RuntimeError(
+                    "Ensure there is at least one replication slot defined "
+                    "by setting max_replication_slots = 1"
                 )
-                try:
-                    if int(max_replication_slots) < 1:
-                        raise TypeError
-                except TypeError:
-                    raise RuntimeError(
-                        "Ensure there is at least one replication slot defined "
-                        "by setting max_replication_slots = 1"
-                    )
 
-                wal_level: t.Optional[str] = self.pg_settings("wal_level")
-                if not wal_level or wal_level.lower() != "logical":
-                    raise RuntimeError(
-                        "Enable logical decoding by setting wal_level = logical"
-                    )
-
-                self._can_create_replication_slot("_tmp_")
-
-                rds_logical_replication: t.Optional[str] = self.pg_settings(
-                    "rds.logical_replication"
+            wal_level: t.Optional[str] = self.pg_settings("wal_level")
+            if not wal_level or wal_level.lower() != "logical":
+                raise RuntimeError(
+                    "Enable logical decoding by setting wal_level = logical"
                 )
-                if (
-                    rds_logical_replication
-                    and rds_logical_replication.lower() == "off"
-                ):
-                    raise RDSError("rds.logical_replication is not enabled")
 
-                # ensure we have run bootstrap and the replication slot exists
-                if repl_slots and not self.replication_slots(self.__name):
-                    raise RuntimeError(
-                        f'Replication slot "{self.__name}" does not exist.\n'
-                        f'Make sure you have run the "bootstrap" command.'
-                    )
+            self._can_create_replication_slot("_tmp_")
 
-        if not settings.REDIS_CHECKPOINT:
+            rds_logical_replication: t.Optional[str] = self.pg_settings(
+                "rds.logical_replication"
+            )
+            if (
+                rds_logical_replication
+                and rds_logical_replication.lower() == "off"
+            ):
+                raise RDSError("rds.logical_replication is not enabled")
+
+            # ensure we have run bootstrap and the replication slot exists
+            if repl_slots and not self.replication_slots(self.__name):
+                raise RuntimeError(
+                    f'Replication slot "{self.__name}" does not exist.\n'
+                    f'Make sure you have run the "bootstrap" command.'
+                )
+
+        if settings.REDIS_CHECKPOINT:
+            # ensure Redis is reachable
+            try:
+                self.redis.ping()
+            except Exception as e:
+                raise RuntimeError(f"Cannot reach Redis: {e}")
+        else:
             # ensure the checkpoint dirpath is valid
             if not Path(settings.CHECKPOINT_PATH).exists():
                 raise RuntimeError(
@@ -302,8 +320,12 @@ class Sync(Base, metaclass=Singleton):
             routing=self.routing,
         )
 
-    def setup(self, no_create: bool = False) -> None:
-        """Create the database triggers and replication slot."""
+    def setup(
+        self, no_create: bool = False, wal: bool = False, polling: bool = False
+    ) -> None:
+        """Create the database triggers and replication slot.
+        Generally bootstrap should not require Redis as it is optional in certain cases.
+        """
         if self.is_mysql_compat:
             raise NotImplementedError(
                 "Setup is not supported for MySQL-family backend (MySQL or MariaDB)"
@@ -320,75 +342,85 @@ class Sync(Base, metaclass=Singleton):
 
                 self.teardown(drop_view=False)
 
-            for schema in self.schemas:
-                # TODO: move if_not_exists to the function
-                if if_not_exists or not self.function_exists(schema):
+            if not polling:
+                for schema in self.schemas:
+                    # TODO: move if_not_exists to the function
+                    if if_not_exists or not self.function_exists(schema):
 
-                    self.create_function(schema)
+                        self.create_function(schema)
 
-                tables: t.Set = set()
-                # tables with user defined foreign keys
-                user_defined_fkey_tables: dict = {}
-                node_columns: dict = {}
+                    tables: t.Set = set()
+                    # tables with user defined foreign keys
+                    user_defined_fkey_tables: dict = {}
+                    node_columns: dict = {}
 
-                for node in self.tree.traverse_breadth_first():
-                    if node.schema != schema:
-                        continue
-                    tables |= set(
-                        [
-                            through.table
-                            for through in node.relationship.throughs
-                        ]
-                    )
-                    tables |= set([node.table])
-                    # we also need to bootstrap the base tables
-                    tables |= set(node.base_tables)
-                    node_columns[node.table] = set(
-                        [
-                            re.split(
-                                rf"\s*({'|'.join(re.escape(op) for op in JSONB_OPERATORS)})\s*",
-                                c,
-                                maxsplit=1,
-                            )[0]
-                            for c in node.column_names
-                        ]
-                    )
-                    # we want to get both the parent and the child keys here
-                    # even though only one of them is the foreign_key.
-                    # this is because we define both in the schema but
-                    # do not specify which table is the foreign key.
-                    columns: list = []
-                    if node.relationship.foreign_key.parent:
-                        columns.extend(node.relationship.foreign_key.parent)
-                    if node.relationship.foreign_key.child:
-                        columns.extend(node.relationship.foreign_key.child)
-                    if columns:
-                        user_defined_fkey_tables.setdefault(node.table, set())
-                        user_defined_fkey_tables[node.table] |= set(columns)
-                if tables:
-                    if if_not_exists or not self.view_exists(
-                        MATERIALIZED_VIEW, schema
-                    ):
-                        self.create_view(
-                            self.index,
+                    for node in self.tree.traverse_breadth_first():
+                        if node.schema != schema:
+                            continue
+                        tables |= set(
+                            [
+                                through.table
+                                for through in node.relationship.throughs
+                            ]
+                        )
+                        tables |= set([node.table])
+                        # we also need to bootstrap the base tables
+                        tables |= set(node.base_tables)
+                        node_columns[node.table] = set(
+                            [
+                                re.split(
+                                    rf"\s*({'|'.join(re.escape(op) for op in JSONB_OPERATORS)})\s*",
+                                    c,
+                                    maxsplit=1,
+                                )[0]
+                                for c in node.column_names
+                            ]
+                        )
+                        # we want to get both the parent and the child keys here
+                        # even though only one of them is the foreign_key.
+                        # this is because we define both in the schema but
+                        # do not specify which table is the foreign key.
+                        columns: list = []
+                        if node.relationship.foreign_key.parent:
+                            columns.extend(
+                                node.relationship.foreign_key.parent
+                            )
+                        if node.relationship.foreign_key.child:
+                            columns.extend(node.relationship.foreign_key.child)
+                        if columns:
+                            user_defined_fkey_tables.setdefault(
+                                node.table, set()
+                            )
+                            user_defined_fkey_tables[node.table] |= set(
+                                columns
+                            )
+                    if tables:
+                        if if_not_exists or not self.view_exists(
+                            MATERIALIZED_VIEW, schema
+                        ):
+                            self.create_view(
+                                self.index,
+                                schema,
+                                tables,
+                                user_defined_fkey_tables,
+                                node_columns,
+                            )
+
+                        self.create_triggers(
                             schema,
-                            tables,
-                            user_defined_fkey_tables,
-                            node_columns,
+                            tables=tables,
+                            join_queries=join_queries,
+                            if_not_exists=if_not_exists,
                         )
 
-                    self.create_triggers(
-                        schema,
-                        tables=tables,
-                        join_queries=join_queries,
-                        if_not_exists=if_not_exists,
-                    )
+            if not wal:
+                if if_not_exists or not self.replication_slots(self.__name):
 
-            if if_not_exists or not self.replication_slots(self.__name):
+                    self.create_replication_slot(self.__name)
 
-                self.create_replication_slot(self.__name)
-
-    def teardown(self, drop_view: bool = True) -> None:
+    def teardown(
+        self, drop_view: bool = True, polling: bool = False, wal: bool = False
+    ) -> None:
         """Drop the database triggers and replication slot."""
         if self.is_mysql_compat:
             raise NotImplementedError(
@@ -407,28 +439,35 @@ class Sync(Base, metaclass=Singleton):
                     f"Checkpoint file not found: {self.checkpoint_file}"
                 )
 
-            self.redis.delete()
+            try:
+                if self._redis is None:
+                    raise RuntimeError("Redis is not configured.")
+                self.redis.delete()
+            except Exception as e:
+                logger.warning(f"Could not clear Redis checkpoint queue: {e}")
 
-            for schema in self.schemas:
-                tables: t.Set = set()
-                for node in self.tree.traverse_breadth_first():
-                    tables |= set(
-                        [
-                            through.table
-                            for through in node.relationship.throughs
-                        ]
+            if not polling:
+                for schema in self.schemas:
+                    tables: t.Set = set()
+                    for node in self.tree.traverse_breadth_first():
+                        tables |= set(
+                            [
+                                through.table
+                                for through in node.relationship.throughs
+                            ]
+                        )
+                        tables |= set([node.table])
+                        # we also need to teardown the base tables
+                        tables |= set(node.base_tables)
+                    self.drop_triggers(
+                        schema=schema, tables=tables, join_queries=join_queries
                     )
-                    tables |= set([node.table])
-                    # we also need to teardown the base tables
-                    tables |= set(node.base_tables)
-                self.drop_triggers(
-                    schema=schema, tables=tables, join_queries=join_queries
-                )
-                if drop_view:
-                    self.drop_view(schema)
-                    self.drop_function(schema)
+                    if drop_view:
+                        self.drop_view(schema)
+                        self.drop_function(schema)
 
-            self.drop_replication_slot(self.__name)
+            if not wal:
+                self.drop_replication_slot(self.__name)
 
     def get_doc_id(self, primary_keys: t.List[str], table: str) -> str:
         """
@@ -1846,20 +1885,22 @@ class Sync(Base, metaclass=Singleton):
     ) -> None:
         # If we have buffered docs, send them
         if self._buffer:
+            logger.info(f"flushing buffer with {len(self._buffer)} docs")
             docs: list = []
             for (op, tbl), run in groupby(
                 self._buffer,
                 key=lambda payload: (payload.tg_op, payload.table),
             ):
                 batch: list = list(run)
-                logger.debug(f"bulk group op={op} tbl={tbl} size={len(batch)}")
+                logger.info(f"bulk group op={op} tbl={tbl} size={len(batch)}")
                 docs.extend(self._payloads(batch))
 
             if docs:
                 processed: int = len(self._buffer)
-                logger.debug(f"sending bulk of {len(docs)} docs")
+                logger.info(f"sending bulk of {len(docs)} docs")
                 self.search_client.bulk(self.index, docs)
                 self.count["xlog"] += processed
+                logger.info(f"sent bulk of {len(docs)} docs")
 
             # if caller didn't provide a flush_lsn, then fall back to last buffered row
             if flush_lsn is None:
@@ -1871,7 +1912,8 @@ class Sync(Base, metaclass=Singleton):
 
         # Even if buffer was empty, we may want to ACK a COMMIT LSN
         if flush_lsn is not None and (force_ack or not self._buffer):
-            cursor.send_feedback(flush_lsn=flush_lsn)
+            cursor.send_feedback(flush_lsn=flush_lsn, force=True)
+            logger.info(f"sent feedback flush_lsn=P{flush_lsn}")
 
     def consume(self, message: t.Any) -> None:
         raw: t.Any = message.payload
@@ -2232,14 +2274,15 @@ def main(
             # In polling mode, the app can run without replication slots or triggers.
             # However, this is not the preferred mode of operation.
             # It should be considered a workaround for running on a read-only cluster.
-            kwargs["polling"] = True
             while True:
                 for doc in config_loader(
                     config=config,
                     schema_url=schema_url,
                     s3_schema_url=s3_schema_url,
                 ):
-                    sync: Sync = Sync(doc, verbose=verbose, **kwargs)
+                    sync: Sync = Sync(
+                        doc, verbose=verbose, polling=True, **kwargs
+                    )
                     sync.pull(polling=True)
                 time.sleep(settings.POLL_INTERVAL)
         elif wal:
@@ -2248,15 +2291,7 @@ def main(
                 schema_url=schema_url,
                 s3_schema_url=s3_schema_url,
             ):
-                sync: Sync = Sync(
-                    doc,
-                    verbose=verbose,
-                    num_workers=num_workers,
-                    producer=producer,
-                    consumer=consumer,
-                    bootstrap=bootstrap,
-                    **kwargs,
-                )
+                sync: Sync = Sync(doc, verbose=verbose, wal=True, **kwargs)
                 sync.wal_consumer()
         else:
             tasks: t.List[asyncio.Task] = []
