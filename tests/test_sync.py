@@ -937,7 +937,7 @@ class TestSync(object):
             mock_teardown.assert_called_once_with(drop_view=False)
 
     @patch("pgsync.redisqueue.RedisQueue.delete")
-    def test_teardown(self, mock_redis, sync):
+    def test_teardown(self, mock_redis_delete, sync):
         with override_env_var(JOIN_QUERIES="False"):
             importlib.reload(settings)
 
@@ -960,16 +960,19 @@ class TestSync(object):
                         )
                     mock_drop_view.assert_called_once_with("public")
                 mock_drop_function.assert_called_once_with("public")
-            mock_redis.assert_called_once()
+            mock_redis_delete.assert_not_called()
             assert os.path.exists(sync.checkpoint_file) is False
 
         with patch("pgsync.sync.logger") as mock_logger:
             with patch("pgsync.sync.Base.drop_replication_slot"):
                 self.checkpoint_file = "foo"
                 sync.teardown()
-                mock_logger.warning.assert_called_once_with(
-                    "Checkpoint file not found: ./.testdb_testdb"
-                )
+                assert mock_logger.warning.call_args_list == [
+                    call("Checkpoint file not found: ./.testdb_testdb"),
+                    call(
+                        "Could not clear Redis checkpoint queue: Redis is not configured."
+                    ),
+                ]
 
     def test_root(self, sync):
         root = sync.tree.root
