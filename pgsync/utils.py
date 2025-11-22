@@ -280,7 +280,10 @@ def config_loader(
 
     try:
         with open(config_path, "r") as f:
-            data = json.load(f)
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"{config_path} is not valid JSON: {e}") from e
             for doc in data:
                 for key, value in doc.items():
                     try:

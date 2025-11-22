@@ -612,7 +612,7 @@ class Sync(Base, metaclass=Singleton):
             is_mariadb: bool = getattr(conn.dialect, "is_mariadb", False)
 
         def _conn_settings_from_engine(engine: sa.Engine) -> dict:
-            url = engine.url
+            url: sa.engine.URL = engine.url
             return {
                 "host": url.host,
                 "port": int(url.port),
@@ -622,9 +622,9 @@ class Sync(Base, metaclass=Singleton):
                 "autocommit": True,
             }
 
-        base = _conn_settings_from_engine(self.engine)
-        connection_settings = dict(base)  # replication socket
-        ctl_connection_settings = dict(base)
+        base: dict = _conn_settings_from_engine(self.engine)
+        connection_settings: dict = dict(base)  # replication socket
+        ctl_connection_settings: dict = dict(base)
         ctl_connection_settings["cursorclass"] = (
             pymysql.cursors.Cursor
         )  # tuple rows
@@ -648,11 +648,11 @@ class Sync(Base, metaclass=Singleton):
             freeze_schema=False,
         )
 
-        current = 0
-        total = None
+        current: int = 0
+        total: t.Optional[int] = None
         batch: list = []
         last_key: t.Optional[tuple[str, str]] = None
-        batch_limit = limit
+        batch_limit: int = limit
 
         # Single-save checkpoint snapshot
         save_file: t.Optional[str] = start_log
@@ -693,7 +693,7 @@ class Sync(Base, metaclass=Singleton):
                                 self.engine, schema, table, row.get("values")
                             ),
                         )
-                        key = (payload.tg_op, payload.table)
+                        key: tuple[str, str] = (payload.tg_op, payload.table)
                         if last_key is None or key == last_key:
                             batch.append(payload)
                         else:
@@ -2315,7 +2315,7 @@ def main(
                     tasks.extend(sync.tasks)
 
             if settings.USE_ASYNC:
-                event_loop = asyncio.get_event_loop()
+                event_loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
                 event_loop.run_until_complete(asyncio.gather(*tasks))
                 event_loop.close()
 
