@@ -112,10 +112,10 @@ def get_redacted_url(url: str) -> str:
     """
     parsed_url: ParseResult = urlparse(url)
     if parsed_url.password:
-        username = parsed_url.username or ""
-        hostname = parsed_url.hostname or ""
-        port = f":{parsed_url.port}" if parsed_url.port else ""
-        redacted_password = "*" * len(parsed_url.password)
+        username: str = parsed_url.username or ""
+        hostname: str = parsed_url.hostname or ""
+        port: str = f":{parsed_url.port}" if parsed_url.port else ""
+        redacted_password: str = "*" * len(parsed_url.password)
         netloc: str = f"{username}:{redacted_password}@{hostname}{port}"
         parsed_url = parsed_url._replace(netloc=netloc)
     return parsed_url.geturl()
@@ -187,7 +187,7 @@ def validate_config(
             raise FileNotFoundError(f'Schema config "{config}" not found')
 
     if schema_url:
-        parsed = urlparse(schema_url)
+        parsed: ParseResult = urlparse(schema_url)
         if parsed.scheme not in ("http", "https"):
             raise ValueError(f'Invalid URL: "{schema_url}"')
 
@@ -217,10 +217,12 @@ def config_loader(
         parsed = urlparse(s3_url)
         if not parsed.netloc or not parsed.path:
             raise ValueError(f"Invalid S3 URL: {s3_url}")
-        bucket = parsed.netloc
-        key = parsed.path.lstrip("/")
-        s3 = boto3.client("s3")
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
+        bucket: str = parsed.netloc
+        key: str = parsed.path.lstrip("/")
+        s3: boto3.client = boto3.client("s3")
+        temp_file: tempfile.NamedTemporaryFile = tempfile.NamedTemporaryFile(
+            delete=False, suffix=".json"
+        )
         s3.download_file(bucket, key, temp_file.name)
         return temp_file.name
 
@@ -283,7 +285,9 @@ def config_loader(
             try:
                 data = json.load(f)
             except json.JSONDecodeError as e:
-                raise ValueError(f"{config_path} is not valid JSON: {e}") from e
+                raise ValueError(
+                    f"{config_path} is not valid JSON: {e}"
+                ) from e
             for doc in data:
                 for key, value in doc.items():
                     try:

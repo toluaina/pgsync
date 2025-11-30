@@ -4,7 +4,7 @@ Postgres/MySQL/MariaDB version:
 
 Elasticsearch/OpenSearch version: 
 
-Redis version: 
+Redis/Valkey version: 
 
 Python version: 
 

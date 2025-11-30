@@ -10,9 +10,9 @@ backports-datetime-fromisoformat==2.0.3
     # via marshmallow
 black==25.11.0
     # via -r requirements/dev.in
-boto3==1.41.2
+boto3==1.41.5
     # via -r requirements/base.in
-botocore==1.41.2
+botocore==1.41.5
     # via
     #   boto3
     #   s3transfer
@@ -58,6 +58,8 @@ flake8==7.3.0
     # via -r requirements/dev.in
 freezegun==1.5.5
     # via -r requirements/dev.in
+greenlet==3.2.4
+    # via sqlalchemy
 identify==2.6.15
     # via pre-commit
 idna==3.11
@@ -159,7 +161,7 @@ six==1.17.0
     #   python-dateutil
 sqlalchemy==2.0.44
     # via -r requirements/base.in
-sqlparse==0.5.3
+sqlparse==0.5.4
     # via -r requirements/base.in
 tomli==2.3.0
     # via
