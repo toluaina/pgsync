@@ -126,7 +126,7 @@ class Sync(Base, metaclass=Singleton):
             self.models, nodes=self.nodes, database=doc["database"]
         )
         if bootstrap:
-            self.setup(wal, polling)
+            self.setup(wal=wal, polling=polling)
 
         if validate:
             self.validate(repl_slots=repl_slots, polling=polling)
@@ -413,7 +413,7 @@ class Sync(Base, metaclass=Singleton):
                             if_not_exists=if_not_exists,
                         )
 
-            if not wal:
+            if wal:
                 if if_not_exists or not self.replication_slots(self.__name):
 
                     self.create_replication_slot(self.__name)
@@ -2291,7 +2291,13 @@ def main(
                 schema_url=schema_url,
                 s3_schema_url=s3_schema_url,
             ):
-                sync: Sync = Sync(doc, verbose=verbose, wal=True, **kwargs)
+                sync: Sync = Sync(
+                    doc,
+                    verbose=verbose,
+                    wal=wal,
+                    bootstrap=bootstrap,
+                    **kwargs,
+                )
                 sync.wal_consumer()
         else:
             tasks: t.List[asyncio.Task] = []
