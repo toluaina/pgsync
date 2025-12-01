@@ -106,11 +106,16 @@ def get_postgres_url(
     port = port or PG_PORT
     driver = driver or PG_DRIVER
     if password:
+        quoted = quote_plus(password)
+        url = f"postgresql+{driver}://{user}:{quoted}@{host}:{port}/{database}"
+        return url
+        """
         return (
-            f"postgresql+{driver}://{user}:{quote_plus(password)}@"
+            f"postgresql+{driver}://{user}:{quoted}@"
             f"{host}:{port}/{database}"
         )
-    logger.debug("Connecting to Postgres without password.")
+        """
+    logger.error("Connecting to Postgres without password.")
     return f"postgresql+{driver}://{user}@{host}:{port}/{database}"
 
 

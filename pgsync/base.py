@@ -1033,9 +1033,9 @@ def _pg_engine(
         password=password,
         port=port,
     )
-    engine = sa.create_engine(url, echo=echo, connect_args=connect_args) 
+    engine = sa.create_engine(url, echo=echo, connect_args=connect_args)
     if password is None and PG_PASSWORD_IAM_IF_NONE:
-        logger.debug("registering listener")
+        logger.error("registering listener. this will break connection if trying to use username / password auth only!")
         sa.event.listen(engine, "do_connect", provide_token)
     return engine
 

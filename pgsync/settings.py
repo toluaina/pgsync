@@ -4,6 +4,7 @@ This module contains the settings for PGSync.
 It reads environment variables from a .env file and sets default values for each variable.
 The variables are used to configure various parameters such as block size, checkpoint path, polling interval, etc.
 """
+import json
 import logging
 import logging.config
 import os
@@ -153,6 +154,15 @@ OPENSEARCH_AWS_SERVERLESS = env.bool(
 # Postgres:
 PG_HOST = env.str("PG_HOST", default="localhost")
 PG_PASSWORD = env.str("PG_PASSWORD", default=None)
+
+logger.error("Using tuomas v0.6")
+if PG_PASSWORD == None:
+    _proxy_backend_config = json.loads(env("PROXY_BACKEND_PASSWORD", default="{}"))
+    PG_PASSWORD = _proxy_backend_config.get("password")
+    logger.error("Using PROXY_BACKEND_PASSWORD for PG_PASSWORD")
+else:
+    logger.error("Using PG_PASSWORD from environment variable, ignoring PROXY_BACKEND_PASSWORD")
+
 PG_PASSWORD_IAM_IF_NONE = env.bool("PG_PASSWORD_IAM_IF_NONE", default=False)
 PG_PORT = env.int("PG_PORT", default=5432)
 PG_SSLMODE = env.str("PG_SSLMODE", default=None)

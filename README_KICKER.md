@@ -15,3 +15,31 @@ NOTE: This appraoch works for both prod and dev. You can specify the environment
     1. You can verify that the push was successful by viewing the images in AWS Console ECR
 1. Restart pgsync task with AWS Console (ECS). No other changes needed, because the Cloudformation configuration fetches the latest image
 1. Make mergechanges to main
+
+aws ecr get-login-password --region eu-west-1 --profile PowerUserAccess-309917491507 | docker login --username AWS --password-stdin 309917491507.dkr.ecr.eu-west-1.amazonaws.com
+
+docker tag pgsync-ecr-repository:latest 309917491507.dkr.ecr.eu-west-1.amazonaws.com/pgsync-ecr-repository:latest
+
+docker push 309917491507.dkr.ecr.eu-west-1.amazonaws.com/pgsync-ecr-repository:latest
+
+### Custom pgsync_drop_triggers definition
+
+CREATE OR REPLACE FUNCTION pgsync_drop_triggers(schema_name text, table_name text)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+EXECUTE format(
+'DROP TRIGGER IF EXISTS %I_notify ON %I.%I;
+DROP TRIGGER IF EXISTS %I_truncate ON %I.%I;',
+table_name, schema_name, table_name,
+table_name, schema_name, table_name
+);
+END
+
+$$
+;
+
+GRANT EXECUTE ON FUNCTION pgsync_drop_triggers(text, text) TO backend;
+$$
