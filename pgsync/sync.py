@@ -446,7 +446,7 @@ class Sync(Base, metaclass=Singleton):
                 )
 
             try:
-                if self._redis is None:
+                if self.redis is None:
                     raise RuntimeError("Redis is not configured.")
                 self.redis.delete()
             except Exception as e:
