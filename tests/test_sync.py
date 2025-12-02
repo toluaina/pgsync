@@ -960,7 +960,7 @@ class TestSync(object):
                         )
                     mock_drop_view.assert_called_once_with("public")
                 mock_drop_function.assert_called_once_with("public")
-            mock_redis_delete.assert_not_called()
+            mock_redis_delete.assert_called_once()
             assert os.path.exists(sync.checkpoint_file) is False
 
         with patch("pgsync.sync.logger") as mock_logger:
@@ -969,9 +969,6 @@ class TestSync(object):
                 sync.teardown()
                 assert mock_logger.warning.call_args_list == [
                     call("Checkpoint file not found: ./.testdb_testdb"),
-                    call(
-                        "Could not clear Redis checkpoint queue: Redis is not configured."
-                    ),
                 ]
 
     def test_root(self, sync):
