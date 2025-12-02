@@ -1404,14 +1404,24 @@ def _pg_engine(
 def pg_execute(
     engine: sa.engine.Engine,
     statement: sa.sql.Select,
-    values: t.Optional[list] = None,
+    values: t.Optional[t.Mapping] = None,
     options: t.Optional[dict] = None,
-) -> None:
+) -> sa.engine.Result:
+    """Execute a query statement."""
     with engine.connect() as conn:
         if options:
             conn = conn.execution_options(**options)
-        conn.execute(statement, values)
-        conn.commit()
+
+        # Don't pass `None` as values
+        if values is not None:
+            result = conn.execute(statement, values)
+        else:
+            result = conn.execute(statement)
+
+        # If caller did NOT request AUTOCOMMIT, commit the transaction
+        if not (options and options.get("isolation_level") == "AUTOCOMMIT"):
+            conn.commit()
+        return result
 
 
 def create_schema(database: str, schema: str, echo: bool = False) -> None:

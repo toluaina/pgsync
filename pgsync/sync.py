@@ -126,7 +126,7 @@ class Sync(Base, metaclass=Singleton):
             self.models, nodes=self.nodes, database=doc["database"]
         )
         if bootstrap:
-            self.setup(wal=wal, polling=polling)
+            self.setup(polling=polling)
 
         if validate:
             self.validate(repl_slots=repl_slots, polling=polling)
@@ -320,9 +320,7 @@ class Sync(Base, metaclass=Singleton):
             routing=self.routing,
         )
 
-    def setup(
-        self, no_create: bool = False, wal: bool = False, polling: bool = False
-    ) -> None:
+    def setup(self, no_create: bool = False, polling: bool = False) -> None:
         """Create the database triggers and replication slot.
         Generally bootstrap should not require Redis as it is optional in certain cases.
         """
@@ -344,6 +342,12 @@ class Sync(Base, metaclass=Singleton):
 
             if not polling:
                 for schema in self.schemas:
+                    if schema not in self.tree.schemas:
+                        logger.warning(
+                            f"Schema '{schema}' not found in node definitions. Skipping..."
+                        )
+                        continue
+
                     # TODO: move if_not_exists to the function
                     if if_not_exists or not self.function_exists(schema):
 
@@ -419,7 +423,9 @@ class Sync(Base, metaclass=Singleton):
                     self.create_replication_slot(self.__name)
 
     def teardown(
-        self, drop_view: bool = True, polling: bool = False, wal: bool = False
+        self,
+        drop_view: bool = True,
+        polling: bool = False,
     ) -> None:
         """Drop the database triggers and replication slot."""
         if self.is_mysql_compat:
@@ -448,6 +454,12 @@ class Sync(Base, metaclass=Singleton):
 
             if not polling:
                 for schema in self.schemas:
+                    if schema not in self.tree.schemas:
+                        logger.warning(
+                            f"Schema '{schema}' not found in node definitions. Skipping..."
+                        )
+                        continue
+
                     tables: t.Set = set()
                     for node in self.tree.traverse_breadth_first():
                         tables |= set(
@@ -466,7 +478,7 @@ class Sync(Base, metaclass=Singleton):
                         self.drop_view(schema)
                         self.drop_function(schema)
 
-            if not wal:
+            if not polling:
                 self.drop_replication_slot(self.__name)
 
     def get_doc_id(self, primary_keys: t.List[str], table: str) -> str:
