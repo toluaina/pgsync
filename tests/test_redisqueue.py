@@ -41,7 +41,7 @@ class TestRedisQueue(object):
         mock_get_redis_url.assert_called_once()
         mock_ping.assert_called_once()
         mock_logger.exception.assert_called_once_with(
-            "Redis server is not running: pong"
+            "Redis server is not reachable when pinging."
         )
 
     def test_qsize(self, mocker):

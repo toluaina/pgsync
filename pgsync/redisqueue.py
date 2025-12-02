@@ -25,15 +25,30 @@ class RedisQueue(object):
         url: str = get_redis_url(**kwargs)
         self.key: str = f"{namespace}:{name}"
         self._meta_key: str = f"{self.key}:meta"
+        self.__db: Redis = Redis.from_url(
+            url,
+            socket_timeout=REDIS_SOCKET_TIMEOUT,
+            retry_on_timeout=REDIS_RETRY_ON_TIMEOUT,
+        )
         try:
-            self.__db: Redis = Redis.from_url(
-                url,
-                socket_timeout=REDIS_SOCKET_TIMEOUT,
-                retry_on_timeout=REDIS_RETRY_ON_TIMEOUT,
-            )
-            self.__db.ping()
-        except ConnectionError as e:
-            logger.exception(f"Redis server is not running: {e}")
+            self.ping()
+        except ConnectionError:
+            raise
+
+    def ping(self) -> bool:
+        """
+        Ping the Redis server to check connectivity.
+
+        Returns:
+            True if the server responded to PING.
+
+        Raises:
+            RedisConnectionError: If the server cannot be reached.
+        """
+        try:
+            return bool(self.__db.ping())
+        except ConnectionError as exc:
+            logger.exception("Redis server is not reachable when pinging.")
             raise
 
     @property

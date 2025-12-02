@@ -28,6 +28,7 @@ from pymysqlreplication.row_event import (
     UpdateRowsEvent,
     WriteRowsEvent,
 )
+from redis.exceptions import ConnectionError
 
 from pgsync.settings import IS_MYSQL_COMPAT
 
@@ -217,8 +218,9 @@ class Sync(Base, metaclass=Singleton):
             # ensure Redis is reachable
             try:
                 self.redis.ping()
-            except Exception as e:
-                raise RuntimeError(f"Cannot reach Redis: {e}")
+            except ConnectionError:
+                raise
+
         else:
             # ensure the checkpoint dirpath is valid
             if not Path(settings.CHECKPOINT_PATH).exists():
