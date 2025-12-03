@@ -4,12 +4,15 @@ import importlib
 import os
 import typing as t
 from collections import namedtuple
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 from mock import ANY, call, patch
 
 from pgsync.base import Base, Payload
 from pgsync.exc import (
+    ForeignKeyError,
     InvalidTGOPError,
     PrimaryKeyNotFoundError,
     RDSError,
@@ -1079,3 +1082,272 @@ class TestSync(object):
         mock_logger.debug.assert_called_once_with(f"_poll_redis: {items}")
         mock_time.sleep.assert_called_once_with(settings.REDIS_POLL_INTERVAL)
         assert sync.count["redis"] == 2
+
+    def test_insert_op_non_root_uses_foreign_keys_and_resolvers(self, sync):
+        """
+        Non-root, non-through node:
+        - uses foreign_keys to populate parent filters
+        - uses _root_foreign_key_resolver + _through_node_resolver to populate root filters
+        """
+
+        # Stub parent and child nodes (duck-typed; don't need the real Node class)
+        parent_node = SimpleNamespace(
+            name="parent",
+            table="parent",
+            parent=None,
+            is_root=False,
+            is_through=False,
+        )
+        node = SimpleNamespace(
+            name="child",
+            table="child",
+            parent=parent_node,
+            is_root=False,
+            is_through=False,
+        )
+
+        # Stub the tree structure
+        sync.tree = SimpleNamespace(
+            tables={"child", "parent", "root"},
+            root=SimpleNamespace(
+                table="root",
+                model=SimpleNamespace(primary_keys=["id"]),
+                parent=None,
+            ),
+        )
+
+        # foreign_keys[node.name] and foreign_keys[node.parent.name] share a key
+        # so that the inner equality condition is hit.
+        sync.query_builder = Mock()
+        sync.query_builder.get_foreign_keys.return_value = {
+            "child": ["id"],
+            "parent": ["id"],
+        }
+
+        # Make the root resolvers predictable
+        sync._root_foreign_key_resolver = Mock(return_value=[{"root_id": 1}])
+
+        def through_node_resolver(node_arg, payloads_arg, filters_arg):
+            # emulate "extend" behaviour
+            filters_arg.append({"root_id": 2})
+            return filters_arg
+
+        sync._through_node_resolver = through_node_resolver
+
+        filters: dict[str, t.List[dict]] = {
+            "parent": [],
+            "root": [],
+        }
+
+        payloads: t.List[Payload] = [
+            Payload(
+                tg_op="INSERT",
+                table="child",
+                new={"id": 99},  # matches foreign_keys["child"] and ["parent"]
+            )
+        ]
+
+        result = sync._insert_op(node, filters, payloads)
+
+        # 1) Parent should get a filter derived from the foreign key
+        assert {"id": 99} in result["parent"]
+
+        # 2) Root should get filters coming back from both resolvers
+        assert {"root_id": 1} in result["root"]
+        assert {"root_id": 2} in result["root"]
+
+        # Sanity: we didn't create any unexpected tables in the filters
+        assert set(result.keys()) == {"parent", "root"}
+
+    def test_insert_op_non_root_falls_back_to__get_foreign_keys(self, sync):
+        """
+        When get_foreign_keys raises ForeignKeyError, _get_foreign_keys is used.
+        """
+
+        parent_node = SimpleNamespace(
+            name="parent",
+            table="parent",
+            parent=None,
+            is_root=False,
+            is_through=False,
+        )
+        node = SimpleNamespace(
+            name="child",
+            table="child",
+            parent=parent_node,
+            is_root=False,
+            is_through=False,
+        )
+
+        sync.tree = SimpleNamespace(
+            tables={"child", "parent", "root"},
+            root=SimpleNamespace(
+                table="root",
+                model=SimpleNamespace(primary_keys=["id"]),
+                parent=None,
+            ),
+        )
+
+        sync.query_builder = Mock()
+        # Primary method fails...
+        sync.query_builder.get_foreign_keys.side_effect = ForeignKeyError(
+            "no fk"
+        )
+        # ...fallback provides the mapping actually used
+        sync.query_builder._get_foreign_keys.return_value = {
+            "child": ["id"],
+            "parent": ["id"],
+        }
+
+        sync._root_foreign_key_resolver = Mock(return_value=[])
+        sync._through_node_resolver = Mock(return_value=[])
+
+        filters: dict[str, t.List[dict]] = {
+            "parent": [],
+            "root": [],
+        }
+
+        payloads: t.List[Payload] = [
+            Payload(
+                tg_op="INSERT",
+                table="child",
+                new={"id": 123},
+            )
+        ]
+
+        result = sync._insert_op(node, filters, payloads)
+
+        # Parent filter must come from fallback mapping
+        assert {"id": 123} in result["parent"]
+
+        sync.query_builder.get_foreign_keys.assert_called_once()
+        sync.query_builder._get_foreign_keys.assert_called_once()
+
+    def test_insert_op_through_node_populates_parent_and_root(self, sync):
+        """
+        Through node:
+        - Uses FKs to populate parent filters
+        - Uses _root_primary_key_resolver for parent and grandparent
+        - Uses _through_node_resolver for additional root filters
+        """
+        grandparent = SimpleNamespace(
+            name="grand",
+            table="grand",
+            parent=None,
+            is_root=False,
+            is_through=False,
+        )
+        parent = SimpleNamespace(
+            name="parent",
+            table="parent",
+            parent=grandparent,
+            is_root=False,
+            is_through=False,
+        )
+        node = SimpleNamespace(
+            name="through",
+            table="through_table",
+            parent=parent,
+            is_root=False,
+            is_through=True,
+        )
+
+        sync.tree = SimpleNamespace(
+            tables={"grand", "parent", "through_table", "root"},
+            root=SimpleNamespace(
+                table="root",
+                model=SimpleNamespace(primary_keys=["id"]),
+                parent=None,
+            ),
+        )
+
+        # FKs used for the "if column in payload.data" part
+        sync.query_builder = SimpleNamespace()
+        sync.query_builder.get_foreign_keys = lambda parent_node, child_node: {
+            "through": ["parent_id"],
+        }
+
+        # Track calls so we know we hit parent and grandparent
+        resolver_calls: list[str] = []
+
+        def root_primary_key_resolver(node_arg, payloads_arg, filters_arg):
+            """
+            Emulate real behaviour: mutate filters_arg and return it.
+            """
+            resolver_calls.append(node_arg.name)
+            if node_arg is parent:
+                filters_arg.append({"id": 10})
+            elif node_arg is grandparent:
+                filters_arg.append({"id": 20})
+            return filters_arg
+
+        def through_node_resolver(node_arg, payloads_arg, filters_arg):
+            """
+            Also mutates filters_arg and returns it.
+            """
+            filters_arg.append({"id": 30})
+            return filters_arg
+
+        sync._root_primary_key_resolver = root_primary_key_resolver
+        sync._through_node_resolver = through_node_resolver
+
+        filters: dict[str, t.List[dict]] = {
+            "parent": [],
+            "root": [],
+        }
+
+        payloads: t.List[Payload] = [
+            Payload(
+                tg_op="INSERT",
+                table="through_table",
+                new={"parent_id": 5},
+            )
+        ]
+
+        result = sync._insert_op(node, filters, payloads)
+
+        # Parent got populated from FK
+        assert {"parent_id": 5} in result["parent"]
+
+        root_filters = result["root"]
+
+        # Root got filters from both root resolvers and through resolver
+        assert {"id": 10} in root_filters
+        assert {"id": 20} in root_filters
+        assert {"id": 30} in root_filters
+
+        # We called the resolver for both parent and grandparent
+        assert resolver_calls == ["parent", "grand"]
+
+    def test_insert_op_ignores_node_not_in_tree_tables(self, sync):
+        """
+        When node.table is not in self.tree.tables and node.is_through is False,
+        the function should return filters unchanged.
+        """
+
+        node = SimpleNamespace(
+            name="other",
+            table="other_table",
+            parent=None,
+            is_root=False,
+            is_through=False,
+        )
+
+        sync.tree = SimpleNamespace(
+            tables={"book", "publisher"},  # "other_table" not listed
+            root=SimpleNamespace(
+                table="book",
+                model=SimpleNamespace(primary_keys=["isbn"]),
+                parent=None,
+            ),
+        )
+
+        original_filters = {"book": [{"isbn": "001"}]}
+        filters = {"book": [{"isbn": "001"}]}
+
+        payloads = []  # no payloads; nothing should happen
+
+        result = sync._insert_op(node, filters, payloads)
+
+        # Same content, no mutation beyond what was already there
+        assert result == original_filters
