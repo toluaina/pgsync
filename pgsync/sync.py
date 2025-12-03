@@ -1063,6 +1063,11 @@ class Sync(Base, metaclass=Singleton):
             if _filters:
                 filters[self.tree.root.table].extend(_filters)
 
+            # also check through table with a direct references to root
+            _filters = self._through_node_resolver(node, payloads, _filters)
+            if _filters:
+                filters[self.tree.root.table].extend(_filters)
+
         elif node.table in self.tree.tables:
             if node.is_root:
                 for payload in payloads:
