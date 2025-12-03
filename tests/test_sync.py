@@ -1351,3 +1351,102 @@ class TestSync(object):
 
         # Same content, no mutation beyond what was already there
         assert result == original_filters
+
+    def test_insert_op_root_node_with_composite_primary_key(self, sync):
+        """
+        Root node: ensure we correctly build filters for composite PKs.
+        """
+
+        # Root node
+        node = SimpleNamespace(
+            name="order",
+            table="order",
+            parent=None,
+            is_root=True,
+            is_through=False,
+        )
+
+        sync.tree = SimpleNamespace(
+            tables={"order"},
+            root=SimpleNamespace(
+                table="order",
+                model=SimpleNamespace(primary_keys=["id", "version"]),
+                parent=None,
+            ),
+        )
+
+        filters: dict[str, t.List[dict]] = {"order": []}
+
+        payloads: t.List[Payload] = [
+            Payload(
+                tg_op="INSERT",
+                table="order",
+                new={"id": 1, "version": 2, "other": "ignored"},
+            )
+        ]
+
+        result = sync._insert_op(node, filters, payloads)
+
+        # Should only contain PK fields, not extra ones
+        assert result == {"order": [{"id": 1, "version": 2}]}
+
+    def test_insert_op_non_root_with_mismatched_foreign_keys(self, sync):
+        """
+        Non-root, non-through node where FK names don't match between child/parent.
+        - We should not add anything to parent filters.
+        """
+
+        parent_node = SimpleNamespace(
+            name="parent",
+            table="parent",
+            parent=None,
+            is_root=False,
+            is_through=False,
+        )
+        node = SimpleNamespace(
+            name="child",
+            table="child",
+            parent=parent_node,
+            is_root=False,
+            is_through=False,
+        )
+
+        sync.tree = SimpleNamespace(
+            tables={"parent", "child", "root"},
+            root=SimpleNamespace(
+                table="root",
+                model=SimpleNamespace(primary_keys=["id"]),
+                parent=None,
+            ),
+        )
+
+        sync.query_builder = Mock()
+        # Note: no matching key names between child and parent
+        sync.query_builder.get_foreign_keys.return_value = {
+            "child": ["child_id"],
+            "parent": ["parent_id"],
+        }
+
+        # No root/through filters for this test
+        sync._root_foreign_key_resolver = Mock(return_value=[])
+        sync._through_node_resolver = Mock(return_value=[])
+
+        filters: dict[str, t.List[dict]] = {
+            "parent": [],
+            "root": [],
+        }
+
+        payloads: t.List[Payload] = [
+            Payload(
+                tg_op="INSERT",
+                table="child",
+                new={"child_id": 42},
+            )
+        ]
+
+        result = sync._insert_op(node, filters, payloads)
+
+        # Parent remains empty because no FK name match
+        assert result["parent"] == []
+        # Root remains unchanged because resolvers returned empty
+        assert result["root"] == []
