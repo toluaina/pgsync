@@ -27,7 +27,7 @@ BEGIN
 
     IF TG_OP = 'DELETE' THEN
 
-        SELECT primary_keys INTO _primary_keys
+        SELECT primary_keys, indices INTO _primary_keys, _indices
         FROM {MATERIALIZED_VIEW}
         WHERE table_name = TG_TABLE_NAME;
 
