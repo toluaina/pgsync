@@ -1,0 +1,237 @@
+[
+    {
+        "database": "book",
+        "index": "book",
+        "nodes": {
+            "table": "book",
+            "columns": [
+                "id",
+                "isbn",
+                "title",
+                "description",
+                "tags",
+                "doc->firstname",
+                "doc->coordinates",
+                "doc#>{a,b,c}->4",
+                "doc->x",
+                "doc->x->0->y",
+                "doc->x->1->z",
+                "publish_date"
+            ],
+            "transform": {
+                "rename": {
+                    "id": "book_id",
+                    "isbn": "book_isbn",
+                    "title": "book_title"
+                },
+                "replace": {
+                    "isbn": {
+                        "00": "XX"
+                    }
+                },
+                "mapping": {
+                    "book_id": {
+                        "type": "long"
+                    },
+                    "book_isbn": {
+                        "type": "text",
+                        "fields": {
+                            "ngram": {
+                                "type": "text",
+                                "analyzer": "ngram_analyzer",
+                                "search_analyzer": "ngram_analyzer",
+                                "fielddata": true
+                            }
+                        }
+                    }
+                }
+            },
+            "children": [
+                {
+                    "table": "publisher",
+                    "columns": [
+                        "name",
+                        "id",
+                        "is_active"
+                    ],
+                    "label": "publisher_label",
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_one",
+                        "foreign_key": {
+                            "child": [
+                                "id"
+                            ],
+                            "parent": [
+                                "publisher_id"
+                            ]
+                        }
+                    },
+                    "children": [],
+                    "transform": {
+                        "rename": {
+                            "id": "publisher_id",
+                            "name": "publisher_name"
+                        },
+                        "concat": [
+                            {
+                                "columns": [
+                                    "publisher_id",
+                                    "publisher_name",
+                                    "is_active",
+                                    "foo"
+                                ],
+                                "destination": "xyz",
+                                "delimiter": "_"
+                            },
+                            {
+                                "columns": [
+                                    "publisher_id",
+                                    "publisher_name",
+                                    "is_active",
+                                    "bar"
+                                ],
+                                "destination": "abc",
+                                "delimiter": "-"
+                            }
+                        ],
+                        "move": {
+                            "column": "id",
+                            "destination": "$root.author.author_id"
+                        },
+                        "mapping": {
+                            "publisher_id": {
+                                "type": "long"
+                            },
+                            "publisher_name": {
+                                "type": "keyword"
+                            }
+                        }
+                    }
+                },
+                {
+                    "table": "book_language",
+                    "columns": [
+                        "book_isbn",
+                        "language_id"
+                    ],
+                    "label": "book_languages",
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_many"
+                    }
+                },
+                {
+                    "table": "author",
+                    "columns": [
+                        "id",
+                        "name",
+                        "date_of_birth"
+                    ],
+                    "label": "authors",
+                    "relationship": {
+                        "type": "one_to_many",
+                        "variant": "object",
+                        "through_tables": [
+                            "book_author"
+                        ]
+                    },
+                    "children": [
+                        {
+                            "table": "city",
+                            "columns": [
+                                "name",
+                                "id"
+                            ],
+                            "label": "city_label",
+                            "relationship": {
+                                "variant": "object",
+                                "type": "one_to_one"
+                            },
+                            "children": [
+                                {
+                                    "table": "country",
+                                    "columns": [
+                                        "name",
+                                        "id"
+                                    ],
+                                    "label": "country_label",
+                                    "relationship": {
+                                        "variant": "object",
+                                        "type": "one_to_one"
+                                    },
+                                    "children": [
+                                        {
+                                            "table": "continent",
+                                            "columns": [
+                                                "name"
+                                            ],
+                                            "transform": {
+                                                "mapping": {
+                                                    "name": {
+                                                        "type": "keyword"
+                                                    }
+                                                }
+                                            },
+                                            "label": "continent_label",
+                                            "relationship": {
+                                                "variant": "object",
+                                                "type": "one_to_one"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "table": "language",
+                    "label": "languages",
+                    "columns": [
+                        "code"
+                    ],
+                    "relationship": {
+                        "type": "one_to_many",
+                        "variant": "scalar",
+                        "through_tables": [
+                            "book_language"
+                        ]
+                    },
+                    "transform": {
+                        "replace": {
+                            "code": {
+                                "-": "="
+                            }
+                        }
+                    }
+                },
+                {
+                    "table": "subject",
+                    "label": "subjects",
+                    "columns": [
+                        "name"
+                    ],
+                    "relationship": {
+                        "type": "one_to_many",
+                        "variant": "scalar",
+                        "through_tables": [
+                            "book_subject"
+                        ]
+                    }
+                },
+                {
+                    "table": "rating",
+                    "label": "ratings",
+                    "columns": [
+                        "value"
+                    ],
+                    "relationship": {
+                        "type": "one_to_one",
+                        "variant": "object"
+                    }
+                }
+            ]
+        }
+    }
+]
