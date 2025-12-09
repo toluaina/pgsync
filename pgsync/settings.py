@@ -52,6 +52,9 @@ STREAM_RESULTS = env.bool("STREAM_RESULTS", default=True)
 POLL_INTERVAL = env.float("POLL_INTERVAL", default=0.1)
 FORMAT_WITH_COMMAS = env.bool("FORMAT_WITH_COMMAS", default=True)
 
+POLLING = env.bool("POLLING", default=False)
+WAL = env.bool("WAL", default=False)
+
 # SQLAlchemy Settings:
 # Use NullPool (no connection pooling) - useful for testing or when you want to close connections immediately
 SQLALCHEMY_USE_NULLPOOL = env.bool("SQLALCHEMY_USE_NULLPOOL", default=False)

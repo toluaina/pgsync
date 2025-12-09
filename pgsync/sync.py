@@ -2134,6 +2134,7 @@ class Sync(Base, metaclass=Singleton):
 @click.option(
     "--polling",
     is_flag=True,
+    default=settings.POLLING,
     help="Polling mode (Incompatible with -d)",
     cls=MutuallyExclusiveOption,
     mutually_exclusive=["daemon", "wal"],
@@ -2142,7 +2143,7 @@ class Sync(Base, metaclass=Singleton):
     "--wal",
     "-w",
     is_flag=True,
-    default=False,
+    default=settings.WAL,
     help="Use WAL for replication",
     cls=MutuallyExclusiveOption,
     mutually_exclusive=[
