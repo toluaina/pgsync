@@ -126,8 +126,9 @@ class Sync(Base, metaclass=Singleton):
         self.tree: Tree = Tree(
             self.models, nodes=self.nodes, database=doc["database"]
         )
+
         if bootstrap:
-            self.setup(polling=polling)
+            self.setup(polling=polling, wal=wal)
 
         if validate:
             self.validate(repl_slots=repl_slots, polling=polling)
@@ -322,7 +323,9 @@ class Sync(Base, metaclass=Singleton):
             routing=self.routing,
         )
 
-    def setup(self, no_create: bool = False, polling: bool = False) -> None:
+    def setup(
+        self, no_create: bool = False, polling: bool = False, wal: bool = False
+    ) -> None:
         """Create the database triggers and replication slot.
         Generally bootstrap should not require Redis as it is optional in certain cases.
         """
@@ -340,9 +343,9 @@ class Sync(Base, metaclass=Singleton):
         ):
             if if_not_exists:
 
-                self.teardown(drop_view=False)
+                self.teardown(drop_view=False, polling=polling, wal=wal)
 
-            if not polling:
+            if not polling and not wal:
                 for schema in self.schemas:
                     if schema not in self.tree.schemas:
                         logger.warning(
@@ -419,7 +422,7 @@ class Sync(Base, metaclass=Singleton):
                             if_not_exists=if_not_exists,
                         )
 
-            if not polling:
+            if not polling and wal:
                 if if_not_exists or not self.replication_slots(self.__name):
 
                     self.create_replication_slot(self.__name)
@@ -428,6 +431,7 @@ class Sync(Base, metaclass=Singleton):
         self,
         drop_view: bool = True,
         polling: bool = False,
+        wal: bool = False,
     ) -> None:
         """Drop the database triggers and replication slot."""
         if self.is_mysql_compat:
@@ -447,12 +451,15 @@ class Sync(Base, metaclass=Singleton):
                     f"Checkpoint file not found: {self.checkpoint_file}"
                 )
 
-            try:
-                if self.redis is None:
-                    raise RuntimeError("Redis is not configured.")
-                self.redis.delete()
-            except Exception as e:
-                logger.warning(f"Could not clear Redis checkpoint queue: {e}")
+            if not wal and not settings.REDIS_CHECKPOINT:
+                try:
+                    if self.redis is None:
+                        raise RuntimeError("Redis is not configured.")
+                    self.redis.delete()
+                except Exception as e:
+                    logger.warning(
+                        f"Could not clear Redis checkpoint queue: {e}"
+                    )
 
             if not polling:
                 for schema in self.schemas:
