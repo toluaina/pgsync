@@ -422,7 +422,7 @@ class Sync(Base, metaclass=Singleton):
                             if_not_exists=if_not_exists,
                         )
 
-            if not polling and wal:
+            if not polling:
                 if if_not_exists or not self.replication_slots(self.__name):
 
                     self.create_replication_slot(self.__name)
@@ -461,7 +461,7 @@ class Sync(Base, metaclass=Singleton):
                         f"Could not clear Redis checkpoint queue: {e}"
                     )
 
-            if not polling:
+            if not polling and not wal:
                 for schema in self.schemas:
                     if schema not in self.tree.schemas:
                         logger.warning(
