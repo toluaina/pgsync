@@ -937,7 +937,9 @@ class TestSync(object):
                         },
                     )
                 mock_create_function.assert_called_once_with("public")
-            mock_teardown.assert_called_once_with(drop_view=False)
+            mock_teardown.assert_called_once_with(
+                drop_view=False, polling=False, wal=False
+            )
 
     @patch("pgsync.redisqueue.RedisQueue.delete")
     def test_teardown(self, mock_redis_delete, sync):
