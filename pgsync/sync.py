@@ -30,6 +30,7 @@ from pymysqlreplication.row_event import (
 )
 from redis.exceptions import ConnectionError
 
+from pgsync.base import pg_logical_repl_conn
 from pgsync.settings import IS_MYSQL_COMPAT
 
 from . import __version__, settings
@@ -1983,7 +1984,7 @@ class Sync(Base, metaclass=Singleton):
 
     def wal_consumer(self) -> None:
         # open a replication‐mode connection
-        conn = self.get_replication_connection(self.engine)
+        conn = pg_logical_repl_conn(database=self.database)
         cursor = conn.cursor()
         # start streaming; include XIDs so you see BEGIN/COMMIT markers
         cursor.start_replication(

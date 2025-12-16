@@ -749,21 +749,6 @@ class Base(object):
             )
         )[0]
 
-    def get_replication_connection(
-        self, engine: sa.engine.Engine
-    ) -> psycopg2.extensions.connection:
-        url: sa.engine.URL = make_url(str(engine.url))
-        # Build a libpq-style connection by keyword args
-        conn: psycopg2.extensions.connection = psycopg2.connect(
-            host=url.host,
-            port=url.port or 5432,
-            user=url.username,
-            password=url.password,
-            dbname=url.database,
-            connection_factory=LogicalReplicationConnection,
-        )
-        return conn
-
     def logical_slot_get_changes(
         self,
         slot_name: str,
@@ -1340,18 +1325,23 @@ def pg_engine(
     )
 
 
-def _pg_engine(
+def _pg_connect_config(
+    *,
     database: str,
     user: t.Optional[str] = None,
     host: t.Optional[str] = None,
     password: t.Optional[str] = None,
     port: t.Optional[int] = None,
-    echo: bool = False,
     sslmode: t.Optional[str] = None,
     sslrootcert: t.Optional[str] = None,
     url: t.Optional[str] = None,
-) -> sa.engine.Engine:
+) -> tuple[str, dict]:
+    """
+    Shared config builder for both SQLAlchemy engines and direct psycopg2 connects.
+    Returns (url, connect_args).
+    """
     connect_args: dict = {}
+
     sslmode = sslmode or PG_SSLMODE
     sslrootcert = sslrootcert or PG_SSLROOTCERT
 
@@ -1370,13 +1360,38 @@ def _pg_engine(
         connect_args["sslrootcert"] = sslrootcert
 
     if url is None:
-        url: str = get_database_url(
+        url = get_database_url(
             database,
             user=user,
             host=host,
             password=password,
             port=port,
         )
+
+    return url, connect_args
+
+
+def _pg_engine(
+    database: str,
+    user: t.Optional[str] = None,
+    host: t.Optional[str] = None,
+    password: t.Optional[str] = None,
+    port: t.Optional[int] = None,
+    echo: bool = False,
+    sslmode: t.Optional[str] = None,
+    sslrootcert: t.Optional[str] = None,
+    url: t.Optional[str] = None,
+) -> sa.engine.Engine:
+    url, connect_args = _pg_connect_config(
+        database=database,
+        user=user,
+        host=host,
+        password=password,
+        port=port,
+        sslmode=sslmode,
+        sslrootcert=sslrootcert,
+        url=url,
+    )
 
     # Use NullPool for testing to avoid connection exhaustion
     if SQLALCHEMY_USE_NULLPOOL:
@@ -1399,6 +1414,43 @@ def _pg_engine(
         pool_recycle=SQLALCHEMY_POOL_RECYCLE,
         pool_timeout=SQLALCHEMY_POOL_TIMEOUT,
     )
+
+
+def pg_logical_repl_conn(
+    *,
+    database: str,
+    user: t.Optional[str] = None,
+    host: t.Optional[str] = None,
+    password: t.Optional[str] = None,
+    port: t.Optional[int] = None,
+    sslmode: t.Optional[str] = None,
+    sslrootcert: t.Optional[str] = None,
+    url: t.Optional[str] = None,
+) -> psycopg2.extensions.connection:
+    url, connect_args = _pg_connect_config(
+        database=database,
+        user=user,
+        host=host,
+        password=password,
+        port=port,
+        sslmode=sslmode,
+        sslrootcert=sslrootcert,
+        url=url,
+    )
+
+    url_: sa.engine.URL = make_url(url)
+
+    conn: psycopg2.extensions.connection = psycopg2.connect(
+        host=url_.host,
+        port=url_.port or 5432,
+        user=url_.username,
+        password=url_.password,
+        dbname=url_.database,
+        connection_factory=LogicalReplicationConnection,
+        **connect_args,
+    )
+
+    return conn
 
 
 def pg_execute(
