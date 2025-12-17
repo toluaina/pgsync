@@ -488,7 +488,7 @@ class TestBase(object):
         row = """
         table public."B1_XYZ": INSERT: "ID"[integer]:5 "CREATED_TIMESTAMP"[bigint]:222 "ADDRESS"[character varying]:'from3' "SOME_FIELD_KEY"[character varying]:'key3' "SOME_OTHER_FIELD_KEY"[character varying]:'issue to handle' "CHANNEL_ID"[integer]:3 "CHANNEL_NAME"[character varying]:'channel 45' "ITEM_ID"[integer]:3 "MESSAGE"[character varying]:'message3' "RETRY"[integer]:4 "STATUS"[character varying]:'status' "SUBJECT"[character varying]:'sub3' "TIMESTAMP"[bigint]:33
         """  # noqa E501
-        payload = pg_base.parse_logical_slot(row)
+        payload = pg_base.parse_logical_slot(row.strip())
         assert payload.data == {
             "CHANNEL_ID": 3,
             "CHANNEL_NAME": "channel 45",
@@ -527,7 +527,7 @@ class TestBase(object):
         row = """
         table public.book: UPDATE: id[integer]:1 isbn[character varying]:'001' title[character varying]:'It' description[character varying]:'Stephens Kings It' copyright[character varying]:null tags[jsonb]:'["a", "b", "c"]' doc[jsonb]:'{"a": {"b": {"c": [0, 1, 2, 3, 4]}}, "i": 73, "x": [{"y": 0, "z": 5}, {"y": 1, "z": 6}], "bool": true, "lastname": "Judye", "firstname": "Glenda", "generation": {"name": "X"}, "nick_names": ["Beatriz", "Jean", "Carilyn", "Carol-Jean", "Sara-Ann"], "coordinates": {"lat": 21.1, "lon": 32.9}}' publisher_id[integer]:1 publish_date[timestamp without time zone]:'1980-01-01 00:00:00' quad[double precision]:2e+58
         """  # noqa E501
-        payload = pg_base.parse_logical_slot(row)
+        payload = pg_base.parse_logical_slot(row.strip())
         assert payload.data == {
             "copyright": None,
             "description": "Stephens Kings It",

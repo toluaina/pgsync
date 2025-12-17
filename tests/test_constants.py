@@ -13,6 +13,52 @@ from pgsync.constants import (
 class TestConstants(object):
     """Constants tests."""
 
+    def test_row_complex_update_prefix_and_suffix(self):
+        row = """
+        table public.book: UPDATE: id[integer]:1 isbn[character varying]:'001' title[character varying]:'It' description[character varying]:'Stephens Kings It' copyright[character varying]:null tags[jsonb]:'["a", "b", "c"]' doc[jsonb]:'{"a": {"b": {"c": [0, 1, 2, 3, 4]}}, "i": 73, "x": [{"y": 0, "z": 5}, {"y": 1, "z": 6}], "bool": true, "lastname": "Judye", "firstname": "Glenda", "generation": {"name": "X"}, "nick_names": ["Beatriz", "Jean", "Carilyn", "Carol-Jean", "Sara-Ann"], "coordinates": {"lat": 21.1, "lon": 32.9}}' publisher_id[integer]:1 publish_date[timestamp without time zone]:'1980-01-01 00:00:00' quad[double precision]:2e+58
+        """
+
+        m = LOGICAL_SLOT_PREFIX.search(row.strip())
+        assert m is not None
+        assert m.groupdict() == {
+            "schema": "public",
+            "table": "book",
+            "tg_op": "UPDATE",
+        }
+
+        fields = [
+            mm.groupdict() for mm in LOGICAL_SLOT_SUFFIX.finditer(row.strip())
+        ]
+        # sanity: first field
+        assert fields[0] == {"key": "id", "type": "integer", "value": "1"}
+
+        # spot-check a few tricky ones
+        assert {
+            "key": "copyright",
+            "type": "character varying",
+            "value": "null",
+        } in fields
+        assert {
+            "key": "tags",
+            "type": "jsonb",
+            "value": '\'["a", "b", "c"]\'',
+        } in fields
+        assert {
+            "key": "publisher_id",
+            "type": "integer",
+            "value": "1",
+        } in fields
+        assert {
+            "key": "publish_date",
+            "type": "timestamp without time zone",
+            "value": "'1980-01-01 00:00:00'",
+        } in fields
+        assert {
+            "key": "quad",
+            "type": "double precision",
+            "value": "2e+58",
+        } in fields
+
     def test_logical_slot_prefix_insert(self):
         insert = "table public.book: INSERT: id[integer]:9 isbn[character varying]:'978-0-924595-91-2a51f2c9f-930d-403c-8687-eeffd0fbfe6f' title[character varying]:'Certainly state million dog son night.' description[character varying]:'Idea prepare how push candidate page. Physical easy sister by let.' copyright[character varying]:null tags[jsonb]:null doc[jsonb]:null point[geometry]:null polygon[geometry]:null publisher_id[integer]:1"  # noqa E501
         match = LOGICAL_SLOT_PREFIX.search(insert)
