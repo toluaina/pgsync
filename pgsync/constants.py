@@ -207,8 +207,21 @@ PRIMARY_KEY_DELIMITER = "|"
 
 # Replication slot patterns
 LOGICAL_SLOT_PREFIX = re.compile(
-    r"table\s\"?(?P<schema>[\w-]+)\"?.\"?(?P<table>[\w-]+)\"?:\s(?P<tg_op>[A-Z]+):"  # noqa E501
+    r"^table\s+"
+    r'"?(?P<schema>[^"]+?)"?\.'  # schema up to the dot
+    r'"?(?P<table>[^"]+?)"?'  # table up to the colon
+    r"\s*:\s*(?P<tg_op>[A-Z]+):"
 )
 LOGICAL_SLOT_SUFFIX = re.compile(
-    r'\s(?P<key>"?\w+"?)\[(?P<type>[\w\s]+)\]:(?P<value>(?:"[^"]*"|\'[^\']*\'|null|\d+e[+-]?\d+|\w+))'
+    r"\s"
+    r'(?P<key>"(?:[^"]|"")+"|[\w$-]+)'  # "Weird Key" or my_col or my-col or my$col
+    r"\[(?P<type>[^\]]+)\]"  # anything until ]
+    r":"
+    r"(?P<value>"
+    r"null|true|false|NaN|Infinity|-Infinity|"
+    r'"(?:[^"]|"")*"|'  # double-quoted, supports "" escape
+    r"'(?:[^']|'')*'|"  # single-quoted, supports '' escape
+    r"-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|"  # numbers: -1, 3.14, 9e-3, 9E+2
+    r"[\w$-]+"  # bare tokens like uuid-ish or identifiers
+    r")"
 )

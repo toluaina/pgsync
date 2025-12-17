@@ -1,5 +1,7 @@
 """Constants tests."""
 
+import pytest
+
 from pgsync.constants import (
     ELASTICSEARCH_MAPPING_PARAMETERS,
     ELASTICSEARCH_TYPES,
@@ -88,6 +90,186 @@ class TestConstants(object):
             "type": "integer",
             "value": "12",
         }
+
+    @pytest.mark.parametrize(
+        "line, expected",
+        [
+            (
+                "table public.book: INSERT: id[integer]:9",
+                {"schema": "public", "table": "book", "tg_op": "INSERT"},
+            ),
+            (
+                'table public."cars": INSERT: brand[character varying]:' "'a'",
+                {"schema": "public", "table": "cars", "tg_op": "INSERT"},
+            ),
+            (
+                "table public.bo-ok: UPDATE: id[integer]:1",
+                {"schema": "public", "table": "bo-ok", "tg_op": "UPDATE"},
+            ),
+            (
+                "table public.book-: DELETE: id[integer]:12",
+                {"schema": "public", "table": "book-", "tg_op": "DELETE"},
+            ),
+            # Quoted schema/table
+            (
+                'table "public"."book": INSERT: id[integer]:9',
+                {"schema": "public", "table": "book", "tg_op": "INSERT"},
+            ),
+            # Schema with dash (works only if your schema group allows "-")
+            (
+                'table "my-schema"."book": INSERT: id[integer]:9',
+                {"schema": "my-schema", "table": "book", "tg_op": "INSERT"},
+            ),
+            pytest.param(
+                'table public."cars$xxx": INSERT: brand[character varying]:'
+                "'a' model[character varying]:'b' year[integer]:1",
+                {"schema": "public", "table": "cars$xxx", "tg_op": "INSERT"},
+            ),
+            # Unquoted table with dollar (Postgres allows $ unquoted too)
+            pytest.param(
+                "table public.cars$xxx: INSERT: id[integer]:1",
+                {"schema": "public", "table": "cars$xxx", "tg_op": "INSERT"},
+            ),
+        ],
+    )
+    def test_logical_slot_prefix_variants(self, line, expected):
+        match = LOGICAL_SLOT_PREFIX.search(line)
+        assert match is not None
+        assert match.groupdict() == expected
+
+    def test_logical_slot_suffix_first_field_insert(self):
+        insert = (
+            "table public.book: INSERT: id[integer]:9 "
+            "isbn[character varying]:'978-0-924595-91-2a51f2c9f-930d-403c-8687-eeffd0fbfe6f' "
+            "title[character varying]:'Certainly state million dog son night.' "
+            "copyright[character varying]:null"
+        )
+        match = LOGICAL_SLOT_SUFFIX.search(insert)
+        assert match is not None
+        assert match.groupdict() == {
+            "key": "id",
+            "type": "integer",
+            "value": "9",
+        }
+
+    def test_logical_slot_suffix_find_multiple_fields(self):
+        line = (
+            "table public.book: INSERT: "
+            "id[integer]:9 "
+            "title[character varying]:'Hello world' "
+            "is_active[boolean]:true "
+            "copyright[character varying]:null"
+        )
+        matches = [m.groupdict() for m in LOGICAL_SLOT_SUFFIX.finditer(line)]
+        assert matches == [
+            {"key": "id", "type": "integer", "value": "9"},
+            {
+                "key": "title",
+                "type": "character varying",
+                "value": "'Hello world'",
+            },
+            {"key": "is_active", "type": "boolean", "value": "true"},
+            {"key": "copyright", "type": "character varying", "value": "null"},
+        ]
+
+    def test_logical_slot_suffix_key_can_be_quoted_simple(self):
+        line = 'table public.book: INSERT: "id"[integer]:9'
+        match = LOGICAL_SLOT_SUFFIX.search(line)
+        assert match is not None
+        assert match.groupdict() == {
+            "key": '"id"',
+            "type": "integer",
+            "value": "9",
+        }
+
+    def test_logical_slot_suffix_empty_strings(self):
+        line = (
+            "table public.book: INSERT: "
+            "empty_single[character varying]:'' "
+            'empty_double[character varying]:""'
+        )
+        matches = [m.groupdict() for m in LOGICAL_SLOT_SUFFIX.finditer(line)]
+        assert matches == [
+            {
+                "key": "empty_single",
+                "type": "character varying",
+                "value": "''",
+            },
+            {
+                "key": "empty_double",
+                "type": "character varying",
+                "value": '""',
+            },
+        ]
+
+    def test_logical_slot_suffix_json_in_single_quotes(self):
+        line = (
+            "table public.book: UPDATE: "
+            'tags[jsonb]:\'["a", "b", "c"]\' '
+            'doc[jsonb]:\'{"a": {"b": 1}, "ok": true}\''
+        )
+        matches = [m.groupdict() for m in LOGICAL_SLOT_SUFFIX.finditer(line)]
+        assert matches == [
+            {"key": "tags", "type": "jsonb", "value": '\'["a", "b", "c"]\''},
+            {
+                "key": "doc",
+                "type": "jsonb",
+                "value": '\'{"a": {"b": 1}, "ok": true}\'',
+            },
+        ]
+
+    def test_logical_slot_suffix_type_with_spaces(self):
+        line = (
+            "table public.book: INSERT: "
+            "created_at[timestamp without time zone]:'2025-12-17 10:11:12'"
+        )
+        match = LOGICAL_SLOT_SUFFIX.search(line)
+        assert match is not None
+        assert match.groupdict() == {
+            "key": "created_at",
+            "type": "timestamp without time zone",
+            "value": "'2025-12-17 10:11:12'",
+        }
+
+    def test_logical_slot_suffix_scientific_lower_e(self):
+        line = "table public.book: INSERT: ratio[double precision]:9e-3"
+        match = LOGICAL_SLOT_SUFFIX.search(line)
+        assert match is not None
+        assert match.groupdict() == {
+            "key": "ratio",
+            "type": "double precision",
+            "value": "9e-3",
+        }
+
+    def test_logical_slot_suffix_scientific_upper_E(self):
+        line = "table public.book: INSERT: ratio[double precision]:9E-3"
+        match = LOGICAL_SLOT_SUFFIX.search(line)
+        assert match is not None
+
+    def test_logical_slot_suffix_negative_int(self):
+        line = "table public.book: INSERT: delta[integer]:-1"
+        match = LOGICAL_SLOT_SUFFIX.search(line)
+        assert match is not None
+
+    def test_logical_slot_suffix_float(self):
+        line = "table public.book: INSERT: price[numeric]:3.14"
+        match = LOGICAL_SLOT_SUFFIX.search(line)
+        assert match is not None
+
+    def test_logical_slot_suffix_type_with_parens(self):
+        line = "table public.book: INSERT: price[numeric(10,2)]:123.45"
+        match = LOGICAL_SLOT_SUFFIX.search(line)
+        assert match is not None
+
+    def test_logical_slot_suffix_quoted_key_with_space(self):
+        line = 'table public.book: INSERT: "Weird Key"[integer]:1'
+        match = LOGICAL_SLOT_SUFFIX.search(line)
+        assert match is not None
+
+    def test_logical_slot_suffix_unquoted_key_with_dash_or_dollar(self):
+        line = "table public.book: INSERT: my-col[integer]:1 my$col[integer]:2"
+        matches = list(LOGICAL_SLOT_SUFFIX.finditer(line))
+        assert len(matches) == 2
 
     def test_elasticsearch_types(self):
         assert ELASTICSEARCH_TYPES == sorted(
