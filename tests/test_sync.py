@@ -234,17 +234,13 @@ class TestSync(object):
                     ROW("COMMIT 76474", 76474),
                     ROW("BEGIN 76475", 76475),
                     ROW(
-                        """
-                        table public.book: UPDATE: id[integer]:1 isbn[character varying]:'001' title[character varying]:'xyz' description[character varying]:'de' copyright[character varying]:null tags[jsonb]:'["a", "b", "c"]' doc[jsonb]:'{"a": {"b": {"c": [0, 1, 2, 3, 4]}}, "i": 73, "x": [{"y": 0, "z": 5}, {"y": 1, "z": 6}], "bool": true, "lastname": "Judye", "firstname": "Glenda", "generation": {"name": "X"}, "nick_names": ["Beatriz", "Jean", "Carilyn", "Carol-Jean", "Sara-Ann"], "coordinates": {"lat": 21.1, "lon": 32.9}}' publisher_id[integer]:1 publish_date[timestamp without time zone]:'1980-01-01 00:00:00'
-                        """,
+                        """table public.book: UPDATE: id[integer]:1 isbn[character varying]:'001' title[character varying]:'xyz' description[character varying]:'de' copyright[character varying]:null tags[jsonb]:'["a", "b", "c"]' doc[jsonb]:'{"a": {"b": {"c": [0, 1, 2, 3, 4]}}, "i": 73, "x": [{"y": 0, "z": 5}, {"y": 1, "z": 6}], "bool": true, "lastname": "Judye", "firstname": "Glenda", "generation": {"name": "X"}, "nick_names": ["Beatriz", "Jean", "Carilyn", "Carol-Jean", "Sara-Ann"], "coordinates": {"lat": 21.1, "lon": 32.9}}' publisher_id[integer]:1 publish_date[timestamp without time zone]:'1980-01-01 00:00:00'""",
                         76475,
                     ),
                     ROW("COMMIT 76475", 76472),
                     ROW("BEGIN 76476", 76472),
                     ROW(
-                        """
-                        table public.book: UPDATE: id[integer]:2 isbn[character varying]:'002' title[character varying]:'abc' description[character varying]:'Lodsdcsdrem ipsum dodscdslor sit amet' copyright[character varying]:null tags[jsonb]:'["d", "e", "f"]' doc[jsonb]:'{"a": {"b": {"c": [2, 3, 4, 5, 6]}}, "i": 99, "x": [{"y": 2, "z": 3}, {"y": 7, "z": 2}], "bool": false, "lastname": "Jones", "firstname": "Jack", "generation": {"name": "X"}, "nick_names": ["Jack", "Jones", "Jay", "Jay-Jay", "Jackie"], "coordinates": {"lat": 25.1, "lon": 52.2}}' publisher_id[integer]:1 publish_date[timestamp without time zone]:'infinity'
-                        """,
+                        """table public.book: UPDATE: id[integer]:2 isbn[character varying]:'002' title[character varying]:'abc' description[character varying]:'Lodsdcsdrem ipsum dodscdslor sit amet' copyright[character varying]:null tags[jsonb]:'["d", "e", "f"]' doc[jsonb]:'{"a": {"b": {"c": [2, 3, 4, 5, 6]}}, "i": 99, "x": [{"y": 2, "z": 3}, {"y": 7, "z": 2}], "bool": false, "lastname": "Jones", "firstname": "Jack", "generation": {"name": "X"}, "nick_names": ["Jack", "Jones", "Jay", "Jay-Jay", "Jackie"], "coordinates": {"lat": 25.1, "lon": 52.2}}' publisher_id[integer]:1 publish_date[timestamp without time zone]:'infinity'""",
                         76472,
                     ),
                     ROW("COMMIT 76476", 76472),
