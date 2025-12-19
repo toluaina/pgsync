@@ -400,7 +400,7 @@ class QueryBuilder(threading.local):
                 subquery.append(
                     sa.select(
                         *[
-                            JSON_CAST(
+                            sa.cast(
                                 sa.literal_column(f"'({page},'")
                                 .concat(sa.column("s"))
                                 .concat(")"),
