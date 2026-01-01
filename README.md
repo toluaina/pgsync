@@ -26,12 +26,22 @@
 
 PGSync is a change data capture tool that syncs data from **PostgreSQL**, **MySQL**, or **MariaDB** to **Elasticsearch** or **OpenSearch** in real-time. Define your document structure in JSON, and PGSync handles the rest — no custom code required.
 
-```
-┌─────────────────┐         ┌─────────────┐         ┌────────────────────┐
-│   PostgreSQL    │         │             │         │   Elasticsearch    │
-│     MySQL       │ ──WAL──▶│   PGSync    │──bulk──▶│    OpenSearch      │
-│    MariaDB      │         │             │         │                    │
-└─────────────────┘         └─────────────┘         └────────────────────┘
+```mermaid
+flowchart LR
+    subgraph Source["🗄️ Source Database"]
+        DB[(PostgreSQL<br/>MySQL<br/>MariaDB)]
+    end
+
+    subgraph CDC["⚡ Change Data Capture"]
+        P[PGSync]
+    end
+
+    subgraph Search["🔍 Search Engine"]
+        ES[(Elasticsearch<br/>OpenSearch)]
+    end
+
+    DB -->|WAL / Binlog| P
+    P -->|Bulk Index| ES
 ```
 
 ### Key Features
