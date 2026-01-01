@@ -1,8 +1,13 @@
 """PGSync trigger template.
 
-This module contains a template for creating a PostgreSQL trigger function that notifies updates asynchronously.
-The trigger function constructs a notification as a JSON object and sends it to a channel using PG_NOTIFY.
-The notification contains information about the updated table, the operation performed, the old and new rows, and the indices.
+This module contains the template for a PostgreSQL trigger function that sends
+change notifications asynchronously via PG_NOTIFY.
+
+The trigger constructs a JSON notification containing:
+- The table name and schema
+- The operation type (INSERT, UPDATE, DELETE, TRUNCATE)
+- The old and new row data (primary and foreign keys only)
+- The associated Elasticsearch/OpenSearch indices
 """
 
 from .constants import MATERIALIZED_VIEW, TRIGGER_FUNC

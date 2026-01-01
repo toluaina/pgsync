@@ -1,8 +1,15 @@
-"""PGSync settings
+"""PGSync settings.
 
-This module contains the settings for PGSync.
-It reads environment variables from a .env file and sets default values for each variable.
-The variables are used to configure various parameters such as block size, checkpoint path, polling interval, etc.
+Configuration management via environment variables loaded from a .env file.
+Each setting has a default value that can be overridden.
+
+Settings are organized into the following categories:
+- PGSync: sync behavior (block size, polling, workers, query chunking)
+- SQLAlchemy: connection pooling configuration
+- Elasticsearch/OpenSearch: client and bulk indexing options
+- PostgreSQL/MySQL/MariaDB: database connection parameters
+- Redis/Valkey: queue and checkpoint storage
+- Logging: log levels and handlers
 """
 
 import logging

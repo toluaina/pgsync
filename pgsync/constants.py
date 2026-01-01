@@ -1,14 +1,13 @@
-"""
-PGSync Constants.
+"""PGSync constants.
 
-This module contains constants used in PGSync.
-It includes constants for relationship types, relationship variants,
-node attributes, relationship attributes, relationship foreign keys,
-tg_op, JSONB operators, Elasticsearch/OpenSearch types,
-Elasticsearch/OpenSearch mapping parameters, transform types, default Postgres/MySQL/MariaDB schema,
-built-in schemas, primary key identifier, logical decoding output plugin,
-trigger function, materialized views, primary key delimiter,
-and replication slot patterns.
+This module defines constants used throughout PGSync, organized into:
+
+- Schema configuration: relationship types, variants, node/relationship attributes
+- Database operations: trigger operations (INSERT, UPDATE, DELETE, TRUNCATE)
+- PostgreSQL: JSONB operators, default schema, logical decoding plugin
+- Elasticsearch/OpenSearch: field types and mapping parameters
+- Transforms: field transformation types (concat, rename, replace, etc.)
+- Internal: materialized view definitions, replication slot patterns
 """
 
 import re

@@ -1,10 +1,15 @@
 name: Build and Test
 
-on: [push]
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   test-postgres:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       max-parallel: 4
       matrix:
@@ -18,7 +23,6 @@ jobs:
           POSTGRES_USER: postgres
         ports:
           - 5432:5432
-        # needed because the postgres container does not provide a healthcheck
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
       redis:
         image: redis
@@ -34,30 +38,30 @@ jobs:
           network.host: 127.0.0.1
           http.host: 0.0.0.0
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+        cache-dependency-path: requirements/dev.txt
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements/dev.txt
+
     - name: Lint with flake8
       run: |
-        pip install flake8
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        # exit-zero treats all errors as warnings
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
     - name: Test with pytest
-      run: |
-        pip install pytest
-        pwd
-        pytest -x -s -vv --cov=./pgsync --cov-report=xml:tests/coverage.xml --cov-report term-missing
+      run: pytest -x -s -vv --cov=./pgsync --cov-report=xml:tests/coverage.xml --cov-report term-missing
       env:
-        # use postgres for the host here because we have specified a container for the job.
-        # If we were running the job on the VM this would be localhost
         ELASTICSEARCH_HOST: localhost
         ELASTICSEARCH_PORT: 9200
         ELASTICSEARCH_SCHEME: http
@@ -68,23 +72,23 @@ jobs:
         PG_USER: postgres
         PYTHONPATH: $PYTHONPATH:./pgsync
         REDIS_CHECKPOINT: False
-    - name: Upload coverage to Codecov  
-      uses: codecov/codecov-action@v1
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: tests/coverage.xml
         flags: unittests
         name: codecov-umbrella
-        yml: ./codecov.yml 
         fail_ci_if_error: false
 
   test-mariadb:
     runs-on: ubuntu-latest
-    # needs: test-postgres
+    timeout-minutes: 15
     strategy:
       max-parallel: 4
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
     services:
       mariadb:
         image: mariadb:11
@@ -109,24 +113,28 @@ jobs:
           network.host: 127.0.0.1
           http.host: 0.0.0.0
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+        cache-dependency-path: requirements/dev.txt
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements/dev.txt  # include mysqlclient or PyMySQL if needed
+        pip install -r requirements/dev.txt
+
     - name: Test with pytest (MariaDB)
-      run: |
-        pip install pytest
-        pytest -x -s -vv --cov=./pgsync --cov-report=xml:tests/coverage.xml --cov-report term-missing
+      run: pytest -x -s -vv --cov=./pgsync --cov-report=xml:tests/coverage.xml --cov-report term-missing
       env:
         ELASTICSEARCH_HOST: localhost
         ELASTICSEARCH_PORT: 9200
         ELASTICSEARCH_SCHEME: http
         PATH: $PATH:./bin
+        # PG_* vars are used for all database types in pgsync settings
         PG_HOST: localhost
         PG_PORT: ${{ job.services.mariadb.ports['3306'] }}
         PG_PASSWORD: mysql
@@ -134,13 +142,12 @@ jobs:
         PG_DRIVER: pymysql
         PYTHONPATH: $PYTHONPATH:./pgsync
         REDIS_CHECKPOINT: False
+
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: tests/coverage.xml
         flags: unittests
         name: codecov-umbrella
-        yml: ./codecov.yml
         fail_ci_if_error: false
-
