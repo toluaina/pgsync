@@ -1,0 +1,27 @@
+[
+   {
+      "database": "through_schemas",
+      "index": "through_schemas",
+      "nodes": {
+         "table": "parent",
+         "schema": "parent",
+         "columns": [],
+         "children": [
+            {
+               "table": "child",
+               "schema": "child",
+               "columns": [],
+               "label": "children",
+               "relationship": {
+                  "variant": "object",
+                  "type": "one_to_many",
+                  "through_tables":
+                     [
+                           "child_to_parent.child_to_parent"
+                     ]
+               }
+            }
+         ]
+      }
+   }
+]
