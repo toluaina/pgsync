@@ -166,11 +166,19 @@ class Node(object):
         self._mapping: dict = {}
 
         for through_table in self.relationship.tables:
+            if "." in through_table:
+                through_schema, through_table_name = through_table.split(
+                    ".", 1
+                )
+            else:
+                through_schema = self.schema
+                through_table_name = through_table
+            through_table = through_table_name
             self.relationship.throughs.append(
                 Node(
                     models=self.models,
                     table=through_table,
-                    schema=self.schema,
+                    schema=through_schema,
                     parent=self,
                     primary_key=[],
                 )

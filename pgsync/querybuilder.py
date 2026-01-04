@@ -479,7 +479,7 @@ class QueryBuilder(threading.local):
                     child._subquery.columns,
                     foreign_keys,
                     table=through.name,
-                    schema=child.schema,
+                    schema=through.schema,
                 )
                 right_foreign_keys: list = self._get_column_foreign_keys(
                     child.parent.model.columns,
@@ -653,7 +653,7 @@ class QueryBuilder(threading.local):
                     child._subquery.columns,
                     child_foreign_keys,
                     table=child_through.table,
-                    schema=child.schema,
+                    schema=child_through.schema,
                 )
 
             else:
@@ -770,7 +770,7 @@ class QueryBuilder(threading.local):
             through.columns,
             base,
             table=through.table,
-            schema=node.schema,
+            schema=through.schema,
         )
 
         columns = [
