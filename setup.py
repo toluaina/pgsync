@@ -76,7 +76,7 @@ setup(
     python_requires=PYTHON_REQUIRES,
     description=DESCRIPTION,
     long_description=README,
-    long_description_content_type="text/markdown",
+    long_description_content_type="text/x-rst",
     install_requires=INSTALL_REQUIRES,
     include_package_data=True,
     keywords=KEYWORDS,
