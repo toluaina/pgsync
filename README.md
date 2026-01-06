@@ -86,11 +86,27 @@ pgsync --config schema.json -d
 
 ### Using Docker Compose
 
+**Default (Elasticsearch + Kibana):**
 ```bash
 git clone https://github.com/toluaina/pgsync
 cd pgsync
 docker-compose up
 ```
+
+This starts PostgreSQL, Redis, Elasticsearch, Kibana, and PGSync configured for Elasticsearch.
+
+**For OpenSearch:**
+```bash
+docker-compose --profile opensearch up
+```
+
+This starts PostgreSQL, Redis, OpenSearch, and PGSync configured for OpenSearch.
+
+**Ports:**
+- PostgreSQL: `15432`
+- Elasticsearch: `9201` (default)
+- Kibana: `5601` (default)
+- OpenSearch: `9400` (OpenSearch profile)
 
 ---
 

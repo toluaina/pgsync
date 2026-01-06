@@ -10,9 +10,12 @@ services:
       - POSTGRES_PASSWORD=PLEASE_CHANGE_ME
       - POSTGRES_DB=postgres
     command: ["postgres", "-c", "wal_level=logical", "-c", "max_wal_senders=2", "-c", "max_replication_slots=2"]
+
   redis:
     image: redis
     command: redis-server --requirepass PLEASE_CHANGE_ME
+
+  # Elasticsearch stack (default)
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.13
     ports:
@@ -22,6 +25,9 @@ services:
       - xpack.security.enabled=false
       - network.host=127.0.0.1
       - http.host=0.0.0.0
+    profiles:
+      - ""
+
   kibana:
     image: docker.elastic.co/kibana/kibana:7.17.13
     ports:
@@ -30,10 +36,30 @@ services:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     depends_on:
       - elasticsearch
-  pgsync:
+    profiles:
+      - ""
+
+  # OpenSearch stack (use with --profile opensearch)
+  opensearch:
+    image: opensearchproject/opensearch:latest
+    profiles:
+      - opensearch
+    ports:
+      - "9400:9200"
+      - "9600:9600"
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "DISABLE_INSTALL_DEMO_CONFIG=true"
+      - "DISABLE_SECURITY_PLUGIN=true"
+
+  # PGSync with Elasticsearch (default)
+  pgsync-elasticsearch:
     build:
       context: .
       dockerfile: Dockerfile
+    profiles:
+      - ""
     command: ./runserver.sh
     sysctls:
       - net.ipv4.tcp_keepalive_time=200
@@ -60,3 +86,37 @@ services:
       - REDIS_PORT=6379
       - REDIS_AUTH=PLEASE_CHANGE_ME
       - ELASTICSEARCH=true
+
+  # PGSync with OpenSearch
+  pgsync-opensearch:
+    profiles:
+      - opensearch
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ./runserver.sh
+    sysctls:
+      - net.ipv4.tcp_keepalive_time=200
+      - net.ipv4.tcp_keepalive_intvl=200
+      - net.ipv4.tcp_keepalive_probes=5
+    labels:
+      org.label-schema.name: "pgsync"
+      org.label-schema.description: "Postgres to OpenSearch sync"
+      com.label-schema.service-type: "daemon"
+    depends_on:
+      - postgres
+      - redis
+      - opensearch
+    environment:
+      - PG_USER=pgsync
+      - PG_HOST=postgres
+      - PG_PORT=5432
+      - PG_PASSWORD=PLEASE_CHANGE_ME
+      - LOG_LEVEL=INFO
+      - ELASTICSEARCH_PORT=9200
+      - ELASTICSEARCH_SCHEME=http
+      - ELASTICSEARCH_HOST=opensearch
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_AUTH=PLEASE_CHANGE_ME
+      - OPENSEARCH=true
