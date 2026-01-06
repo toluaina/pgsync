@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import threading
 import typing as t
+from collections import deque
 from dataclasses import dataclass
 
 import sqlalchemy as sa
@@ -342,12 +343,12 @@ class Node(object):
             child.display(prefix, leaf)
 
     def traverse_breadth_first(self) -> t.Generator:
-        stack: t.List[Node] = [self]
-        while stack:
-            node: Node = stack.pop(0)
+        queue: deque = deque([self])
+        while queue:
+            node: Node = queue.popleft()
             yield node
             for child in node.children:
-                stack.append(child)
+                queue.append(child)
 
     def traverse_post_order(self) -> t.Generator:
         for child in self.children:

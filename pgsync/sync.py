@@ -1806,10 +1806,15 @@ class Sync(Base, metaclass=Singleton):
         """
         # this is used for the views.
         # we substitute the views for the base table here
+        # Build lookup table once for O(1) access instead of O(n²) nested loops
+        base_table_to_node: dict = {}
+        for node in self.tree.traverse_breadth_first():
+            for base_table in node.base_tables:
+                base_table_to_node[base_table] = node
+
         for i, payload in enumerate(payloads):
-            for node in self.tree.traverse_breadth_first():
-                if payload.table in node.base_tables:
-                    payloads[i].table = node.table
+            if payload.table in base_table_to_node:
+                payloads[i].table = base_table_to_node[payload.table].table
 
         logger.debug(f"on_publish len {len(payloads)}")
         # Safe inserts are insert operations that can be performed in any order

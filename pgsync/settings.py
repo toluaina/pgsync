@@ -82,12 +82,12 @@ WAL = env.bool("WAL", default=False)
 
 # Use NullPool (no pooling) - useful for testing
 SQLALCHEMY_USE_NULLPOOL = env.bool("SQLALCHEMY_USE_NULLPOOL", default=False)
-# Persistent connections in pool
-SQLALCHEMY_POOL_SIZE = env.int("SQLALCHEMY_POOL_SIZE", default=5)
-# Extra connections allowed beyond pool_size
-SQLALCHEMY_MAX_OVERFLOW = env.int("SQLALCHEMY_MAX_OVERFLOW", default=10)
-# Ping connections before checkout to verify they're alive
-SQLALCHEMY_POOL_PRE_PING = env.bool("SQLALCHEMY_POOL_PRE_PING", default=False)
+# Persistent connections in pool (20 for better concurrency)
+SQLALCHEMY_POOL_SIZE = env.int("SQLALCHEMY_POOL_SIZE", default=20)
+# Extra connections allowed beyond pool_size (40 for high load)
+SQLALCHEMY_MAX_OVERFLOW = env.int("SQLALCHEMY_MAX_OVERFLOW", default=40)
+# Ping connections before checkout to verify they're alive (enabled for production stability)
+SQLALCHEMY_POOL_PRE_PING = env.bool("SQLALCHEMY_POOL_PRE_PING", default=True)
 # Recycle connections after N seconds (-1 = never)
 SQLALCHEMY_POOL_RECYCLE = env.int("SQLALCHEMY_POOL_RECYCLE", default=-1)
 # Seconds to wait for available connection before timeout
