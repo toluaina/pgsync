@@ -24,7 +24,7 @@ DESCRIPTION = "Postgres/MySQL/MariaDB to Elasticsearch/OpenSearch sync"
 URL = "https://github.com/toluaina/pgsync"
 AUTHOR = MAINTAINER = "Tolu Aina"
 AUTHOR_EMAIL = MAINTAINER_EMAIL = "tolu@pgsync.com"
-PYTHON_REQUIRES = ">=3.9.0"
+PYTHON_REQUIRES = ">=3.10.0"
 VERSION = get_version()
 INSTALL_REQUIRES = []
 KEYWORDS = [
@@ -41,7 +41,6 @@ CLASSIFIERS = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Natural Language :: English",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",

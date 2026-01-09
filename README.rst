@@ -39,7 +39,7 @@ Key Features
 Requirements
 ------------
 
-- `Python <https://www.python.org>`_ 3.9+
+- `Python <https://www.python.org>`_ 3.10+
 - `PostgreSQL <https://www.postgresql.org>`_ 9.6+ or `MySQL <https://www.mysql.com>`_ 8.0.0+ or `MariaDB <https://mariadb.org>`_ 12.0.0+
 - `Redis <https://redis.io>`_ 3.1.0+ or `Valkey <https://valkey.io>`_ 7.2.0+ (optional in WAL mode)
 - `Elasticsearch <https://www.elastic.co/products/elastic-stack>`_ 6.3.1+ or `OpenSearch <https://opensearch.org>`_ 1.3.7+

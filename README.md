@@ -153,7 +153,7 @@ Changes to any related table automatically update the document in Elasticsearch/
 
 | Component | Version |
 |-----------|---------|
-| ![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white) | 3.9+ |
+| ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white) | 3.10+ |
 | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-9.6+-4169E1?logo=postgresql&logoColor=white) | 9.6+ (or MySQL 5.7.22+ / MariaDB 10.5+) |
 | ![Elasticsearch](https://img.shields.io/badge/Elasticsearch-6.3+-005571?logo=elasticsearch&logoColor=white) | 6.3.1+ (or OpenSearch 1.3.7+) |
 | ![Redis](https://img.shields.io/badge/Redis-3.1+-DC382D?logo=redis&logoColor=white) | 3.1+ (or Valkey 7.2+) — optional in WAL mode |
