@@ -241,6 +241,96 @@ PGSync transforms this into search-ready documents:
 
 ---
 
+## Transforms
+
+PGSync supports built-in transforms to modify field values before indexing. Transforms are applied in order: `replace` → `rename` → `concat`.
+
+### Replace
+
+Find and replace substrings within field values:
+
+```json
+{
+  "table": "product",
+  "columns": ["code", "name"],
+  "transform": {
+    "replace": {
+      "code": {
+        "-": "/",
+        "_": " "
+      }
+    }
+  }
+}
+```
+
+| Before | After |
+|--------|-------|
+| `ABC-DEF_GHI` | `ABC/DEF GHI` |
+
+### Rename
+
+Rename fields in the output document:
+
+```json
+{
+  "table": "book",
+  "columns": ["id", "title"],
+  "transform": {
+    "rename": {
+      "id": "book_id",
+      "title": "book_title"
+    }
+  }
+}
+```
+
+### Concat
+
+Combine multiple fields into a new field:
+
+```json
+{
+  "table": "user",
+  "columns": ["first_name", "last_name"],
+  "transform": {
+    "concat": {
+      "columns": ["first_name", "last_name"],
+      "destination": "full_name",
+      "delimiter": " "
+    }
+  }
+}
+```
+
+### Combined Example
+
+Transforms can be combined and applied to nested children:
+
+```json
+{
+  "table": "book",
+  "columns": ["isbn", "title"],
+  "children": [{
+    "table": "publisher",
+    "columns": ["code", "name"],
+    "transform": {
+      "replace": { "code": { "-": "." } },
+      "rename": { "name": "publisher_name" }
+    }
+  }],
+  "transform": {
+    "concat": {
+      "columns": ["isbn", "title"],
+      "destination": "search_text",
+      "delimiter": " - "
+    }
+  }
+}
+```
+
+---
+
 ## Why PGSync?
 
 | Challenge | PGSync Solution |

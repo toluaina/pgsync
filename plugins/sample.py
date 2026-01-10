@@ -1,85 +1,97 @@
+"""Sample plugins demonstrating common PGSync plugin patterns."""
+
 import typing as t
 
 from pgsync import plugin
 
 
-class Auth(plugin.Plugin):
-    """Example auth plugin."""
+class AuthPlugin(plugin.Plugin):
+    """
+    Example authentication plugin.
+
+    Provides credentials for database, Elasticsearch, and Redis connections.
+    Implement the `auth` method to return credentials from a secrets manager,
+    environment variables, or other secure storage.
+    """
 
     name: str = "Auth"
 
     def transform(self, doc: dict, **kwargs) -> dict:
-        pass
+        return doc
 
     def auth(self, key: str) -> t.Optional[str]:
-        """Sample auth."""
-        if key == "PG_PASSWORD":
-            return None
-        if key == "ELASTICSEARCH_PASSWORD":
-            return None
-        if key == "REDIS_AUTH":
-            return None
+        """
+        Return credentials for the given key.
+
+        Args:
+            key: One of 'PG_PASSWORD', 'ELASTICSEARCH_PASSWORD', or 'REDIS_AUTH'
+
+        Returns:
+            The credential string, or None to use default configuration.
+        """
+        credentials = {
+            "PG_PASSWORD": None,
+            "ELASTICSEARCH_PASSWORD": None,
+            "REDIS_AUTH": None,
+        }
+        return credentials.get(key)
 
 
 class VillainPlugin(plugin.Plugin):
-    """Example Villain plugin."""
+    """
+    Example plugin that adds a static field to documents.
+
+    Demonstrates basic document modification with conditional logic
+    based on document ID or index name.
+    """
 
     name: str = "Villain"
 
     def transform(self, doc: dict, **kwargs) -> dict:
-        """Demonstrates how to modify a doc."""
-        doc_id: str = kwargs["_id"]
-        doc_index: str = kwargs["_index"]
-
-        if doc_id == "x":
-            # do something...
-            pass
-        if doc_index == "myindex":
-            # do another thing...
-            pass
-
+        """Add a villain field to the document."""
         doc["villain"] = "Ronan"
         return doc
 
 
 class HeroPlugin(plugin.Plugin):
-    """Example Hero plugin."""
+    """
+    Example plugin that adds a static field to documents.
+
+    Demonstrates the basic plugin pattern for enriching documents
+    with additional data during sync.
+    """
 
     name: str = "Hero"
 
     def transform(self, doc: dict, **kwargs) -> dict:
-        """Demonstrates how to modify a doc."""
-        doc_id: str = kwargs["_id"]
-        doc_index: str = kwargs["_index"]
-
-        if doc_id == "x":
-            # do something...
-            pass
-
-        if doc_index == "myindex":
-            # do another thing...
-            pass
-
+        """Add a hero field to the document."""
         doc["hero"] = "Doctor Strange"
         return doc
 
 
 class GeometryPlugin(plugin.Plugin):
-    """Example plugin demonstrating GeoPoint and GeoShape."""
+    """
+    Plugin for transforming PostGIS geometry fields.
+
+    Converts GeoJSON Point and Polygon types to Elasticsearch-compatible
+    geo_point and geo_shape formats.
+    """
 
     name: str = "Geometry"
 
     def transform(self, doc: dict, **kwargs) -> dict:
-        """Demonstrates how to modify a doc."""
-        doc_index: str = kwargs["_index"]
+        """Transform geometry fields to Elasticsearch geo types."""
+        if not doc:
+            return doc
 
-        if doc_index == "book":
-            if doc and doc.get("point"):
-                if doc["point"]["type"] == "Point":
-                    doc["coordinates"] = doc["point"]["coordinates"]
+        # Convert GeoJSON Point to geo_point coordinates
+        point = doc.get("point")
+        if point and point.get("type") == "Point":
+            doc["coordinates"] = point["coordinates"]
 
-            if doc and doc.get("polygon"):
-                if doc["polygon"]["type"] == "Polygon":
-                    doc["shape"] = doc["polygon"]
+        # Convert GeoJSON Polygon to geo_shape
+        polygon = doc.get("polygon")
+        if polygon and polygon.get("type") == "Polygon":
+            doc["shape"] = polygon
 
         return doc

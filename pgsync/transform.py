@@ -111,64 +111,108 @@ class Transform(object):
                 result[key] = value
         return result
 
-    """
     @classmethod
     def replace(cls, data: dict, nodes: dict) -> dict:
-        # TODO!
-        Replace field where value is
-        "replace": {
-            "code": {
-                "-": "="
+        """Replace substrings in field values.
+
+        example:
+            "replace": {
+                "code": {
+                    "-": "=",
+                    "_": " "
+                }
             }
-        }
-        return cls._replace(data, cls.get(nodes, REPLACE_TRANSFORM)))
+
+        This replaces all "-" with "=" and "_" with " " in the "code" field.
+        """
+        return cls._replace(data, cls.get(nodes, REPLACE_TRANSFORM))
 
     @classmethod
     def _replace(
-        cls, data: dict, nodes: dict, result: Optional[dict] = None
+        cls, data: dict, nodes: dict, result: t.Optional[dict] = None
     ) -> dict:
-        # TODO!
-        Replace field where value is
-        "replace": {
-            "code": {
-                "-": "="
-            }
-        }
-        result_dict = result_dict or {}
-        if isinstance(data, dict):
-            if nodes:
-                for key, values in nodes.items():
-                    if key not in data:
-                        continue
-                    if isinstance(data[key], list):
-                        for k in values:
-                            for search, replace in values[k].items():
-                                data[key] = [
-                                    x.replace(search, replace)
-                                    for x in data[key]
-                                ]
-                    else:
-                        for search, replace in values.items():
-                            data[key] = data[key].replace(search, replace)
+        """
+        Replace substrings in field values based on transform_node.
 
-            for key, value in data.items():
-                if isinstance(value, dict):
-                    value = cls._replace(value, nodes.get(key))
+        example:
+            "replace": {
+                "code": {
+                    "-": "="
+                }
+            }
+
+        Args:
+            data (dict): The dictionary containing fields to transform.
+            nodes (dict): A dictionary mapping field names to replacement rules.
+            result (dict, optional): The resulting dictionary. Defaults to None.
+
+        Returns:
+            dict: The resulting dictionary after replacements.
+        """
+        result = result or {}
+        if not isinstance(data, dict):
+            return result
+
+        for key, value in data.items():
+            # Check if this key has replacement rules
+            if key in nodes and isinstance(nodes[key], dict):
+                replacements = nodes[key]
+                # Check if replacements is a search->replace mapping
+                # (all values are strings) or nested structure
+                is_replacement_map = all(
+                    isinstance(v, str) for v in replacements.values()
+                )
+
+                if is_replacement_map:
+                    # Apply replacements to this field
+                    if isinstance(value, str):
+                        for search, replace in replacements.items():
+                            value = value.replace(search, replace)
+                    elif isinstance(value, list):
+                        value = [
+                            cls._apply_replacements(item, replacements)
+                            for item in value
+                        ]
+                elif isinstance(value, dict):
+                    # Nested dict - recurse with nested nodes
+                    value = cls._replace(value, replacements)
                 elif isinstance(value, list):
+                    # List of dicts - recurse for each item
                     value = [
-                        cls._replace(v, nodes[key])
+                        cls._replace(v, replacements)
                         for v in value
-                        if key in nodes
+                        if isinstance(v, dict)
                     ]
-                result_dict[key] = value
-        return result_dict
-    """
+            elif isinstance(value, dict):
+                # Recurse into nested dicts even without explicit nodes
+                value = cls._replace(value, nodes.get(key, {}))
+            elif isinstance(value, list):
+                # Handle lists of dicts
+                child_nodes = nodes.get(key, {})
+                if child_nodes and isinstance(child_nodes, dict):
+                    value = [
+                        cls._replace(v, child_nodes)
+                        for v in value
+                        if isinstance(v, dict)
+                    ]
+
+            result[key] = value
+
+        return result
+
+    @classmethod
+    def _apply_replacements(cls, value: t.Any, replacements: dict) -> t.Any:
+        """Apply replacement rules to a single value."""
+        if isinstance(value, str):
+            for search, replace in replacements.items():
+                value = value.replace(search, replace)
+        return value
 
     @classmethod
     def transform(cls, data: dict, nodes: dict):
+        data = cls.replace(data, nodes)
         data = cls.rename(data, nodes)
         data = cls.concat(data, nodes)
-        # data = cls.replace(data, nodes)
         return data
 
     @classmethod

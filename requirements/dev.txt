@@ -19,6 +19,7 @@ botocore==1.42.25
 certifi==2026.1.4
     # via
     #   elastic-transport
+    #   elasticsearch
     #   opensearch-py
     #   requests
 cfgv==3.5.0
@@ -35,15 +36,13 @@ coverage[toml]==7.13.1
     #   pytest-cov
 distlib==0.4.0
     # via virtualenv
-elastic-transport==8.17.1
-    # via
-    #   -r requirements/base.in
-    #   elasticsearch
-elasticsearch==8.19.3
+elastic-transport==9.2.1
+    # via -r requirements/base.in
+elasticsearch==7.17.12
     # via
     #   -r requirements/base.in
     #   elasticsearch-dsl
-elasticsearch-dsl==8.15.4
+elasticsearch-dsl==7.4.1
     # via -r requirements/base.in
 environs==14.5.0
     # via -r requirements/base.in
@@ -61,6 +60,8 @@ flake8==7.3.0
     # via -r requirements/dev.in
 freezegun==1.5.5
     # via -r requirements/dev.in
+greenlet==3.3.0
+    # via sqlalchemy
 grpcio==1.76.0
     # via opensearch-protobufs
 identify==2.6.15
@@ -112,7 +113,7 @@ pluggy==1.6.0
     #   pytest-cov
 pre-commit==4.5.1
     # via -r requirements/dev.in
-protobuf==6.33.2
+protobuf==6.33.3
     # via opensearch-protobufs
 psycopg2-binary==2.9.11
     # via -r requirements/base.in
@@ -163,8 +164,13 @@ s3transfer==0.16.0
     # via boto3
 six==1.17.0
     # via
+    #   elasticsearch-dsl
     #   opensearch-dsl
     #   python-dateutil
+sniffio==1.3.1
+    # via
+    #   elastic-transport
+    #   elasticsearch
 sqlalchemy==2.0.45
     # via -r requirements/base.in
 sqlparse==0.5.5
@@ -179,7 +185,6 @@ typing-extensions==4.15.0
     #   anyio
     #   black
     #   elasticsearch
-    #   elasticsearch-dsl
     #   environs
     #   exceptiongroup
     #   grpcio
@@ -188,10 +193,11 @@ typing-extensions==4.15.0
     #   virtualenv
 tzdata==2025.3
     # via faker
-urllib3==2.6.3
+urllib3==1.26.20
     # via
     #   botocore
     #   elastic-transport
+    #   elasticsearch
     #   opensearch-py
     #   requests
 virtualenv==20.36.1
