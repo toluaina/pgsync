@@ -43,6 +43,7 @@ from .settings import (
     PG_SSLROOTCERT,
     PG_URL_RO,
     PG_USER_RO,
+    PG_WORK_MEM,
     QUERY_CHUNK_SIZE,
     SQLALCHEMY_MAX_OVERFLOW,
     SQLALCHEMY_POOL_PRE_PING,
@@ -1397,23 +1398,39 @@ def _pg_engine(
     if SQLALCHEMY_USE_NULLPOOL:
         from sqlalchemy.pool import NullPool
 
-        return sa.create_engine(
+        engine = sa.create_engine(
             url,
             echo=echo,
             connect_args=connect_args,
             poolclass=NullPool,
         )
+    else:
+        engine = sa.create_engine(
+            url,
+            echo=echo,
+            connect_args=connect_args,
+            pool_size=SQLALCHEMY_POOL_SIZE,
+            max_overflow=SQLALCHEMY_MAX_OVERFLOW,
+            pool_pre_ping=SQLALCHEMY_POOL_PRE_PING,
+            pool_recycle=SQLALCHEMY_POOL_RECYCLE,
+            pool_timeout=SQLALCHEMY_POOL_TIMEOUT,
+        )
 
-    return sa.create_engine(
-        url,
-        echo=echo,
-        connect_args=connect_args,
-        pool_size=SQLALCHEMY_POOL_SIZE,
-        max_overflow=SQLALCHEMY_MAX_OVERFLOW,
-        pool_pre_ping=SQLALCHEMY_POOL_PRE_PING,
-        pool_recycle=SQLALCHEMY_POOL_RECYCLE,
-        pool_timeout=SQLALCHEMY_POOL_TIMEOUT,
-    )
+    # Set work_mem on each connection if configured.
+    # This prevents temp file creation during complex queries with
+    # LATERAL JOINs and JSON aggregation (typically needs 12-16MB).
+    if PG_WORK_MEM and not IS_MYSQL_COMPAT:
+        from sqlalchemy import event
+
+        @event.listens_for(engine, "connect")
+        def set_work_mem(dbapi_conn, connection_record):
+            cursor = dbapi_conn.cursor()
+            cursor.execute(f"SET work_mem = '{PG_WORK_MEM}'")
+            cursor.close()
+
+        logger.debug(f"Configured work_mem={PG_WORK_MEM} for new connections")
+
+    return engine
 
 
 def pg_logical_repl_conn(

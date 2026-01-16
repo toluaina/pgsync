@@ -251,6 +251,12 @@ MYSQL_DRIVERS = ("pymysql", "mysqldb", "mariadbconnector")
 POSTGRES_DRIVERS = ("psycopg", "psycopg2", "psycopg3", "asyncpg", "pg8000")
 IS_MYSQL_COMPAT = PG_DRIVER in MYSQL_DRIVERS
 
+# PostgreSQL session settings
+# work_mem controls memory for sort/hash operations before spilling to disk.
+# Complex sync queries with LATERAL JOINs may need 12-16MB to avoid temp files.
+# Set to None to use PostgreSQL server default.
+PG_WORK_MEM = env.str("PG_WORK_MEM", default=None)
+
 # =============================================================================
 # Redis/Valkey
 # =============================================================================
