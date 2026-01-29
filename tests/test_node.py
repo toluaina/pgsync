@@ -355,3 +355,176 @@ class TestRelationship(object):
                 }
             )
         assert "Multiple through tables" in str(excinfo.value)
+
+
+@pytest.mark.usefixtures("table_creator")
+class TestNodeAdditional(object):
+    """Additional Node tests for coverage."""
+
+    @classmethod
+    def setup_class(cls):
+        cls.schema = "testdb" if IS_MYSQL_COMPAT else "public"
+
+    def test_node_is_root(self, connection):
+        """Test is_root property."""
+        pg_base = Base(connection.engine.url.database)
+        node = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+        # Root node has no parent
+        assert node.is_root is True
+
+        # Set a parent
+        parent = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema=self.schema,
+        )
+        node.parent = parent
+        assert node.is_root is False
+
+    def test_node_name_property(self, connection):
+        """Test name property returns fully qualified name."""
+        pg_base = Base(connection.engine.url.database)
+        node = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+        assert node.name == f"{self.schema}.book"
+
+    def test_node_table_property(self, connection):
+        """Test table property."""
+        pg_base = Base(connection.engine.url.database)
+        node = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+        assert node.table == "book"
+
+    def test_node_schema_property(self, connection):
+        """Test schema property."""
+        pg_base = Base(connection.engine.url.database)
+        node = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+        assert node.schema == self.schema
+
+    def test_node_label_defaults_to_table(self, connection):
+        """Test label defaults to table name."""
+        pg_base = Base(connection.engine.url.database)
+        node = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+        assert node.label == "book"
+
+    def test_node_custom_label(self, connection):
+        """Test custom label."""
+        pg_base = Base(connection.engine.url.database)
+        node = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+            label="custom_book",
+        )
+        assert node.label == "custom_book"
+
+    def test_tree_root_property(self, sync):
+        """Test Tree root property."""
+        nodes = {
+            "table": "book",
+            "children": [],
+        }
+        tree = Tree(sync.models, nodes=nodes, database=self.schema)
+        assert tree.root is not None
+        assert tree.root.table == "book"
+        sync.search_client.close()
+
+    def test_tree_tables_property(self, sync):
+        """Test Tree tables property returns all tables."""
+        nodes = {
+            "table": "book",
+            "children": [
+                {
+                    "table": "publisher",
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_one",
+                    },
+                },
+            ],
+        }
+        tree = Tree(sync.models, nodes=nodes, database=self.schema)
+        tables = tree.tables
+        assert "book" in tables
+        assert "publisher" in tables
+        sync.search_client.close()
+
+    def test_tree_schemas_property(self, sync):
+        """Test Tree schemas property."""
+        nodes = {
+            "table": "book",
+            "children": [],
+        }
+        tree = Tree(sync.models, nodes=nodes, database=self.schema)
+        schemas = tree.schemas
+        assert self.schema in schemas
+        sync.search_client.close()
+
+    def test_foreign_key_parent_property(self):
+        """Test ForeignKey parent property."""
+        foreign_key = ForeignKey({"child": ["id"], "parent": ["publisher_id"]})
+        assert foreign_key.parent == ["publisher_id"]
+
+    def test_foreign_key_child_property(self):
+        """Test ForeignKey child property."""
+        foreign_key = ForeignKey({"child": ["id"], "parent": ["publisher_id"]})
+        assert foreign_key.child == ["id"]
+
+    def test_relationship_type_property(self):
+        """Test Relationship type property."""
+        relationship = Relationship(
+            {
+                "variant": "object",
+                "type": "one_to_one",
+            }
+        )
+        assert relationship.type == "one_to_one"
+
+    def test_relationship_variant_property(self):
+        """Test Relationship variant property."""
+        relationship = Relationship(
+            {
+                "variant": "object",
+                "type": "one_to_many",
+            }
+        )
+        assert relationship.variant == "object"
+
+    def test_relationship_throughs_property(self):
+        """Test Relationship throughs property."""
+        rel_without_through = Relationship(
+            {
+                "variant": "object",
+                "type": "one_to_one",
+            }
+        )
+        # Relationship object uses `throughs` as the internal property
+        assert rel_without_through.throughs == []
+
+        rel_with_through = Relationship(
+            {
+                "variant": "object",
+                "type": "one_to_many",
+                "through_tables": ["book_author"],
+            }
+        )
+        # Note: through_tables is from the input, but internal throughs is populated by tree
+        assert hasattr(rel_with_through, "throughs")

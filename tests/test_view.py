@@ -300,3 +300,74 @@ class TestView(object):
                 call("Creating view: myschema._view"),
                 call("Created view: myschema._view"),
             ]
+
+    def test_create_view_ddl_compile(self, connection):
+        """Test CreateView DDL compiles correctly."""
+        ddl = CreateView(
+            DEFAULT_SCHEMA, "test_view", sa.select(1), materialized=False
+        )
+        # Verify DDL object has expected attributes
+        assert ddl.schema == DEFAULT_SCHEMA
+        assert ddl.name == "test_view"
+        assert ddl.materialized is False
+
+    def test_create_view_ddl_compile_materialized(self, connection):
+        """Test CreateView DDL compiles correctly for materialized views."""
+        ddl = CreateView(
+            DEFAULT_SCHEMA, "test_mat_view", sa.select(1), materialized=True
+        )
+        assert ddl.materialized is True
+
+    def test_drop_view_ddl_compile(self, connection):
+        """Test DropView DDL compiles correctly."""
+        ddl = DropView(DEFAULT_SCHEMA, "test_view", materialized=False)
+        assert ddl.schema == DEFAULT_SCHEMA
+        assert ddl.name == "test_view"
+        assert ddl.materialized is False
+
+    def test_drop_view_ddl_compile_materialized(self, connection):
+        """Test DropView DDL compiles correctly for materialized views."""
+        ddl = DropView(DEFAULT_SCHEMA, "test_mat_view", materialized=True)
+        assert ddl.materialized is True
+
+    def test_refresh_view_ddl_compile(self, connection):
+        """Test RefreshView DDL compiles correctly."""
+        ddl = RefreshView(DEFAULT_SCHEMA, "test_view")
+        assert ddl.schema == DEFAULT_SCHEMA
+        assert ddl.name == "test_view"
+
+    def test_refresh_view_concurrently(self, connection):
+        """Test RefreshView with concurrently option."""
+        ddl = RefreshView(DEFAULT_SCHEMA, "test_view", concurrently=True)
+        assert ddl.concurrently is True
+
+    def test_create_index_ddl(self, connection):
+        """Test CreateIndex DDL object."""
+        ddl = CreateIndex(
+            "test_idx", DEFAULT_SCHEMA, "book", ["isbn", "title"]
+        )
+        assert ddl.name == "test_idx"
+        assert ddl.schema == DEFAULT_SCHEMA
+
+    def test_drop_index_ddl(self, connection):
+        """Test DropIndex DDL object."""
+        ddl = DropIndex("test_idx")
+        assert ddl.name == "test_idx"
+
+    def test_is_view_not_exists(self, connection):
+        """Test is_view returns False for non-existent view."""
+        result = is_view(
+            connection.engine,
+            DEFAULT_SCHEMA,
+            "nonexistent_view",
+            materialized=True,
+        )
+        assert result is False
+
+        result = is_view(
+            connection.engine,
+            DEFAULT_SCHEMA,
+            "nonexistent_view",
+            materialized=False,
+        )
+        assert result is False

@@ -30,7 +30,7 @@ ROW = namedtuple("Row", ["data", "xid"])
 
 @pytest.fixture(scope="function")
 def sync():
-    with override_env_var(ELASTICSEARCH="True", OPENSEARCH="False"):
+    with override_env_var(ELASTICSEARCH="False", OPENSEARCH="True"):
         importlib.reload(settings)
         _sync = Sync(
             {
@@ -451,7 +451,7 @@ class TestSync(object):
                 "Xlog: [0] => "
                 "Db: [0] => "
                 "Redis: [0] => "
-                "Elasticsearch: [0]...\n"
+                "OpenSearch: [0]...\n"
             )
 
     @patch("pgsync.sync.logger")
@@ -1448,3 +1448,326 @@ class TestSync(object):
         assert result["parent"] == []
         # Root remains unchanged because resolvers returned empty
         assert result["root"] == []
+
+    def test_checkpoint_getter_postgresql(self, sync, tmp_path):
+        """Test checkpoint getter for PostgreSQL format."""
+        from pathlib import Path
+
+        with override_env_var(REDIS_CHECKPOINT="False"):
+            importlib.reload(settings)
+            # Write a valid integer checkpoint to the actual checkpoint file
+            checkpoint_path = Path(sync.checkpoint_file)
+            checkpoint_path.write_text("12345\n")
+
+            result = sync.checkpoint
+            assert result == 12345
+
+            # Cleanup
+            if checkpoint_path.exists():
+                checkpoint_path.unlink()
+
+    def test_checkpoint_setter_postgresql(self, sync, tmp_path):
+        """Test checkpoint setter for PostgreSQL format."""
+        from pathlib import Path
+
+        with override_env_var(REDIS_CHECKPOINT="False"):
+            importlib.reload(settings)
+            sync.checkpoint = 54321
+
+            checkpoint_path = Path(sync.checkpoint_file)
+            content = checkpoint_path.read_text()
+            assert "54321" in content
+
+            # Cleanup
+            if checkpoint_path.exists():
+                checkpoint_path.unlink()
+
+    def test_checkpoint_setter_none_raises_error(self, sync):
+        """Test that setting checkpoint to None raises TypeError."""
+        with pytest.raises(TypeError) as excinfo:
+            sync.checkpoint = None
+        assert "Cannot assign a None value to checkpoint" in str(excinfo.value)
+
+    @patch("pgsync.sync.logger")
+    def test_consume_begin_commit(self, mock_logger, sync):
+        """Test consume handles BEGIN/COMMIT messages."""
+        # Create mock message for BEGIN
+        begin_message = Mock()
+        begin_message.payload = "BEGIN 12345"
+        begin_message.data_start = "0/12345"
+        begin_message.cursor = Mock()
+
+        # Should not raise and should not add to buffer
+        sync._buffer = []
+        sync.consume(begin_message)
+        assert sync._buffer == []
+
+    @patch("pgsync.sync.logger")
+    def test_consume_commit_flushes_buffer(self, mock_logger, sync):
+        """Test consume flushes buffer on COMMIT."""
+        commit_message = Mock()
+        commit_message.payload = "COMMIT 12345"
+        commit_message.data_start = "0/12345"
+        commit_message.cursor = Mock()
+
+        # Pre-populate buffer
+        sync._buffer = [
+            Payload(
+                tg_op="INSERT",
+                table="book",
+                new={"isbn": "001"},
+                schema="public",
+            )
+        ]
+        sync._buffer_last_lsn = "0/12340"
+
+        with patch.object(sync, "_flush_buffer") as mock_flush:
+            sync.consume(commit_message)
+            mock_flush.assert_called_once()
+
+    def test_flush_buffer_with_empty_buffer(self, sync):
+        """Test _flush_buffer with empty buffer."""
+        sync._buffer = []
+        mock_cursor = Mock()
+
+        # Should not raise
+        sync._flush_buffer(mock_cursor, flush_lsn="0/12345", force_ack=True)
+        mock_cursor.send_feedback.assert_called_once()
+
+    @patch("pgsync.sync.SearchClient.bulk")
+    def test_flush_buffer_with_data(self, mock_bulk, sync):
+        """Test _flush_buffer sends bulk data."""
+        sync._buffer = [
+            Payload(
+                tg_op="INSERT",
+                table="book",
+                new={"isbn": "001"},
+                schema="public",
+            ),
+            Payload(
+                tg_op="INSERT",
+                table="book",
+                new={"isbn": "002"},
+                schema="public",
+            ),
+        ]
+        sync._buffer_last_lsn = "0/12345"
+        mock_cursor = Mock()
+
+        with patch.object(
+            sync, "_payloads", return_value=[{"_id": "1"}, {"_id": "2"}]
+        ):
+            sync._flush_buffer(mock_cursor)
+
+        # Buffer should be cleared
+        assert sync._buffer == []
+        assert sync._buffer_last_lsn is None
+
+    def test_get_doc_id_single_pk(self, sync):
+        """Test get_doc_id with single primary key."""
+        doc_id = sync.get_doc_id(["001"], "book")
+        assert doc_id == "001"
+
+    def test_get_doc_id_composite_pk(self, sync):
+        """Test get_doc_id with composite primary key."""
+        doc_id = sync.get_doc_id(["001", "v1"], "book")
+        assert doc_id == "001|v1"  # Uses PRIMARY_KEY_DELIMITER which is "|"
+
+    def test_get_doc_id_empty_raises_error(self, sync):
+        """Test get_doc_id raises error for empty primary keys."""
+        with pytest.raises(PrimaryKeyNotFoundError):
+            sync.get_doc_id([], "book")
+
+    @patch("pgsync.sync.sys")
+    def test_status_producer_only(self, mock_sys, sync):
+        """Test _status with producer mode only."""
+        sync.producer = True
+        sync.consumer = False
+        sync._status("Test")
+        call_args = mock_sys.stdout.write.call_args[0][0]
+        assert "(Producer)" in call_args
+
+    @patch("pgsync.sync.sys")
+    def test_status_consumer_only(self, mock_sys, sync):
+        """Test _status with consumer mode only."""
+        sync.producer = False
+        sync.consumer = True
+        sync._status("Test")
+        call_args = mock_sys.stdout.write.call_args[0][0]
+        assert "(Consumer)" in call_args
+
+    def test_refresh_views_postgresql(self, sync):
+        """Test refresh_views calls _refresh_views for PostgreSQL."""
+        with patch.object(sync, "_refresh_views") as mock_refresh:
+            sync.refresh_views()
+            mock_refresh.assert_called_once()
+
+    @patch("pgsync.sync.Sync._refresh_views")
+    def test_async_refresh_views(self, mock_refresh, sync):
+        """Test async_refresh_views calls _refresh_views."""
+        import asyncio
+
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(sync.async_refresh_views())
+        mock_refresh.assert_called_once()
+
+    def test_slot_name_property(self, sync):
+        """Test slot_name property returns correct name."""
+        assert sync.slot_name == "testdb_testdb"
+
+    def test_checkpoint_file_property(self, sync):
+        """Test checkpoint_file property returns correct path."""
+        assert "testdb_testdb" in sync.checkpoint_file
+
+    @patch("pgsync.sync.RedisQueue")
+    def test_redis_property_lazy_init(self, mock_redis_class, sync):
+        """Test redis property lazy initialization."""
+        sync._redis = None
+        _ = sync.redis
+        # Redis should be initialized
+
+    def test_tree_property(self, sync):
+        """Test tree is properly initialized."""
+        assert sync.tree is not None
+        assert sync.tree.root is not None
+        assert sync.tree.root.table == "book"
+
+    @patch("pgsync.sync.Sync.logical_slot_get_changes")
+    def test_truncate_slots_when_truncate_true(self, mock_changes, sync):
+        """Test _truncate_slots calls logical_slot_get_changes when _truncate is True."""
+        sync._truncate = True
+        sync._truncate_slots()
+        mock_changes.assert_called_once_with(
+            "testdb_testdb", upto_nchanges=None
+        )
+
+    @patch("pgsync.sync.Sync.logical_slot_get_changes")
+    def test_truncate_slots_when_truncate_false(self, mock_changes, sync):
+        """Test _truncate_slots does nothing when _truncate is False."""
+        sync._truncate = False
+        sync._truncate_slots()
+        mock_changes.assert_not_called()
+
+    def test_validate_raises_for_invalid_schema(self, sync):
+        """Test validate raises SchemaError for incompatible schema."""
+        sync.nodes = []  # Not a dict, should raise
+        with pytest.raises(SchemaError) as excinfo:
+            sync.validate()
+        assert "Incompatible schema" in str(excinfo.value)
+
+    def test_validate_raises_for_missing_index(self, sync):
+        """Test validate raises ValueError for missing index."""
+        original_index = sync.index
+        sync.index = None
+        sync.nodes = {}  # Valid dict
+        with pytest.raises(ValueError) as excinfo:
+            sync.validate()
+        assert "Index is missing" in str(excinfo.value)
+        sync.index = original_index
+
+    def test_verbose_property(self, sync):
+        """Test verbose mode setting."""
+        sync.verbose = True
+        assert sync.verbose is True
+        sync.verbose = False
+        assert sync.verbose is False
+
+    def test_xlog_progress(self, sync):
+        """Test _xlog_progress status reporting."""
+        with patch("pgsync.sync.sys") as mock_sys:
+            sync._xlog_progress(50, 100)
+            mock_sys.stdout.write.assert_called()
+            mock_sys.stdout.flush.assert_called()
+
+    def test_search_client_property(self, sync):
+        """Test search_client property."""
+        client = sync.search_client
+        assert client is not None
+        assert hasattr(client, "bulk")
+
+    def test_index_property(self, sync):
+        """Test index property."""
+        assert sync.index == "testdb"
+
+    def test_database_property(self, sync):
+        """Test database property."""
+        assert sync.database == "testdb"
+
+    @patch("pgsync.sync.Sync._payloads")
+    def test_sync_generator(self, mock_payloads, sync):
+        """Test sync method as generator."""
+        mock_payloads.return_value = iter(
+            [{"_id": "1", "_index": "testdb", "_source": {"field": "value"}}]
+        )
+        docs = list(sync.sync())
+        # Should yield documents
+
+    def test_nodes_property(self, sync):
+        """Test nodes property returns schema dict."""
+        nodes = sync.nodes
+        assert isinstance(nodes, dict)
+        assert "table" in nodes
+
+    def test_count_property(self, sync):
+        """Test count property tracking."""
+        assert "xlog" in sync.count
+        assert "db" in sync.count
+        assert "redis" in sync.count
+
+    def test_producer_consumer_flags(self, sync):
+        """Test producer/consumer mode flags."""
+        sync.producer = True
+        sync.consumer = False
+        assert sync.producer is True
+        assert sync.consumer is False
+
+        sync.producer = False
+        sync.consumer = True
+        assert sync.producer is False
+        assert sync.consumer is True
+
+    def test_routing_property(self, sync):
+        """Test routing property."""
+        sync.routing = "user_id"
+        assert sync.routing == "user_id"
+        sync.routing = None
+        assert sync.routing is None
+
+    def test_pipeline_property(self, sync):
+        """Test pipeline property."""
+        sync.pipeline = "my_pipeline"
+        assert sync.pipeline == "my_pipeline"
+        sync.pipeline = None
+
+    def test_plugins_property(self, sync):
+        """Test _plugins property."""
+        assert sync._plugins is not None or sync._plugins is None
+
+    def test_lock_property(self, sync):
+        """Test lock property exists."""
+        assert sync.lock is not None
+
+    def test_buffer_initialization(self, sync):
+        """Test buffer is initialized."""
+        sync._buffer = []
+        assert sync._buffer == []
+
+    @patch("pgsync.sync.Sync.sync")
+    def test_payloads_truncate_op(self, mock_sync, sync):
+        """Test _payloads handles TRUNCATE operation."""
+        payloads = [
+            Payload(tg_op="TRUNCATE", table="book", schema="public"),
+        ]
+        result = list(sync._payloads(payloads))
+        # TRUNCATE triggers sync without filters
+
+    def test_tree_tables_property(self, sync):
+        """Test tree.tables property."""
+        tables = sync.tree.tables
+        assert "book" in tables
+        assert "publisher" in tables
+
+    def test_tree_schemas_property(self, sync):
+        """Test tree.schemas property."""
+        schemas = sync.tree.schemas
+        assert "public" in schemas

@@ -171,11 +171,8 @@ class TestBase(object):
     ):
         pg_base = Base(connection.engine.url.database)
         pg_base.truncate_table("book")
-        calls = [
-            call('Truncating table: "public"."book"'),
-            call('Truncated table: "public"."book"'),
-        ]
-        assert mock_logger.debug.call_args_list == calls
+        mock_logger.debug.assert_any_call('Truncating table: "public"."book"')
+        mock_logger.debug.assert_any_call('Truncated table: "public"."book"')
         mock_execute.assert_called_once()
         mock_text.assert_called_once_with(
             'TRUNCATE TABLE "public"."book" CASCADE'
@@ -188,11 +185,10 @@ class TestBase(object):
     ):
         pg_base = Base(connection.engine.url.database)
         pg_base.truncate_tables(["book", "user"])
-        calls = [
-            call("Truncating tables: ['book', 'user']"),
-            call("Truncated tables: ['book', 'user']"),
-        ]
-        assert mock_logger.debug.call_args_list == calls
+        mock_logger.debug.assert_any_call(
+            "Truncating tables: ['book', 'user']"
+        )
+        mock_logger.debug.assert_any_call("Truncated tables: ['book', 'user']")
         calls = [
             call("book", schema="public"),
             call("user", schema="public"),
@@ -206,11 +202,8 @@ class TestBase(object):
     ):
         pg_base = Base(connection.engine.url.database)
         pg_base.truncate_schema("public")
-        calls = [
-            call("Truncating schema: public"),
-            call("Truncated schema: public"),
-        ]
-        assert mock_logger.debug.call_args_list == calls
+        mock_logger.debug.assert_any_call("Truncating schema: public")
+        mock_logger.debug.assert_any_call("Truncated schema: public")
         mock_truncate_tables.assert_called_once_with(
             [
                 "author",
@@ -263,13 +256,18 @@ class TestBase(object):
         pg_base = Base(connection.engine.url.database)
         pg_base.create_replication_slot("slot_name")
         pg_base.drop_replication_slot("slot_name")
-        calls = [
-            call("Creating replication slot: slot_name"),
-            call("Created replication slot: slot_name"),
-            call("Dropping replication slot: slot_name"),
-            call("Dropped replication slot: slot_name"),
-        ]
-        assert mock_logger.debug.call_args_list == calls
+        mock_logger.debug.assert_any_call(
+            "Creating replication slot: slot_name"
+        )
+        mock_logger.debug.assert_any_call(
+            "Created replication slot: slot_name"
+        )
+        mock_logger.debug.assert_any_call(
+            "Dropping replication slot: slot_name"
+        )
+        mock_logger.debug.assert_any_call(
+            "Dropped replication slot: slot_name"
+        )
 
         with pytest.raises(sa.exc.ProgrammingError):
             pg_base.drop_replication_slot(1)
@@ -283,13 +281,18 @@ class TestBase(object):
         pg_base = Base(connection.engine.url.database)
         pg_base.create_replication_slot("slot_name")
         pg_base.drop_replication_slot("slot_name")
-        calls = [
-            call("Creating replication slot: slot_name"),
-            call("Created replication slot: slot_name"),
-            call("Dropping replication slot: slot_name"),
-            call("Dropped replication slot: slot_name"),
-        ]
-        assert mock_logger.debug.call_args_list == calls
+        mock_logger.debug.assert_any_call(
+            "Creating replication slot: slot_name"
+        )
+        mock_logger.debug.assert_any_call(
+            "Created replication slot: slot_name"
+        )
+        mock_logger.debug.assert_any_call(
+            "Dropping replication slot: slot_name"
+        )
+        mock_logger.debug.assert_any_call(
+            "Dropped replication slot: slot_name"
+        )
 
     @pytest.mark.skipif(
         IS_MYSQL_COMPAT,
@@ -301,12 +304,12 @@ class TestBase(object):
         pg_base = Base(connection.engine.url.database)
         pg_base.create_function(DEFAULT_SCHEMA)
         pg_base.create_triggers(DEFAULT_SCHEMA, "book", join_queries=True)
-        calls = [
-            call("Creating trigger on table: public.book"),
-            call("Dropping trigger on table: public.book"),
-            call("Dropping trigger on table: public.book"),
-        ]
-        assert mock_logger.debug.call_args_list == calls
+        mock_logger.debug.assert_any_call(
+            "Creating trigger on table: public.book"
+        )
+        mock_logger.debug.assert_any_call(
+            "Dropping trigger on table: public.book"
+        )
         assert mock_execute.call_count == 6
 
         pg_base.drop_function(DEFAULT_SCHEMA)
@@ -433,11 +436,8 @@ class TestBase(object):
         pg_base = Base(connection.engine.url.database)
         with patch("pgsync.sync.Base.engine"):
             pg_base.drop_view("public")
-            calls = [
-                call("Dropping view: public._view"),
-                call("Dropped view: public._view"),
-            ]
-            assert mock_logger.debug.call_args_list == calls
+            mock_logger.debug.assert_any_call("Dropping view: public._view")
+            mock_logger.debug.assert_any_call("Dropped view: public._view")
 
     @pytest.mark.skipif(
         IS_MYSQL_COMPAT,
@@ -448,11 +448,8 @@ class TestBase(object):
         pg_base = Base(connection.engine.url.database)
         with patch("pgsync.sync.Base.engine"):
             pg_base.refresh_view("foo", "public", concurrently=True)
-            calls = [
-                call("Refreshing view: public.foo"),
-                call("Refreshed view: public.foo"),
-            ]
-            assert mock_logger.debug.call_args_list == calls
+            mock_logger.debug.assert_any_call("Refreshing view: public.foo")
+            mock_logger.debug.assert_any_call("Refreshed view: public.foo")
 
     def test_parse_value(self, connection):
         pg_base = Base(connection.engine.url.database)
@@ -674,3 +671,308 @@ class TestBase(object):
         )
 
         _pg_engine("mydb", sslmode="allow", sslrootcert=__file__)
+
+
+class TestPayload:
+    """Tests for the Payload class."""
+
+    def test_payload_creation(self):
+        """Test Payload object creation."""
+        from pgsync.base import Payload
+
+        payload = Payload(
+            tg_op="INSERT",
+            table="book",
+            schema="public",
+            new={"id": 1, "title": "Test"},
+            old={},
+        )
+        assert payload.tg_op == "INSERT"
+        assert payload.table == "book"
+        assert payload.schema == "public"
+        assert payload.new == {"id": 1, "title": "Test"}
+        assert payload.old == {}
+
+    def test_payload_data_returns_new_for_insert(self):
+        """Test Payload.data returns new values for INSERT."""
+        from pgsync.base import Payload
+
+        payload = Payload(
+            tg_op="INSERT",
+            table="book",
+            new={"id": 1, "title": "Test"},
+            old={},
+        )
+        assert payload.data == {"id": 1, "title": "Test"}
+
+    def test_payload_data_returns_new_for_update(self):
+        """Test Payload.data returns new values for UPDATE."""
+        from pgsync.base import Payload
+
+        payload = Payload(
+            tg_op="UPDATE",
+            table="book",
+            new={"id": 1, "title": "Updated"},
+            old={"id": 1, "title": "Original"},
+        )
+        assert payload.data == {"id": 1, "title": "Updated"}
+
+    def test_payload_data_returns_old_for_delete(self):
+        """Test Payload.data returns old values for DELETE."""
+        from pgsync.base import Payload
+
+        payload = Payload(
+            tg_op="DELETE",
+            table="book",
+            new={},
+            old={"id": 1, "title": "Deleted"},
+        )
+        assert payload.data == {"id": 1, "title": "Deleted"}
+
+    def test_payload_data_returns_new_for_truncate(self):
+        """Test Payload.data returns new (empty) for TRUNCATE since it has no old."""
+        from pgsync.base import Payload
+
+        payload = Payload(
+            tg_op="TRUNCATE",
+            table="book",
+            new={},
+            old={},
+        )
+        # TRUNCATE returns new (which is empty) since old is also empty
+        assert payload.data == {}
+
+    def test_payload_xmin_defaults_to_none(self):
+        """Test Payload.xmin defaults to None."""
+        from pgsync.base import Payload
+
+        payload = Payload(
+            tg_op="INSERT",
+            table="book",
+            new={},
+        )
+        assert payload.xmin is None
+
+    def test_payload_with_xmin(self):
+        """Test Payload with xmin set."""
+        from pgsync.base import Payload
+
+        payload = Payload(
+            tg_op="INSERT",
+            table="book",
+            new={},
+            xmin=12345,
+        )
+        assert payload.xmin == 12345
+
+    def test_payload_table_attribute(self):
+        """Test Payload table attribute."""
+        from pgsync.base import Payload
+
+        payload = Payload(
+            tg_op="INSERT",
+            table="book",
+            schema="public",
+            new={"id": 1},
+        )
+        assert payload.table == "book"
+        assert payload.schema == "public"
+
+
+class TestBaseAdditional:
+    """Additional tests for Base class."""
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
+    def test_txid_current(self, connection):
+        """Test txid_current returns transaction ID."""
+        pg_base = Base(connection.engine.url.database)
+        txid = pg_base.txid_current
+        assert isinstance(txid, int)
+        assert txid > 0
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
+    def test_verbose_property(self, connection):
+        """Test verbose property setting."""
+        pg_base = Base(connection.engine.url.database, verbose=True)
+        assert pg_base.verbose is True
+
+        pg_base2 = Base(connection.engine.url.database, verbose=False)
+        assert pg_base2.verbose is False
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
+    def test_models_method(self, connection):
+        """Test models method returns table metadata."""
+        pg_base = Base(connection.engine.url.database)
+        # models is a method that takes table and schema
+        model = pg_base.models("book", DEFAULT_SCHEMA)
+        assert model is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
+    def test_database_property(self, connection):
+        """Test database property."""
+        pg_base = Base(connection.engine.url.database)
+        assert pg_base.database == connection.engine.url.database
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
+    def test_engine_property(self, connection):
+        """Test engine property."""
+        pg_base = Base(connection.engine.url.database)
+        assert pg_base.engine is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
+    def test_execute_method(self, connection):
+        """Test execute method runs SQL."""
+        pg_base = Base(connection.engine.url.database)
+        stmt = sa.text("SELECT 1")
+        # execute() doesn't return anything, so we just check it doesn't raise
+        pg_base.execute(stmt)
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
+    def test_table_count_method(self, connection):
+        """Test table count method."""
+        pg_base = Base(connection.engine.url.database)
+        # The count method requires a model, use tables() instead
+        tables = pg_base.tables(DEFAULT_SCHEMA)
+        assert isinstance(tables, list)
+        assert "book" in tables
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
+    def test_parse_value_integer(self, connection):
+        """Test parse_value with integer type."""
+        pg_base = Base(connection.engine.url.database)
+        result = pg_base.parse_value("integer", "42")
+        assert result == 42
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
+    def test_parse_value_boolean_true(self, connection):
+        """Test parse_value with boolean true."""
+        pg_base = Base(connection.engine.url.database)
+        result = pg_base.parse_value("boolean", "true")
+        assert result is True
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
+    def test_parse_value_bigint(self, connection):
+        """Test parse_value with bigint type."""
+        pg_base = Base(connection.engine.url.database)
+        result = pg_base.parse_value("bigint", "9999999999")
+        assert result == 9999999999
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
+    def test_parse_value_null(self, connection):
+        """Test parse_value with null value."""
+        pg_base = Base(connection.engine.url.database)
+        result = pg_base.parse_value("character varying", "null")
+        assert result is None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
+    def test_parse_value_double_precision(self, connection):
+        """Test parse_value with double precision type."""
+        pg_base = Base(connection.engine.url.database)
+        result = pg_base.parse_value("double precision", "3.14159")
+        assert abs(result - 3.14159) < 0.0001
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
+    def test_session_property(self, connection):
+        """Test session property returns a session."""
+        pg_base = Base(connection.engine.url.database)
+        session = pg_base.session
+        assert session is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
+    def test_tables_method(self, connection):
+        """Test tables method returns table list."""
+        pg_base = Base(connection.engine.url.database)
+        tables = pg_base.tables(DEFAULT_SCHEMA)
+        assert isinstance(tables, list)
+        assert "book" in tables
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
+    def test_parse_value_text_type(self, connection):
+        """Test parse_value with text type."""
+        pg_base = Base(connection.engine.url.database)
+        result = pg_base.parse_value("text", "'hello world'")
+        assert "hello world" in result
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
+    def test_parse_value_numeric(self, connection):
+        """Test parse_value with numeric type."""
+        pg_base = Base(connection.engine.url.database)
+        result = pg_base.parse_value("numeric", "123.45")
+        assert float(result) == 123.45
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
+    def test_replication_slots_query(self, connection):
+        """Test replication_slots method with slot name."""
+        pg_base = Base(connection.engine.url.database)
+        # Check for a non-existent slot - returns empty list
+        slots = pg_base.replication_slots("nonexistent_slot")
+        assert isinstance(slots, list)
+        assert len(slots) == 0

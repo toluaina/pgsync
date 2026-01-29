@@ -10,9 +10,9 @@ backports-datetime-fromisoformat==2.0.3
     # via marshmallow
 black==26.1.0
     # via -r requirements/dev.in
-boto3==1.42.34
+boto3==1.42.37
     # via -r requirements/base.in
-botocore==1.42.34
+botocore==1.42.37
     # via
     #   boto3
     #   s3transfer
@@ -100,7 +100,7 @@ packaging==26.0
     #   black
     #   mysql-replication
     #   pytest
-pathspec==1.0.3
+pathspec==1.0.4
     # via black
 platformdirs==4.5.1
     # via
