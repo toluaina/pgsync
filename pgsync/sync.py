@@ -1954,6 +1954,11 @@ class Sync(Base, metaclass=Singleton):
 
         logger.debug(f"[LSN {lsn}] {raw}")
 
+        # Handle empty payloads gracefully
+        if not raw or not raw.strip():
+            logger.debug(f"[LSN {lsn}] Empty payload, skipping")
+            return
+
         match = TX_BOUNDARY_RE.match(raw)
         if match:
             kind: str = match.group(1).upper()

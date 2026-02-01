@@ -648,5 +648,3 @@ class TestSearchClientBulkOperations:
                     ):
                         # Should not raise when settings are False
                         client.bulk("test", actions)
-
-
