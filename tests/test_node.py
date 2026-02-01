@@ -594,22 +594,22 @@ class TestNodeEdgeCases:
         assert child.is_root is False
 
     def test_node_with_custom_label(self, connection):
-        """Test Node with custom label in relationship."""
+        """Test Node with custom label."""
         pg_base = Base(connection.engine.url.database)
 
         node = Node(
             models=pg_base.models,
             table="publisher",
             schema="public",
+            label="custom_label",
             relationship={
                 "type": "one_to_one",
                 "variant": "object",
-                "label": "custom_label",
             },
         )
 
         # Should use custom label
-        assert node.relationship.label == "custom_label"
+        assert node.label == "custom_label"
 
     def test_node_table_columns_property(self, connection):
         """Test Node.table_columns returns column names."""
@@ -668,7 +668,11 @@ class TestTreeEdgeCases:
             },
         }
 
-        tree = Tree(pg_base, schema)
+        tree = Tree(
+            pg_base.models,
+            nodes=schema["nodes"],
+            database=schema["database"],
+        )
 
         # Should have built tree with multiple children
         assert tree.root is not None
@@ -697,13 +701,16 @@ class TestTreeEdgeCases:
             },
         }
 
-        tree = Tree(pg_base, schema)
+        tree = Tree(
+            pg_base.models,
+            nodes=schema["nodes"],
+            database=schema["database"],
+        )
 
         # Collect all nodes via traverse
         nodes = []
-        for node in tree.traverse(tree.root):
+        for node in tree.traverse_post_order():
             nodes.append(node)
 
         # Should include root and children
         assert len(nodes) >= 2
-        assert hasattr(rel_with_through, "throughs")
