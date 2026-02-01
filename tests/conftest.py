@@ -2,6 +2,26 @@
 
 import logging
 import os
+from pathlib import Path
+
+# Set required environment variables BEFORE importing pgsync modules
+# Read .env file to check if search backend is already configured
+env_file = Path.cwd() / ".env"
+has_es_in_env = False
+has_os_in_env = False
+
+if env_file.exists():
+    env_content = env_file.read_text()
+    for line in env_content.splitlines():
+        line = line.strip()
+        if line.startswith("ELASTICSEARCH=") and "true" in line.lower():
+            has_es_in_env = True
+        elif line.startswith("OPENSEARCH=") and "true" in line.lower():
+            has_os_in_env = True
+
+# Only set ELASTICSEARCH if neither is configured in .env
+if not has_es_in_env and not has_os_in_env:
+    os.environ["ELASTICSEARCH"] = "True"
 
 import pytest
 import sqlalchemy as sa
