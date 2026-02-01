@@ -1051,15 +1051,13 @@ class Base(object):
             if not xid8s:
                 return {}
             # TODO: use the SQLAlchemy ORM to handle this query
-            statement = sa.text(
-                """
+            statement = sa.text("""
                 SELECT xid AS xid8,
                 PG_VISIBLE_IN_SNAPSHOT(xid::xid8, PG_CURRENT_SNAPSHOT()) AS visible
                 FROM UNNEST(CAST(:xid8s AS text[]))
                 WITH ORDINALITY AS t(xid, ord)
                 ORDER BY t.ord
-            """
-            )
+            """)
             if self.verbose:
                 compiled_query(
                     statement,

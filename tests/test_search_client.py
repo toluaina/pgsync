@@ -502,3 +502,487 @@ class TestSearchClient(object):
                 ):
                     client = SearchClient()
                     assert client.major_version == 0
+
+
+# ============================================================================
+# PHASE 5 EXTENDED TESTS - Search Client Comprehensive Coverage
+# ============================================================================
+
+
+class TestSearchClientBulkOperations:
+    """Extended tests for bulk operations."""
+
+    def test_bulk_with_custom_chunk_size(self):
+        """Test bulk operations with custom chunk size."""
+        with override_env_var(ELASTICSEARCH="True", OPENSEARCH="False"):
+            importlib.reload(settings)
+            with mock.patch(
+                "pgsync.search_client.get_search_url",
+                return_value="http://localhost:9200",
+            ):
+                mock_client = MagicMock()
+                with mock.patch(
+                    "pgsync.search_client.get_search_client",
+                    return_value=mock_client,
+                ):
+                    client = SearchClient()
+                    actions = [
+                        {
+                            "_index": "test",
+                            "_id": "1",
+                            "_source": {"field": "value"},
+                        }
+                    ]
+
+                    with mock.patch.object(client, "_bulk") as mock_bulk:
+                        client.bulk("test", actions, chunk_size=100)
+
+                        # Should pass custom chunk_size
+                        call_kwargs = mock_bulk.call_args[1]
+                        assert call_kwargs["chunk_size"] == 100
+
+    def test_bulk_with_retry_parameters(self):
+        """Test bulk operations with retry configuration."""
+        with override_env_var(ELASTICSEARCH="True", OPENSEARCH="False"):
+            importlib.reload(settings)
+            with mock.patch(
+                "pgsync.search_client.get_search_url",
+                return_value="http://localhost:9200",
+            ):
+                mock_client = MagicMock()
+                with mock.patch(
+                    "pgsync.search_client.get_search_client",
+                    return_value=mock_client,
+                ):
+                    client = SearchClient()
+                    actions = [{"_index": "test", "_id": "1"}]
+
+                    with mock.patch.object(client, "_bulk") as mock_bulk:
+                        client.bulk(
+                            "test",
+                            actions,
+                            max_retries=5,
+                            initial_backoff=2.0,
+                            max_backoff=60.0,
+                        )
+
+                        # Should pass retry parameters
+                        call_kwargs = mock_bulk.call_args[1]
+                        assert call_kwargs["max_retries"] == 5
+                        assert call_kwargs["initial_backoff"] == 2.0
+                        assert call_kwargs["max_backoff"] == 60.0
+
+    def test_bulk_exception_handling_with_raise_on_exception(self):
+        """Test bulk raises exception when raise_on_exception is True."""
+        with override_env_var(ELASTICSEARCH="True", OPENSEARCH="False"):
+            importlib.reload(settings)
+            with mock.patch(
+                "pgsync.search_client.get_search_url",
+                return_value="http://localhost:9200",
+            ):
+                mock_client = MagicMock()
+                with mock.patch(
+                    "pgsync.search_client.get_search_client",
+                    return_value=mock_client,
+                ):
+                    client = SearchClient()
+                    actions = [{"_index": "test", "_id": "1"}]
+
+                    with mock.patch.object(
+                        client, "_bulk", side_effect=Exception("Bulk failed")
+                    ):
+                        with pytest.raises(Exception) as excinfo:
+                            client.bulk(
+                                "test", actions, raise_on_exception=True
+                            )
+                        assert "Bulk failed" in str(excinfo.value)
+
+    def test_bulk_exception_handling_with_raise_on_error(self):
+        """Test bulk raises exception when raise_on_error is True."""
+        with override_env_var(ELASTICSEARCH="True", OPENSEARCH="False"):
+            importlib.reload(settings)
+            with mock.patch(
+                "pgsync.search_client.get_search_url",
+                return_value="http://localhost:9200",
+            ):
+                mock_client = MagicMock()
+                with mock.patch(
+                    "pgsync.search_client.get_search_client",
+                    return_value=mock_client,
+                ):
+                    client = SearchClient()
+                    actions = [{"_index": "test", "_id": "1"}]
+
+                    with mock.patch.object(
+                        client,
+                        "_bulk",
+                        side_effect=Exception("Error occurred"),
+                    ):
+                        with pytest.raises(Exception) as excinfo:
+                            client.bulk("test", actions, raise_on_error=True)
+                        assert "Error occurred" in str(excinfo.value)
+
+    def test_bulk_suppresses_exception_when_raise_flags_false(self):
+        """Test bulk suppresses exception when both raise flags are False."""
+        with override_env_var(ELASTICSEARCH="True", OPENSEARCH="False"):
+            importlib.reload(settings)
+            with mock.patch(
+                "pgsync.search_client.get_search_url",
+                return_value="http://localhost:9200",
+            ):
+                mock_client = MagicMock()
+                with mock.patch(
+                    "pgsync.search_client.get_search_client",
+                    return_value=mock_client,
+                ):
+                    client = SearchClient()
+                    actions = [{"_index": "test", "_id": "1"}]
+
+                    with mock.patch.object(
+                        client, "_bulk", side_effect=Exception("Bulk failed")
+                    ):
+                        # Should not raise
+                        client.bulk(
+                            "test",
+                            actions,
+                            raise_on_exception=False,
+                            raise_on_error=False,
+                        )
+
+
+class TestSearchClientSearchOperations:
+    """Extended tests for search operations."""
+
+    def test_search_with_multiple_fields(self):
+        """Test _search with multiple field filters."""
+        with override_env_var(ELASTICSEARCH="True", OPENSEARCH="False"):
+            importlib.reload(settings)
+            with mock.patch(
+                "pgsync.search_client.get_search_url",
+                return_value="http://localhost:9200",
+            ):
+                mock_client = MagicMock()
+                mock_client.search.return_value = {
+                    "hits": {
+                        "hits": [
+                            {"_id": "1"},
+                            {"_id": "2"},
+                        ]
+                    }
+                }
+                with mock.patch(
+                    "pgsync.search_client.get_search_client",
+                    return_value=mock_client,
+                ):
+                    client = SearchClient()
+                    fields = {"field1": ["value1"], "field2": ["value2"]}
+
+                    results = list(
+                        client._search("test_index", "test_table", fields)
+                    )
+
+                    # Should return doc IDs
+                    assert results == ["1", "2"]
+                    # Should have called search with correct query
+                    assert mock_client.search.called
+
+    def test_search_with_empty_fields(self):
+        """Test _search with no field filters returns all docs."""
+        with override_env_var(ELASTICSEARCH="True", OPENSEARCH="False"):
+            importlib.reload(settings)
+            with mock.patch(
+                "pgsync.search_client.get_search_url",
+                return_value="http://localhost:9200",
+            ):
+                mock_client = MagicMock()
+                mock_client.search.return_value = {
+                    "hits": {
+                        "hits": [{"_id": "1"}, {"_id": "2"}, {"_id": "3"}]
+                    }
+                }
+                with mock.patch(
+                    "pgsync.search_client.get_search_client",
+                    return_value=mock_client,
+                ):
+                    client = SearchClient()
+                    results = list(
+                        client._search("test_index", "test_table", None)
+                    )
+
+                    assert len(results) == 3
+
+    def test_search_pagination_with_scroll(self):
+        """Test _search uses scroll for large result sets."""
+        with override_env_var(ELASTICSEARCH="True", OPENSEARCH="False"):
+            importlib.reload(settings)
+            with mock.patch(
+                "pgsync.search_client.get_search_url",
+                return_value="http://localhost:9200",
+            ):
+                mock_client = MagicMock()
+                # First call returns results with scroll_id
+                mock_client.search.return_value = {
+                    "_scroll_id": "scroll123",
+                    "hits": {"hits": [{"_id": "1"}]},
+                }
+                # Scroll call returns more results
+                mock_client.scroll.return_value = {
+                    "_scroll_id": "scroll123",
+                    "hits": {"hits": []},  # No more results
+                }
+                with mock.patch(
+                    "pgsync.search_client.get_search_client",
+                    return_value=mock_client,
+                ):
+                    client = SearchClient()
+                    results = list(client._search("test_index", "test_table"))
+
+                    # Should have used scroll
+                    assert len(results) >= 1
+
+
+class TestSearchClientMappingOperations:
+    """Extended tests for mapping and settings operations."""
+
+    def test_create_setting_with_replicas(self):
+        """Test _create_setting with replica configuration."""
+        with override_env_var(ELASTICSEARCH="True", OPENSEARCH="False"):
+            importlib.reload(settings)
+            with mock.patch(
+                "pgsync.search_client.get_search_url",
+                return_value="http://localhost:9200",
+            ):
+                mock_client = MagicMock()
+                mock_client.indices.exists.return_value = False
+                with mock.patch(
+                    "pgsync.search_client.get_search_client",
+                    return_value=mock_client,
+                ):
+                    client = SearchClient()
+                    setting = {"number_of_replicas": 2}
+
+                    client._create_setting("test_index", {}, setting=setting)
+
+                    # Should pass replica setting
+                    call_kwargs = mock_client.indices.create.call_args[1]
+                    assert "body" in call_kwargs
+                    assert (
+                        call_kwargs["body"]["settings"]["number_of_replicas"]
+                        == 2
+                    )
+
+    def test_create_setting_skips_when_index_exists(self):
+        """Test _create_setting skips creation when index exists."""
+        with override_env_var(ELASTICSEARCH="True", OPENSEARCH="False"):
+            importlib.reload(settings)
+            with mock.patch(
+                "pgsync.search_client.get_search_url",
+                return_value="http://localhost:9200",
+            ):
+                mock_client = MagicMock()
+                mock_client.indices.exists.return_value = True
+                with mock.patch(
+                    "pgsync.search_client.get_search_client",
+                    return_value=mock_client,
+                ):
+                    client = SearchClient()
+                    client._create_setting("test_index", {})
+
+                    # Should not call create
+                    assert not mock_client.indices.create.called
+
+    def test_build_mapping_with_keyword_type(self):
+        """Test _build_mapping handles keyword type correctly."""
+        with override_env_var(ELASTICSEARCH="True", OPENSEARCH="False"):
+            importlib.reload(settings)
+            with mock.patch(
+                "pgsync.search_client.get_search_url",
+                return_value="http://localhost:9200",
+            ):
+                mock_client = MagicMock()
+                with mock.patch(
+                    "pgsync.search_client.get_search_client",
+                    return_value=mock_client,
+                ):
+                    client = SearchClient()
+                    mapping = {
+                        "properties": {
+                            "name": {"type": "keyword"},
+                        }
+                    }
+
+                    result = client._build_mapping(mapping)
+
+                    # Should include keyword type
+                    assert result["properties"]["name"]["type"] == "keyword"
+
+    def test_build_mapping_with_nested_objects(self):
+        """Test _build_mapping handles nested object types."""
+        with override_env_var(ELASTICSEARCH="True", OPENSEARCH="False"):
+            importlib.reload(settings)
+            with mock.patch(
+                "pgsync.search_client.get_search_url",
+                return_value="http://localhost:9200",
+            ):
+                mock_client = MagicMock()
+                with mock.patch(
+                    "pgsync.search_client.get_search_client",
+                    return_value=mock_client,
+                ):
+                    client = SearchClient()
+                    mapping = {
+                        "properties": {
+                            "user": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {"type": "text"},
+                                    "age": {"type": "integer"},
+                                },
+                            }
+                        }
+                    }
+
+                    result = client._build_mapping(mapping)
+
+                    # Should preserve nested structure
+                    assert result["properties"]["user"]["type"] == "object"
+                    assert "name" in result["properties"]["user"]["properties"]
+
+    def test_build_mapping_with_array_types(self):
+        """Test _build_mapping handles array field types."""
+        with override_env_var(ELASTICSEARCH="True", OPENSEARCH="False"):
+            importlib.reload(settings)
+            with mock.patch(
+                "pgsync.search_client.get_search_url",
+                return_value="http://localhost:9200",
+            ):
+                mock_client = MagicMock()
+                with mock.patch(
+                    "pgsync.search_client.get_search_client",
+                    return_value=mock_client,
+                ):
+                    client = SearchClient()
+                    mapping = {
+                        "properties": {
+                            "tags": {
+                                "type": "keyword"
+                            },  # Arrays use same type
+                        }
+                    }
+
+                    result = client._build_mapping(mapping)
+
+                    # Should handle array type
+                    assert result["properties"]["tags"]["type"] == "keyword"
+
+
+class TestSearchClientAWSIntegration:
+    """Tests for AWS Elasticsearch integration."""
+
+    def test_aws_elasticsearch_initialization(self):
+        """Test SearchClient initializes with AWS credentials."""
+        with override_env_var(
+            ELASTICSEARCH="True",
+            OPENSEARCH="False",
+            ELASTICSEARCH_AWS_HOSTED="True",
+            ELASTICSEARCH_AWS_REGION="us-east-1",
+        ):
+            importlib.reload(settings)
+            with mock.patch(
+                "pgsync.search_client.get_search_url",
+                return_value="https://search-domain.us-east-1.es.amazonaws.com",
+            ):
+                with mock.patch("pgsync.search_client.boto3") as mock_boto3:
+                    mock_session = MagicMock()
+                    mock_boto3.Session.return_value = mock_session
+                    mock_creds = MagicMock()
+                    mock_session.get_credentials.return_value = mock_creds
+
+                    with mock.patch(
+                        "pgsync.search_client.Elasticsearch"
+                    ) as mock_es:
+                        SearchClient()
+
+                        # Should have created Elasticsearch client with AWS auth
+                        assert mock_es.called
+
+    def test_aws_credentials_retrieval(self):
+        """Test AWS credentials are retrieved from session."""
+        with override_env_var(
+            ELASTICSEARCH="True",
+            OPENSEARCH="False",
+            ELASTICSEARCH_AWS_HOSTED="True",
+            ELASTICSEARCH_AWS_REGION="us-west-2",
+        ):
+            importlib.reload(settings)
+            with mock.patch(
+                "pgsync.search_client.get_search_url",
+                return_value="https://search-domain.us-west-2.es.amazonaws.com",
+            ):
+                with mock.patch("pgsync.search_client.boto3") as mock_boto3:
+                    mock_session = MagicMock()
+                    mock_boto3.Session.return_value = mock_session
+                    mock_creds = MagicMock()
+                    mock_session.get_credentials.return_value = mock_creds
+
+                    with mock.patch("pgsync.search_client.Elasticsearch"):
+                        SearchClient()
+
+                        # Should have retrieved credentials
+                        mock_session.get_credentials.assert_called_once()
+
+
+class TestSearchClientOpenSearchVsElasticsearch:
+    """Tests for OpenSearch vs Elasticsearch specific behavior."""
+
+    def test_opensearch_client_initialization(self):
+        """Test OpenSearch client is created when configured."""
+        with override_env_var(ELASTICSEARCH="False", OPENSEARCH="True"):
+            importlib.reload(settings)
+            with mock.patch(
+                "pgsync.search_client.get_search_url",
+                return_value="http://localhost:9200",
+            ):
+                with mock.patch("pgsync.search_client.OpenSearch") as mock_os:
+                    SearchClient()
+
+                    # Should create OpenSearch client
+                    assert mock_os.called
+
+    def test_elasticsearch_client_initialization(self):
+        """Test Elasticsearch client is created when configured."""
+        with override_env_var(ELASTICSEARCH="True", OPENSEARCH="False"):
+            importlib.reload(settings)
+            with mock.patch(
+                "pgsync.search_client.get_search_url",
+                return_value="http://localhost:9200",
+            ):
+                with mock.patch(
+                    "pgsync.search_client.Elasticsearch"
+                ) as mock_es:
+                    SearchClient()
+
+                    # Should create Elasticsearch client
+                    assert mock_es.called
+
+    def test_opensearch_version_detection(self):
+        """Test OpenSearch version is detected correctly."""
+        with override_env_var(ELASTICSEARCH="False", OPENSEARCH="True"):
+            importlib.reload(settings)
+            with mock.patch(
+                "pgsync.search_client.get_search_url",
+                return_value="http://localhost:9200",
+            ):
+                mock_client = MagicMock()
+                mock_client.info.return_value = {
+                    "version": {"number": "2.5.0"}
+                }
+                with mock.patch(
+                    "pgsync.search_client.get_search_client",
+                    return_value=mock_client,
+                ):
+                    client = SearchClient()
+
+                    # Should detect major version
+                    assert client.major_version == 2
+                    assert client.is_opensearch is True

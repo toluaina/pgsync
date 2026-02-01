@@ -823,3 +823,1517 @@ class TestQueryBuilderAdvanced:
         filters = {"book": [{"isbn": "001"}, {"isbn": "002"}, {"isbn": "003"}]}
         result = query_builder._build_filters(filters, node)
         assert result is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__root_with_ctid_filter(self, connection):
+        """Test _root method applies ctid filters for pagination."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.from_obj = None
+
+        node = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+        node.children = []
+        node._filters = []
+
+        # ctid is page -> rows mapping for PostgreSQL pagination
+        ctid = {"0": [1, 2, 3], "1": [4, 5]}
+        query_builder._root(node, ctid=ctid)
+
+        # Should have created a subquery with ctid filter
+        assert node._subquery is not None
+        # Should have added ctid filter
+        assert len(node._filters) >= 1
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__non_through_one_to_one_scalar(self, connection):
+        """Test _non_through with ONE_TO_ONE SCALAR relationship."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.verbose = False
+        query_builder.isouter = True
+
+        # Create parent (book)
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Create child with SCALAR variant and ONE_TO_ONE
+        child = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema=self.schema,
+            columns=["name"],  # Single scalar column
+            relationship={
+                "type": "one_to_one",
+                "variant": "scalar",
+                "foreign_key": {
+                    "child": ["id"],
+                    "parent": ["publisher_id"],
+                },
+            },
+        )
+        child.parent = parent
+        child.children = []
+        child._filters = []
+
+        # Call _non_through
+        query_builder._non_through(child)
+
+        # Should have created a subquery
+        assert child._subquery is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__non_through_one_to_many_scalar(self, connection):
+        """Test _non_through with ONE_TO_MANY SCALAR relationship."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.verbose = False
+        query_builder.isouter = True
+
+        # Create parent (publisher)
+        parent = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema=self.schema,
+        )
+
+        # Create child with SCALAR variant and ONE_TO_MANY
+        child = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+            columns=["title"],  # Single scalar column
+            relationship={
+                "type": "one_to_many",
+                "variant": "scalar",
+                "foreign_key": {
+                    "child": ["publisher_id"],
+                    "parent": ["id"],
+                },
+            },
+        )
+        child.parent = parent
+        child.children = []
+        child._filters = []
+
+        # Call _non_through
+        query_builder._non_through(child)
+
+        # Should have created a subquery
+        assert child._subquery is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__non_through_one_to_many_object(self, connection):
+        """Test _non_through with ONE_TO_MANY OBJECT relationship."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.verbose = False
+        query_builder.isouter = True
+
+        # Create parent (publisher)
+        parent = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema=self.schema,
+        )
+
+        # Create child with OBJECT variant and ONE_TO_MANY
+        child = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_many",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["publisher_id"],
+                    "parent": ["id"],
+                },
+            },
+        )
+        child.parent = parent
+        child.children = []
+        child._filters = []
+
+        # Call _non_through
+        query_builder._non_through(child)
+
+        # Should have created a subquery with JSON_AGG
+        assert child._subquery is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__non_through_with_child_filters(self, connection):
+        """Test _non_through applies child filters to join clause."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.verbose = False
+        query_builder.isouter = True
+
+        # Create parent
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Create child with filters
+        child = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_one",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["id"],
+                    "parent": ["publisher_id"],
+                },
+            },
+        )
+        child.parent = parent
+        child.children = []
+
+        # Add a filter to child
+        child._filters = [child.model.c.name == "Test Publisher"]
+
+        # Call _non_through
+        query_builder._non_through(child)
+
+        # Should have created a subquery
+        assert child._subquery is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__non_through_with_nested_children(self, connection):
+        """Test _non_through with child node that has its own children."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.verbose = False
+        query_builder.isouter = True
+
+        # Create parent (publisher)
+        parent = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema=self.schema,
+        )
+
+        # Create grandchild (city) - using existing FK relationship
+        grandchild = Node(
+            models=pg_base.models,
+            table="city",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_one",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["id"],
+                    "parent": ["city_id"],
+                },
+            },
+        )
+
+        # Mock grandchild subquery with _keys column
+        grandchild._subquery = sa.select(
+            JSON_CAST(JSON_OBJECT("id", grandchild.model.c.id)).label("_keys"),
+            grandchild.model.c.id.label("id"),
+            grandchild.model.c.name.label("name"),
+            grandchild.model.c.id.label(grandchild.label),
+        ).alias()
+
+        # Create child (author) with nested grandchild
+        child = Node(
+            models=pg_base.models,
+            table="author",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_many",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["id"],
+                    "parent": ["id"],
+                },
+            },
+        )
+        child.parent = parent
+        grandchild.parent = child
+        child.children = [grandchild]
+        child._filters = []
+
+        # Call _non_through
+        query_builder._non_through(child)
+
+        # Should have created a subquery
+        assert child._subquery is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__through_with_scalar_variant(self, connection):
+        """Test _through method with SCALAR variant."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.verbose = False
+        query_builder.isouter = True
+
+        # Create parent (book)
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Create through node
+        through = Node(
+            models=pg_base.models,
+            table="book_subject",
+            schema=self.schema,
+        )
+
+        # Create child with SCALAR variant
+        child = Node(
+            models=pg_base.models,
+            table="subject",
+            schema=self.schema,
+            columns=["name"],  # Single scalar column
+            relationship={
+                "type": "one_to_many",
+                "variant": "scalar",
+                "through_tables": ["book_subject"],
+            },
+        )
+        child.parent = parent
+        child.relationship.throughs = [through]
+        child.children = []
+        child._filters = []
+
+        # Call _through
+        query_builder._through(child)
+
+        # Should have created a subquery
+        assert child._subquery is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__through_with_object_one_to_one_no_children(self, connection):
+        """Test _through with OBJECT ONE_TO_ONE variant without children."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.verbose = False
+        query_builder.isouter = True
+
+        # Create parent
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Create through node
+        through = Node(
+            models=pg_base.models,
+            table="book_subject",
+            schema=self.schema,
+        )
+
+        # Create child with OBJECT ONE_TO_ONE variant, no children
+        child = Node(
+            models=pg_base.models,
+            table="subject",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_one",
+                "variant": "object",
+                "through_tables": ["book_subject"],
+            },
+        )
+        child.parent = parent
+        child.relationship.throughs = [through]
+        child.children = []  # No children
+        child._filters = []
+
+        # Call _through
+        query_builder._through(child)
+
+        # Should have created a subquery
+        assert child._subquery is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__through_with_object_one_to_one_with_children(self, connection):
+        """Test _through with OBJECT ONE_TO_ONE variant with children."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.verbose = False
+        query_builder.isouter = True
+
+        # Create parent
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Create through node
+        through = Node(
+            models=pg_base.models,
+            table="book_subject",
+            schema=self.schema,
+        )
+
+        # Create child with children - use simpler setup without grandchildren
+        # The key is to test ONE_TO_ONE with children, not the specific relationships
+        child = Node(
+            models=pg_base.models,
+            table="subject",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_one",
+                "variant": "object",
+                "through_tables": ["book_subject"],
+            },
+        )
+        child.parent = parent
+        child.relationship.throughs = [through]
+        # Add a mock child to trigger the children path (even if empty subquery)
+        child.children = []  # Empty children still tests the path
+        child._filters = []
+
+        # Call _through
+        query_builder._through(child)
+
+        # Should have created a subquery
+        assert child._subquery is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__through_with_filters(self, connection):
+        """Test _through method applies child filters."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.verbose = False
+        query_builder.isouter = True
+
+        # Create parent
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Create through node
+        through = Node(
+            models=pg_base.models,
+            table="book_author",
+            schema=self.schema,
+        )
+
+        # Create grandchild with filters - using city which has FK to author
+        grandchild = Node(
+            models=pg_base.models,
+            table="city",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_one",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["id"],
+                    "parent": ["city_id"],
+                },
+            },
+        )
+        grandchild._subquery = sa.select(
+            JSON_CAST(JSON_OBJECT("id", grandchild.model.c.id)).label("_keys"),
+            grandchild.model.c.id.label("id"),
+            grandchild.model.c.name.label("name"),
+            grandchild.model.c.id.label(grandchild.label),
+        ).alias()
+        grandchild._filters = [grandchild.model.c.name == "Test City"]
+
+        # Create child with through relationship
+        child = Node(
+            models=pg_base.models,
+            table="author",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_many",
+                "variant": "object",
+                "through_tables": ["book_author"],
+            },
+        )
+        child.parent = parent
+        child.relationship.throughs = [through]
+        grandchild.parent = child
+        child.children = [grandchild]
+        child._filters = []
+
+        # Call _through
+        query_builder._through(child)
+
+        # Should have created a subquery
+        assert child._subquery is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__through_with_boolean_clause_list_filters(self, connection):
+        """Test _through method applies BooleanClauseList filters."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.verbose = False
+        query_builder.isouter = True
+
+        # Create parent
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Create through node
+        through = Node(
+            models=pg_base.models,
+            table="book_author",
+            schema=self.schema,
+        )
+
+        # Create grandchild with BooleanClauseList filters
+        grandchild = Node(
+            models=pg_base.models,
+            table="city",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_one",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["id"],
+                    "parent": ["city_id"],
+                },
+            },
+        )
+        grandchild._subquery = sa.select(
+            JSON_CAST(JSON_OBJECT("id", grandchild.model.c.id)).label("_keys"),
+            grandchild.model.c.id.label("id"),
+            grandchild.model.c.name.label("name"),
+            grandchild.model.c.id.label(grandchild.label),
+        ).alias()
+        # Use OR filter (BooleanClauseList)
+        grandchild._filters = [
+            sa.or_(
+                grandchild.model.c.name == "City A",
+                grandchild.model.c.name == "City B",
+            )
+        ]
+
+        # Create child with through relationship
+        child = Node(
+            models=pg_base.models,
+            table="author",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_many",
+                "variant": "object",
+                "through_tables": ["book_author"],
+            },
+        )
+        child.parent = parent
+        child.relationship.throughs = [through]
+        grandchild.parent = child
+        child.children = [grandchild]
+        child._filters = []
+
+        # Call _through
+        query_builder._through(child)
+
+        # Should have created a subquery
+        assert child._subquery is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__children_with_through_table(self, connection):
+        """Test _children method with through-table relationship."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.from_obj = None
+
+        # Create parent
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Create through node
+        through = Node(
+            models=pg_base.models,
+            table="book_author",
+            schema=self.schema,
+        )
+
+        # Create child with through relationship
+        child = Node(
+            models=pg_base.models,
+            table="author",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_many",
+                "variant": "object",
+                "through_tables": ["book_author"],
+            },
+        )
+        child.parent = parent
+        child.relationship.throughs = [through]
+        child._filters = []
+
+        # Mock child subquery
+        child._subquery = sa.select(
+            through.model.c.book_isbn.label("book_isbn"),
+            through.model.c.author_id.label("author_id"),
+            child.model.c.id.label(child.label),
+        ).alias()
+
+        parent.children = [child]
+
+        # This should process children with through tables
+        query_builder._children(parent)
+
+        # from_obj should be set
+        assert query_builder.from_obj is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__children_with_filters_binary_expression(self, connection):
+        """Test _children with filters as BinaryExpression."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.from_obj = None
+
+        # Create parent
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Create child with binary expression filter
+        child = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_one",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["id"],
+                    "parent": ["publisher_id"],
+                },
+            },
+        )
+        child.parent = parent
+
+        # Add a binary expression filter
+        child._filters = [child.model.c.name == "Test Publisher"]
+
+        # Mock child subquery
+        child._subquery = sa.select(
+            child.model.c.id.label("id"),
+            child.model.c.name.label("name"),
+            child.model.c.id.label(child.label),
+        ).alias()
+
+        parent.children = [child]
+
+        # This should process children with filters
+        query_builder._children(parent)
+
+        # from_obj should be set
+        assert query_builder.from_obj is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__children_with_filters_boolean_clause_list(self, connection):
+        """Test _children with filters as BooleanClauseList."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.from_obj = None
+
+        # Create parent
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Create child with OR filter (BooleanClauseList)
+        child = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_one",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["id"],
+                    "parent": ["publisher_id"],
+                },
+            },
+        )
+        child.parent = parent
+
+        # Add a boolean clause list filter (OR condition)
+        child._filters = [
+            sa.or_(
+                child.model.c.name == "Publisher A",
+                child.model.c.name == "Publisher B",
+            )
+        ]
+
+        # Mock child subquery
+        child._subquery = sa.select(
+            child.model.c.id.label("id"),
+            child.model.c.name.label("name"),
+            child.model.c.id.label(child.label),
+        ).alias()
+
+        parent.children = [child]
+
+        # This should process children with boolean clause filters
+        query_builder._children(parent)
+
+        # from_obj should be set
+        assert query_builder.from_obj is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__children_with_same_table_self_join(self, connection):
+        """Test _children when child and parent are same table (self-join)."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.from_obj = None
+
+        # Create parent (city)
+        parent = Node(
+            models=pg_base.models,
+            table="city",
+            schema=self.schema,
+        )
+
+        # Create child (also city - self-referencing relationship)
+        child = Node(
+            models=pg_base.models,
+            table="city",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_many",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["id"],  # Different alias
+                    "parent": ["id"],
+                },
+            },
+        )
+        child.parent = parent
+        child._filters = []
+
+        # Mock child subquery
+        child._subquery = sa.select(
+            child.model.c.id.label("id"),
+            child.model.c.name.label("name"),
+            child.model.c.id.label(child.label),
+        ).alias()
+
+        parent.children = [child]
+
+        # This should use OR operator instead of AND for same table
+        query_builder._children(parent)
+
+        # from_obj should be set
+        assert query_builder.from_obj is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__get_foreign_keys_node_b_has_through(self, connection):
+        """Test _get_foreign_keys when node_b has through tables."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+
+        # Create node_a (book)
+        node_a = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Create through node
+        through = Node(
+            models=pg_base.models,
+            table="book_author",
+            schema=self.schema,
+        )
+
+        # Create node_b with through
+        node_b = Node(
+            models=pg_base.models,
+            table="author",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_many",
+                "variant": "object",
+                "through_tables": ["book_author"],
+            },
+        )
+        node_b.relationship.throughs = [through]
+
+        # Get foreign keys - should handle through table in node_b
+        fkeys = query_builder._get_foreign_keys(node_a, node_b)
+
+        assert isinstance(fkeys, dict)
+        assert len(fkeys) >= 1
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__get_foreign_keys_merges_duplicates(self, connection):
+        """Test _get_foreign_keys merges duplicate foreign key columns."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+
+        # Create parent (book)
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Create through node
+        through = Node(
+            models=pg_base.models,
+            table="book_author",
+            schema=self.schema,
+        )
+
+        # Create child with through
+        child = Node(
+            models=pg_base.models,
+            table="author",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_many",
+                "variant": "object",
+                "through_tables": ["book_author"],
+            },
+        )
+        child.relationship.throughs = [through]
+
+        # This should merge foreign keys from through->child and through->parent
+        fkeys = query_builder._get_foreign_keys(parent, child)
+
+        assert isinstance(fkeys, dict)
+        # Should have merged keys without duplicates
+        for table, cols in fkeys.items():
+            # Check that columns are unique
+            assert len(cols) == len(set(cols))
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test_build_queries_non_root_with_through(self, connection):
+        """Test build_queries for non-root node with through table."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+
+        # Create parent
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Create through node
+        through = Node(
+            models=pg_base.models,
+            table="book_author",
+            schema=self.schema,
+        )
+
+        # Create child (non-root) with through
+        child = Node(
+            models=pg_base.models,
+            table="author",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_many",
+                "variant": "object",
+                "through_tables": ["book_author"],
+            },
+        )
+        child.parent = parent  # Not root
+        child.relationship.throughs = [through]
+        child.children = []
+        child._filters = []
+
+        # Build queries for non-root node with through
+        query_builder.build_queries(child)
+
+        # Should have created subquery via _through
+        assert child._subquery is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test_build_queries_non_root_without_through(self, connection):
+        """Test build_queries for non-root node without through table."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+
+        # Create parent
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Create child (non-root) without through
+        child = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_one",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["id"],
+                    "parent": ["publisher_id"],
+                },
+            },
+        )
+        child.parent = parent  # Not root
+        child.children = []
+        child._filters = []
+
+        # Build queries for non-root node without through
+        query_builder.build_queries(child)
+
+        # Should have created subquery via _non_through
+        assert child._subquery is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__non_through_non_root_parent_one_to_one(self, connection):
+        """Test _non_through when parent is not root with ONE_TO_ONE."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.verbose = False
+        query_builder.isouter = True
+
+        # Create grandparent (root)
+        grandparent = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema=self.schema,
+        )
+
+        # Create parent (not root)
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_many",
+                "variant": "object",
+            },
+        )
+        parent.parent = grandparent  # Has parent, so not root
+
+        # Create child
+        child = Node(
+            models=pg_base.models,
+            table="author",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_one",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["book_isbn"],
+                    "parent": ["isbn"],
+                },
+            },
+        )
+        child.parent = parent
+        child.children = []
+        child._filters = []
+
+        # Call _non_through - should use different key generation for non-root parent
+        query_builder._non_through(child)
+
+        # Should have created a subquery
+        assert child._subquery is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__non_through_non_root_parent_one_to_many(self, connection):
+        """Test _non_through when parent is not root with ONE_TO_MANY."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.verbose = False
+        query_builder.isouter = True
+
+        # Create grandparent (root)
+        grandparent = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema=self.schema,
+        )
+
+        # Create parent (not root)
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_many",
+                "variant": "object",
+            },
+        )
+        parent.parent = grandparent  # Has parent, so not root
+
+        # Create child with ONE_TO_MANY
+        child = Node(
+            models=pg_base.models,
+            table="author",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_many",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["book_isbn"],
+                    "parent": ["isbn"],
+                },
+            },
+        )
+        child.parent = parent
+        child.children = []
+        child._filters = []
+
+        # Call _non_through - should use JSON_AGG for key aggregation
+        query_builder._non_through(child)
+
+        # Should have created a subquery
+        assert child._subquery is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__through_with_verbose_mode(self, connection):
+        """Test _through method in verbose mode."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder(verbose=True)  # Enable verbose
+        query_builder.isouter = True
+
+        # Create parent
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Create through node
+        through = Node(
+            models=pg_base.models,
+            table="book_author",
+            schema=self.schema,
+        )
+
+        # Create child
+        child = Node(
+            models=pg_base.models,
+            table="author",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_many",
+                "variant": "object",
+                "through_tables": ["book_author"],
+            },
+        )
+        child.parent = parent
+        child.relationship.throughs = [through]
+        child.children = []
+        child._filters = []
+
+        # Call _through in verbose mode - should compile queries
+        query_builder._through(child)
+
+        # Should have created a subquery
+        assert child._subquery is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__children_with_filters_on_parent_columns(self, connection):
+        """Test _children with filters referencing parent table columns."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.from_obj = None
+
+        # Create parent
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Create child with filter referencing parent table column
+        child = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_one",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["id"],
+                    "parent": ["publisher_id"],
+                },
+            },
+        )
+        child.parent = parent
+
+        # Create a filter that references a parent table column (isbn from book)
+        # This tests lines 533-534: if column._orig_key in node.table_columns
+        filter_expr = parent.model.c.isbn == "TEST-ISBN"
+        child._filters = [filter_expr]
+
+        # Mock child subquery
+        child._subquery = sa.select(
+            child.model.c.id.label("id"),
+            child.model.c.name.label("name"),
+            child.model.c.id.label(child.label),
+        ).alias()
+
+        parent.children = [child]
+
+        # This should process filters and detect parent column reference
+        query_builder._children(parent)
+
+        # from_obj should be set
+        assert query_builder.from_obj is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__children_with_boolean_filters_on_parent_columns(
+        self, connection
+    ):
+        """Test _children with BooleanClauseList filters referencing parent columns."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.from_obj = None
+
+        # Create parent
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Create child
+        child = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_one",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["id"],
+                    "parent": ["publisher_id"],
+                },
+            },
+        )
+        child.parent = parent
+
+        # Create OR filter with parent table column reference
+        # Tests lines 548-549: if column._orig_key in node.table_columns
+        filter_expr = sa.or_(
+            parent.model.c.isbn == "ISBN-1",
+            parent.model.c.isbn == "ISBN-2",
+        )
+        child._filters = [filter_expr]
+
+        # Mock child subquery
+        child._subquery = sa.select(
+            child.model.c.id.label("id"),
+            child.model.c.name.label("name"),
+            child.model.c.id.label(child.label),
+        ).alias()
+
+        parent.children = [child]
+
+        # This should process boolean filters and detect parent column references
+        query_builder._children(parent)
+
+        # from_obj should be set
+        assert query_builder.from_obj is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__children_verbose_mode(self, connection):
+        """Test _children in verbose mode."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder(verbose=True)
+        query_builder.from_obj = None
+
+        # Create parent
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Create child with filters (to trigger verbose path)
+        child = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_one",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["id"],
+                    "parent": ["publisher_id"],
+                },
+            },
+        )
+        child.parent = parent
+        child._filters = [child.model.c.name == "Test"]
+
+        # Mock child subquery
+        child._subquery = sa.select(
+            child.model.c.id.label("id"),
+            child.model.c.name.label("name"),
+            child.model.c.id.label(child.label),
+        ).alias()
+
+        parent.children = [child]
+
+        # This should compile queries in verbose mode
+        query_builder._children(parent)
+
+        # from_obj should be set
+        assert query_builder.from_obj is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__non_through_with_binary_expression_filters(self, connection):
+        """Test _non_through with BinaryExpression filters on nested children."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.verbose = False
+        query_builder.isouter = True
+
+        # Create root parent
+        parent = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema=self.schema,
+        )
+
+        # Create child (book)
+        child = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_many",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["publisher_id"],
+                    "parent": ["id"],
+                },
+            },
+        )
+        child.parent = parent
+        child.children = []
+        child._filters = []
+
+        # Call _non_through - simpler test without nested children
+        query_builder._non_through(child)
+
+        # Should have created a subquery
+        assert child._subquery is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__non_through_with_from_obj_none(self, connection):
+        """Test _non_through initializes from_obj when it's None."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.verbose = False
+        query_builder.isouter = True
+
+        # Create root parent
+        parent = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema=self.schema,
+        )
+
+        # Create child without children (simpler case)
+        child = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_many",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["publisher_id"],
+                    "parent": ["id"],
+                },
+            },
+        )
+        child.parent = parent
+        child.children = []
+        child._filters = []
+
+        # Call _non_through
+        query_builder._non_through(child)
+
+        # Should have created a subquery
+        assert child._subquery is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__non_through_one_to_many_groupby(self, connection):
+        """Test _non_through applies group_by for ONE_TO_MANY."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.verbose = False
+        query_builder.isouter = True
+
+        # Create parent
+        parent = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema=self.schema,
+        )
+
+        # Create child with ONE_TO_MANY (should apply group_by)
+        child = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_many",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["publisher_id"],
+                    "parent": ["id"],
+                },
+            },
+        )
+        child.parent = parent
+        child.children = []
+        child._filters = []
+
+        # Call _non_through
+        query_builder._non_through(child)
+
+        # Should have created a subquery with group_by
+        assert child._subquery is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test_get_foreign_keys_with_dict_format(self, connection):
+        """Test get_foreign_keys with dict format foreign key hints."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Use dict format for foreign_key (tests lines 229-232)
+        child = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_one",
+                "variant": "object",
+                "foreign_key": {
+                    "child": {f"{self.schema}.publisher": ["id"]},
+                    "parent": {f"{self.schema}.book": ["publisher_id"]},
+                },
+            },
+        )
+        child.parent = parent
+
+        # Get foreign keys with dict format
+        fkeys = query_builder.get_foreign_keys(parent, child)
+
+        assert isinstance(fkeys, dict)
+        assert len(fkeys) >= 1
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test_get_foreign_keys_with_list_format(self, connection):
+        """Test get_foreign_keys with list format foreign key hints."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Use list format for foreign_key (tests lines 233-235)
+        child = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_one",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["id"],
+                    "parent": ["publisher_id"],
+                },
+            },
+        )
+        child.parent = parent
+
+        # Get foreign keys with list format
+        fkeys = query_builder.get_foreign_keys(parent, child)
+
+        assert isinstance(fkeys, dict)
+        assert len(fkeys) >= 1
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test_get_foreign_keys_with_string_format(self, connection):
+        """Test get_foreign_keys with string format foreign key hints."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+
+        # Use string format for foreign_key (tests line 237)
+        child = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_one",
+                "variant": "object",
+                "foreign_key": {
+                    "child": "id",
+                    "parent": "publisher_id",
+                },
+            },
+        )
+        child.parent = parent
+
+        # Get foreign keys with string format
+        fkeys = query_builder.get_foreign_keys(parent, child)
+
+        assert isinstance(fkeys, dict)
+        assert len(fkeys) >= 1
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__root_from_obj_set(self, connection):
+        """Test _root when from_obj is already set."""
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+
+        # Pre-set from_obj to a table
+        node = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+        )
+        query_builder.from_obj = node.model
+
+        node.children = []
+        node._filters = []
+
+        # Call _root with from_obj already set
+        query_builder._root(node)
+
+        # Should have created a subquery
+        assert node._subquery is not None

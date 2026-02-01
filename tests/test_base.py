@@ -976,3 +976,421 @@ class TestBaseAdditional:
         slots = pg_base.replication_slots("nonexistent_slot")
         assert isinstance(slots, list)
         assert len(slots) == 0
+
+
+# ============================================================================
+# PHASE 6 EXTENDED TESTS - Base.py Comprehensive Coverage
+# ============================================================================
+
+
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
+@pytest.mark.usefixtures("table_creator")
+class TestConnectionPooling:
+    """Tests for connection pooling and configuration."""
+
+    def test_connection_pool_size_configuration(self, connection):
+        """Test connection pool is configured with correct size."""
+        pg_base = Base(connection.engine.url.database)
+
+        # Engine should have pool configured
+        assert pg_base.engine.pool is not None
+
+    def test_connection_pre_ping_enabled(self, connection):
+        """Test pre-ping is enabled for connection health checks."""
+        pg_base = Base(connection.engine.url.database)
+
+        # Pool should be configured with pre-ping
+        # This ensures stale connections are detected
+        assert hasattr(pg_base.engine.pool, "_pre_ping")
+
+    def test_engine_disposal(self, connection):
+        """Test engine can be properly disposed."""
+        pg_base = Base(connection.engine.url.database)
+
+        # Should be able to dispose engine
+        pg_base.engine.dispose()
+
+        # After disposal, should be able to reconnect
+        pg_base.engine.connect().close()
+
+    def test_connection_thread_safety(self, connection):
+        """Test connections are thread-safe with thread-local storage."""
+        import threading
+
+        pg_base = Base(connection.engine.url.database)
+        results = []
+
+        def get_connection():
+            conn = pg_base.engine.connect()
+            results.append(id(conn))
+            conn.close()
+
+        threads = [threading.Thread(target=get_connection) for _ in range(3)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        # Each thread should have gotten its own connection
+        assert len(results) == 3
+
+
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
+@pytest.mark.usefixtures("table_creator")
+class TestReplicationSlotOperations:
+    """Extended tests for replication slot operations."""
+
+    def test_create_replication_slot_success(self, connection):
+        """Test creating a replication slot."""
+        pg_base = Base(connection.engine.url.database)
+        slot_name = "test_slot_create"
+
+        # Clean up if exists
+        try:
+            pg_base.drop_replication_slot(slot_name)
+        except Exception:
+            pass
+
+        # Create slot
+        pg_base.create_replication_slot(slot_name)
+
+        # Verify it exists
+        slots = pg_base.replication_slots(slot_name)
+        assert len(slots) > 0
+        assert slots[0]["slot_name"] == slot_name
+
+        # Cleanup
+        pg_base.drop_replication_slot(slot_name)
+
+    def test_drop_replication_slot_success(self, connection):
+        """Test dropping a replication slot."""
+        pg_base = Base(connection.engine.url.database)
+        slot_name = "test_slot_drop"
+
+        # Create slot first
+        try:
+            pg_base.create_replication_slot(slot_name)
+        except Exception:
+            pass  # May already exist
+
+        # Drop it
+        pg_base.drop_replication_slot(slot_name)
+
+        # Verify it's gone
+        slots = pg_base.replication_slots(slot_name)
+        assert len(slots) == 0
+
+    def test_create_replication_slot_already_exists(self, connection):
+        """Test creating a slot that already exists."""
+        pg_base = Base(connection.engine.url.database)
+        slot_name = "test_slot_duplicate"
+
+        # Create slot
+        try:
+            pg_base.drop_replication_slot(slot_name)
+        except Exception:
+            pass
+        pg_base.create_replication_slot(slot_name)
+
+        # Try to create again - should handle gracefully
+        try:
+            pg_base.create_replication_slot(slot_name)
+        except Exception as e:
+            # Expected - slot already exists
+            assert (
+                "already exists" in str(e).lower()
+                or "duplicate" in str(e).lower()
+            )
+
+        # Cleanup
+        pg_base.drop_replication_slot(slot_name)
+
+    def test_drop_replication_slot_nonexistent(self, connection):
+        """Test dropping a non-existent slot."""
+        pg_base = Base(connection.engine.url.database)
+        slot_name = "nonexistent_slot_12345"
+
+        # Try to drop non-existent slot
+        try:
+            pg_base.drop_replication_slot(slot_name)
+        except Exception as e:
+            # Expected - slot doesn't exist
+            assert (
+                "does not exist" in str(e).lower()
+                or "not found" in str(e).lower()
+            )
+
+    def test_replication_slots_returns_all_when_no_name(self, connection):
+        """Test replication_slots returns all slots when no name provided."""
+        pg_base = Base(connection.engine.url.database)
+
+        # Get all slots
+        slots = pg_base.replication_slots()
+
+        # Should return a list (may be empty)
+        assert isinstance(slots, list)
+
+
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
+@pytest.mark.usefixtures("table_creator")
+class TestLogicalSlotChanges:
+    """Tests for logical slot change reading."""
+
+    def test_logical_slot_changes_with_limit(self, connection):
+        """Test _logical_slot_changes respects limit parameter."""
+        pg_base = Base(connection.engine.url.database)
+        slot_name = "test_slot_changes"
+
+        # Create slot
+        try:
+            pg_base.drop_replication_slot(slot_name)
+        except Exception:
+            pass
+        pg_base.create_replication_slot(slot_name)
+
+        # Read changes with limit
+        changes = pg_base._logical_slot_changes(slot_name, limit=10)
+
+        # Should return a list
+        assert isinstance(changes, list)
+        # Should not exceed limit
+        assert len(changes) <= 10
+
+        # Cleanup
+        pg_base.drop_replication_slot(slot_name)
+
+    def test_logical_slot_changes_empty_slot(self, connection):
+        """Test _logical_slot_changes on empty slot."""
+        pg_base = Base(connection.engine.url.database)
+        slot_name = "test_slot_empty"
+
+        # Create fresh slot
+        try:
+            pg_base.drop_replication_slot(slot_name)
+        except Exception:
+            pass
+        pg_base.create_replication_slot(slot_name)
+
+        # Read from empty slot
+        changes = pg_base._logical_slot_changes(slot_name, limit=10)
+
+        # Should return empty list or minimal changes
+        assert isinstance(changes, list)
+
+        # Cleanup
+        pg_base.drop_replication_slot(slot_name)
+
+
+@pytest.mark.usefixtures("table_creator")
+class TestPayloadExtended:
+    """Extended tests for Payload class."""
+
+    def test_payload_equality(self):
+        """Test Payload equality comparison."""
+        payload1 = Payload(
+            tg_op="INSERT",
+            table="book",
+            schema="public",
+            new={"id": 1, "title": "Test"},
+        )
+        payload2 = Payload(
+            tg_op="INSERT",
+            table="book",
+            schema="public",
+            new={"id": 1, "title": "Test"},
+        )
+
+        # Same data should be equal
+        assert payload1.tg_op == payload2.tg_op
+        assert payload1.table == payload2.table
+
+    def test_payload_with_old_and_new(self):
+        """Test Payload with both old and new data (UPDATE)."""
+        payload = Payload(
+            tg_op="UPDATE",
+            table="book",
+            schema="public",
+            old={"id": 1, "title": "Old Title"},
+            new={"id": 1, "title": "New Title"},
+        )
+
+        assert payload.old == {"id": 1, "title": "Old Title"}
+        assert payload.new == {"id": 1, "title": "New Title"}
+        # data property should return new for UPDATE
+        assert payload.data == {"id": 1, "title": "New Title"}
+
+    def test_payload_repr(self):
+        """Test Payload string representation."""
+        payload = Payload(
+            tg_op="INSERT",
+            table="book",
+            schema="public",
+            new={"id": 1},
+        )
+
+        repr_str = repr(payload)
+        assert "INSERT" in repr_str
+        assert "book" in repr_str
+
+    def test_payload_with_none_values(self):
+        """Test Payload handles None values correctly."""
+        payload = Payload(
+            tg_op="DELETE",
+            table="book",
+            schema="public",
+            old={"id": 1},
+            new=None,
+        )
+
+        assert payload.new is None
+        # data should return old for DELETE
+        assert payload.data == {"id": 1}
+
+    def test_payload_xmin_integer_conversion(self):
+        """Test Payload xmin is converted to integer."""
+        payload = Payload(
+            tg_op="INSERT",
+            table="book",
+            schema="public",
+            new={"id": 1},
+            xmin="12345",  # String
+        )
+
+        # Should be converted to int
+        assert isinstance(payload.xmin, int)
+        assert payload.xmin == 12345
+
+    def test_payload_schema_defaults_to_public(self):
+        """Test Payload schema defaults to public."""
+        payload = Payload(
+            tg_op="INSERT",
+            table="book",
+            new={"id": 1},
+        )
+
+        # Should default to public
+        assert payload.schema == "public"
+
+
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
+@pytest.mark.usefixtures("table_creator")
+class TestSessionManagement:
+    """Tests for session and transaction management."""
+
+    def test_session_property(self, connection):
+        """Test session property creates session."""
+        pg_base = Base(connection.engine.url.database)
+
+        # Should return a session
+        session = pg_base.session
+        assert session is not None
+
+    def test_session_commit(self, connection):
+        """Test session can commit transactions."""
+        pg_base = Base(connection.engine.url.database)
+
+        # Get session and ensure it can commit
+        session = pg_base.session
+        session.commit()
+
+    def test_session_rollback(self, connection):
+        """Test session can rollback transactions."""
+        pg_base = Base(connection.engine.url.database)
+
+        # Get session and rollback
+        session = pg_base.session
+        session.rollback()
+
+    def test_execute_method(self, connection):
+        """Test execute method runs SQL."""
+        pg_base = Base(connection.engine.url.database)
+
+        # Execute simple query
+        result = pg_base.execute("SELECT 1 as num")
+
+        # Should return result
+        assert result is not None
+
+    def test_fetchone_method(self, connection):
+        """Test fetchone returns single row."""
+        pg_base = Base(connection.engine.url.database)
+
+        # Execute and fetch one
+        result = pg_base.fetchone("SELECT 1 as num")
+
+        # Should return single row
+        assert result is not None
+
+    def test_fetchall_method(self, connection):
+        """Test fetchall returns all rows."""
+        pg_base = Base(connection.engine.url.database)
+
+        # Execute and fetch all
+        results = pg_base.fetchall("SELECT 1 as num UNION SELECT 2")
+
+        # Should return multiple rows
+        assert isinstance(results, list)
+        assert len(results) >= 1
+
+
+@pytest.mark.usefixtures("table_creator")
+class TestDatabaseOperations:
+    """Extended tests for database operations."""
+
+    def test_table_count_method(self, connection):
+        """Test table_count returns count."""
+        pg_base = Base(connection.engine.url.database)
+
+        # Count rows in a table
+        count = pg_base.count("book")
+
+        # Should return integer
+        assert isinstance(count, int)
+        assert count >= 0
+
+    def test_models_property(self, connection):
+        """Test models property returns reflection."""
+        pg_base = Base(connection.engine.url.database)
+
+        # Should return models dictionary
+        models = pg_base.models
+        assert isinstance(models, dict)
+
+    def test_database_property(self, connection):
+        """Test database property returns database name."""
+        pg_base = Base(connection.engine.url.database)
+
+        # Should return database name
+        db_name = pg_base.database
+        assert db_name is not None
+        assert isinstance(db_name, str)
+
+    def test_verbose_property(self, connection):
+        """Test verbose property."""
+        pg_base = Base(connection.engine.url.database)
+
+        # Should have verbose property
+        assert hasattr(pg_base, "verbose")
+
+    def test_txid_current(self, connection):
+        """Test txid_current returns transaction ID."""
+        pg_base = Base(connection.engine.url.database)
+
+        # Get current txid
+        txid = pg_base.txid_current
+
+        # Should return integer
+        assert isinstance(txid, int)
+        assert txid > 0

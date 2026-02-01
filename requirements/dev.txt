@@ -10,9 +10,9 @@ backports-datetime-fromisoformat==2.0.3
     # via marshmallow
 black==26.1.0
     # via -r requirements/dev.in
-boto3==1.42.37
+boto3==1.42.39
     # via -r requirements/base.in
-botocore==1.42.37
+botocore==1.42.39
     # via
     #   boto3
     #   s3transfer
@@ -112,7 +112,7 @@ pluggy==1.6.0
     #   pytest-cov
 pre-commit==4.5.1
     # via -r requirements/dev.in
-protobuf==6.33.4
+protobuf==6.33.5
     # via opensearch-protobufs
 psycopg2-binary==2.9.11
     # via -r requirements/base.in
@@ -147,7 +147,7 @@ python-dotenv==1.2.1
     # via
     #   -r requirements/base.in
     #   environs
-pytokens==0.4.0
+pytokens==0.4.1
     # via black
 pyyaml==6.0.3
     # via pre-commit

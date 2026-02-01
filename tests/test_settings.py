@@ -32,13 +32,16 @@ def test_database_url(mocker):
     assert str(engine.engine.url) == url
 
 
-def test_search_url(mocker):
+def test_search_url(mocker, monkeypatch):
     """Test the search url is configured."""
     mock_get_search_url = mocker.patch(
         "pgsync.urls.get_search_url",
         return_value="http://some-domain:33",
     )
     mocker.patch("logging.config.dictConfig")
+    # Set ELASTICSEARCH and disable OPENSEARCH to avoid validation error on reload
+    monkeypatch.setenv("ELASTICSEARCH", "True")
+    monkeypatch.setenv("OPENSEARCH", "False")
     importlib.reload(settings)
     assert mock_get_search_url() == "http://some-domain:33"
     mock_get_search_url.assert_called_once()

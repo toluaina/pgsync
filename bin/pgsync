@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 """PGSync runtime."""
+
 from pgsync import sync
 
 if __name__ == "__main__":

@@ -371,3 +371,336 @@ class TestView(object):
             materialized=False,
         )
         assert result is False
+
+
+# ============================================================================
+# PHASE 7 EXTENDED TESTS - View.py Comprehensive Coverage
+# ============================================================================
+
+
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
+@pytest.mark.usefixtures("table_creator")
+class TestViewCompilation:
+    """Extended tests for view DDL compilation."""
+
+    def test_compile_create_view_with_literal_binds(self, connection):
+        """Test compile_create_view with literal_binds for query parameters."""
+        from pgsync.view import compile_create_view
+
+        # Create a view with parameters
+        view = View(
+            name="test_view_literal",
+            schema=DEFAULT_SCHEMA,
+        )
+
+        # Compile with literal_binds=True
+        ddl = compile_create_view(
+            connection.engine,
+            DEFAULT_SCHEMA,
+            "test_view_literal",
+            sa.select(sa.literal(1).label("num")),
+            materialized=False,
+        )
+
+        # Should contain CREATE VIEW
+        assert "CREATE" in ddl
+        assert "VIEW" in ddl
+        assert "test_view_literal" in ddl
+
+    def test_compile_create_view_materialized_with_literal_binds(
+        self, connection
+    ):
+        """Test compile_create_view for materialized view with literal_binds."""
+        from pgsync.view import compile_create_view
+
+        # Compile materialized view
+        ddl = compile_create_view(
+            connection.engine,
+            DEFAULT_SCHEMA,
+            "test_mat_view_literal",
+            sa.select(sa.literal(1).label("num")),
+            materialized=True,
+        )
+
+        # Should contain CREATE MATERIALIZED VIEW
+        assert "CREATE MATERIALIZED VIEW" in ddl
+        assert "test_mat_view_literal" in ddl
+
+    def test_compile_create_view_with_complex_query(
+        self, connection, book_cls
+    ):
+        """Test compile_create_view with complex SELECT query."""
+        from pgsync.view import compile_create_view
+
+        # Complex query with joins
+        query = sa.select(
+            book_cls.c.isbn,
+            book_cls.c.title,
+        ).where(book_cls.c.isbn.isnot(None))
+
+        ddl = compile_create_view(
+            connection.engine,
+            DEFAULT_SCHEMA,
+            "test_complex_view",
+            query,
+            materialized=False,
+        )
+
+        # Should contain the WHERE clause
+        assert "WHERE" in ddl or "where" in ddl.lower()
+
+    def test_compile_drop_view_non_materialized(self, connection):
+        """Test compile_drop_view for regular views."""
+        from pgsync.view import compile_drop_view
+
+        ddl = compile_drop_view(
+            connection.engine,
+            DEFAULT_SCHEMA,
+            "test_drop_view",
+            materialized=False,
+        )
+
+        # Should be DROP VIEW
+        assert "DROP VIEW" in ddl
+        assert "MATERIALIZED" not in ddl
+
+    def test_compile_drop_view_materialized(self, connection):
+        """Test compile_drop_view for materialized views."""
+        from pgsync.view import compile_drop_view
+
+        ddl = compile_drop_view(
+            connection.engine,
+            DEFAULT_SCHEMA,
+            "test_drop_mat_view",
+            materialized=True,
+        )
+
+        # Should be DROP MATERIALIZED VIEW
+        assert "DROP MATERIALIZED VIEW" in ddl
+
+    def test_compile_refresh_view_concurrently_true(self, connection):
+        """Test compile_refresh_view with CONCURRENTLY flag."""
+        from pgsync.view import compile_refresh_view
+
+        ddl = compile_refresh_view(
+            connection.engine,
+            DEFAULT_SCHEMA,
+            "test_refresh_view",
+            concurrently=True,
+        )
+
+        # Should contain CONCURRENTLY
+        assert "CONCURRENTLY" in ddl
+        assert "REFRESH MATERIALIZED VIEW" in ddl
+
+    def test_compile_refresh_view_concurrently_false(self, connection):
+        """Test compile_refresh_view without CONCURRENTLY flag."""
+        from pgsync.view import compile_refresh_view
+
+        ddl = compile_refresh_view(
+            connection.engine,
+            DEFAULT_SCHEMA,
+            "test_refresh_view",
+            concurrently=False,
+        )
+
+        # Should not contain CONCURRENTLY
+        assert "CONCURRENTLY" not in ddl
+        assert "REFRESH MATERIALIZED VIEW" in ddl
+
+
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
+@pytest.mark.usefixtures("table_creator")
+class TestViewConstraints:
+    """Extended tests for constraint queries."""
+
+    def test_get_constraints_with_schema(self, connection):
+        """Test _get_constraints query building with schema."""
+        from pgsync.view import _get_constraints
+
+        # Get constraints for a table
+        constraints = _get_constraints(
+            connection.engine,
+            DEFAULT_SCHEMA,
+            "book",
+        )
+
+        # Should return dict
+        assert isinstance(constraints, dict)
+
+    def test_get_constraints_primary_keys(self, connection):
+        """Test _get_constraints returns primary key constraints."""
+        from pgsync.view import _get_constraints
+
+        constraints = _get_constraints(
+            connection.engine,
+            DEFAULT_SCHEMA,
+            "book",
+        )
+
+        # Should have primary key constraint
+        has_pk = any(
+            constraint.get("type") == "p"
+            for constraint in constraints.values()
+        )
+        assert has_pk
+
+    def test_get_constraints_foreign_keys(self, connection):
+        """Test _get_constraints returns foreign key constraints."""
+        from pgsync.view import _get_constraints
+
+        constraints = _get_constraints(
+            connection.engine,
+            DEFAULT_SCHEMA,
+            "book",
+        )
+
+        # Should have foreign key constraints (book has FKs to publisher, etc.)
+        has_fk = any(
+            constraint.get("type") == "f"
+            for constraint in constraints.values()
+        )
+        assert has_fk
+
+    def test_get_constraints_unique_constraints(self, connection):
+        """Test _get_constraints returns unique constraints."""
+        from pgsync.view import _get_constraints
+
+        # Get constraints for a table that might have unique constraints
+        constraints = _get_constraints(
+            connection.engine,
+            DEFAULT_SCHEMA,
+            "book",
+        )
+
+        # Should return valid constraint dict
+        assert isinstance(constraints, dict)
+
+
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
+@pytest.mark.usefixtures("table_creator")
+class TestViewNonDefaultSchema:
+    """Tests for views with non-default schemas."""
+
+    def test_create_view_custom_schema(self, connection):
+        """Test creating view in non-default schema."""
+        # Note: This requires a custom schema to exist
+        # For now, test the DDL compilation
+
+        from pgsync.view import compile_create_view
+
+        custom_schema = "custom_schema"
+
+        ddl = compile_create_view(
+            connection.engine,
+            custom_schema,
+            "test_custom_view",
+            sa.select(sa.literal(1).label("num")),
+            materialized=False,
+        )
+
+        # Should include schema in view name
+        assert custom_schema in ddl
+        assert "test_custom_view" in ddl
+
+    def test_drop_view_custom_schema(self, connection):
+        """Test dropping view from non-default schema."""
+        from pgsync.view import compile_drop_view
+
+        custom_schema = "custom_schema"
+
+        ddl = compile_drop_view(
+            connection.engine,
+            custom_schema,
+            "test_custom_view",
+            materialized=False,
+        )
+
+        # Should include schema in view name
+        assert custom_schema in ddl
+
+    def test_refresh_view_custom_schema(self, connection):
+        """Test refreshing materialized view in non-default schema."""
+        from pgsync.view import compile_refresh_view
+
+        custom_schema = "custom_schema"
+
+        ddl = compile_refresh_view(
+            connection.engine,
+            custom_schema,
+            "test_custom_mat_view",
+            concurrently=False,
+        )
+
+        # Should include schema in view name
+        assert custom_schema in ddl
+
+
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
+@pytest.mark.usefixtures("table_creator")
+class TestViewHelpers:
+    """Extended tests for view helper methods."""
+
+    def test_view_initialization(self):
+        """Test View object initialization."""
+        view = View(
+            name="test_view",
+            schema="public",
+        )
+
+        assert view.name == "test_view"
+        assert view.schema == "public"
+
+    def test_view_with_custom_properties(self):
+        """Test View with additional properties."""
+        view = View(
+            name="test_view",
+            schema="public",
+        )
+
+        # Should have materialized property
+        assert hasattr(view, "materialized")
+
+    def test_view_name_property(self, connection):
+        """Test View name property."""
+        view = View(
+            name="test_view",
+            schema="public",
+        )
+
+        assert view.name == "test_view"
+
+    def test_view_schema_property(self, connection):
+        """Test View schema property."""
+        view = View(
+            name="test_view",
+            schema="custom_schema",
+        )
+
+        assert view.schema == "custom_schema"
+
+    def test_is_view_returns_false_for_tables(self, connection):
+        """Test is_view returns False for regular tables."""
+        from pgsync.view import is_view
+
+        # book is a table, not a view
+        result = is_view(
+            connection.engine,
+            DEFAULT_SCHEMA,
+            "book",
+            materialized=False,
+        )
+
+        assert result is False

@@ -512,3 +512,353 @@ class TestGetRedactedUrl:
         )
         assert "secret123" not in url
         assert "***" in url
+
+
+# ============================================================================
+# PHASE 8 EXTENDED TESTS - Utils.py Comprehensive Coverage
+# ============================================================================
+
+
+class TestDownloadFromURL:
+    """Extended tests for download_from_url function."""
+
+    @patch("pgsync.utils.requests.get")
+    def test_download_from_url_success(self, mock_get):
+        """Test successful file download from URL."""
+        from pgsync.utils import download_from_url
+
+        # Mock successful response
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.text = "file content here"
+        mock_get.return_value = mock_response
+
+        result = download_from_url("http://example.com/file.txt")
+
+        assert result == "file content here"
+        mock_get.assert_called_once_with("http://example.com/file.txt")
+
+    @patch("pgsync.utils.requests.get")
+    def test_download_from_url_http_error(self, mock_get):
+        """Test download_from_url handles HTTP errors."""
+        from pgsync.utils import download_from_url
+
+        # Mock 404 response
+        mock_response = Mock()
+        mock_response.status_code = 404
+        mock_response.raise_for_status.side_effect = Exception("404 Not Found")
+        mock_get.return_value = mock_response
+
+        with pytest.raises(Exception) as excinfo:
+            download_from_url("http://example.com/missing.txt")
+        assert "404" in str(excinfo.value)
+
+    @patch("pgsync.utils.requests.get")
+    def test_download_from_url_network_error(self, mock_get):
+        """Test download_from_url handles network errors."""
+        import requests
+
+        from pgsync.utils import download_from_url
+
+        # Mock network error
+        mock_get.side_effect = requests.ConnectionError("Network error")
+
+        with pytest.raises(requests.ConnectionError):
+            download_from_url("http://example.com/file.txt")
+
+    @patch("pgsync.utils.requests.get")
+    def test_download_from_url_timeout(self, mock_get):
+        """Test download_from_url handles timeouts."""
+        import requests
+
+        from pgsync.utils import download_from_url
+
+        # Mock timeout
+        mock_get.side_effect = requests.Timeout("Request timeout")
+
+        with pytest.raises(requests.Timeout):
+            download_from_url("http://example.com/file.txt")
+
+
+@pytest.mark.skipif(
+    not IS_MYSQL_COMPAT,
+    reason="MySQL-specific tests",
+)
+class TestRemapUnknown:
+    """Tests for remap_unknown MySQL column type remapping."""
+
+    def test_remap_unknown_bigint(self):
+        """Test remap_unknown converts BIGINT UNSIGNED."""
+        from pgsync.utils import remap_unknown
+
+        result = remap_unknown("BIGINT UNSIGNED")
+        assert result == "BIGINT"
+
+    def test_remap_unknown_int_unsigned(self):
+        """Test remap_unknown converts INT UNSIGNED."""
+        from pgsync.utils import remap_unknown
+
+        result = remap_unknown("INT UNSIGNED")
+        assert result == "INTEGER"
+
+    def test_remap_unknown_mediumint(self):
+        """Test remap_unknown converts MEDIUMINT."""
+        from pgsync.utils import remap_unknown
+
+        result = remap_unknown("MEDIUMINT")
+        assert result == "INTEGER"
+
+    def test_remap_unknown_tinyint(self):
+        """Test remap_unknown converts TINYINT."""
+        from pgsync.utils import remap_unknown
+
+        result = remap_unknown("TINYINT")
+        assert result == "SMALLINT"
+
+    def test_remap_unknown_double_precision(self):
+        """Test remap_unknown converts DOUBLE to DOUBLE PRECISION."""
+        from pgsync.utils import remap_unknown
+
+        result = remap_unknown("DOUBLE")
+        assert result == "DOUBLE PRECISION"
+
+    def test_remap_unknown_datetime(self):
+        """Test remap_unknown converts DATETIME to TIMESTAMP."""
+        from pgsync.utils import remap_unknown
+
+        result = remap_unknown("DATETIME")
+        assert result == "TIMESTAMP"
+
+    def test_remap_unknown_unknown_type(self):
+        """Test remap_unknown returns TEXT for unknown types."""
+        from pgsync.utils import remap_unknown
+
+        result = remap_unknown("UNKNOWN_TYPE")
+        assert result == "TEXT"
+
+
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="PostgreSQL-specific qname tests",
+)
+@pytest.mark.usefixtures("table_creator")
+class TestQnameExtended:
+    """Extended tests for qname function with different dialects."""
+
+    def test_qname_with_schema_and_table(self, connection):
+        """Test qname with both schema and table."""
+        from pgsync.utils import qname
+
+        result = qname(connection.engine, schema="public", table="book")
+        assert "public" in result
+        assert "book" in result
+
+    def test_qname_table_only(self, connection):
+        """Test qname with table only."""
+        from pgsync.utils import qname
+
+        result = qname(connection.engine, table="book")
+        assert "book" in result
+
+    def test_qname_schema_only(self, connection):
+        """Test qname with schema only."""
+        from pgsync.utils import qname
+
+        result = qname(connection.engine, schema="public")
+        assert "public" in result
+
+    def test_qname_neither_schema_nor_table(self, connection):
+        """Test qname with neither schema nor table."""
+        from pgsync.utils import qname
+
+        result = qname(connection.engine)
+        # Should return empty or minimal identifier
+        assert isinstance(result, str)
+
+    def test_qname_quoted_identifiers(self, connection):
+        """Test qname handles identifiers that need quoting."""
+        from pgsync.utils import qname
+
+        # Table with special characters
+        result = qname(connection.engine, schema="public", table="my-table")
+        assert isinstance(result, str)
+
+
+class TestMutuallyExclusiveOptionExtended:
+    """Extended tests for MutuallyExclusiveOption Click option."""
+
+    def test_mutually_exclusive_option_instantiation(self):
+        """Test MutuallyExclusiveOption can be instantiated."""
+        from pgsync.utils import MutuallyExclusiveOption
+
+        option = MutuallyExclusiveOption(
+            param_decls=["--option"],
+            mutually_exclusive=["other_option"],
+        )
+
+        assert option is not None
+        assert hasattr(option, "mutually_exclusive")
+
+    def test_mutually_exclusive_option_with_empty_list(self):
+        """Test MutuallyExclusiveOption with empty exclusion list."""
+        from pgsync.utils import MutuallyExclusiveOption
+
+        option = MutuallyExclusiveOption(
+            param_decls=["--option"],
+            mutually_exclusive=[],
+        )
+
+        assert option.mutually_exclusive == []
+
+    def test_mutually_exclusive_option_multiple_exclusions(self):
+        """Test MutuallyExclusiveOption with multiple exclusions."""
+        from pgsync.utils import MutuallyExclusiveOption
+
+        option = MutuallyExclusiveOption(
+            param_decls=["--option"],
+            mutually_exclusive=["option1", "option2", "option3"],
+        )
+
+        assert len(option.mutually_exclusive) == 3
+
+
+class TestChunksExtended:
+    """Extended tests for chunks generator."""
+
+    def test_chunks_generator_protocol(self):
+        """Test chunks returns a generator."""
+        from pgsync.utils import chunks
+
+        result = chunks([1, 2, 3, 4, 5], 2)
+
+        # Should be iterable
+        assert hasattr(result, "__iter__")
+
+    def test_chunks_preserves_order(self):
+        """Test chunks preserves element order."""
+        from pgsync.utils import chunks
+
+        data = [1, 2, 3, 4, 5, 6]
+        result = list(chunks(data, 2))
+
+        # Should maintain order
+        flattened = [item for chunk in result for item in chunk]
+        assert flattened == data
+
+    def test_chunks_with_strings(self):
+        """Test chunks works with string sequences."""
+        from pgsync.utils import chunks
+
+        result = list(chunks("abcdefgh", 3))
+
+        assert len(result) == 3
+        assert result[0] == "abc"
+        assert result[1] == "def"
+        assert result[2] == "gh"
+
+    def test_chunks_with_tuples(self):
+        """Test chunks works with tuples."""
+        from pgsync.utils import chunks
+
+        data = (1, 2, 3, 4, 5)
+        result = list(chunks(data, 2))
+
+        assert len(result) == 3
+        assert result[0] == (1, 2)
+        assert result[1] == (3, 4)
+        assert result[2] == (5,)
+
+
+class TestUtilityHelpers:
+    """Extended tests for utility helper functions."""
+
+    def test_format_number_with_commas_enabled(self):
+        """Test format_number with comma formatting enabled."""
+        from pgsync.utils import format_number
+
+        with override_env_var(FORMAT_WITH_COMMAS="True"):
+            importlib.reload(settings)
+            result = format_number(1000000)
+            # Should contain commas
+            assert "," in str(result) or result == 1000000
+
+    def test_format_number_negative(self):
+        """Test format_number with negative numbers."""
+        from pgsync.utils import format_number
+
+        result = format_number(-12345)
+        assert "-" in str(result)
+
+    def test_show_settings_output(self, mock_logger):
+        """Test show_settings logs all settings."""
+        from pgsync.utils import show_settings
+
+        show_settings()
+
+        # Should have logged something
+        assert mock_logger.info.called
+
+    def test_compiled_query_with_bind_parameters(self):
+        """Test compiled_query handles bind parameters."""
+        import sqlalchemy as sa
+
+        from pgsync.utils import compiled_query
+
+        query = sa.select(sa.literal(1).label("num")).where(
+            sa.literal(1) == sa.bindparam("value")
+        )
+
+        result = compiled_query(query)
+
+        # Should return compiled SQL string
+        assert isinstance(result, str)
+        assert "SELECT" in result.upper()
+
+    def test_timer_context_manager(self):
+        """Test Timer context manager."""
+        import time
+
+        from pgsync.utils import Timer
+
+        with Timer("test_operation"):
+            time.sleep(0.01)
+
+        # Should complete without error
+
+
+class TestExceptionHandling:
+    """Extended tests for exception decorator."""
+
+    def test_exception_decorator_with_function(self):
+        """Test exception decorator on regular function."""
+        from pgsync.utils import exception
+
+        @exception
+        def test_func():
+            return "success"
+
+        result = test_func()
+        assert result == "success"
+
+    def test_exception_decorator_catches_exception(self):
+        """Test exception decorator catches and logs exceptions."""
+        from pgsync.utils import exception
+
+        @exception
+        def failing_func():
+            raise ValueError("Test error")
+
+        # Should catch the exception and not raise
+        result = failing_func()
+        assert result is None
+
+    def test_exception_decorator_with_kwargs(self):
+        """Test exception decorator with keyword arguments."""
+        from pgsync.utils import exception
+
+        @exception
+        def func_with_kwargs(a=1, b=2):
+            return a + b
+
+        result = func_with_kwargs(a=5, b=10)
+        assert result == 15

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 """Create a custom NGram analyzer for the default mapping."""
+
 import logging
 
 import click

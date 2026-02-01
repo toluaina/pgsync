@@ -527,4 +527,183 @@ class TestNodeAdditional(object):
             }
         )
         # Note: through_tables is from the input, but internal throughs is populated by tree
+
+
+# ============================================================================
+# PHASE 9 EXTENDED TESTS - Node.py Final Coverage
+# ============================================================================
+
+
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
+@pytest.mark.usefixtures("table_creator")
+class TestNodeEdgeCases:
+    """Extended tests for Node edge cases and final coverage."""
+
+    def test_node_label_generation(self, connection):
+        """Test Node generates unique labels for relationships."""
+        pg_base = Base(connection.engine.url.database)
+
+        node = Node(
+            models=pg_base.models,
+            table="book",
+            schema="public",
+        )
+
+        # Should have a label property
+        assert hasattr(node, "label")
+        assert isinstance(node.label, str)
+
+    def test_node_is_root_when_no_parent(self, connection):
+        """Test Node.is_root returns True when no parent."""
+        pg_base = Base(connection.engine.url.database)
+
+        node = Node(
+            models=pg_base.models,
+            table="book",
+            schema="public",
+        )
+
+        # Should be root when no parent
+        assert node.is_root is True
+
+    def test_node_is_not_root_when_has_parent(self, connection):
+        """Test Node.is_root returns False when has parent."""
+        pg_base = Base(connection.engine.url.database)
+
+        parent = Node(
+            models=pg_base.models,
+            table="book",
+            schema="public",
+        )
+
+        child = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema="public",
+            relationship={
+                "type": "one_to_one",
+                "variant": "object",
+            },
+        )
+        child.parent = parent
+
+        # Should not be root when has parent
+        assert child.is_root is False
+
+    def test_node_with_custom_label(self, connection):
+        """Test Node with custom label in relationship."""
+        pg_base = Base(connection.engine.url.database)
+
+        node = Node(
+            models=pg_base.models,
+            table="publisher",
+            schema="public",
+            relationship={
+                "type": "one_to_one",
+                "variant": "object",
+                "label": "custom_label",
+            },
+        )
+
+        # Should use custom label
+        assert node.relationship.label == "custom_label"
+
+    def test_node_table_columns_property(self, connection):
+        """Test Node.table_columns returns column names."""
+        pg_base = Base(connection.engine.url.database)
+
+        node = Node(
+            models=pg_base.models,
+            table="book",
+            schema="public",
+        )
+
+        # Should have table_columns
+        assert hasattr(node, "table_columns")
+        table_cols = node.table_columns
+        assert isinstance(table_cols, list)
+        assert len(table_cols) > 0
+
+
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
+@pytest.mark.usefixtures("table_creator")
+class TestTreeEdgeCases:
+    """Extended tests for Tree structure edge cases."""
+
+    def test_tree_build_with_multiple_children(self, connection):
+        """Test Tree.build with multiple child relationships."""
+        pg_base = Base(connection.engine.url.database)
+
+        schema = {
+            "database": connection.engine.url.database,
+            "index": "test_index",
+            "nodes": {
+                "table": "book",
+                "columns": ["isbn", "title"],
+                "children": [
+                    {
+                        "table": "publisher",
+                        "columns": ["id", "name"],
+                        "relationship": {
+                            "type": "one_to_one",
+                            "variant": "object",
+                        },
+                    },
+                    {
+                        "table": "author",
+                        "columns": ["id", "name"],
+                        "relationship": {
+                            "type": "one_to_many",
+                            "variant": "object",
+                            "through_tables": ["book_author"],
+                        },
+                    },
+                ],
+            },
+        }
+
+        tree = Tree(pg_base, schema)
+
+        # Should have built tree with multiple children
+        assert tree.root is not None
+        assert len(tree.root.children) == 2
+
+    def test_tree_traverse_all_nodes(self, connection):
+        """Test Tree.traverse visits all nodes."""
+        pg_base = Base(connection.engine.url.database)
+
+        schema = {
+            "database": connection.engine.url.database,
+            "index": "test_index",
+            "nodes": {
+                "table": "book",
+                "columns": ["isbn", "title"],
+                "children": [
+                    {
+                        "table": "publisher",
+                        "columns": ["id", "name"],
+                        "relationship": {
+                            "type": "one_to_one",
+                            "variant": "object",
+                        },
+                    },
+                ],
+            },
+        }
+
+        tree = Tree(pg_base, schema)
+
+        # Collect all nodes via traverse
+        nodes = []
+        for node in tree.traverse(tree.root):
+            nodes.append(node)
+
+        # Should include root and children
+        assert len(nodes) >= 2
         assert hasattr(rel_with_through, "throughs")
