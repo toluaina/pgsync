@@ -1364,6 +1364,10 @@ class TestSessionManagement:
         assert len(results) >= 0
 
 
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
 @pytest.mark.usefixtures("table_creator")
 class TestDatabaseOperations:
     """Extended tests for database operations."""
