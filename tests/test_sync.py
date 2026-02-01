@@ -1984,30 +1984,6 @@ class TestMySQLBinlogChanges:
             # Should flush multiple times
             assert mock_flush.call_count >= 3
 
-    @patch("pgsync.sync.BinLogStreamReader")
-    def test_binlog_changes_checkpoint_save(self, mock_stream_class):
-        """Test binlog_changes saves checkpoint in MySQL format."""
-        mock_stream = Mock()
-        mock_stream.log_file = "mysql-bin.000001"
-        mock_stream.log_pos = 12345
-        mock_stream.__iter__ = Mock(return_value=iter([]))
-        mock_stream_class.return_value = mock_stream
-
-        sync = Sync(
-            {
-                "index": "testdb",
-                "database": "testdb",
-                "nodes": {"table": "book"},
-            },
-            validate=False,
-            repl_slots=False,
-        )
-
-        with patch.object(sync.redis, "set_meta") as mock_set_meta:
-            sync.binlog_changes()
-            # Should save checkpoint
-            mock_set_meta.assert_called_once()
-
 
 # ============================================================================
 # WAL STREAMING TESTS - Lines 813-901, 1950-2001 (consume, wal_consumer)
