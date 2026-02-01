@@ -5,22 +5,33 @@ import os
 from pathlib import Path
 
 # Set required environment variables BEFORE importing pgsync modules
-# Read .env file to check if search backend is already configured
-env_file = Path.cwd() / ".env"
-has_es_in_env = False
-has_os_in_env = False
+# Check both environment variables and .env file for search backend configuration
+has_es = False
+has_os = False
 
-if env_file.exists():
-    env_content = env_file.read_text()
-    for line in env_content.splitlines():
-        line = line.strip()
-        if line.startswith("ELASTICSEARCH=") and "true" in line.lower():
-            has_es_in_env = True
-        elif line.startswith("OPENSEARCH=") and "true" in line.lower():
-            has_os_in_env = True
+# First check if already set in environment
+es_env = os.environ.get("ELASTICSEARCH", "").lower()
+os_env = os.environ.get("OPENSEARCH", "").lower()
 
-# Only set ELASTICSEARCH if neither is configured in .env
-if not has_es_in_env and not has_os_in_env:
+if es_env in ("true", "1", "yes"):
+    has_es = True
+if os_env in ("true", "1", "yes"):
+    has_os = True
+
+# Also check .env file if neither is set in environment
+if not has_es and not has_os:
+    env_file = Path.cwd() / ".env"
+    if env_file.exists():
+        env_content = env_file.read_text()
+        for line in env_content.splitlines():
+            line = line.strip()
+            if line.startswith("ELASTICSEARCH=") and "true" in line.lower():
+                has_es = True
+            elif line.startswith("OPENSEARCH=") and "true" in line.lower():
+                has_os = True
+
+# Only set ELASTICSEARCH if neither is configured anywhere
+if not has_es and not has_os:
     os.environ["ELASTICSEARCH"] = "True"
 
 import pytest
