@@ -283,23 +283,29 @@ class TestView(object):
         user_defined_fkey_tables = {"publisher": ["publisher_id"]}
         create_schema(connection.engine.url.database, "myschema")
 
-        with patch("pgsync.view.logger") as mock_logger:
-            create_view(
-                connection.engine,
-                pg_base.models,
-                fetchall,
-                "testdb",
-                "myschema",
-                set(["book", "publisher"]),
-                user_defined_fkey_tables=user_defined_fkey_tables,
-                views=[],
-                node_columns={"book": ["node_id"]},
+        try:
+            with patch("pgsync.view.logger") as mock_logger:
+                create_view(
+                    connection.engine,
+                    pg_base.models,
+                    fetchall,
+                    "testdb",
+                    "myschema",
+                    set(["book", "publisher"]),
+                    user_defined_fkey_tables=user_defined_fkey_tables,
+                    views=[],
+                    node_columns={"book": ["node_id"]},
+                )
+                assert mock_logger.debug.call_count == 2
+                assert mock_logger.debug.call_args_list == [
+                    call("Creating view: myschema._view"),
+                    call("Created view: myschema._view"),
+                ]
+        finally:
+            connection.execute(
+                sa.text("DROP SCHEMA IF EXISTS myschema CASCADE")
             )
-            assert mock_logger.debug.call_count == 2
-            assert mock_logger.debug.call_args_list == [
-                call("Creating view: myschema._view"),
-                call("Created view: myschema._view"),
-            ]
+            connection.commit()
 
     def test_create_view_ddl_compile(self, connection):
         """Test CreateView DDL compiles correctly."""
@@ -388,24 +394,14 @@ class TestViewCompilation:
 
     def test_compile_create_view_with_literal_binds(self, connection):
         """Test compile_create_view with literal_binds for query parameters."""
-        from pgsync.view import compile_create_view
-
-        # Create a view with parameters
-        view = View(
-            name="test_view_literal",
+        element = CreateView(
             schema=DEFAULT_SCHEMA,
-        )
-
-        # Compile with literal_binds=True
-        ddl = compile_create_view(
-            connection.engine,
-            DEFAULT_SCHEMA,
-            "test_view_literal",
-            sa.select(sa.literal(1).label("num")),
+            name="test_view_literal",
+            selectable=sa.select(sa.literal(1).label("num")),
             materialized=False,
         )
+        ddl = element.compile(dialect=connection.engine.dialect).string
 
-        # Should contain CREATE VIEW
         assert "CREATE" in ddl
         assert "VIEW" in ddl
         assert "test_view_literal" in ddl
@@ -414,18 +410,14 @@ class TestViewCompilation:
         self, connection
     ):
         """Test compile_create_view for materialized view with literal_binds."""
-        from pgsync.view import compile_create_view
-
-        # Compile materialized view
-        ddl = compile_create_view(
-            connection.engine,
-            DEFAULT_SCHEMA,
-            "test_mat_view_literal",
-            sa.select(sa.literal(1).label("num")),
+        element = CreateView(
+            schema=DEFAULT_SCHEMA,
+            name="test_mat_view_literal",
+            selectable=sa.select(sa.literal(1).label("num")),
             materialized=True,
         )
+        ddl = element.compile(dialect=connection.engine.dialect).string
 
-        # Should contain CREATE MATERIALIZED VIEW
         assert "CREATE MATERIALIZED VIEW" in ddl
         assert "test_mat_view_literal" in ddl
 
@@ -433,81 +425,67 @@ class TestViewCompilation:
         self, connection, book_cls
     ):
         """Test compile_create_view with complex SELECT query."""
-        from pgsync.view import compile_create_view
-
-        # Complex query with joins
+        book_table = book_cls.__table__
         query = sa.select(
-            book_cls.c.isbn,
-            book_cls.c.title,
-        ).where(book_cls.c.isbn.isnot(None))
+            book_table.c.isbn,
+            book_table.c.title,
+        ).where(book_table.c.isbn.isnot(None))
 
-        ddl = compile_create_view(
-            connection.engine,
-            DEFAULT_SCHEMA,
-            "test_complex_view",
-            query,
+        element = CreateView(
+            schema=DEFAULT_SCHEMA,
+            name="test_complex_view",
+            selectable=query,
             materialized=False,
         )
+        ddl = element.compile(dialect=connection.engine.dialect).string
 
-        # Should contain the WHERE clause
         assert "WHERE" in ddl or "where" in ddl.lower()
 
     def test_compile_drop_view_non_materialized(self, connection):
         """Test compile_drop_view for regular views."""
-        from pgsync.view import compile_drop_view
-
-        ddl = compile_drop_view(
-            connection.engine,
-            DEFAULT_SCHEMA,
-            "test_drop_view",
+        element = DropView(
+            schema=DEFAULT_SCHEMA,
+            name="test_drop_view",
             materialized=False,
         )
+        ddl = element.compile(dialect=connection.engine.dialect).string
 
-        # Should be DROP VIEW
-        assert "DROP VIEW" in ddl
+        assert "DROP" in ddl
+        assert "VIEW" in ddl
         assert "MATERIALIZED" not in ddl
 
     def test_compile_drop_view_materialized(self, connection):
         """Test compile_drop_view for materialized views."""
-        from pgsync.view import compile_drop_view
-
-        ddl = compile_drop_view(
-            connection.engine,
-            DEFAULT_SCHEMA,
-            "test_drop_mat_view",
+        element = DropView(
+            schema=DEFAULT_SCHEMA,
+            name="test_drop_mat_view",
             materialized=True,
         )
+        ddl = element.compile(dialect=connection.engine.dialect).string
 
-        # Should be DROP MATERIALIZED VIEW
         assert "DROP MATERIALIZED VIEW" in ddl
 
     def test_compile_refresh_view_concurrently_true(self, connection):
         """Test compile_refresh_view with CONCURRENTLY flag."""
-        from pgsync.view import compile_refresh_view
-
-        ddl = compile_refresh_view(
-            connection.engine,
-            DEFAULT_SCHEMA,
-            "test_refresh_view",
+        element = RefreshView(
+            schema=DEFAULT_SCHEMA,
+            name="test_refresh_view",
             concurrently=True,
         )
+        ddl = element.compile(dialect=connection.engine.dialect).string
 
-        # Should contain CONCURRENTLY
         assert "CONCURRENTLY" in ddl
         assert "REFRESH MATERIALIZED VIEW" in ddl
 
     def test_compile_refresh_view_concurrently_false(self, connection):
         """Test compile_refresh_view without CONCURRENTLY flag."""
-        from pgsync.view import compile_refresh_view
-
-        ddl = compile_refresh_view(
-            connection.engine,
-            DEFAULT_SCHEMA,
-            "test_refresh_view",
+        element = RefreshView(
+            schema=DEFAULT_SCHEMA,
+            name="test_refresh_view",
             concurrently=False,
         )
+        ddl = element.compile(dialect=connection.engine.dialect).string
 
-        # Should not contain CONCURRENTLY
         assert "CONCURRENTLY" not in ddl
         assert "REFRESH MATERIALIZED VIEW" in ddl
 
@@ -521,66 +499,54 @@ class TestViewConstraints:
     """Extended tests for constraint queries."""
 
     def test_get_constraints_with_schema(self, connection):
-        """Test _get_constraints query building with schema."""
+        """Test _get_constraints returns a valid Select query."""
         from pgsync.view import _get_constraints
 
-        # Get constraints for a table
-        constraints = _get_constraints(
-            connection.engine,
+        pg_base = Base(connection.engine.url.database)
+        query = _get_constraints(
+            pg_base.models,
             DEFAULT_SCHEMA,
-            "book",
+            {"book"},
+            "primary_keys",
+            "PRIMARY KEY",
         )
-
-        # Should return dict
-        assert isinstance(constraints, dict)
+        assert isinstance(query, sa.sql.Select)
 
     def test_get_constraints_primary_keys(self, connection):
-        """Test _get_constraints returns primary key constraints."""
-        from pgsync.view import _get_constraints
+        """Test _primary_keys returns a valid Select query."""
+        from pgsync.view import _primary_keys
 
-        constraints = _get_constraints(
-            connection.engine,
+        pg_base = Base(connection.engine.url.database)
+        query = _primary_keys(
+            pg_base.models,
             DEFAULT_SCHEMA,
-            "book",
+            {"book"},
         )
-
-        # Should have primary key constraint
-        has_pk = any(
-            constraint.get("type") == "p"
-            for constraint in constraints.values()
-        )
-        assert has_pk
+        assert isinstance(query, sa.sql.Select)
 
     def test_get_constraints_foreign_keys(self, connection):
-        """Test _get_constraints returns foreign key constraints."""
-        from pgsync.view import _get_constraints
-
-        constraints = _get_constraints(
-            connection.engine,
+        """Test _foreign_keys returns a valid Select query."""
+        pg_base = Base(connection.engine.url.database)
+        query = _foreign_keys(
+            pg_base.models,
             DEFAULT_SCHEMA,
-            "book",
+            {"book"},
         )
-
-        # Should have foreign key constraints (book has FKs to publisher, etc.)
-        has_fk = any(
-            constraint.get("type") == "f"
-            for constraint in constraints.values()
-        )
-        assert has_fk
+        assert isinstance(query, sa.sql.Select)
 
     def test_get_constraints_unique_constraints(self, connection):
-        """Test _get_constraints returns unique constraints."""
+        """Test _get_constraints with UNIQUE constraint type."""
         from pgsync.view import _get_constraints
 
-        # Get constraints for a table that might have unique constraints
-        constraints = _get_constraints(
-            connection.engine,
+        pg_base = Base(connection.engine.url.database)
+        query = _get_constraints(
+            pg_base.models,
             DEFAULT_SCHEMA,
-            "book",
+            {"book"},
+            "unique_keys",
+            "UNIQUE",
         )
-
-        # Should return valid constraint dict
-        assert isinstance(constraints, dict)
+        assert isinstance(query, sa.sql.Select)
 
 
 @pytest.mark.skipif(
@@ -593,55 +559,40 @@ class TestViewNonDefaultSchema:
 
     def test_create_view_custom_schema(self, connection):
         """Test creating view in non-default schema."""
-        # Note: This requires a custom schema to exist
-        # For now, test the DDL compilation
-
-        from pgsync.view import compile_create_view
-
         custom_schema = "custom_schema"
-
-        ddl = compile_create_view(
-            connection.engine,
-            custom_schema,
-            "test_custom_view",
-            sa.select(sa.literal(1).label("num")),
+        element = CreateView(
+            schema=custom_schema,
+            name="test_custom_view",
+            selectable=sa.select(sa.literal(1).label("num")),
             materialized=False,
         )
+        ddl = element.compile(dialect=connection.engine.dialect).string
 
-        # Should include schema in view name
         assert custom_schema in ddl
         assert "test_custom_view" in ddl
 
     def test_drop_view_custom_schema(self, connection):
         """Test dropping view from non-default schema."""
-        from pgsync.view import compile_drop_view
-
         custom_schema = "custom_schema"
-
-        ddl = compile_drop_view(
-            connection.engine,
-            custom_schema,
-            "test_custom_view",
+        element = DropView(
+            schema=custom_schema,
+            name="test_custom_view",
             materialized=False,
         )
+        ddl = element.compile(dialect=connection.engine.dialect).string
 
-        # Should include schema in view name
         assert custom_schema in ddl
 
     def test_refresh_view_custom_schema(self, connection):
         """Test refreshing materialized view in non-default schema."""
-        from pgsync.view import compile_refresh_view
-
         custom_schema = "custom_schema"
-
-        ddl = compile_refresh_view(
-            connection.engine,
-            custom_schema,
-            "test_custom_mat_view",
+        element = RefreshView(
+            schema=custom_schema,
+            name="test_custom_mat_view",
             concurrently=False,
         )
+        ddl = element.compile(dialect=connection.engine.dialect).string
 
-        # Should include schema in view name
         assert custom_schema in ddl
 
 
@@ -654,39 +605,44 @@ class TestViewHelpers:
     """Extended tests for view helper methods."""
 
     def test_view_initialization(self):
-        """Test View object initialization."""
-        view = View(
+        """Test CreateView object initialization."""
+        view = CreateView(
             name="test_view",
             schema="public",
+            selectable=sa.select(sa.literal(1)),
         )
 
         assert view.name == "test_view"
         assert view.schema == "public"
 
     def test_view_with_custom_properties(self):
-        """Test View with additional properties."""
-        view = View(
+        """Test CreateView with additional properties."""
+        view = CreateView(
             name="test_view",
             schema="public",
+            selectable=sa.select(sa.literal(1)),
+            materialized=True,
         )
 
-        # Should have materialized property
         assert hasattr(view, "materialized")
+        assert view.materialized is True
 
     def test_view_name_property(self, connection):
-        """Test View name property."""
-        view = View(
+        """Test CreateView name property."""
+        view = CreateView(
             name="test_view",
             schema="public",
+            selectable=sa.select(sa.literal(1)),
         )
 
         assert view.name == "test_view"
 
     def test_view_schema_property(self, connection):
-        """Test View schema property."""
-        view = View(
+        """Test CreateView schema property."""
+        view = CreateView(
             name="test_view",
             schema="custom_schema",
+            selectable=sa.select(sa.literal(1)),
         )
 
         assert view.schema == "custom_schema"

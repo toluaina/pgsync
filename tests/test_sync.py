@@ -2420,7 +2420,6 @@ class TestAsyncMethods:
     def test_truncate_slots_threaded(self, sync):
         """Test truncate_slots threaded decorator."""
         import threading
-        import time as time_module
 
         sync._truncate = True
         call_event = threading.Event()
@@ -2428,18 +2427,21 @@ class TestAsyncMethods:
         def mock_truncate_impl():
             call_event.set()
 
+        def sleep_then_stop(seconds):
+            # Break the while-True loop after the first iteration
+            raise SystemExit
+
         with patch.object(
             sync, "_truncate_slots", side_effect=mock_truncate_impl
         ):
-            # Mock sleep with a small delay to prevent tight loop
-            with patch("pgsync.sync.time.sleep", return_value=None):
-                # Call the threaded method - it starts a daemon thread
-                sync.truncate_slots()
+            with patch("pgsync.sync.time.sleep", side_effect=sleep_then_stop):
+                with patch("pgsync.utils.os._exit"):
+                    thread = sync.truncate_slots()
+                    thread.join(timeout=2.0)
 
-                # Wait for _truncate_slots to be called (max 2 seconds)
-                assert call_event.wait(
-                    timeout=2.0
-                ), "_truncate_slots was not called"
+                    assert call_event.wait(
+                        timeout=2.0
+                    ), "_truncate_slots was not called"
 
     def test_status_threaded(self, sync):
         """Test status threaded method."""
@@ -2454,22 +2456,27 @@ class TestAsyncMethods:
         def mock_meta_impl(*args, **kwargs):
             meta_called.set()
 
+        def sleep_then_stop(seconds):
+            raise SystemExit
+
         with patch.object(sync, "_status", side_effect=mock_status_impl):
             with patch.object(
                 sync.redis, "set_meta", side_effect=mock_meta_impl
             ):
-                # Mock sleep with a small delay to prevent tight loop
-                with patch("pgsync.sync.time.sleep", return_value=None):
-                    # Call the threaded method - it starts a daemon thread
-                    sync.status()
+                with patch(
+                    "pgsync.sync.time.sleep",
+                    side_effect=sleep_then_stop,
+                ):
+                    with patch("pgsync.utils.os._exit"):
+                        thread = sync.status()
+                        thread.join(timeout=2.0)
 
-                    # Wait for both _status and set_meta to be called (max 2 seconds each)
-                    assert status_called.wait(
-                        timeout=2.0
-                    ), "_status was not called"
-                    assert meta_called.wait(
-                        timeout=2.0
-                    ), "set_meta was not called"
+                        assert status_called.wait(
+                            timeout=2.0
+                        ), "_status was not called"
+                        assert meta_called.wait(
+                            timeout=2.0
+                        ), "set_meta was not called"
 
 
 # ============================================================================

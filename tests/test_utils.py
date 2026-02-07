@@ -10,7 +10,7 @@ from mock import call, patch
 
 from pgsync import settings
 from pgsync.base import Base
-from pgsync.settings import ELASTICSEARCH, IS_MYSQL_COMPAT
+from pgsync.settings import IS_MYSQL_COMPAT
 from pgsync.urls import get_database_url, get_redis_url, get_search_url
 from pgsync.utils import (
     compiled_query,
@@ -107,6 +107,9 @@ class TestUtils(object):
     @patch("pgsync.utils.logger")
     def test_show_settings(self, mock_logger):
         show_settings(config="tests/fixtures/schema.json")
+        search_backend = (
+            "Elasticsearch" if settings.ELASTICSEARCH else "OpenSearch"
+        )
         calls = [
             call("\x1b[4mSettings\x1b[0m:"),
             call("Schema    : tests/fixtures/schema.json"),
@@ -114,9 +117,7 @@ class TestUtils(object):
             call("Path: ./"),
             call("\x1b[4mDatabase\x1b[0m:"),
             call(f"URL: {get_database_url(self.schema)}"),
-            call(
-                f"\x1b[4m{'Elasticsearch' if ELASTICSEARCH else 'OpenSearch'}\x1b[0m:"
-            ),
+            call(f"\x1b[4m{search_backend}\x1b[0m:"),
             call(f"URL: {get_search_url()}"),
             call("\x1b[4mRedis\x1b[0m:"),
             call(f"URL: {get_redis_url}"),
@@ -764,9 +765,10 @@ class TestExceptionHandling:
         def failing_func():
             raise ValueError("Test error")
 
-        # Should catch the exception and not raise
-        result = failing_func()
-        assert result is None
+        # Should catch the exception and not raise (must patch os._exit)
+        with patch("pgsync.utils.os._exit", return_value=None):
+            result = failing_func()
+            assert result is None
 
     def test_exception_decorator_with_kwargs(self):
         """Test exception decorator with keyword arguments."""
