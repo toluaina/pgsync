@@ -523,61 +523,56 @@ class TestGetRedactedUrl:
 # ============================================================================
 
 
-@pytest.mark.skipif(
-    not IS_MYSQL_COMPAT,
-    reason="MySQL-specific tests",
-)
 class TestRemapUnknown:
-    """Tests for remap_unknown MySQL column type remapping."""
+    """Tests for remap_unknown MySQL column name remapping."""
 
-    def test_remap_unknown_bigint(self):
-        """Test remap_unknown converts BIGINT UNSIGNED."""
+    def test_remap_unknown_cols(self):
+        """Test remap_unknown remaps UNKNOWN_COL keys to real names."""
         from pgsync.utils import remap_unknown
 
-        result = remap_unknown("BIGINT UNSIGNED")
-        assert result == "BIGINT"
+        values = {"UNKNOWN_COL0": "v1", "UNKNOWN_COL1": "v2"}
+        with patch("pgsync.utils._cols", return_value=["isbn", "title"]):
+            result = remap_unknown(None, "public", "book", values)
+        assert result == {"isbn": "v1", "title": "v2"}
 
-    def test_remap_unknown_int_unsigned(self):
-        """Test remap_unknown converts INT UNSIGNED."""
+    def test_remap_unknown_passthrough_normal_keys(self):
+        """Test remap_unknown returns values unchanged for normal keys."""
         from pgsync.utils import remap_unknown
 
-        result = remap_unknown("INT UNSIGNED")
-        assert result == "INTEGER"
+        values = {"isbn": "001", "title": "Test"}
+        result = remap_unknown(None, "public", "book", values)
+        assert result == {"isbn": "001", "title": "Test"}
 
-    def test_remap_unknown_mediumint(self):
-        """Test remap_unknown converts MEDIUMINT."""
+    def test_remap_unknown_empty_values(self):
+        """Test remap_unknown returns empty dict for empty input."""
         from pgsync.utils import remap_unknown
 
-        result = remap_unknown("MEDIUMINT")
-        assert result == "INTEGER"
+        result = remap_unknown(None, "public", "book", {})
+        assert result == {}
 
-    def test_remap_unknown_tinyint(self):
-        """Test remap_unknown converts TINYINT."""
+    def test_remap_unknown_none_values(self):
+        """Test remap_unknown returns None for None input."""
         from pgsync.utils import remap_unknown
 
-        result = remap_unknown("TINYINT")
-        assert result == "SMALLINT"
+        result = remap_unknown(None, "public", "book", None)
+        assert result is None
 
-    def test_remap_unknown_double_precision(self):
-        """Test remap_unknown converts DOUBLE to DOUBLE PRECISION."""
+    def test_remap_unknown_fallback_index(self):
+        """Test remap_unknown uses fallback for out-of-range index."""
         from pgsync.utils import remap_unknown
 
-        result = remap_unknown("DOUBLE")
-        assert result == "DOUBLE PRECISION"
+        values = {"UNKNOWN_COL0": "v1", "UNKNOWN_COL5": "v2"}
+        with patch("pgsync.utils._cols", return_value=["isbn"]):
+            result = remap_unknown(None, "public", "book", values)
+        assert result == {"isbn": "v1", "@6": "v2"}
 
-    def test_remap_unknown_datetime(self):
-        """Test remap_unknown converts DATETIME to TIMESTAMP."""
+    def test_remap_unknown_mixed_keys_no_remap(self):
+        """Test remap_unknown skips remapping with mixed key types."""
         from pgsync.utils import remap_unknown
 
-        result = remap_unknown("DATETIME")
-        assert result == "TIMESTAMP"
-
-    def test_remap_unknown_unknown_type(self):
-        """Test remap_unknown returns TEXT for unknown types."""
-        from pgsync.utils import remap_unknown
-
-        result = remap_unknown("UNKNOWN_TYPE")
-        assert result == "TEXT"
+        values = {"UNKNOWN_COL0": "v1", "real_col": "v2"}
+        result = remap_unknown(None, "public", "book", values)
+        assert result == {"UNKNOWN_COL0": "v1", "real_col": "v2"}
 
 
 @pytest.mark.skipif(
