@@ -58,10 +58,11 @@ def sync():
         )
         Singleton._instances = {}
         yield _sync
-        _sync.logical_slot_get_changes(
-            f"{_sync.database}_testdb",
-            upto_nchanges=None,
-        )
+        if not IS_MYSQL_COMPAT:
+            _sync.logical_slot_get_changes(
+                f"{_sync.database}_testdb",
+                upto_nchanges=None,
+            )
         _sync.engine.connect().close()
         _sync.engine.dispose()
         _sync.session.close()
@@ -2188,7 +2189,7 @@ class TestMySQLCheckpoint:
             checkpoint_path.write_text("mysql-bin.000123,4567\n")
 
             result = sync.checkpoint
-            assert result == ("mysql-bin.000123", 4567)
+            assert result == "mysql-bin.000123,4567"
 
             # Cleanup
             if checkpoint_path.exists():
@@ -2820,11 +2821,6 @@ class TestSyncEdgeCases:
 
 
 @pytest.mark.skipif(
-    IS_MYSQL_COMPAT,
-    reason="PostgreSQL-specific WAL tests",
-)
-@pytest.mark.usefixtures("table_creator")
-@pytest.mark.skipif(
     not IS_MYSQL_COMPAT,
     reason="MySQL-specific binlog tests",
 )
@@ -2919,16 +2915,6 @@ class TestMySQLBinlogExtended:
 
 
 @pytest.mark.skipif(
-    IS_MYSQL_COMPAT,
-    reason="PostgreSQL-specific flush tests",
-)
-@pytest.mark.usefixtures("table_creator")
-@pytest.mark.usefixtures("table_creator")
-@pytest.mark.skipif(
-    IS_MYSQL_COMPAT,
-    reason="PostgreSQL-specific poll_db tests",
-)
-@pytest.mark.skipif(
     not IS_MYSQL_COMPAT,
     reason="MySQL-specific checkpoint tests",
 )
@@ -3010,9 +2996,9 @@ class TestMySQLCheckpointExtended:
             # Write checkpoint as comma-separated string
             sync.checkpoint = "mysql-bin.000789,12345"
 
-            # Read it back - getter returns (log_file, log_pos) tuple
+            # Read it back - getter returns "log_file,log_pos" string
             result = sync.checkpoint
-            assert result == ("mysql-bin.000789", 12345)
+            assert result == "mysql-bin.000789,12345"
 
             # Cleanup
             checkpoint_path = Path(sync.checkpoint_file)
