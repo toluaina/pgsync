@@ -2183,9 +2183,9 @@ class TestMySQLCheckpoint:
                 repl_slots=False,
             )
 
-            # Write MySQL format checkpoint
+            # Write MySQL format checkpoint (comma-separated)
             checkpoint_path = Path(sync.checkpoint_file)
-            checkpoint_path.write_text("mysql-bin.000123 4567\n")
+            checkpoint_path.write_text("mysql-bin.000123,4567\n")
 
             result = sync.checkpoint
             assert result == ("mysql-bin.000123", 4567)
@@ -2211,7 +2211,7 @@ class TestMySQLCheckpoint:
                 repl_slots=False,
             )
 
-            sync.checkpoint = ("mysql-bin.000456", 8901)
+            sync.checkpoint = "mysql-bin.000456,8901"
 
             checkpoint_path = Path(sync.checkpoint_file)
             content = checkpoint_path.read_text()
@@ -2980,7 +2980,7 @@ class TestMySQLCheckpointExtended:
             )
 
             # Set checkpoint
-            sync.checkpoint = ("mysql-bin.000001", 1000)
+            sync.checkpoint = "mysql-bin.000001,1000"
 
             # File should exist
             checkpoint_path = Path(sync.checkpoint_file)
@@ -3007,13 +3007,12 @@ class TestMySQLCheckpointExtended:
                 repl_slots=False,
             )
 
-            # Write checkpoint
-            original = ("mysql-bin.000789", 12345)
-            sync.checkpoint = original
+            # Write checkpoint as comma-separated string
+            sync.checkpoint = "mysql-bin.000789,12345"
 
-            # Read it back
+            # Read it back - getter returns (log_file, log_pos) tuple
             result = sync.checkpoint
-            assert result == original
+            assert result == ("mysql-bin.000789", 12345)
 
             # Cleanup
             checkpoint_path = Path(sync.checkpoint_file)
