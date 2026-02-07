@@ -2170,7 +2170,7 @@ class TestMySQLCheckpoint:
         """Test checkpoint getter parses MySQL format."""
         from pathlib import Path
 
-        with override_env_var(REDIS_CHECKPOINT="False"):
+        with override_env_var(REDIS_CHECKPOINT="False", ELASTICSEARCH="True"):
             importlib.reload(settings)
 
             sync = Sync(
@@ -2198,7 +2198,7 @@ class TestMySQLCheckpoint:
         """Test checkpoint setter writes MySQL format."""
         from pathlib import Path
 
-        with override_env_var(REDIS_CHECKPOINT="False"):
+        with override_env_var(REDIS_CHECKPOINT="False", ELASTICSEARCH="True"):
             importlib.reload(settings)
 
             sync = Sync(
@@ -2939,7 +2939,7 @@ class TestMySQLCheckpointExtended:
         """Test checkpoint getter handles missing checkpoint file."""
         from pathlib import Path
 
-        with override_env_var(REDIS_CHECKPOINT="False"):
+        with override_env_var(REDIS_CHECKPOINT="False", ELASTICSEARCH="True"):
             importlib.reload(settings)
 
             sync = Sync(
@@ -2966,7 +2966,7 @@ class TestMySQLCheckpointExtended:
         import tempfile
         from pathlib import Path
 
-        with override_env_var(REDIS_CHECKPOINT="False"):
+        with override_env_var(REDIS_CHECKPOINT="False", ELASTICSEARCH="True"):
             importlib.reload(settings)
 
             sync = Sync(
@@ -2994,7 +2994,7 @@ class TestMySQLCheckpointExtended:
         """Test checkpoint can be written and read back correctly."""
         from pathlib import Path
 
-        with override_env_var(REDIS_CHECKPOINT="False"):
+        with override_env_var(REDIS_CHECKPOINT="False", ELASTICSEARCH="True"):
             importlib.reload(settings)
 
             sync = Sync(
