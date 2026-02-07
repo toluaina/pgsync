@@ -1607,8 +1607,7 @@ class TestSync(object):
         """Test async_refresh_views calls _refresh_views."""
         import asyncio
 
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(sync.async_refresh_views())
+        asyncio.run(sync.async_refresh_views())
         mock_refresh.assert_called_once()
 
     def test_slot_name_property(self, sync):
@@ -2393,9 +2392,12 @@ class TestAsyncMethods:
             # Run iterations until cancelled
             mock_sleep.side_effect = [None, asyncio.CancelledError()]
 
-            loop = asyncio.get_event_loop()
-            with pytest.raises(asyncio.CancelledError):
-                loop.run_until_complete(sync.async_truncate_slots())
+            loop = asyncio.new_event_loop()
+            try:
+                with pytest.raises(asyncio.CancelledError):
+                    loop.run_until_complete(sync.async_truncate_slots())
+            finally:
+                loop.close()
 
             # Called twice: once before first sleep, once before second sleep that raises
             assert mock_truncate.call_count == 2
@@ -2409,9 +2411,12 @@ class TestAsyncMethods:
             # Run iterations until cancelled
             mock_sleep.side_effect = [None, asyncio.CancelledError()]
 
-            loop = asyncio.get_event_loop()
-            with pytest.raises(asyncio.CancelledError):
-                loop.run_until_complete(sync.async_status())
+            loop = asyncio.new_event_loop()
+            try:
+                with pytest.raises(asyncio.CancelledError):
+                    loop.run_until_complete(sync.async_status())
+            finally:
+                loop.close()
 
             # Called twice: once before first sleep, once before second sleep that raises
             assert mock_status.call_count == 2
