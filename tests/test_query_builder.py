@@ -1,6 +1,5 @@
 """QueryBuilder tests."""
 
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -8,7 +7,7 @@ import sqlalchemy as sa
 
 from pgsync.base import Base
 from pgsync.exc import ForeignKeyError
-from pgsync.node import Node, Tree
+from pgsync.node import Node
 from pgsync.querybuilder import (
     JSON_AGG,
     JSON_ARRAY,
@@ -2337,3 +2336,99 @@ class TestQueryBuilderAdvanced:
 
         # Should have created a subquery
         assert node._subquery is not None
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test_get_foreign_keys_explicit_fk_with_multiple_fks(self, connection):
+        """Test get_foreign_keys uses only explicit FK when child has multiple FKs to parent.
+
+        Regression test: when a child table (book) has multiple foreign keys to the
+        same parent table (user) — e.g. buyer_id and seller_id — and the schema
+        specifies an explicit foreign_key, only the specified FK columns should be
+        returned, not all discovered FKs.
+        """
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+
+        parent = Node(
+            models=pg_base.models,
+            table="user",
+            schema=self.schema,
+        )
+
+        # book has both buyer_id and seller_id pointing to user.id
+        # Explicitly specify only buyer_id
+        child = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+            columns=["isbn"],
+            relationship={
+                "type": "one_to_many",
+                "variant": "scalar",
+                "foreign_key": {
+                    "child": ["buyer_id"],
+                    "parent": ["id"],
+                },
+            },
+        )
+        child.parent = parent
+
+        fkeys = query_builder.get_foreign_keys(parent, child)
+
+        # Should only contain buyer_id for the book table, not seller_id
+        book_key = f"{self.schema}.book"
+        user_key = f"{self.schema}.user"
+        assert book_key in fkeys
+        assert fkeys[book_key] == ["buyer_id"]
+        assert user_key in fkeys
+        assert fkeys[user_key] == ["id"]
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__non_through_explicit_fk_with_multiple_fks(self, connection):
+        """Test _non_through works when child has multiple FKs to parent.
+
+        Regression test for IndexError: when a child table has multiple foreign
+        keys to the same parent and the schema provides an explicit foreign_key,
+        _non_through should use only the specified FK and not crash.
+        """
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.verbose = False
+        query_builder.isouter = True
+
+        parent = Node(
+            models=pg_base.models,
+            table="user",
+            schema=self.schema,
+        )
+
+        # book.buyer_id -> user.id (explicit), book.seller_id -> user.id (should be ignored)
+        child = Node(
+            models=pg_base.models,
+            table="book",
+            schema=self.schema,
+            columns=["isbn"],
+            relationship={
+                "type": "one_to_many",
+                "variant": "scalar",
+                "foreign_key": {
+                    "child": ["buyer_id"],
+                    "parent": ["id"],
+                },
+            },
+        )
+        child.parent = parent
+        child.children = []
+        child._filters = []
+
+        # This previously raised IndexError because get_foreign_keys returned
+        # both buyer_id and seller_id for book but only one id for user
+        query_builder._non_through(child)
+
+        assert child._subquery is not None

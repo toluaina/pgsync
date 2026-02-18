@@ -210,7 +210,8 @@ class QueryBuilder(threading.local):
                 getattr(getattr(node, "model", None), "original", None)
             )
 
-        # merge relationship provided hints (if any); do NOT short-circuit
+        # merge relationship provided hints (if any)
+        has_explicit_fk = False
         for node in (node_a, node_b):
             rel_fk = getattr(
                 getattr(node, "relationship", None), "foreign_key", None
@@ -241,7 +242,15 @@ class QueryBuilder(threading.local):
             # child table cols
             merge_side(getattr(rel_fk, "child", None), child_tbl_key)
 
+            if getattr(rel_fk, "parent", None) and getattr(
+                rel_fk, "child", None
+            ):
+                has_explicit_fk = True
+
         # SQLAlchemy introspection in both directions (A -> B and B -> A)
+        # Skip when an explicit foreign_key was provided in the schema,
+        # otherwise auto discovery adds ALL FKs between the tables which
+        # causes mismatches when a child has multiple FKs to the parent.
         A = getattr(getattr(node_a, "model", None), "original", None)
         B = getattr(getattr(node_b, "model", None), "original", None)
 
@@ -252,7 +261,7 @@ class QueryBuilder(threading.local):
         def same_table(t1: t.Any, t2: t.Any) -> bool:
             return qname(t1) is not None and qname(t1) == qname(t2)
 
-        if A is not None and B is not None:
+        if not has_explicit_fk and A is not None and B is not None:
             for fk in getattr(A, "foreign_keys", []):
                 # does A have an FK pointing to B?
                 if same_table(getattr(fk, "column", None).table, B):

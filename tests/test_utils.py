@@ -1,6 +1,5 @@
 """Utils tests."""
 
-import importlib
 import os
 
 import pytest
@@ -23,7 +22,6 @@ from pgsync.utils import (
     Timer,
     validate_config,
 )
-from tests.testing_utils import override_env_var
 
 
 @pytest.mark.usefixtures("table_creator")
