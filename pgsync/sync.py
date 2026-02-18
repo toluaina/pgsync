@@ -2324,6 +2324,7 @@ def main(
                     sync.pull(polling=True)
                 time.sleep(settings.POLL_INTERVAL)
         elif wal:
+            syncs: t.List[Sync] = []
             for doc in config_loader(
                 config=config,
                 schema_url=schema_url,
@@ -2336,7 +2337,26 @@ def main(
                     bootstrap=bootstrap,
                     **kwargs,
                 )
-                sync.wal_consumer()
+                syncs.append(sync)
+
+            # Start additional schema consumers in daemon threads
+            # so all entries in the schema config are processed
+            # concurrently.
+            # Each Sync instance has its own
+            # replication slot and database connection.
+            threads: t.List[threading.Thread] = []
+            for sync in syncs[1:]:
+                thread = threading.Thread(
+                    target=sync.wal_consumer,
+                    daemon=True,
+                )
+                thread.start()
+                threads.append(thread)
+
+            # Run the first consumer on the main thread so that
+            # KeyboardInterrupt is handled naturally.
+            if syncs:
+                syncs[0].wal_consumer()
         else:
             tasks: t.List[asyncio.Task] = []
             for doc in config_loader(

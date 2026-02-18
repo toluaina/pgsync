@@ -2117,6 +2117,77 @@ class TestWALStreaming:
         assert call_kwargs["decode"] is True
         assert "include-xids" in call_kwargs["options"]
 
+    @patch("pgsync.sync.config_loader")
+    @patch("pgsync.sync.Sync")
+    def test_main_wal_multiple_schemas_spawns_threads(
+        self, MockSync, mock_config_loader
+    ):
+        """Test that WAL mode spawns threads for multiple schema entries."""
+        import threading
+
+        from click.testing import CliRunner
+
+        from pgsync.sync import main
+
+        docs = [
+            {"database": "db1", "index": "idx1", "nodes": {"table": "t1"}},
+            {"database": "db2", "index": "idx2", "nodes": {"table": "t2"}},
+            {"database": "db3", "index": "idx3", "nodes": {"table": "t3"}},
+        ]
+        mock_config_loader.return_value = docs
+
+        sync_instances = [Mock() for _ in docs]
+        MockSync.side_effect = sync_instances
+
+        started_threads = []
+
+        def _record_start(self_thread):
+            started_threads.append(self_thread)
+            self_thread.run()
+
+        with patch.object(threading.Thread, "start", _record_start):
+            runner = CliRunner()
+            result = runner.invoke(main, ["--wal", "-c", "schema.json"])
+
+        # All three consumers should have been called
+        for s in sync_instances:
+            s.wal_consumer.assert_called_once()
+
+        # Two extra threads for the 2nd and 3rd schemas
+        assert len(started_threads) == 2
+
+    @patch("pgsync.sync.config_loader")
+    @patch("pgsync.sync.Sync")
+    def test_main_wal_single_schema_no_threads(
+        self, MockSync, mock_config_loader
+    ):
+        """Test that a single schema entry doesn't spawn extra threads."""
+        import threading
+
+        from click.testing import CliRunner
+
+        from pgsync.sync import main
+
+        mock_config_loader.return_value = [
+            {"database": "db1", "index": "idx1", "nodes": {"table": "t1"}},
+        ]
+
+        sync_instance = Mock()
+        MockSync.return_value = sync_instance
+
+        started_threads = []
+
+        def _record_start(self_thread):
+            started_threads.append(self_thread)
+            self_thread.run()
+
+        with patch.object(threading.Thread, "start", _record_start):
+            runner = CliRunner()
+            result = runner.invoke(main, ["--wal", "-c", "schema.json"])
+
+        sync_instance.wal_consumer.assert_called_once()
+        assert len(started_threads) == 0
+
 
 # ============================================================================
 # POLL_DB TESTS - Lines 1687-1750 (Producer thread)
