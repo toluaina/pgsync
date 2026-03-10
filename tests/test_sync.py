@@ -2117,12 +2117,15 @@ class TestWALStreaming:
         assert call_kwargs["decode"] is True
         assert "include-xids" in call_kwargs["options"]
 
+    @patch("pgsync.sync.show_settings")
+    @patch("pgsync.sync.validate_config")
     @patch("pgsync.sync.config_loader")
     @patch("pgsync.sync.Sync")
     def test_main_wal_multiple_schemas_spawns_threads(
-        self, MockSync, mock_config_loader
+        self, MockSync, mock_config_loader, _mock_validate, _mock_show
     ):
         """Test that WAL mode spawns threads for multiple schema entries."""
+        import tempfile
         import threading
 
         from click.testing import CliRunner
@@ -2145,9 +2148,10 @@ class TestWALStreaming:
             started_threads.append(self_thread)
             self_thread.run()
 
-        with patch.object(threading.Thread, "start", _record_start):
-            runner = CliRunner()
-            result = runner.invoke(main, ["--wal", "-c", "schema.json"])
+        with tempfile.NamedTemporaryFile(suffix=".json") as tmp:
+            with patch.object(threading.Thread, "start", _record_start):
+                runner = CliRunner()
+                result = runner.invoke(main, ["--wal", "-c", tmp.name])
 
         # All three consumers should have been called
         for s in sync_instances:
@@ -2156,12 +2160,15 @@ class TestWALStreaming:
         # Two extra threads for the 2nd and 3rd schemas
         assert len(started_threads) == 2
 
+    @patch("pgsync.sync.show_settings")
+    @patch("pgsync.sync.validate_config")
     @patch("pgsync.sync.config_loader")
     @patch("pgsync.sync.Sync")
     def test_main_wal_single_schema_no_threads(
-        self, MockSync, mock_config_loader
+        self, MockSync, mock_config_loader, _mock_validate, _mock_show
     ):
         """Test that a single schema entry doesn't spawn extra threads."""
+        import tempfile
         import threading
 
         from click.testing import CliRunner
@@ -2181,9 +2188,10 @@ class TestWALStreaming:
             started_threads.append(self_thread)
             self_thread.run()
 
-        with patch.object(threading.Thread, "start", _record_start):
-            runner = CliRunner()
-            result = runner.invoke(main, ["--wal", "-c", "schema.json"])
+        with tempfile.NamedTemporaryFile(suffix=".json") as tmp:
+            with patch.object(threading.Thread, "start", _record_start):
+                runner = CliRunner()
+                result = runner.invoke(main, ["--wal", "-c", tmp.name])
 
         sync_instance.wal_consumer.assert_called_once()
         assert len(started_threads) == 0
