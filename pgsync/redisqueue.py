@@ -5,7 +5,7 @@ import logging
 import typing as t
 
 from redis import Redis
-from redis.exceptions import ConnectionError
+from redis.exceptions import ConnectionError, ResponseError
 
 from .settings import (
     REDIS_READ_CHUNK_SIZE,
@@ -15,6 +15,8 @@ from .settings import (
 from .urls import get_redis_url
 
 logger = logging.getLogger(__name__)
+
+_META_SCALAR_KEY = "__value"
 
 
 class RedisQueue(object):
@@ -112,10 +114,43 @@ class RedisQueue(object):
         logger.info(f"Deleted redis key: {self.key}")
 
     def set_meta(self, value: t.Any) -> None:
-        """Store an arbitrary JSON-serialisable value in a dedicated key."""
-        self.__db.set(self._meta_key, json.dumps(value))
+        """Merge *value* into the metadata hash using HSET."""
+        if not isinstance(value, dict):
+            value = {_META_SCALAR_KEY: value}
+        mapping = {field: json.dumps(v) for field, v in value.items()}
+        try:
+            self.__db.hset(self._meta_key, mapping=mapping)
+        except ResponseError as e:
+            if "WRONGTYPE" not in str(e):
+                raise
+
+            # non-atomic fallback approach, this should only happen during the initial migration
+            self.__db.delete(self._meta_key)
+            self.__db.hset(self._meta_key, mapping=mapping)
 
     def get_meta(self, default: t.Any = None) -> t.Any:
-        """Retrieve the stored value (or *default* if nothing is set)."""
-        raw: t.Optional[str] = self.__db.get(self._meta_key)
-        return json.loads(raw) if raw is not None else default
+        """Return the metadata dict.
+
+        Reads from the Redis hash (new format).  Falls back to reading a plain
+        JSON string (legacy format written by older pgsync versions) so that
+        existing deployments can upgrade without losing checkpoint data.
+        """
+        try:
+            raw: dict = self.__db.hgetall(self._meta_key)
+        except ResponseError as e:
+            if "WRONGTYPE" not in str(e):
+                raise
+            raw = {}
+
+        if raw:
+            result = {
+                (k.decode() if isinstance(k, bytes) else k): json.loads(v)
+                for k, v in raw.items()
+            }
+            if list(result.keys()) == [_META_SCALAR_KEY]:
+                return result[_META_SCALAR_KEY]
+            return result
+
+        # Empty hash or WRONGTYPE - fall back to legacy plain-string format.
+        legacy: t.Optional[bytes] = self.__db.get(self._meta_key)
+        return json.loads(legacy) if legacy is not None else default

@@ -4,7 +4,7 @@ import json
 
 import pytest
 from mock import call, patch
-from redis.exceptions import ConnectionError
+from redis.exceptions import ConnectionError, ResponseError
 
 from pgsync.redisqueue import RedisQueue
 
@@ -124,6 +124,93 @@ class TestRedisQueue(object):
         remaining = queue._RedisQueue__db.lrange(queue.key, 0, -1)
         assert len(remaining) == 1
         assert json.loads(remaining[0])["xmin"] == 2002
+
+    def test_set_meta_and_get_meta(self):
+        """Test trivial get/set round trip"""
+        queue = RedisQueue("something")
+        queue.delete()
+
+        queue.set_meta({"checkpoint": 42})
+        assert queue.get_meta() == {"checkpoint": 42}
+        queue.delete()
+
+    def test_set_meta_merges_fields(self):
+        """Test that set_meta merges fields correctly"""
+        queue = RedisQueue("something")
+        queue.delete()
+
+        # run 2 partial key updates
+        queue.set_meta({"checkpoint": 100})
+        queue.set_meta({"txid_current": 200})
+
+        # check that both are successful and don't overwrite each other
+        meta = queue.get_meta(default={})
+        assert meta.get("checkpoint") == 100
+        assert meta.get("txid_current") == 200
+        queue.delete()
+
+    def test_get_meta_default_when_absent(self):
+        """Test that get_meta returns the default value when the key is absent"""
+        queue = RedisQueue("something")
+        queue.delete()
+
+        assert queue.get_meta(default={}) == {}
+        assert queue.get_meta() is None
+        queue.delete()
+
+    def test_set_meta_scalar_roundtrip(self):
+        """Test that a non-dict scalar is transparently wrapped and unwrapped."""
+        queue = RedisQueue("something")
+        queue.delete()
+
+        for value in (42, 3.14, "hello", True, [1, 2, 3]):
+            queue.set_meta(value)
+            assert queue.get_meta() == value
+
+        queue.delete()
+
+    def test_get_meta_legacy_string_format(self):
+        """Test that get_meta correctly handles the legacy string format"""
+        queue = RedisQueue("something")
+        queue.delete()
+
+        # write the old format directly, bypassing set_meta.
+        queue._RedisQueue__db.set(
+            queue._meta_key,
+            json.dumps({"checkpoint": 7, "txid_current": 99}),
+        )
+        meta = queue.get_meta(default={})
+        assert meta == {"checkpoint": 7, "txid_current": 99}
+        queue.delete()
+
+    def test_set_meta_overwrites_legacy_string_key(self):
+        """set_meta must succeed even when the key holds a legacy plain string."""
+        queue = RedisQueue("something")
+        queue.delete()
+
+        # write legacy plain-string format directly
+        queue._RedisQueue__db.set(
+            queue._meta_key, json.dumps({"checkpoint": 1})
+        )
+
+        # set_meta should transparently replace the string key with a hash
+        queue.set_meta({"checkpoint": 99})
+        assert queue.get_meta() == {"checkpoint": 99}
+        queue.delete()
+
+    def test_get_meta_reraises_non_wrongtype_response_error(self, mocker):
+        """get_meta must re-raise ResponseErrors that are not WRONGTYPE."""
+        queue = RedisQueue("something")
+        queue.delete()
+
+        mocker.patch.object(
+            queue._RedisQueue__db,
+            "hgetall",
+            side_effect=ResponseError("ERR some other error"),
+        )
+        with pytest.raises(ResponseError, match="ERR some other error"):
+            queue.get_meta()
+        queue.delete()
 
     def test_pop_visible_in_snapshot_none_visible(self):
         queue: RedisQueue = RedisQueue("something")
