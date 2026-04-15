@@ -568,50 +568,6 @@ class Base(object):
         )
         return row[0]
 
-    def pg_try_advisory_lock(
-        self, key: t.Union[int, str], timeout: int = 0
-    ) -> bool:
-        """
-        Attempts to acquire an dvisory/named lock based on a hashed slot name without blocking.
-
-        PostgreSQL: integer key -> PG_TRY_ADVISORY_LOCK(key) -> bool
-        MySQL/MariaDB: string name -> GET_LOCK(name, timeout) -> 1 on success
-                    (timeout defaults to 0 = non-blocking)
-
-        Returns:
-            bool: True if the lock was acquired, False otherwise.
-        """
-        if self.is_mysql_compat:
-            row = self.fetchone(
-                sa.text("SELECT GET_LOCK(:name, :timeout)").bindparams(
-                    name=str(key), timeout=int(timeout)
-                )
-            )
-            return bool(row and row[0] == 1)
-
-        row = self.fetchone(
-            sa.text("SELECT PG_TRY_ADVISORY_LOCK(:key)").bindparams(key=key)
-        )
-        return bool(row and row[0])
-
-    def pg_advisory_unlock(self, key: t.Union[int, str]) -> bool:
-        """
-        Releases an advisory lock associated with the hashed slot name.
-
-        Returns:
-            bool: True if the lock was released, False if it was not held.
-        """
-        if self.is_mysql_compat:
-            row = self.fetchone(
-                sa.text("SELECT RELEASE_LOCK(:name)").bindparams(name=str(key))
-            )
-            return bool(row and row[0] == 1)
-
-        row = self.fetchone(
-            sa.text("SELECT PG_ADVISORY_UNLOCK(:key)").bindparams(key=key)
-        )
-        return bool(row and row[0])
-
     @contextmanager
     def advisory_lock(
         self,
@@ -627,6 +583,10 @@ class Base(object):
         Context manager to acquire a PostgreSQL advisory lock with optional retries.
         Acquire a PostgreSQL advisory lock with retries, backoff, and jitter.
         Jitter reduces lock-step contention so callers don't starve.
+
+        A single connection is held for the entire lifetime of the context
+        so that lock and unlock always run on the same PostgreSQL backend,
+        preventing advisory lock leaks.
         """
         key: int = self.advisory_key(slot_name)
         attempt: int = 0
@@ -635,50 +595,89 @@ class Base(object):
         # current backoff window (seconds)
         delay: float = base_delay
 
-        while True:
-            if self.pg_try_advisory_lock(key):
-                break
+        with self.engine.connect() as conn:
+            while True:
+                if self._try_lock_on(conn, key):
+                    break
 
-            if (max_retries is not None) and (attempt >= max_retries):
-                raise RuntimeError(
-                    f"Failed to acquire advisory lock for '{slot_name}' after {max_retries} retries."
-                )
-
-            # Compute sleep using jitter strategy
-            if jitter == "decorrelated":
-                # Decorrelated jitter chooses the *next* delay first.
-                delay = min(max_delay, random.uniform(base_delay, delay * 3))
-                sleep_for = delay
-            else:
-                # For other modes, sleep is derived from current delay.
-                if jitter == "full":
-                    sleep_for = random.uniform(0.0, delay)
-                elif jitter == "equal":
-                    sleep_for = (delay / 2.0) + random.uniform(
-                        0.0, delay / 2.0
+                if (max_retries is not None) and (attempt >= max_retries):
+                    raise RuntimeError(
+                        f"Failed to acquire advisory lock for '{slot_name}' after {max_retries} retries."
                     )
-                elif jitter == "none":
+
+                # Compute sleep using jitter strategy
+                if jitter == "decorrelated":
+                    # Decorrelated jitter chooses the *next* delay first.
+                    delay = min(
+                        max_delay, random.uniform(base_delay, delay * 3)
+                    )
                     sleep_for = delay
                 else:
-                    # Fallback to full jitter if an unknown option is passed
-                    sleep_for = random.uniform(0.0, delay)
+                    # For other modes, sleep is derived from current delay.
+                    if jitter == "full":
+                        sleep_for = random.uniform(0.0, delay)
+                    elif jitter == "equal":
+                        sleep_for = (delay / 2.0) + random.uniform(
+                            0.0, delay / 2.0
+                        )
+                    elif jitter == "none":
+                        sleep_for = delay
+                    else:
+                        # Fallback to full jitter if an unknown option is passed
+                        sleep_for = random.uniform(0.0, delay)
 
-            time.sleep(max(0.0, sleep_for))
+                time.sleep(max(0.0, sleep_for))
 
-            # Increase delay for next attempt (except decorrelated which already advanced)
-            if backoff_type == "exponential" and jitter != "decorrelated":
-                delay = min(max_delay, delay * backoff_factor)
-            # For fixed backoff, 'delay' stays at base_delay unless decorrelated changed it.
+                # Increase delay for next attempt (except decorrelated which already advanced)
+                if backoff_type == "exponential" and jitter != "decorrelated":
+                    delay = min(max_delay, delay * backoff_factor)
+                # For fixed backoff, 'delay' stays at base_delay unless decorrelated changed it.
 
-            attempt += 1
+                attempt += 1
 
-        try:
-            yield
-        finally:
             try:
-                self.pg_advisory_unlock(key)
-            except Exception:
-                pass
+                yield
+            finally:
+                try:
+                    self._unlock_on(conn, key)
+                except Exception:
+                    pass
+
+    # ------------------------------------------------------------------
+    # Internal helpers that run lock/unlock on an explicit connection
+    # ------------------------------------------------------------------
+
+    def _try_lock_on(
+        self, conn: sa.engine.Connection, key: t.Union[int, str]
+    ) -> bool:
+        """Acquire an advisory lock on *conn* without blocking."""
+        if self.is_mysql_compat:
+            row = conn.execute(
+                sa.text("SELECT GET_LOCK(:name, 0)").bindparams(
+                    name=str(key)
+                )
+            ).fetchone()
+            return bool(row and row[0] == 1)
+        row = conn.execute(
+            sa.text("SELECT PG_TRY_ADVISORY_LOCK(:key)").bindparams(key=key)
+        ).fetchone()
+        return bool(row and row[0])
+
+    def _unlock_on(
+        self, conn: sa.engine.Connection, key: t.Union[int, str]
+    ) -> bool:
+        """Release an advisory lock on *conn*."""
+        if self.is_mysql_compat:
+            row = conn.execute(
+                sa.text("SELECT RELEASE_LOCK(:name)").bindparams(
+                    name=str(key)
+                )
+            ).fetchone()
+            return bool(row and row[0] == 1)
+        row = conn.execute(
+            sa.text("SELECT PG_ADVISORY_UNLOCK(:key)").bindparams(key=key)
+        ).fetchone()
+        return bool(row and row[0])
 
     def _logical_slot_changes(
         self,

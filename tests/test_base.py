@@ -1420,3 +1420,145 @@ class TestDatabaseOperations:
         # Should return integer
         assert isinstance(txid, int)
         assert txid > 0
+
+
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
+@pytest.mark.usefixtures("table_creator")
+class TestAdvisoryLock:
+    """Tests for advisory_lock context manager."""
+
+    def test_lock_acquired_and_released(self, connection):
+        """Lock is held inside the block and released after."""
+        pg_base = Base(connection.engine.url.database)
+        slot = "test_lock_acq_rel"
+
+        with pg_base.advisory_lock(slot):
+            # Lock should be visible in pg_locks
+            row = connection.execute(
+                sa.text(
+                    "SELECT COUNT(*) FROM pg_locks "
+                    "WHERE locktype = 'advisory' AND granted "
+                    "AND objid = hashtext(:slot)::int"
+                ).bindparams(slot=slot)
+            ).fetchone()
+            assert row[0] == 1
+
+        # After exiting, lock should be gone
+        row = connection.execute(
+            sa.text(
+                "SELECT COUNT(*) FROM pg_locks "
+                "WHERE locktype = 'advisory' AND granted "
+                "AND objid = hashtext(:slot)::int"
+            ).bindparams(slot=slot)
+        ).fetchone()
+        assert row[0] == 0
+
+    def test_lock_released_on_exception(self, connection):
+        """Lock must not leak when the body raises."""
+        pg_base = Base(connection.engine.url.database)
+        slot = "test_lock_exc"
+
+        with pytest.raises(ValueError):
+            with pg_base.advisory_lock(slot):
+                raise ValueError("boom")
+
+        row = connection.execute(
+            sa.text(
+                "SELECT COUNT(*) FROM pg_locks "
+                "WHERE locktype = 'advisory' AND granted "
+                "AND objid = hashtext(:slot)::int"
+            ).bindparams(slot=slot)
+        ).fetchone()
+        assert row[0] == 0
+
+    def test_lock_uses_single_backend(self, connection):
+        """Lock and unlock must happen on the same PostgreSQL backend PID."""
+        pg_base = Base(connection.engine.url.database)
+        slot = "test_lock_single_pid"
+
+        pids = []
+
+        with pg_base.advisory_lock(slot):
+            # Find the PID holding the advisory lock
+            rows = connection.execute(
+                sa.text(
+                    "SELECT pid FROM pg_locks "
+                    "WHERE locktype = 'advisory' AND granted "
+                    "AND objid = hashtext(:slot)::int"
+                ).bindparams(slot=slot)
+            ).fetchall()
+            pids = [r[0] for r in rows]
+
+        # Exactly one backend should have held the lock
+        assert len(pids) == 1
+
+    def test_retry_on_contention(self, connection):
+        """advisory_lock retries when the lock is already held."""
+        pg_base = Base(connection.engine.url.database)
+        slot = "test_lock_contention"
+        key = pg_base.advisory_key(slot)
+
+        # Hold the lock on a separate connection so the context manager must retry
+        blocker = pg_base.engine.connect()
+        try:
+            blocker.execute(
+                sa.text("SELECT PG_TRY_ADVISORY_LOCK(:key)").bindparams(
+                    key=key
+                )
+            )
+
+            # Release after a short delay from another thread
+            import threading
+
+            def release():
+                import time
+
+                time.sleep(0.3)
+                blocker.execute(
+                    sa.text("SELECT PG_ADVISORY_UNLOCK(:key)").bindparams(
+                        key=key
+                    )
+                )
+
+            t = threading.Thread(target=release)
+            t.start()
+
+            # Should succeed after the blocker releases
+            with pg_base.advisory_lock(
+                slot, max_retries=10, retry_interval=0.1, jitter="none"
+            ):
+                pass
+
+            t.join()
+        finally:
+            blocker.close()
+
+    def test_max_retries_exceeded(self, connection):
+        """RuntimeError raised when retries are exhausted."""
+        pg_base = Base(connection.engine.url.database)
+        slot = "test_lock_max_retries"
+        key = pg_base.advisory_key(slot)
+
+        blocker = pg_base.engine.connect()
+        try:
+            blocker.execute(
+                sa.text("SELECT PG_TRY_ADVISORY_LOCK(:key)").bindparams(
+                    key=key
+                )
+            )
+
+            with pytest.raises(RuntimeError, match="Failed to acquire"):
+                with pg_base.advisory_lock(
+                    slot, max_retries=2, retry_interval=0.01, jitter="none"
+                ):
+                    pass
+        finally:
+            blocker.execute(
+                sa.text("SELECT PG_ADVISORY_UNLOCK(:key)").bindparams(
+                    key=key
+                )
+            )
+            blocker.close()
