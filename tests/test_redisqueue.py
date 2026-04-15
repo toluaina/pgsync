@@ -9,6 +9,15 @@ from redis.exceptions import ConnectionError
 from pgsync.redisqueue import RedisQueue
 
 
+@pytest.fixture
+def queue():
+    """Provide a clean RedisQueue for meta tests."""
+    q = RedisQueue("test_meta")
+    q.delete()
+    yield q
+    q.delete()
+
+
 class TestRedisQueue(object):
     """Redis Queue tests."""
 
@@ -153,3 +162,52 @@ class TestRedisQueue(object):
         assert len(remaining) == 3
         xmins = [json.loads(i)["xmin"] for i in remaining]
         assert set(xmins) == {3001, 3002, 3003}
+
+
+class TestSetMetaGetMeta:
+    """Tests for hash-based set_meta / get_meta."""
+
+    def test_set_and_get_single_field(self, queue):
+        queue.set_meta({"checkpoint": 42})
+        assert queue.get_meta() == {"checkpoint": 42}
+
+    def test_set_and_get_string_value(self, queue):
+        queue.set_meta({"checkpoint": "binlog.000003,154"})
+        assert queue.get_meta() == {"checkpoint": "binlog.000003,154"}
+
+    def test_independent_fields_do_not_overwrite(self, queue):
+        """The core bug: two callers writing different fields must not clobber each other."""
+        queue.set_meta({"checkpoint": 100})
+        queue.set_meta({"txid_current": 200})
+        meta = queue.get_meta()
+        assert meta["checkpoint"] == 100
+        assert meta["txid_current"] == 200
+
+    def test_same_field_updates_in_place(self, queue):
+        queue.set_meta({"txid_current": 1})
+        queue.set_meta({"txid_current": 2})
+        assert queue.get_meta() == {"txid_current": 2}
+
+    def test_get_meta_empty_returns_default(self, queue):
+        assert queue.get_meta() is None
+        assert queue.get_meta(default={}) == {}
+        assert queue.get_meta(default={"x": 1}) == {"x": 1}
+
+    def test_delete_clears_meta(self, queue):
+        queue.set_meta({"checkpoint": 10})
+        queue.delete()
+        assert queue.get_meta() is None
+
+    def test_migration_from_string_key_set(self, queue):
+        """set_meta gracefully replaces a legacy string-type key."""
+        # Simulate old code: store a plain JSON string at the meta key
+        queue._RedisQueue__db.set(queue._meta_key, json.dumps({"old": 1}))
+        # New hash-based set_meta should recover
+        queue.set_meta({"checkpoint": 99})
+        assert queue.get_meta()["checkpoint"] == 99
+
+    def test_migration_from_string_key_get(self, queue):
+        """get_meta gracefully handles a legacy string-type key."""
+        queue._RedisQueue__db.set(queue._meta_key, json.dumps({"old": 1}))
+        # Should return the default instead of crashing
+        assert queue.get_meta(default={}) == {}

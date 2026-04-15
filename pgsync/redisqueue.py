@@ -5,7 +5,7 @@ import logging
 import typing as t
 
 from redis import Redis
-from redis.exceptions import ConnectionError
+from redis.exceptions import ConnectionError, ResponseError
 
 from .settings import (
     REDIS_READ_CHUNK_SIZE,
@@ -111,11 +111,27 @@ class RedisQueue(object):
         self.__db.delete(self._meta_key)
         logger.info(f"Deleted redis key: {self.key}")
 
-    def set_meta(self, value: t.Any) -> None:
-        """Store an arbitrary JSON-serialisable value in a dedicated key."""
-        self.__db.set(self._meta_key, json.dumps(value))
+    def set_meta(self, value: dict) -> None:
+        """Store fields in a Redis hash (field-level, no cross-field overwrites)."""
+        encoded = {k: json.dumps(v) for k, v in value.items()}
+        try:
+            self.__db.hset(self._meta_key, mapping=encoded)
+        except ResponseError:
+            # Key exists as a non-hash type from a previous version; replace it.
+            self.__db.delete(self._meta_key)
+            self.__db.hset(self._meta_key, mapping=encoded)
 
     def get_meta(self, default: t.Any = None) -> t.Any:
-        """Retrieve the stored value (or *default* if nothing is set)."""
-        raw: t.Optional[str] = self.__db.get(self._meta_key)
-        return json.loads(raw) if raw is not None else default
+        """Retrieve all stored fields as a dict."""
+        try:
+            raw: dict = self.__db.hgetall(self._meta_key)
+        except ResponseError:
+            # Key exists as a non-hash type from a previous version; discard it.
+            self.__db.delete(self._meta_key)
+            return default
+        if not raw:
+            return default
+        return {
+            (k.decode() if isinstance(k, bytes) else k): json.loads(v)
+            for k, v in raw.items()
+        }
