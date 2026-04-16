@@ -1536,6 +1536,43 @@ class TestAdvisoryLock:
         finally:
             blocker.close()
 
+    def test_reentrant_same_thread(self, connection):
+        """Nested advisory_lock on the same slot from the same thread is a no-op.
+
+        Regression test: pgsync has call sites (e.g. _can_create_replication_slot)
+        that enter advisory_lock and then call helpers which re-enter
+        advisory_lock for the same slot. Without re-entrancy, those nested
+        acquires would deadlock forever on max_retries=None.
+        """
+        pg_base = Base(connection.engine.url.database)
+        slot = "test_lock_reentrant"
+
+        with pg_base.advisory_lock(slot):
+            # This would hang forever (max_retries=None) if nesting deadlocked
+            with pg_base.advisory_lock(
+                slot, max_retries=None, retry_interval=0.05
+            ):
+                pass
+            # Outer is still held
+            row = connection.execute(
+                sa.text(
+                    "SELECT COUNT(*) FROM pg_locks "
+                    "WHERE locktype = 'advisory' AND granted "
+                    "AND objid = hashtext(:slot)::int"
+                ).bindparams(slot=slot)
+            ).fetchone()
+            assert row[0] == 1
+
+        # Both released after outer exits
+        row = connection.execute(
+            sa.text(
+                "SELECT COUNT(*) FROM pg_locks "
+                "WHERE locktype = 'advisory' AND granted "
+                "AND objid = hashtext(:slot)::int"
+            ).bindparams(slot=slot)
+        ).fetchone()
+        assert row[0] == 0
+
     def test_max_retries_exceeded(self, connection):
         """RuntimeError raised when retries are exhausted."""
         pg_base = Base(connection.engine.url.database)

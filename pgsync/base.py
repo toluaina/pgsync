@@ -243,6 +243,10 @@ class Base(object):
         self.verbose: bool = verbose
         self._conn = None
         self._session = None
+        # Per-thread set of advisory lock keys currently held, to make
+        # advisory_lock() re-entrant without requiring the nested call to
+        # acquire a second backend connection.
+        self._advisory_locks_held = threading.local()
 
     def connect(self) -> None:
         """Connect to database."""
@@ -586,9 +590,21 @@ class Base(object):
 
         A single connection is held for the entire lifetime of the context
         so that lock and unlock always run on the same PostgreSQL backend,
-        preventing advisory lock leaks.
+        preventing advisory lock leaks. Re-entrant within the same thread:
+        nested calls for the same slot are no-ops.
         """
         key: int = self.advisory_key(slot_name)
+
+        held: set = getattr(self._advisory_locks_held, "keys", None)
+        if held is None:
+            held = set()
+            self._advisory_locks_held.keys = held
+
+        if key in held:
+            # Already held in this thread; nested acquires are a no-op.
+            yield
+            return
+
         attempt: int = 0
 
         base_delay: float = float(retry_interval)
@@ -635,9 +651,11 @@ class Base(object):
 
                 attempt += 1
 
+            held.add(key)
             try:
                 yield
             finally:
+                held.discard(key)
                 try:
                     self._unlock_on(conn, key)
                 except Exception:
