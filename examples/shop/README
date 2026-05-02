@@ -1,0 +1,7 @@
+demonstrates a 3-level nested chain (shop -> department -> product) with explicit
+foreign_key blocks at every level. used as a regression for the grandchild FK
+resolution bug where a middle node's foreign_key to its own parent leaked into
+the join between the middle node and its child, generating
+  WHERE product_1.department_id = department_1.shop_id
+instead of
+  WHERE product_1.department_id = department_1.id

@@ -1594,8 +1594,6 @@ class TestAdvisoryLock:
                     pass
         finally:
             blocker.execute(
-                sa.text("SELECT PG_ADVISORY_UNLOCK(:key)").bindparams(
-                    key=key
-                )
+                sa.text("SELECT PG_ADVISORY_UNLOCK(:key)").bindparams(key=key)
             )
             blocker.close()

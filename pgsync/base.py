@@ -671,9 +671,7 @@ class Base(object):
         """Acquire an advisory lock on *conn* without blocking."""
         if self.is_mysql_compat:
             row = conn.execute(
-                sa.text("SELECT GET_LOCK(:name, 0)").bindparams(
-                    name=str(key)
-                )
+                sa.text("SELECT GET_LOCK(:name, 0)").bindparams(name=str(key))
             ).fetchone()
             return bool(row and row[0] == 1)
         row = conn.execute(
@@ -687,9 +685,7 @@ class Base(object):
         """Release an advisory lock on *conn*."""
         if self.is_mysql_compat:
             row = conn.execute(
-                sa.text("SELECT RELEASE_LOCK(:name)").bindparams(
-                    name=str(key)
-                )
+                sa.text("SELECT RELEASE_LOCK(:name)").bindparams(name=str(key))
             ).fetchone()
             return bool(row and row[0] == 1)
         row = conn.execute(

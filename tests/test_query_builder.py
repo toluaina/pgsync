@@ -542,6 +542,124 @@ class TestQueryBuilder(object):
         # Cache should have entry
         assert (parent, child) in query_builder._cache
 
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test_get_foreign_keys_grandchild_with_explicit_fks(self, connection):
+        """Regression: a middle node's explicit FK to its own parent must not
+        leak into the FK resolution between that middle node and its child.
+        """
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+
+        # continent (root) -> country (continent_id) -> city (country_id)
+        root = Node(
+            models=pg_base.models,
+            table="continent",
+            schema=self.schema,
+        )
+        middle = Node(
+            models=pg_base.models,
+            table="country",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_many",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["continent_id"],
+                    "parent": ["id"],
+                },
+            },
+        )
+        middle.parent = root
+        leaf = Node(
+            models=pg_base.models,
+            table="city",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_many",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["country_id"],
+                    "parent": ["id"],
+                },
+            },
+        )
+        leaf.parent = middle
+
+        fkeys = query_builder.get_foreign_keys(middle, leaf)
+
+        # The middle node's "country.continent_id"/"continent.id" FK describes
+        # country<->continent, not country<->city, so it must not appear here.
+        assert fkeys == {
+            f"{self.schema}.country": ["id"],
+            f"{self.schema}.city": ["country_id"],
+        }
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    def test__non_through_grandchild_explicit_fks(self, connection):
+        """Regression: SQL produced for a grandchild join must use the middle
+        node's primary key, not the middle node's FK to its own parent.
+        """
+        pg_base = Base(connection.engine.url.database)
+        query_builder = QueryBuilder()
+        query_builder.verbose = False
+        query_builder.isouter = True
+
+        root = Node(
+            models=pg_base.models,
+            table="continent",
+            schema=self.schema,
+        )
+        middle = Node(
+            models=pg_base.models,
+            table="country",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_many",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["continent_id"],
+                    "parent": ["id"],
+                },
+            },
+        )
+        middle.parent = root
+        middle.children = []
+        middle._filters = []
+
+        leaf = Node(
+            models=pg_base.models,
+            table="city",
+            schema=self.schema,
+            relationship={
+                "type": "one_to_many",
+                "variant": "object",
+                "foreign_key": {
+                    "child": ["country_id"],
+                    "parent": ["id"],
+                },
+            },
+        )
+        leaf.parent = middle
+        leaf.children = []
+        leaf._filters = []
+
+        query_builder._non_through(leaf)
+
+        sql = str(
+            leaf._subquery.element.compile(
+                compile_kwargs={"literal_binds": False}
+            )
+        )
+        # The join must compare city.country_id to country.id, not country.continent_id.
+        assert "city_1.country_id = country_1.id" in sql
+        assert "country_1.continent_id" not in sql
+
     def test_get_foreign_keys_raises_error_when_no_fk(self, connection):
         """Test get_foreign_keys raises ForeignKeyError when no FK found."""
         pg_base = Base(connection.engine.url.database)

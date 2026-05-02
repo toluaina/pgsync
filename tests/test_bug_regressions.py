@@ -16,7 +16,6 @@ from pgsync.redisqueue import RedisQueue
 from pgsync.settings import IS_MYSQL_COMPAT
 from pgsync.urls import get_redis_url
 
-
 # ── Advisory lock ────────────────────────────────────────────────────
 
 

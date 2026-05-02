@@ -219,6 +219,14 @@ class QueryBuilder(threading.local):
             if not rel_fk:
                 continue
 
+            # node.relationship.foreign_key describes the FK between node and
+            # node.parent (in the tree). Only honor it when the other node IS
+            # node's tree parent; otherwise it can leak a middle node's FK to
+            # its grandparent into a grandchild join's resolution dict.
+            other = node_b if node is node_a else node_a
+            if getattr(node, "parent", None) is not other:
+                continue
+
             parent_tbl_key = node_table_key(node, prefer_parent=True)
             child_tbl_key = node_table_key(node, prefer_parent=False)
 

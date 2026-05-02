@@ -1,0 +1,52 @@
+[
+    {
+        "database": "shop",
+        "index": "shops",
+        "nodes": {
+            "table": "shop",
+            "columns": [
+                "id",
+                "name",
+                "city"
+            ],
+            "children": [
+                {
+                    "table": "department",
+                    "columns": [
+                        "id",
+                        "name",
+                        "floor"
+                    ],
+                    "label": "departments",
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_many",
+                        "foreign_key": {
+                            "parent": ["id"],
+                            "child": ["shop_id"]
+                        }
+                    },
+                    "children": [
+                        {
+                            "table": "product",
+                            "columns": [
+                                "id",
+                                "name",
+                                "price"
+                            ],
+                            "label": "products",
+                            "relationship": {
+                                "variant": "object",
+                                "type": "one_to_many",
+                                "foreign_key": {
+                                    "parent": ["id"],
+                                    "child": ["department_id"]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+]
