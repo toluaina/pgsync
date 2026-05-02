@@ -27,6 +27,7 @@
 PGSync is a change data capture tool that syncs data from **PostgreSQL**, **MySQL**, or **MariaDB** to **Elasticsearch** or **OpenSearch** in real-time. Define your document structure in JSON, and PGSync handles the rest — no custom code required.
 
 ```mermaid
+%%{init: {'look': 'handDrawn', 'theme': 'neutral'}}%%
 flowchart LR
     subgraph Source["🗄️ Source Database"]
         DB[(PostgreSQL<br/>MySQL<br/>MariaDB)]
