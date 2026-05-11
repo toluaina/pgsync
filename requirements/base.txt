@@ -9,7 +9,7 @@ async-timeout==5.0.1
 backports-datetime-fromisoformat==2.0.3
     # via marshmallow
 boto3==1.43.2
-    # via -r requirements/base.in
+    # via -r base.in
 botocore==1.43.2
     # via
     #   boto3
@@ -23,25 +23,25 @@ certifi==2026.4.22
 charset-normalizer==3.4.7
     # via requests
 click==8.3.3
-    # via -r requirements/base.in
+    # via -r base.in
 elastic-transport==9.2.1
-    # via -r requirements/base.in
+    # via -r base.in
 elasticsearch==7.17.13
     # via
-    #   -r requirements/base.in
+    #   -r base.in
     #   elasticsearch-dsl
 elasticsearch-dsl==7.4.1
-    # via -r requirements/base.in
+    # via -r base.in
 environs==15.0.1
-    # via -r requirements/base.in
+    # via -r base.in
 events==0.5
     # via opensearch-py
+greenlet==3.5.0
+    # via sqlalchemy
 grpcio==1.80.0
     # via opensearch-protobufs
 idna==3.13
-    # via
-    #   anyio
-    #   requests
+    # via requests
 jmespath==1.1.0
     # via
     #   boto3
@@ -49,9 +49,9 @@ jmespath==1.1.0
 marshmallow==4.3.0
     # via environs
 mysql-replication==1.0.15
-    # via -r requirements/base.in
+    # via -r base.in
 opensearch-dsl==2.1.0
-    # via -r requirements/base.in
+    # via -r base.in
 opensearch-protobufs==1.2.0
     # via opensearch-py
 opensearch-py==3.2.0
@@ -61,30 +61,29 @@ packaging==26.2
 protobuf==7.34.1
     # via opensearch-protobufs
 psycopg2-binary==2.9.12
-    # via -r requirements/base.in
+    # via -r base.in
 pymysql==1.1.3
     # via
-    #   -r requirements/base.in
+    #   -r base.in
     #   mysql-replication
 python-dateutil==2.9.0.post0
     # via
     #   botocore
-    #   elasticsearch
     #   elasticsearch-dsl
     #   opensearch-dsl
     #   opensearch-py
 python-dotenv==1.2.2
     # via
-    #   -r requirements/base.in
+    #   -r base.in
     #   environs
 redis==7.4.0
-    # via -r requirements/base.in
+    # via -r base.in
 requests==2.33.1
     # via
     #   opensearch-py
     #   requests-aws4auth
 requests-aws4auth==1.3.2
-    # via -r requirements/base.in
+    # via -r base.in
 s3transfer==0.17.0
     # via boto3
 six==1.17.0
@@ -93,23 +92,18 @@ six==1.17.0
     #   opensearch-dsl
     #   python-dateutil
 sniffio==1.3.1
-    # via
-    #   elastic-transport
-    #   elasticsearch
+    # via elastic-transport
 sqlalchemy==2.0.49
-    # via -r requirements/base.in
+    # via -r base.in
 sqlparse==0.5.5
-    # via -r requirements/base.in
+    # via -r base.in
 typing-extensions==4.15.0
     # via
-    #   anyio
-    #   elasticsearch
     #   environs
-    #   exceptiongroup
     #   grpcio
     #   marshmallow
     #   sqlalchemy
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   botocore
     #   elastic-transport
