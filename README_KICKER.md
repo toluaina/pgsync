@@ -15,3 +15,9 @@ NOTE: This appraoch works for both prod and dev. You can specify the environment
     1. You can verify that the push was successful by viewing the images in AWS Console ECR
 1. Restart pgsync task with AWS Console (ECS). No other changes needed, because the Cloudformation configuration fetches the latest image
 1. Make mergechanges to main
+
+## Updating task defition (taskdef) on pgsync
+
+For prod
+
+aws cloudformation update-stack --stack-name pgsync-taskdef --template-body file://.aws/stacks/pgsync-taskdef.json --parameters file://.aws/params/prod/pgsync-taskdef.json --capabilities CAPABILITY_NAMED_IAM --region eu-west-1 --profile AdministratorAccess-309917491507
