@@ -9,9 +9,9 @@ async-timeout==5.0.1
 backports-datetime-fromisoformat==2.0.3
     # via marshmallow
 black==26.3.1
-    # via -r requirements/dev.in
+    # via -r dev.in
 boto3==1.43.2
-    # via -r requirements/base.in
+    # via -r base.in
 botocore==1.43.2
     # via
     #   boto3
@@ -28,52 +28,50 @@ charset-normalizer==3.4.7
     # via requests
 click==8.3.3
     # via
-    #   -r requirements/base.in
+    #   -r base.in
     #   black
 coverage[toml]==7.13.5
     # via
-    #   -r requirements/dev.in
+    #   -r dev.in
     #   pytest-cov
 distlib==0.4.0
     # via virtualenv
 elastic-transport==9.2.1
-    # via -r requirements/base.in
+    # via -r base.in
 elasticsearch==7.17.13
     # via
-    #   -r requirements/base.in
+    #   -r base.in
     #   elasticsearch-dsl
 elasticsearch-dsl==7.4.1
-    # via -r requirements/base.in
+    # via -r base.in
 environs==15.0.1
-    # via -r requirements/base.in
+    # via -r base.in
 events==0.5
     # via opensearch-py
 exceptiongroup==1.3.1
-    # via
-    #   anyio
-    #   pytest
+    # via pytest
 faker==40.15.0
-    # via -r requirements/dev.in
+    # via -r dev.in
 filelock==3.29.0
     # via
     #   python-discovery
     #   virtualenv
 flake8==7.3.0
-    # via -r requirements/dev.in
+    # via -r dev.in
 freezegun==1.5.5
-    # via -r requirements/dev.in
+    # via -r dev.in
+greenlet==3.5.0
+    # via sqlalchemy
 grpcio==1.80.0
     # via opensearch-protobufs
 identify==2.6.19
     # via pre-commit
-idna==3.13
-    # via
-    #   anyio
-    #   requests
+idna==3.15
+    # via requests
 iniconfig==2.3.0
     # via pytest
 isort==8.0.1
-    # via -r requirements/dev.in
+    # via -r dev.in
 jmespath==1.1.0
     # via
     #   boto3
@@ -83,15 +81,15 @@ marshmallow==4.3.0
 mccabe==0.7.0
     # via flake8
 mock==5.2.0
-    # via -r requirements/dev.in
+    # via -r dev.in
 mypy-extensions==1.1.0
     # via black
 mysql-replication==1.0.15
-    # via -r requirements/base.in
+    # via -r base.in
 nodeenv==1.10.0
     # via pre-commit
 opensearch-dsl==2.1.0
-    # via -r requirements/base.in
+    # via -r base.in
 opensearch-protobufs==1.2.0
     # via opensearch-py
 opensearch-py==3.2.0
@@ -113,11 +111,11 @@ pluggy==1.6.0
     #   pytest
     #   pytest-cov
 pre-commit==4.6.0
-    # via -r requirements/dev.in
+    # via -r dev.in
 protobuf==7.34.1
     # via opensearch-protobufs
 psycopg2-binary==2.9.12
-    # via -r requirements/base.in
+    # via -r base.in
 pycodestyle==2.14.0
     # via flake8
 pyflakes==3.4.0
@@ -126,21 +124,20 @@ pygments==2.20.0
     # via pytest
 pymysql==1.1.3
     # via
-    #   -r requirements/base.in
+    #   -r base.in
     #   mysql-replication
 pytest==9.0.3
     # via
-    #   -r requirements/dev.in
+    #   -r dev.in
     #   pytest-cov
     #   pytest-mock
 pytest-cov==7.1.0
-    # via -r requirements/dev.in
+    # via -r dev.in
 pytest-mock==3.15.1
-    # via -r requirements/dev.in
+    # via -r dev.in
 python-dateutil==2.9.0.post0
     # via
     #   botocore
-    #   elasticsearch
     #   elasticsearch-dsl
     #   freezegun
     #   opensearch-dsl
@@ -149,20 +146,20 @@ python-discovery==1.2.2
     # via virtualenv
 python-dotenv==1.2.2
     # via
-    #   -r requirements/base.in
+    #   -r base.in
     #   environs
 pytokens==0.4.1
     # via black
 pyyaml==6.0.3
     # via pre-commit
 redis==7.4.0
-    # via -r requirements/base.in
+    # via -r base.in
 requests==2.33.1
     # via
     #   opensearch-py
     #   requests-aws4auth
 requests-aws4auth==1.3.2
-    # via -r requirements/base.in
+    # via -r base.in
 s3transfer==0.17.0
     # via boto3
 six==1.17.0
@@ -171,13 +168,11 @@ six==1.17.0
     #   opensearch-dsl
     #   python-dateutil
 sniffio==1.3.1
-    # via
-    #   elastic-transport
-    #   elasticsearch
+    # via elastic-transport
 sqlalchemy==2.0.49
-    # via -r requirements/base.in
+    # via -r base.in
 sqlparse==0.5.5
-    # via -r requirements/base.in
+    # via -r base.in
 tomli==2.4.1
     # via
     #   black
@@ -185,9 +180,7 @@ tomli==2.4.1
     #   pytest
 typing-extensions==4.15.0
     # via
-    #   anyio
     #   black
-    #   elasticsearch
     #   environs
     #   exceptiongroup
     #   grpcio
