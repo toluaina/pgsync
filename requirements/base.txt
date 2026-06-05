@@ -8,9 +8,9 @@ async-timeout==5.0.1
     # via redis
 backports-datetime-fromisoformat==2.0.3
     # via marshmallow
-boto3==1.43.12
+boto3==1.43.23
     # via -r requirements/base.in
-botocore==1.43.12
+botocore==1.43.23
     # via
     #   boto3
     #   s3transfer
@@ -22,9 +22,9 @@ certifi==2026.5.20
     #   requests
 charset-normalizer==3.4.7
     # via requests
-click==8.4.0
+click==8.4.1
     # via -r requirements/base.in
-elastic-transport==9.4.0
+elastic-transport==9.4.1
     # via -r requirements/base.in
 elasticsearch==7.17.13
     # via
@@ -36,9 +36,9 @@ environs==15.0.1
     # via -r requirements/base.in
 events==0.5
     # via opensearch-py
-grpcio==1.80.0
+grpcio==1.81.0
     # via opensearch-protobufs
-idna==3.15
+idna==3.18
     # via
     #   anyio
     #   requests
@@ -77,7 +77,7 @@ python-dotenv==1.2.2
     # via
     #   -r requirements/base.in
     #   environs
-redis==7.4.0
+redis==8.0.0
     # via -r requirements/base.in
 requests==2.34.2
     # via
@@ -85,7 +85,7 @@ requests==2.34.2
     #   requests-aws4auth
 requests-aws4auth==1.3.2
     # via -r requirements/base.in
-s3transfer==0.17.0
+s3transfer==0.18.0
     # via boto3
 six==1.17.0
     # via
@@ -96,7 +96,7 @@ sniffio==1.3.1
     # via
     #   elastic-transport
     #   elasticsearch
-sqlalchemy==2.0.49
+sqlalchemy==2.0.50
     # via -r requirements/base.in
 sqlparse==0.5.5
     # via -r requirements/base.in
