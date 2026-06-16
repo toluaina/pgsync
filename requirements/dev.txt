@@ -10,9 +10,9 @@ backports-datetime-fromisoformat==2.0.3
     # via marshmallow
 black==26.5.1
     # via -r requirements/dev.in
-boto3==1.43.23
+boto3==1.43.31
     # via -r requirements/base.in
-botocore==1.43.23
+botocore==1.43.31
     # via
     #   boto3
     #   s3transfer
@@ -34,9 +34,9 @@ coverage[toml]==7.14.1
     # via
     #   -r requirements/dev.in
     #   pytest-cov
-distlib==0.4.1
+distlib==0.4.3
     # via virtualenv
-elastic-transport==9.4.1
+elastic-transport==9.4.2
     # via -r requirements/base.in
 elasticsearch==7.17.13
     # via
@@ -52,9 +52,9 @@ exceptiongroup==1.3.1
     # via
     #   anyio
     #   pytest
-faker==40.21.0
+faker==40.23.0
     # via -r requirements/dev.in
-filelock==3.29.1
+filelock==3.29.4
     # via
     #   python-discovery
     #   virtualenv
@@ -62,7 +62,7 @@ flake8==7.3.0
     # via -r requirements/dev.in
 freezegun==1.5.5
     # via -r requirements/dev.in
-grpcio==1.81.0
+grpcio==1.81.1
     # via opensearch-protobufs
 identify==2.6.19
     # via pre-commit
@@ -114,7 +114,7 @@ pluggy==1.6.0
     #   pytest-cov
 pre-commit==4.6.0
     # via -r requirements/dev.in
-protobuf==7.35.0
+protobuf==7.35.1
     # via opensearch-protobufs
 psycopg2-binary==2.9.12
     # via -r requirements/base.in
@@ -128,7 +128,7 @@ pymysql==1.2.0
     # via
     #   -r requirements/base.in
     #   mysql-replication
-pytest==9.0.3
+pytest==9.1.0
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -145,7 +145,7 @@ python-dateutil==2.9.0.post0
     #   freezegun
     #   opensearch-dsl
     #   opensearch-py
-python-discovery==1.4.0
+python-discovery==1.4.2
     # via virtualenv
 python-dotenv==1.2.2
     # via
@@ -163,7 +163,7 @@ requests==2.34.2
     #   requests-aws4auth
 requests-aws4auth==1.3.2
     # via -r requirements/base.in
-s3transfer==0.18.0
+s3transfer==0.19.0
     # via boto3
 six==1.17.0
     # via
@@ -174,7 +174,7 @@ sniffio==1.3.1
     # via
     #   elastic-transport
     #   elasticsearch
-sqlalchemy==2.0.50
+sqlalchemy==2.0.51
     # via -r requirements/base.in
 sqlparse==0.5.5
     # via -r requirements/base.in
@@ -201,5 +201,5 @@ urllib3==2.7.0
     #   elasticsearch
     #   opensearch-py
     #   requests
-virtualenv==21.4.2
+virtualenv==21.5.1
     # via pre-commit

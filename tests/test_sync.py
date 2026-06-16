@@ -205,6 +205,51 @@ class TestSync(object):
                             sync.logical_slot_changes()
             assert "Error parsing row" in str(excinfo.value)
 
+    @patch("pgsync.sync.logger")
+    def test_logical_slot_changes_skips_heartbeat(self, mock_logger, sync):
+        """Regression: CDC heartbeat rows must not reach parse_logical_slot.
+
+        Reproduces the reported SQL peek/pull path (logical_slot_changes),
+        where a logical decoding message (e.g. Datastream heartbeat) used to
+        raise LogicalSlotParseError. The heartbeat must be filtered out before
+        parse_logical_slot is ever called, while the surrounding INSERT row is
+        still parsed normally.
+        """
+        heartbeat: str = (
+            "message: transactional: 1 prefix: datastream, "
+            "sz: 13 content:cdc heartbeat"
+        )
+        insert: str = (
+            "table public.book: INSERT: id[integer]:10 isbn[character "
+            "varying]:'888' title[character varying]:'My book title' "
+            "description[character varying]:null copyright[character "
+            "varying]:null tags[jsonb]:null publisher_id[integer]:null"
+        )
+        with patch("pgsync.sync.Sync.logical_slot_peek_changes") as mock_peek:
+            mock_peek.side_effect = [
+                [
+                    ROW("BEGIN 72736", 72736),
+                    ROW(heartbeat, 72736),
+                    ROW(insert, 72736),
+                    ROW("COMMIT 72736", 72736),
+                ],
+                [],
+            ]
+            with patch("pgsync.sync.Sync.logical_slot_get_changes"):
+                with patch("pgsync.sync.Sync.sync"):
+                    with patch(
+                        "pgsync.sync.Sync.parse_logical_slot",
+                        wraps=sync.parse_logical_slot,
+                    ) as spy_parse:
+                        # Must not raise LogicalSlotParseError on the heartbeat
+                        sync.logical_slot_changes()
+
+        parsed_rows: t.List[str] = [
+            c.args[0] for c in spy_parse.call_args_list
+        ]
+        assert heartbeat not in parsed_rows
+        assert insert in parsed_rows
+
     @patch("pgsync.sync.SearchClient.bulk")
     @patch("pgsync.sync.logger")
     def test_logical_slot_changes_groups(
@@ -1502,6 +1547,86 @@ class TestSync(object):
         sync._buffer = []
         sync.consume(begin_message)
         assert sync._buffer == []
+
+    @patch("pgsync.sync.logger")
+    def test_consume_skips_transactional_logical_message(
+        self, mock_logger, sync
+    ):
+        """Test consume ignores transactional logical messages (heartbeats).
+
+        A transactional message is wrapped in a BEGIN/COMMIT, so its LSN is
+        ACKed by the COMMIT path - consume must not parse it, buffer it, or
+        ACK it directly.
+        """
+        message = Mock()
+        message.payload = (
+            "message: transactional: 1 prefix: datastream, "
+            "sz: 13 content:cdc heartbeat"
+        )
+        message.data_start = "0/12345"
+        message.cursor = Mock()
+
+        sync._buffer = []
+        with patch.object(sync, "parse_logical_slot") as mock_parse:
+            sync.consume(message)
+            mock_parse.assert_not_called()
+        assert sync._buffer == []
+        message.cursor.send_feedback.assert_not_called()
+
+    @patch("pgsync.sync.logger")
+    def test_consume_acks_nontransactional_logical_message(
+        self, mock_logger, sync
+    ):
+        """Test consume ACKs standalone (transactional: 0) logical messages.
+
+        A non-transactional message has no COMMIT to advance the slot, so
+        consume must ACK its LSN explicitly when nothing is buffered.
+        """
+        message = Mock()
+        message.payload = (
+            "message: transactional: 0 prefix: datastream, "
+            "sz: 13 content:cdc heartbeat"
+        )
+        message.data_start = "0/12345"
+        message.cursor = Mock()
+
+        sync._buffer = []
+        with patch.object(sync, "parse_logical_slot") as mock_parse:
+            sync.consume(message)
+            mock_parse.assert_not_called()
+        assert sync._buffer == []
+        message.cursor.send_feedback.assert_called_once_with(
+            flush_lsn="0/12345", force=True
+        )
+
+    @patch("pgsync.sync.logger")
+    def test_consume_nontransactional_message_skips_ack_when_buffered(
+        self, mock_logger, sync
+    ):
+        """Test consume does not ACK past un-flushed buffered rows.
+
+        When rows are buffered, a non-transactional message must not ACK its
+        LSN (that would confirm past uncommitted rows); the next COMMIT ACKs.
+        """
+        message = Mock()
+        message.payload = (
+            "message: transactional: 0 prefix: datastream, "
+            "sz: 13 content:cdc heartbeat"
+        )
+        message.data_start = "0/12345"
+        message.cursor = Mock()
+
+        sync._buffer = [
+            Payload(
+                tg_op="INSERT",
+                table="book",
+                new={"isbn": "001"},
+                schema="public",
+            )
+        ]
+        sync.consume(message)
+        assert len(sync._buffer) == 1
+        message.cursor.send_feedback.assert_not_called()
 
     @patch("pgsync.sync.logger")
     def test_consume_commit_flushes_buffer(self, mock_logger, sync):

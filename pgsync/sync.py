@@ -77,6 +77,16 @@ from .utils import (
 )
 
 TX_BOUNDARY_RE = re.compile(r"^(BEGIN|COMMIT)\s+(\d+)", re.IGNORECASE)
+# Logical decoding messages emitted via pg_logical_emit_message (e.g. CDC
+# heartbeats from tools like Datastream). These are non-DML records and must
+# be ignored rather than parsed as row changes. The transactional flag tells
+# us whether the message is wrapped in a BEGIN/COMMIT (transactional: 1) or
+# emitted standalone (transactional: 0); standalone messages have no COMMIT to
+# ACK their LSN, so we must acknowledge them explicitly.
+LOGICAL_MSG_RE = re.compile(
+    r"^message:(?:\s+transactional:\s+(?P<transactional>[01]))?\s",
+    re.IGNORECASE,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -577,7 +587,9 @@ class Sync(Base, metaclass=Singleton):
             # parse and filter out BEGIN/COMMIT and unwanted schemas
             payloads: t.List[Payload] = []
             for row in raw:
-                if TX_BOUNDARY_RE.match(row.data):
+                if TX_BOUNDARY_RE.match(row.data) or LOGICAL_MSG_RE.match(
+                    row.data
+                ):
                     continue
                 try:
                     payload: Payload = self.parse_logical_slot(row.data)
@@ -1970,6 +1982,28 @@ class Sync(Base, metaclass=Singleton):
                     force_ack=True,  # ACK even if buffer empty
                 )
             # BEGIN/COMMIT don't include rows by themselves
+            return
+
+        logical_msg: t.Optional[re.Match] = LOGICAL_MSG_RE.match(raw)
+        if logical_msg:
+            # Logical decoding message (e.g. CDC heartbeat); not a row change.
+            # A transactional message (transactional: 1) is wrapped in a
+            # BEGIN/COMMIT, so the COMMIT path will ACK its LSN. A standalone
+            # message (transactional: 0) has no COMMIT, so ACK it explicitly -
+            # but only when nothing is buffered, to avoid confirming past
+            # un-flushed rows. This keeps confirmed_flush_lsn advancing during
+            # heartbeat-only periods so the slot does not replay them.
+            if (
+                lsn
+                and logical_msg.group("transactional") == "0"
+                and not self._buffer
+            ):
+                message.cursor.send_feedback(flush_lsn=lsn, force=True)
+                logger.debug(
+                    f"[LSN {lsn}] ACKed non-transactional logical message"
+                )
+            else:
+                logger.debug(f"[LSN {lsn}] Logical message, skipping")
             return
 
         # Not BEGIN/COMMIT -> row change
