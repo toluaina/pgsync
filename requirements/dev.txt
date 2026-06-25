@@ -10,13 +10,13 @@ backports-datetime-fromisoformat==2.0.3
     # via marshmallow
 black==26.5.1
     # via -r requirements/dev.in
-boto3==1.43.31
+boto3==1.43.36
     # via -r requirements/base.in
-botocore==1.43.31
+botocore==1.43.36
     # via
     #   boto3
     #   s3transfer
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   elastic-transport
     #   elasticsearch
@@ -26,11 +26,11 @@ cfgv==3.5.0
     # via pre-commit
 charset-normalizer==3.4.7
     # via requests
-click==8.4.1
+click==8.4.2
     # via
     #   -r requirements/base.in
     #   black
-coverage[toml]==7.14.1
+coverage[toml]==7.14.3
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -128,7 +128,7 @@ pymysql==1.2.0
     # via
     #   -r requirements/base.in
     #   mysql-replication
-pytest==9.1.0
+pytest==9.1.1
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -155,7 +155,7 @@ pytokens==0.4.1
     # via black
 pyyaml==6.0.3
     # via pre-commit
-redis==8.0.0
+redis==8.0.1
     # via -r requirements/base.in
 requests==2.34.2
     # via
