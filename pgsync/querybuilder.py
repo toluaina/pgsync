@@ -34,7 +34,7 @@ def JSON_ARRAY(*args: t.Any) -> sa.sql.functions.Function:
 def JSON_AGG(expr: t.Any) -> sa.sql.functions.Function:
     """Aggregate into JSON array."""
     return (
-        sa.func.JSON_ARRAYAGG(sa.distinct(expr))
+        sa.func.JSON_ARRAYAGG(expr)
         if IS_MYSQL_COMPAT
         else sa.func.JSON_AGG(expr)
     )

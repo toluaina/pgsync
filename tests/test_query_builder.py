@@ -801,6 +801,17 @@ class TestJSONFunctions:
         result = JSON_AGG(col)
         assert "JSON_AGG" in str(result)
 
+    def test_json_agg_mysql_json_object_has_no_distinct(self):
+        """Test MySQL JSON_ARRAYAGG does not emit invalid DISTINCT JSON."""
+        with patch("pgsync.querybuilder.IS_MYSQL_COMPAT", True):
+            expr = JSON_OBJECT("id", sa.column("id"))
+            result = JSON_AGG(expr)
+            sql = str(result)
+
+        assert "JSON_ARRAYAGG" in sql
+        assert "JSON_OBJECT" in sql
+        assert "DISTINCT" not in sql
+
     @pytest.mark.skipif(
         IS_MYSQL_COMPAT,
         reason="Skipped because IS_MYSQL_COMPAT env var is set",
