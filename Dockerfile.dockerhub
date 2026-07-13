@@ -40,7 +40,8 @@ COPY \
     /app/scripts/
 
 # Install PGSync and dependencies
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir .
 
 # Stage 2: Runtime
 FROM python:3.12.12-slim AS runtime
