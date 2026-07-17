@@ -122,7 +122,7 @@ class Sync(Base, metaclass=Singleton):
         super().__init__(
             doc.get("database", self.index), verbose=verbose, **kwargs
         )
-        self.search_client: SearchClient = SearchClient()
+        self.search_client: SearchClient = self.make_search_client()
         self.__name: str = re.sub(
             "[^0-9a-zA-Z_]+", "", f"{self.database.lower()}_{self.index}"
         )
@@ -323,13 +323,36 @@ class Sync(Base, metaclass=Singleton):
                 sys.stdout.write("\n")
                 sys.stdout.flush()
 
+    def make_search_client(self) -> SearchClient:
+        """Return the search-engine client.
+
+        Override in a subclass to supply a customised client (e.g. one that
+        wraps ``bulk``), instead of the default ``SearchClient``.
+        """
+        return SearchClient()
+
+    def extra_setting(self) -> dict:
+        """Hook: extra index settings a subclass contributes (merged in)."""
+        return {}
+
+    def extra_mapping(self) -> dict:
+        """Hook: extra mapping properties a subclass contributes (merged in)."""
+        return {}
+
     def create_setting(self) -> None:
         """Create Elasticsearch/OpenSearch setting and mapping if required."""
+        setting: dict = {**(self.setting or {}), **self.extra_setting()} or None
+        extra_mapping: dict = self.extra_mapping()
+        mapping = (
+            {**(self.mapping or {}), **extra_mapping}
+            if extra_mapping
+            else self.mapping
+        )
         self.search_client._create_setting(
             self.index,
             self.tree,
-            setting=self.setting,
-            mapping=self.mapping,
+            setting=setting,
+            mapping=mapping,
             mappings=self.mappings,
             routing=self.routing,
         )

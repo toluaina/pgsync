@@ -35,6 +35,11 @@ class RedisQueue(object):
         except ConnectionError:
             raise
 
+    @property
+    def client(self) -> Redis:
+        """The underlying Redis/Valkey client (for get/set style access)."""
+        return self.__db
+
     def ping(self) -> bool:
         """
         Ping the Redis server to check connectivity.

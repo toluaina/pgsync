@@ -53,6 +53,16 @@ class TestRedisQueue(object):
             "Redis server is not reachable when pinging."
         )
 
+    def test_client_property(self):
+        """The client property exposes the underlying Redis/Valkey client."""
+        queue = RedisQueue("something")
+        # It returns the same private client instance...
+        assert queue.client is queue._RedisQueue__db
+        # ...and supports get/set style access on that client.
+        queue.client.set("queue:something:probe", "1")
+        assert queue.client.get("queue:something:probe") == b"1"
+        queue.client.delete("queue:something:probe")
+
     def test_qsize(self, mocker):
         """Test the redis qsize."""
         queue = RedisQueue("something")

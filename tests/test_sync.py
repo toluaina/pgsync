@@ -943,6 +943,103 @@ class TestSync(object):
             routing=None,
         )
 
+    def test_make_search_client_default(self, sync):
+        """make_search_client returns a SearchClient by default and is the
+        client the Sync instance actually uses."""
+        from pgsync.search_client import SearchClient
+
+        client = sync.make_search_client()
+        assert isinstance(client, SearchClient)
+        assert isinstance(sync.search_client, SearchClient)
+
+    def test_make_search_client_override_used(self):
+        """A subclass can override make_search_client to supply a custom
+        client and Sync will use it (backward-compatible extension hook)."""
+        sentinel = Mock()
+
+        class CustomSync(Sync):
+            def make_search_client(self):
+                return sentinel
+
+        with override_env_var(ELASTICSEARCH="False", OPENSEARCH="True"):
+            importlib.reload(settings)
+            Singleton._instances = {}
+            _sync = CustomSync(
+                {
+                    "index": "testdb",
+                    "database": "testdb",
+                    "nodes": {"table": "book", "columns": ["isbn", "title"]},
+                }
+            )
+            try:
+                assert _sync.search_client is sentinel
+            finally:
+                Singleton._instances = {}
+                _sync.engine.connect().close()
+                _sync.engine.dispose()
+                _sync.session.close()
+
+    def test_extra_setting_and_mapping_defaults(self, sync):
+        """The extra_* hooks default to empty dicts (no-op)."""
+        assert sync.extra_setting() == {}
+        assert sync.extra_mapping() == {}
+
+    @patch("pgsync.sync.SearchClient._create_setting")
+    def test_create_setting_merges_extra_setting(self, mock_es, sync):
+        """extra_setting is merged into the setting passed to the client."""
+        sync.setting = {"number_of_shards": 1}
+        with patch.object(
+            sync, "extra_setting", return_value={"number_of_replicas": 2}
+        ):
+            sync.create_setting()
+        mock_es.assert_called_once_with(
+            "testdb",
+            ANY,
+            setting={"number_of_shards": 1, "number_of_replicas": 2},
+            mapping=None,
+            mappings=None,
+            routing=None,
+        )
+
+    @patch("pgsync.sync.SearchClient._create_setting")
+    def test_create_setting_merges_extra_mapping(self, mock_es, sync):
+        """extra_mapping is merged into the mapping passed to the client."""
+        sync.mapping = {"title": {"type": "text"}}
+        with patch.object(
+            sync,
+            "extra_mapping",
+            return_value={"embedding": {"type": "dense_vector"}},
+        ):
+            sync.create_setting()
+        mock_es.assert_called_once_with(
+            "testdb",
+            ANY,
+            setting=None,
+            mapping={
+                "title": {"type": "text"},
+                "embedding": {"type": "dense_vector"},
+            },
+            mappings=None,
+            routing=None,
+        )
+
+    @patch("pgsync.sync.SearchClient._create_setting")
+    def test_create_setting_extra_only(self, mock_es, sync):
+        """extra_* hooks supply values even when no base setting/mapping."""
+        sync.setting = None
+        sync.mapping = None
+        with patch.object(sync, "extra_setting", return_value={"a": 1}):
+            with patch.object(sync, "extra_mapping", return_value={"b": 2}):
+                sync.create_setting()
+        mock_es.assert_called_once_with(
+            "testdb",
+            ANY,
+            setting={"a": 1},
+            mapping={"b": 2},
+            mappings=None,
+            routing=None,
+        )
+
     @patch("pgsync.sync.Sync.teardown")
     def test_setup(self, mock_teardown, sync):
         with override_env_var(JOIN_QUERIES="False"):

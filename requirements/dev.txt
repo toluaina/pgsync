@@ -10,9 +10,9 @@ backports-datetime-fromisoformat==2.0.3
     # via marshmallow
 black==26.5.1
     # via -r requirements/dev.in
-boto3==1.43.46
+boto3==1.43.51
     # via -r requirements/base.in
-botocore==1.43.46
+botocore==1.43.51
     # via
     #   boto3
     #   s3transfer
@@ -29,7 +29,7 @@ click==8.4.2
     # via
     #   -r requirements/base.in
     #   black
-coverage[toml]==7.15.0
+coverage[toml]==7.15.2
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -53,9 +53,9 @@ exceptiongroup==1.3.1
     # via
     #   anyio
     #   pytest
-faker==40.28.1
+faker==40.31.0
     # via -r requirements/dev.in
-filelock==3.29.7
+filelock==3.30.3
     # via
     #   python-discovery
     #   virtualenv
