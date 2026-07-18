@@ -26,6 +26,8 @@ PGSync
 
 Keep your relational database as the source of truth and expose structured denormalized documents in your search engine.
 
+**Django integration:** Use `django-pgsync <https://github.com/toluaina/django-pgsync/>`_ to integrate PGSync with Django projects.
+
 Key Features
 ------------
 

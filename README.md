@@ -26,6 +26,8 @@
 
 PGSync is a change data capture tool that syncs data from **PostgreSQL**, **MySQL**, or **MariaDB** to **Elasticsearch** or **OpenSearch** in real-time. Define your document structure in JSON, and PGSync handles the rest — no custom code required.
 
+> **Django integration:** Use [django-pgsync](https://github.com/toluaina/django-pgsync/) to integrate PGSync with Django projects.
+
 ```mermaid
 %%{init: {'look': 'handDrawn', 'theme': 'neutral'}}%%
 flowchart LR
