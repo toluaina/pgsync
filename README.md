@@ -16,7 +16,7 @@
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/r/toluaina1/pgsync)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-[Website](https://pgsync.com) · [Documentation](https://pgsync.com) · [Examples](examples/) · [Report Bug](https://github.com/toluaina/pgsync/issues)
+[Live Demo ↗](https://demo.pgsync.com/) · [Website](https://pgsync.com) · [Documentation](https://pgsync.com) · [Examples](examples/) · [Report Bug](https://github.com/toluaina/pgsync/issues)
 
 </div>
 
