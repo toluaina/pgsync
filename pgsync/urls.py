@@ -4,6 +4,7 @@ import logging
 import typing as t
 from urllib.parse import ParseResult, quote, quote_plus, urlparse, urlunparse
 
+from . import settings
 from .plugin import Plugins
 from .settings import (
     ELASTICSEARCH_HOST,
@@ -17,7 +18,6 @@ from .settings import (
     PG_PASSWORD,
     PG_PORT,
     PG_URL,
-    PG_USER,
     REDIS_AUTH,
     REDIS_DB,
     REDIS_HOST,
@@ -27,6 +27,10 @@ from .settings import (
     REDIS_USER,
     USE_UTF8MB4,
 )
+
+# PG_USER is resolved lazily (see pgsync.settings.__getattr__); referencing it
+# via the module — settings.PG_USER — rather than a name-import keeps `import
+# pgsync` env-free.
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +121,7 @@ def get_database_url(
     Returns:
         str: The URL to connect to the database.
     """
-    user = user or PG_USER
+    user = user or settings.PG_USER
     host = host or PG_HOST
     password = _get_auth("PG_PASSWORD") or password or PG_PASSWORD
     port = port or PG_PORT

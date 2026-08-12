@@ -211,7 +211,11 @@ OPENSEARCH_AWS_SERVERLESS = env.bool(
 PG_URL = env.str("PG_URL", default=None)
 PG_HOST = env.str("PG_HOST", default="localhost")
 PG_PORT = env.int("PG_PORT", default=5432)
-PG_USER = env.str("PG_USER", default=None) if PG_URL else env.str("PG_USER")
+# PG_USER is the one required setting (unless PG_URL is given). It is resolved
+# lazily via module __getattr__ (see below) so that merely *importing* pgsync —
+# e.g. to subclass Sync in a custom sink — does not require PG_* env. The
+# required-check still fires, on first access, which in real runs is as soon as
+# a connection URL is built.
 PG_PASSWORD = env.str("PG_PASSWORD", default=None)
 PG_SSLMODE = env.str("PG_SSLMODE", default=None)
 PG_SSLROOTCERT = env.str("PG_SSLROOTCERT", default=None)
@@ -336,3 +340,22 @@ LOGGING = _get_logging_config(
 )
 
 logging.config.dictConfig(LOGGING)
+
+
+def __getattr__(name: str) -> t.Any:
+    """Lazily resolve settings that must not be evaluated at import time.
+
+    Currently only ``PG_USER``: it is required (unless ``PG_URL`` is set), so
+    evaluating it eagerly would make importing pgsync fail without ``PG_*`` env.
+    Resolving it on first access (PEP 562) keeps the required-check — it raises
+    the same ``EnvError`` when genuinely missing — while allowing env-free import
+    (e.g. subclassing ``Sync`` in a custom sink). The resolved value is cached
+    into module globals, so subsequent access is a normal attribute lookup.
+    """
+    if name == "PG_USER":
+        value = (
+            env.str("PG_USER", default=None) if PG_URL else env.str("PG_USER")
+        )
+        globals()["PG_USER"] = value  # cache; __getattr__ won't fire again
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

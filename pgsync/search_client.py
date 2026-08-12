@@ -19,13 +19,14 @@ from .constants import (
     META,
 )
 from .node import Tree
+from .sink import Sink
 from .urls import get_search_url
 
 logger = logging.getLogger(__name__)
 
 
-class SearchClient(object):
-    """SearchClient."""
+class SearchClient(Sink):
+    """Elasticsearch/OpenSearch sink — the reference :class:`Sink`."""
 
     def __init__(self):
         """
@@ -83,6 +84,17 @@ class SearchClient(object):
     def close(self) -> None:
         """Close transport connection."""
         self.__client.transport.close()
+
+    def prepare_action(self, doc: dict) -> dict:
+        """Add the legacy ``_type`` field for Elasticsearch < 7.
+
+        Overrides :meth:`pgsync.sink.Sink.prepare_action` so this ES-only quirk
+        stays behind the sink instead of in ``Sync``. OpenSearch and ES >= 7 need
+        no ``_type``, so the doc is returned unchanged there.
+        """
+        if self.major_version < 7 and not self.is_opensearch:
+            doc["_type"] = "_doc"
+        return doc
 
     def teardown(self, index: str) -> None:
         """

@@ -154,6 +154,11 @@ class Sync(Base, metaclass=Singleton):
         self.lock: threading.Lock = threading.Lock()
         # holds Payload objects across multiple consume() calls
         self._buffer: list["Payload"] = []
+        # graceful shutdown: background workers loop until this is set, and
+        # stop() joins them. Never set unless stop() is called, so the default
+        # daemon lifecycle (workers run until the process is killed) is unchanged.
+        self._stop_event: threading.Event = threading.Event()
+        self._workers: t.List[threading.Thread] = []
 
     @property
     def slot_name(self) -> str:
@@ -341,7 +346,10 @@ class Sync(Base, metaclass=Singleton):
 
     def create_setting(self) -> None:
         """Create Elasticsearch/OpenSearch setting and mapping if required."""
-        setting: dict = {**(self.setting or {}), **self.extra_setting()} or None
+        setting: dict = {
+            **(self.setting or {}),
+            **self.extra_setting(),
+        } or None
         extra_mapping: dict = self.extra_mapping()
         mapping = (
             {**(self.mapping or {}), **extra_mapping}
@@ -1214,11 +1222,7 @@ class Sync(Base, metaclass=Singleton):
                     }
                     if self.routing:
                         doc["_routing"] = old_values[self.routing]
-                    if (
-                        self.search_client.major_version < 7
-                        and not self.search_client.is_opensearch
-                    ):
-                        doc["_type"] = "_doc"
+                    doc = self.search_client.prepare_action(doc)
                     docs.append(doc)
 
             if docs:
@@ -1272,11 +1276,7 @@ class Sync(Base, metaclass=Singleton):
                 }
                 if self.routing:
                     doc["_routing"] = payload.data[self.routing]
-                if (
-                    self.search_client.major_version < 7
-                    and not self.search_client.is_opensearch
-                ):
-                    doc["_type"] = "_doc"
+                doc = self.search_client.prepare_action(doc)
                 docs.append(doc)
             if docs:
                 raise_on_exception: t.Optional[bool] = (
@@ -1314,11 +1314,7 @@ class Sync(Base, metaclass=Singleton):
                     "_index": self.index,
                     "_op_type": "delete",
                 }
-                if (
-                    self.search_client.major_version < 7
-                    and not self.search_client.is_opensearch
-                ):
-                    doc["_type"] = "_doc"
+                doc = self.search_client.prepare_action(doc)
                 docs.append(doc)
             if docs:
                 self.search_client.bulk(self.index, docs)
@@ -1562,11 +1558,7 @@ class Sync(Base, metaclass=Singleton):
             if self.routing:
                 doc["_routing"] = row[self.routing]
 
-            if (
-                self.search_client.major_version < 7
-                and not self.search_client.is_opensearch
-            ):
-                doc["_type"] = "_doc"
+            doc = self.search_client.prepare_action(doc)
 
             if self._plugins:
                 doc = next(self._plugins.transform([doc]))
@@ -1697,7 +1689,7 @@ class Sync(Base, metaclass=Singleton):
             logger.info("Setting read only consumer")
             self._thread_local.read_only = True
 
-        while True:
+        while not self._stop_event.is_set():
             self._poll_redis()
 
     async def _async_poll_redis(self) -> None:
@@ -1734,49 +1726,61 @@ class Sync(Base, metaclass=Singleton):
         )
         payloads: list = []
 
-        while True:
-            # NB: consider reducing POLL_TIMEOUT to increase throughput
-            if select.select([conn], [], [], settings.POLL_TIMEOUT) == (
-                [],
-                [],
-                [],
-            ):
-                # Catch any hanging items from the last poll
-                if payloads:
-                    self.redis.push(payloads)
-                    payloads = []
-                continue
+        while not self._stop_event.is_set():
+            payloads = self._poll_db_once(conn, payloads)
 
-            try:
-                conn.poll()
-            except OperationalError as e:
-                logger.fatal(f"OperationalError: {e}")
-                os._exit(-1)
+    def _poll_db_once(self, conn: t.Any, payloads: list) -> list:
+        """One iteration of the producer loop: wait briefly for notifications on
+        ``conn``, buffer those addressed to this index, and flush to Redis/Valkey.
 
-            while conn.notifies:
-                if len(payloads) >= settings.REDIS_WRITE_CHUNK_SIZE:
-                    self.redis.push(payloads)
-                    payloads = []
-                notification: t.AnyStr = conn.notifies.pop(0)
-                if notification.channel == self.database:
+        Returns the (possibly reset) ``payloads`` buffer for the next iteration.
+        Factored out of :meth:`poll_db` so the short ``POLL_TIMEOUT`` wait also
+        serves as the stop-flag poll interval, and so alternative runners (e.g. a
+        stoppable daemon) can reuse the exact producer semantics.
+        """
+        # NB: consider reducing POLL_TIMEOUT to increase throughput
+        if select.select([conn], [], [], settings.POLL_TIMEOUT) == (
+            [],
+            [],
+            [],
+        ):
+            # Catch any hanging items from the last poll
+            if payloads:
+                self.redis.push(payloads)
+                payloads = []
+            return payloads
 
-                    try:
-                        payload = json.loads(notification.payload)
-                    except json.JSONDecodeError as e:
-                        logger.exception(
-                            f"Error decoding JSON payload: {e}\n"
-                            f"Payload: {notification.payload}"
-                        )
-                        continue
-                    if (
-                        payload.get("indices")
-                        and self.index in payload.get("indices", [])
-                        and payload.get("schema") in self.tree.schemas
-                    ):
-                        payloads.append(payload)
-                        logger.debug(f"poll_db: {payload}")
-                        with self.lock:
-                            self.count["db"] += 1
+        try:
+            conn.poll()
+        except OperationalError as e:
+            logger.fatal(f"OperationalError: {e}")
+            os._exit(-1)
+
+        while conn.notifies:
+            if len(payloads) >= settings.REDIS_WRITE_CHUNK_SIZE:
+                self.redis.push(payloads)
+                payloads = []
+            notification: t.AnyStr = conn.notifies.pop(0)
+            if notification.channel == self.database:
+
+                try:
+                    payload = json.loads(notification.payload)
+                except json.JSONDecodeError as e:
+                    logger.exception(
+                        f"Error decoding JSON payload: {e}\n"
+                        f"Payload: {notification.payload}"
+                    )
+                    continue
+                if (
+                    payload.get("indices")
+                    and self.index in payload.get("indices", [])
+                    and payload.get("schema") in self.tree.schemas
+                ):
+                    payloads.append(payload)
+                    logger.debug(f"poll_db: {payload}")
+                    with self.lock:
+                        self.count["db"] += 1
+        return payloads
 
     @exception
     def async_poll_db(self) -> None:
@@ -2066,9 +2070,10 @@ class Sync(Base, metaclass=Singleton):
     @exception
     def truncate_slots(self) -> None:
         """Truncate the logical replication slot."""
-        while True:
+        while not self._stop_event.is_set():
             self._truncate_slots()
-            time.sleep(settings.REPLICATION_SLOT_CLEANUP_INTERVAL)
+            # wait() (not sleep) so stop() returns promptly during a long interval
+            self._stop_event.wait(settings.REPLICATION_SLOT_CLEANUP_INTERVAL)
 
     @exception
     async def async_truncate_slots(self) -> None:
@@ -2084,10 +2089,10 @@ class Sync(Base, metaclass=Singleton):
     @threaded
     @exception
     def status(self) -> None:
-        while True:
+        while not self._stop_event.is_set():
             self._status(label="Sync")
             self.redis.set_meta({"txid_current": self.txid_current})
-            time.sleep(settings.LOG_INTERVAL)
+            self._stop_event.wait(settings.LOG_INTERVAL)
 
     @exception
     async def async_status(self) -> None:
@@ -2137,7 +2142,7 @@ class Sync(Base, metaclass=Singleton):
         else:
             # sync up to and produce items in the Redis/Valkey cache
             if self.producer:
-                self.poll_db()
+                self._workers.append(self.poll_db())
                 # sync up to current transaction_id
                 self.pull()
 
@@ -2145,12 +2150,27 @@ class Sync(Base, metaclass=Singleton):
             # poll Redis/Valkey and populate Elasticsearch/OpenSearch
             if self.consumer:
                 for _ in range(self.num_workers):
-                    self.poll_redis()
+                    self._workers.append(self.poll_redis())
 
             # start a background worker thread to cleanup the replication slot
-            self.truncate_slots()
+            self._workers.append(self.truncate_slots())
             # start a background worker thread to show status
-            self.status()
+            self._workers.append(self.status())
+
+    def stop(self, timeout: t.Optional[float] = 10.0) -> None:
+        """Signal all background workers to finish and join them.
+
+        Idempotent and safe to call from a signal handler. Workers started by
+        :meth:`receive` (``poll_db``/``poll_redis``/``truncate_slots``/
+        ``status``) loop until ``_stop_event`` is set; after :meth:`stop` returns
+        they have exited, so the process can terminate cleanly instead of relying
+        on the interpreter killing the non-daemon threads on ``KeyboardInterrupt``.
+        """
+        self._stop_event.set()
+        for thread in self._workers:
+            if thread is not None and thread is not threading.current_thread():
+                thread.join(timeout=timeout)
+        self._workers = []
 
 
 @click.command()
