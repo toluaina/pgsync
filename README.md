@@ -28,6 +28,10 @@ PGSync is a change data capture tool that syncs data from **PostgreSQL**, **MySQ
 
 > **Django integration:** Use [django-pgsync](https://github.com/toluaina/django-pgsync/) to integrate PGSync with Django projects.
 
+> **PGSync Pro:** Add real-time [semantic and hybrid search](https://pgsync.com/pro) to Elasticsearch or OpenSearch, with on-device or hosted embeddings that re-embed only when a document's meaning changes.
+
+> **ClickHouse connector:** Stream PostgreSQL to [ClickHouse](https://clickhouse.com) in real time with [pgsync-clickhouse](https://pgsync.com/clickhouse), a change-data-capture sink that mirrors tables or builds denormalized wide tables on `ReplacingMergeTree` (one-to-one children flattened into typed columns, one-to-many into native `Array(Tuple(...))`), with exactly-once-on-replay keyed on the source WAL LSN.
+
 ```mermaid
 %%{init: {'look': 'handDrawn', 'theme': 'neutral'}}%%
 flowchart LR
