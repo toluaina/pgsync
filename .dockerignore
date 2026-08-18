@@ -3,12 +3,31 @@
 **/.pytest_cache/
 **/*.pyc
 
-# Exclude docker specific files
+# Version control and local tooling
+.git/
+.github/
+.agents/
+.codex/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+
+# Build and test artifacts
+**/*.egg-info/
+build/
+dist/
+htmlcov/
+
+# Docker and local configuration
 .dockerignore
 Dockerfile
+Dockerfile.dockerhub
+docker-compose*.yml
 
 # Coverage
 **/.coverage.xml
 **/coverage.xml
+.coverage
 
 .env

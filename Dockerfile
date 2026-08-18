@@ -1,25 +1,20 @@
-FROM python:3.12-slim AS build
+FROM python:3.12.12-slim
 
-ARG WORKDIR=/code
 ARG EXAMPLE_NAME=airbnb
-ENV EXAMPLE_NAME=$EXAMPLE_NAME
+ENV EXAMPLE_NAME=${EXAMPLE_NAME}
 
-# Create and switch to workdir
-RUN mkdir -p "$WORKDIR"
-WORKDIR "$WORKDIR"
+WORKDIR /code
 
-# Install git (required for pip install from git+ URL)
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends git \
-    && rm -rf /var/lib/apt/lists/*
+# Install dependencies separately so this layer is reused until they change.
+COPY requirements/base.txt ./requirements/base.txt
+RUN pip install --no-cache-dir -r requirements/base.txt
 
-# Copy project files
-COPY ./examples/ ./examples
-COPY ./docker/wait-for-it.sh ./wait-for-it.sh
-COPY ./docker/runserver.sh ./runserver.sh
+# Install the checked-out project rather than an unpinned remote revision.
+COPY pgsync/ ./pgsync/
+COPY README.rst README.md LICENSE setup.cfg setup.py ./
+COPY bin/bootstrap bin/parallel_sync bin/pgsync ./bin/
+RUN pip install --no-cache-dir --no-deps .
 
-# Install pgsync from GitHub
-RUN pip install --no-cache-dir git+https://github.com/toluaina/pgsync.git
-
-# Make scripts executable
-RUN chmod +x wait-for-it.sh runserver.sh
+# Example and Compose runtime files change more often than dependencies.
+COPY examples/ ./examples/
+COPY --chmod=755 docker/wait-for-it.sh docker/runserver.sh ./

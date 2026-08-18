@@ -1,66 +1,31 @@
-# Stage 1: Build
+# syntax=docker/dockerfile:1.7
+
+# Build wheels in an isolated stage, so compiler tooling and source files do not
+# become part of the published image.
 FROM python:3.12.12-slim AS build
 
 WORKDIR /app
 
-# Install system dependencies and ensure system libraries are updated (e.g., glibc)
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install -y gcc libpq-dev && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# Build dependency wheels first for better layer reuse. All current
+# dependencies, including psycopg2-binary, publish compatible wheels.
+COPY requirements/base.txt ./requirements/base.txt
+RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements/base.txt
 
-# Copy PGSync source code
-COPY \
-    pgsync/__init__.py \
-    pgsync/base.py \
-    pgsync/constants.py \
-    pgsync/exc.py \
-    pgsync/helper.py \
-    pgsync/node.py \
-    pgsync/plugin.py \
-    pgsync/querybuilder.py \
-    pgsync/redisqueue.py \
-    pgsync/search_client.py \
-    pgsync/settings.py \
-    pgsync/singleton.py \
-    pgsync/sink.py \
-    pgsync/sync.py \
-    pgsync/transform.py \
-    pgsync/trigger.py \
-    pgsync/urls.py \
-    pgsync/utils.py \
-    pgsync/view.py /app/pgsync/
+COPY pgsync/ ./pgsync/
+COPY README.rst LICENSE setup.cfg setup.py ./
+COPY bin/bootstrap bin/parallel_sync bin/pgsync ./bin/
+RUN pip wheel --no-cache-dir --no-deps --wheel-dir /wheels .
 
-COPY requirements/base.txt /app/requirements/
-COPY README.rst README.md LICENSE setup.cfg setup.py /app/
-COPY bin/bootstrap bin/es_mapping bin/parallel_sync bin/pgsync /app/bin/
-COPY \
-    scripts/pg_replication_slots.sh \
-    scripts/pg_locks.sh \
-    scripts/pg_temp_tables.sh \
-    /app/scripts/
-
-# Install PGSync and dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir .
-
-# Stage 2: Runtime
 FROM python:3.12.12-slim AS runtime
-
-RUN apt-get update && apt-get upgrade -y && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Create non-root user
+# Install as root, then run the CLI without root privileges.
 RUN useradd --no-create-home --shell /bin/false pgsync
+RUN --mount=type=bind,from=build,source=/wheels,target=/wheels,readonly \
+    pip install --no-cache-dir --no-index --find-links=/wheels /wheels/pgsync-*.whl
+
 USER pgsync
 
-COPY --from=build /usr/local/lib/python3.12 /usr/local/lib/python3.12
-COPY --from=build /usr/local/bin /usr/local/bin
-COPY --from=build /app /app
-
-# Add binaries to PATH
-ENV PATH="/usr/local/bin:${PATH}"
-
-# Entrypoint matches pgsync CLI behavior
+# Entrypoint matches pgsync CLI behavior.
 ENTRYPOINT ["pgsync"]
