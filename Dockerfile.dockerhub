@@ -23,6 +23,7 @@ COPY \
     pgsync/search_client.py \
     pgsync/settings.py \
     pgsync/singleton.py \
+    pgsync/sink.py \
     pgsync/sync.py \
     pgsync/transform.py \
     pgsync/trigger.py \
@@ -32,7 +33,7 @@ COPY \
 
 COPY requirements/base.txt /app/requirements/
 COPY README.rst README.md LICENSE setup.cfg setup.py /app/
-COPY bin/bootstrap bin/parallel_sync bin/pgsync /app/bin/
+COPY bin/bootstrap bin/es_mapping bin/parallel_sync bin/pgsync /app/bin/
 COPY \
     scripts/pg_replication_slots.sh \
     scripts/pg_locks.sh \
