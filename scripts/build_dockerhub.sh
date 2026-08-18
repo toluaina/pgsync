@@ -11,15 +11,24 @@ if [ -z "${DOCKERHUB_TOKEN:-}" ]; then
 fi
 
 IMAGE_NAME="pgsync"
-TAG="latest"
+TAG="${TAG:-latest}"
+PLATFORMS="${PLATFORMS:-linux/amd64,linux/arm64}"
+IMAGE="${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${TAG}"
 
-echo "Building Docker image..."
-docker build -t ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${TAG} -f Dockerfile.dockerhub .
+if ! docker buildx version >/dev/null 2>&1; then
+  echo "Error: Docker Buildx is required to publish a multi-platform image"
+  exit 1
+fi
 
 echo "Logging into Docker Hub..."
 echo "${DOCKERHUB_TOKEN}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
 
-# echo "Pushing image to Docker Hub..."
-docker push "${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${TAG}"
+echo "Building and publishing ${IMAGE} for ${PLATFORMS}..."
+docker buildx build \
+  --platform "${PLATFORMS}" \
+  --tag "${IMAGE}" \
+  --file Dockerfile.dockerhub \
+  --push \
+  .
 
 echo "Done."
