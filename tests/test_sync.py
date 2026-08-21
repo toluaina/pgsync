@@ -37,6 +37,8 @@ def test_cli_rejects_polling_and_wal_from_environment():
         **os.environ,
         "POLLING": "true",
         "WAL": "true",
+        "ELASTICSEARCH": "false",
+        "OPENSEARCH": "true",
         "PYTHONPATH": os.pathsep.join(
             filter(None, [project_root, os.environ.get("PYTHONPATH")])
         ),
