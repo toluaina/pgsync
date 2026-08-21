@@ -2,6 +2,7 @@
     {
         "database": "book",
         "index": "book",
+        "routing": "book_isbn",
         "mappings": {
             "properties": {
                 "age": {

@@ -1174,6 +1174,24 @@ class Sync(Base, metaclass=Singleton):
 
         return filters
 
+    def _queue_root_delete(
+        self,
+        payload: Payload,
+        doc: dict,
+        docs: list,
+        unrouted_delete_ids: list,
+    ) -> None:
+        """Queue a routed delete or an id-only cross-shard fallback."""
+        if self.routing:
+            # CDC normally includes only old primary-key values. When the old
+            # routing value is unavailable, delete by id across all shards to
+            # avoid leaving a stale document behind.
+            if self.routing not in payload.old:
+                unrouted_delete_ids.append(doc["_id"])
+                return
+            doc["_routing"] = payload.old[self.routing]
+        docs.append(self.search_client.prepare_action(doc))
+
     def _update_op(
         self,
         node: Node,
@@ -1188,6 +1206,7 @@ class Sync(Base, metaclass=Singleton):
             #   2.1) This is crucial otherwise we can have the old and new
             #        doc in Elasticsearch/OpenSearch at the same time
             docs: list = []
+            unrouted_delete_ids: list = []
             for payload in payloads:
                 primary_values: list = [
                     payload.data[key] for key in node.model.primary_keys
@@ -1220,13 +1239,16 @@ class Sync(Base, metaclass=Singleton):
                         "_index": self.index,
                         "_op_type": "delete",
                     }
-                    if self.routing:
-                        doc["_routing"] = old_values[self.routing]
-                    doc = self.search_client.prepare_action(doc)
-                    docs.append(doc)
+                    self._queue_root_delete(
+                        payload, doc, docs, unrouted_delete_ids
+                    )
 
             if docs:
                 self.search_client.bulk(self.index, docs)
+            if unrouted_delete_ids:
+                self.search_client.delete_by_query(
+                    self.index, unrouted_delete_ids
+                )
 
         else:
             # update the child tables
@@ -1262,6 +1284,7 @@ class Sync(Base, metaclass=Singleton):
         # Elasticsearch/OpenSearch
         if node.is_root:
             docs: list = []
+            unrouted_delete_ids: list = []
             for payload in payloads:
                 primary_values: list = [
                     payload.data[key]
@@ -1274,10 +1297,9 @@ class Sync(Base, metaclass=Singleton):
                     "_index": self.index,
                     "_op_type": "delete",
                 }
-                if self.routing:
-                    doc["_routing"] = payload.data[self.routing]
-                doc = self.search_client.prepare_action(doc)
-                docs.append(doc)
+                self._queue_root_delete(
+                    payload, doc, docs, unrouted_delete_ids
+                )
             if docs:
                 raise_on_exception: t.Optional[bool] = (
                     False if settings.USE_ASYNC else None
@@ -1290,6 +1312,10 @@ class Sync(Base, metaclass=Singleton):
                     docs,
                     raise_on_exception=raise_on_exception,
                     raise_on_error=raise_on_error,
+                )
+            if unrouted_delete_ids:
+                self.search_client.delete_by_query(
+                    self.index, unrouted_delete_ids
                 )
 
         else:

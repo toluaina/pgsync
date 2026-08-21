@@ -21,6 +21,7 @@ member               role
 ``_create_setting``  target-schema setup (index mapping / CREATE TABLE / ...)
 ``prepare_action``   let the sink annotate an action doc before ``bulk``
 ``_search``          look up doc ids to delete (search-engine specific)
+``delete_by_query``  delete ids across shards when routing is unavailable
 ``refresh``          make writes visible (search-engine specific; no-op else)
 ``search``           ad-hoc query passthrough
 ``teardown``         drop the target (index / table)
@@ -114,6 +115,10 @@ class Sink(abc.ABC):
         ClickHouse tombstones sourced from the WAL) inherit this empty default.
         """
         return iter(())
+
+    def delete_by_query(self, index: str, ids: t.List[str]) -> None:
+        """Delete documents by id without requiring their routing values."""
+        raise NotImplementedError
 
     def refresh(self, indices: t.List[str]) -> None:
         """Make recent writes visible.  No-op where the target has no concept

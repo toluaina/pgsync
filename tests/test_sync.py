@@ -30,6 +30,28 @@ from .testing_utils import override_env_var
 ROW = namedtuple("Row", ["data", "xid"])
 
 
+def make_root_sync(routing: str):
+    """Create the minimum Sync state needed to test root deletes."""
+    sync = object.__new__(Sync)
+    sync.index = "book"
+    sync.routing = routing
+    sync.tree = SimpleNamespace(
+        root=SimpleNamespace(
+            table="book",
+            model=SimpleNamespace(primary_keys=["id"]),
+        )
+    )
+    sync.get_doc_id = Mock(return_value="1")
+    sync.search_client = Mock()
+    sync.search_client.prepare_action.side_effect = lambda doc: doc
+    node = SimpleNamespace(
+        is_root=True,
+        table="book",
+        model=SimpleNamespace(primary_keys=["id"]),
+    )
+    return sync, node
+
+
 def test_cli_rejects_polling_and_wal_from_environment():
     """Environment-derived polling and WAL defaults remain exclusive."""
     project_root = os.path.dirname(os.path.dirname(__file__))
@@ -54,6 +76,73 @@ def test_cli_rejects_polling_and_wal_from_environment():
 
     assert result.returncode == 2
     assert "POLLING and WAL cannot both be enabled" in result.stderr
+
+
+def test_update_op_deletes_old_document_without_old_routing():
+    """A root primary-key update falls back to a cross-shard delete."""
+    sync, node = make_root_sync("book_isbn")
+    filters: dict = {"book": []}
+    payloads: t.List[Payload] = [
+        Payload(
+            tg_op="UPDATE",
+            table="book",
+            old={"id": 1},
+            new={"id": 2, "isbn": "001"},
+        )
+    ]
+
+    sync._update_op(node, filters, payloads)
+
+    sync.search_client.bulk.assert_not_called()
+    sync.search_client.delete_by_query.assert_called_once_with("book", ["1"])
+
+
+def test_update_op_deletes_old_document_with_old_routing():
+    """A direct delete is used when CDC includes the old routing value."""
+    sync, node = make_root_sync("id")
+    payloads: t.List[Payload] = [
+        Payload(
+            tg_op="UPDATE",
+            table="book",
+            old={"id": 1},
+            new={"id": 2},
+        )
+    ]
+
+    sync._update_op(node, {"book": []}, payloads)
+
+    delete = sync.search_client.bulk.call_args.args[1][0]
+    assert delete["_id"] == "1"
+    assert delete["_routing"] == 1
+    sync.search_client.delete_by_query.assert_not_called()
+
+
+def test_delete_op_deletes_document_without_old_routing():
+    """A root delete falls back to a cross-shard delete without routing."""
+    sync, node = make_root_sync("book_isbn")
+    payloads: t.List[Payload] = [
+        Payload(tg_op="DELETE", table="book", old={"id": 1})
+    ]
+
+    sync._delete_op(node, {"book": []}, payloads)
+
+    sync.search_client.bulk.assert_not_called()
+    sync.search_client.delete_by_query.assert_called_once_with("book", ["1"])
+
+
+def test_delete_op_deletes_document_with_old_routing():
+    """A root delete uses a direct routed delete when routing is available."""
+    sync, node = make_root_sync("id")
+    payloads: t.List[Payload] = [
+        Payload(tg_op="DELETE", table="book", old={"id": 1})
+    ]
+
+    sync._delete_op(node, {"book": []}, payloads)
+
+    delete = sync.search_client.bulk.call_args.args[1][0]
+    assert delete["_id"] == "1"
+    assert delete["_routing"] == 1
+    sync.search_client.delete_by_query.assert_not_called()
 
 
 @pytest.fixture(scope="function")

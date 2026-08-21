@@ -227,6 +227,21 @@ class SearchClient(Sink):
         """Refresh the Elasticsearch/OpenSearch index."""
         self.__client.indices.refresh(index=indices)
 
+    def delete_by_query(self, index: str, ids: t.List[str]) -> None:
+        """Delete documents by id across all shards.
+
+        This is used for the rare primary-key update where a document was
+        indexed with custom routing but its old routing value is absent from
+        the CDC payload.
+        """
+        if not ids:
+            return
+        self.__client.delete_by_query(
+            index=index,
+            body={"query": {"ids": {"values": ids}}},
+            conflicts="proceed",
+        )
+
     def _search(self, index: str, table: str, fields: t.Optional[dict] = None):
         """
         Search private area for matching docs in Elasticsearch/OpenSearch.

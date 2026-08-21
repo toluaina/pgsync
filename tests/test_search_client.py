@@ -16,6 +16,19 @@ from .testing_utils import override_env_var
 class TestSearchClient(object):
     """Search Client tests."""
 
+    def test_delete_by_query(self):
+        """Delete-by-query targets every shard when routing is unavailable."""
+        client = object.__new__(SearchClient)
+        client._SearchClient__client = MagicMock()
+
+        client.delete_by_query("book", ["1", "2"])
+
+        client._SearchClient__client.delete_by_query.assert_called_once_with(
+            index="book",
+            body={"query": {"ids": {"values": ["1", "2"]}}},
+            conflicts="proceed",
+        )
+
     def test_get_search_init(self, mocker):
         url = "http://some-domain:33"
         with override_env_var(ELASTICSEARCH="True", OPENSEARCH="False"):
