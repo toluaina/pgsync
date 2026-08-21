@@ -32,14 +32,18 @@ ROW = namedtuple("Row", ["data", "xid"])
 
 def test_cli_rejects_polling_and_wal_from_environment():
     """Environment-derived polling and WAL defaults remain exclusive."""
+    project_root = os.path.dirname(os.path.dirname(__file__))
     env = {
         **os.environ,
         "POLLING": "true",
         "WAL": "true",
+        "PYTHONPATH": os.pathsep.join(
+            filter(None, [project_root, os.environ.get("PYTHONPATH")])
+        ),
     }
     result = subprocess.run(
         [sys.executable, "bin/pgsync"],
-        cwd=os.path.dirname(os.path.dirname(__file__)),
+        cwd=project_root,
         env=env,
         capture_output=True,
         text=True,
