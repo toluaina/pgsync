@@ -20,8 +20,11 @@ FROM python:3.12.12-slim AS runtime
 
 WORKDIR /app
 
-# Install as root, then run the CLI without root privileges.
-RUN useradd --no-create-home --shell /bin/false pgsync
+# Install as root, then run the CLI without root privileges. Creating this
+# directory with the runtime user's ownership also initializes a fresh named
+# Docker volume with permissions suitable for file checkpoints.
+RUN useradd --no-create-home --shell /bin/false pgsync \
+    && install -d -o pgsync -g pgsync /app/checkpoints
 RUN --mount=type=bind,from=build,source=/wheels,target=/wheels,readonly \
     pip install --no-cache-dir --no-index --find-links=/wheels /wheels/pgsync-*.whl
 

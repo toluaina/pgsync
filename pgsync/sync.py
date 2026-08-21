@@ -2332,6 +2332,16 @@ def main(
         sys.stdout.write(f"Version: {__version__}\n")
         return
 
+    # Click's mutually-exclusive option handler only sees options supplied on
+    # the command line. The defaults for these flags can also come from
+    # POLLING and WAL environment variables, so validate their final values
+    # here as well.
+    if polling and wal:
+        raise click.UsageError(
+            "POLLING and WAL cannot both be enabled. "
+            "Set only one of them to true."
+        )
+
     kwargs: dict = {
         "user": user,
         "host": host,

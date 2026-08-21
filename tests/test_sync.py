@@ -2,6 +2,8 @@
 
 import importlib
 import os
+import subprocess
+import sys
 import typing as t
 from collections import namedtuple
 from types import SimpleNamespace
@@ -26,6 +28,26 @@ from pgsync.sync import settings, Sync
 from .testing_utils import override_env_var
 
 ROW = namedtuple("Row", ["data", "xid"])
+
+
+def test_cli_rejects_polling_and_wal_from_environment():
+    """Environment-derived polling and WAL defaults remain exclusive."""
+    env = {
+        **os.environ,
+        "POLLING": "true",
+        "WAL": "true",
+    }
+    result = subprocess.run(
+        [sys.executable, "bin/pgsync"],
+        cwd=os.path.dirname(os.path.dirname(__file__)),
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 2
+    assert "POLLING and WAL cannot both be enabled" in result.stderr
 
 
 @pytest.fixture(scope="function")
@@ -2777,9 +2799,7 @@ class TestAsyncMethods:
                 assert status_called.wait(
                     timeout=2.0
                 ), "_status was not called"
-                assert meta_called.wait(
-                    timeout=2.0
-                ), "set_meta was not called"
+                assert meta_called.wait(timeout=2.0), "set_meta was not called"
 
 
 # ============================================================================
