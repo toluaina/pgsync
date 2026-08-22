@@ -45,7 +45,7 @@ def timeit(func: t.Callable):
         since: float = time()
         fn = func(*args, **kwargs)
         until: float = time()
-        sys.stdout.write(f"{func.__name__}: {until-since} secs\n")
+        sys.stdout.write(f"{func.__name__}: {until - since} secs\n")
         return fn
 
     return timed
@@ -420,5 +420,5 @@ def remap_unknown(
         if idx < len(cols):
             remapped[cols[idx]] = v
         else:
-            remapped[f"@{idx+1}"] = v  # fallback
+            remapped[f"@{idx + 1}"] = v  # fallback
     return remapped
