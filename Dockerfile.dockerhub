@@ -2,7 +2,7 @@
 
 # Build wheels in an isolated stage, so compiler tooling and source files do not
 # become part of the published image.
-FROM python:3.12.12-slim AS build
+FROM python:3.14.7-slim AS build
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ COPY README.rst LICENSE setup.cfg setup.py ./
 COPY bin/bootstrap bin/parallel_sync bin/pgsync ./bin/
 RUN pip wheel --no-cache-dir --no-deps --wheel-dir /wheels .
 
-FROM python:3.12.12-slim AS runtime
+FROM python:3.14.7-slim AS runtime
 
 WORKDIR /app
 
