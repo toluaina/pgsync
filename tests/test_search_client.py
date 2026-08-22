@@ -476,9 +476,7 @@ class TestSearchClient(object):
                     mock_tree.traverse_post_order.return_value = [mock_node]
                     mock_tree.root = mock_node
 
-                    result = client._build_mapping(
-                        mock_tree, routing="user_id"
-                    )
+                    client._build_mapping(mock_tree, routing="user_id")
 
                     assert mock_node._mapping.get("_routing") == {
                         "required": True

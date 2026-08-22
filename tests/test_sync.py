@@ -228,7 +228,7 @@ class TestSync(object):
                 [ROW("COMMIT 72736", 1234)],
                 [],
             ]
-            with patch("pgsync.sync.Sync.sync") as mock_sync:
+            with patch("pgsync.sync.Sync.sync"):
                 sync.logical_slot_changes()
                 assert mock_peek.call_args_list == [
                     call(
@@ -422,7 +422,7 @@ class TestSync(object):
                 ],
                 [],
             ]
-            with patch("pgsync.sync.Sync.sync") as mock_sync:
+            with patch("pgsync.sync.Sync.sync"):
                 sync.logical_slot_changes()
                 assert mock_logical_slot_peek_changes.call_args_list == [
                     call(
@@ -2038,7 +2038,7 @@ class TestSync(object):
         mock_payloads.return_value = iter(
             [{"_id": "1", "_index": "testdb", "_source": {"field": "value"}}]
         )
-        docs = list(sync.sync())
+        list(sync.sync())
         # Should yield documents
 
     def test_nodes_property(self, sync):
@@ -2097,7 +2097,7 @@ class TestSync(object):
         payloads = [
             Payload(tg_op="TRUNCATE", table="book", schema="public"),
         ]
-        result = list(sync._payloads(payloads))
+        list(sync._payloads(payloads))
         # TRUNCATE triggers sync without filters
 
     def test_tree_tables_property(self, sync):
@@ -2490,7 +2490,7 @@ class TestWALStreaming:
         with tempfile.NamedTemporaryFile(suffix=".json") as tmp:
             with patch.object(threading.Thread, "start", _record_start):
                 runner = CliRunner()
-                result = runner.invoke(main, ["--wal", "-c", tmp.name])
+                runner.invoke(main, ["--wal", "-c", tmp.name])
 
         # All three consumers should have been called
         for s in sync_instances:
@@ -2530,7 +2530,7 @@ class TestWALStreaming:
         with tempfile.NamedTemporaryFile(suffix=".json") as tmp:
             with patch.object(threading.Thread, "start", _record_start):
                 runner = CliRunner()
-                result = runner.invoke(main, ["--wal", "-c", tmp.name])
+                runner.invoke(main, ["--wal", "-c", tmp.name])
 
         sync_instance.wal_consumer.assert_called_once()
         assert len(started_threads) == 0
@@ -3091,7 +3091,7 @@ class TestSyncEdgeCases:
         filters = {"book": []}
 
         with patch.object(sync.search_client, "_search", return_value=["001"]):
-            with patch.object(sync.search_client, "bulk") as mock_bulk:
+            with patch.object(sync.search_client, "bulk"):
                 result = sync._delete_op(node, filters, payloads)
 
                 # Should have searched and deleted
@@ -3150,7 +3150,7 @@ class TestSyncEdgeCases:
                 [(["001"], {"isbn": "001"}, ["001"])]
             )
 
-            docs = list(sync.sync())
+            list(sync.sync())
 
             # Plugin should be called
             mock_plugin.transform.assert_called()
@@ -3361,7 +3361,6 @@ class TestMySQLCheckpointExtended:
 
     def test_checkpoint_setter_creates_directory(self):
         """Test checkpoint setter creates parent directory if needed."""
-        import tempfile
         from pathlib import Path
 
         with override_env_var(REDIS_CHECKPOINT="False", ELASTICSEARCH="True"):

@@ -34,18 +34,24 @@ if not has_es and not has_os:
 if not has_es and not has_os:
     os.environ["ELASTICSEARCH"] = "True"
 
-import pytest
-import sqlalchemy as sa
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
-from sqlalchemy.pool import NullPool
-from sqlalchemy.schema import UniqueConstraint
+# These imports must follow the environment setup above.
+import pytest  # noqa: E402
+import sqlalchemy as sa  # noqa: E402
+from sqlalchemy.orm import (  # noqa: E402
+    DeclarativeBase,
+    Mapped,
+    mapped_column,
+    sessionmaker,
+)
+from sqlalchemy.pool import NullPool  # noqa: E402
+from sqlalchemy.schema import UniqueConstraint  # noqa: E402
 
-from pgsync.base import Base, create_database, drop_database
-from pgsync.constants import DEFAULT_SCHEMA
-from pgsync.settings import IS_MYSQL_COMPAT
-from pgsync.singleton import Singleton
-from pgsync.sync import Sync
-from pgsync.urls import get_database_url
+from pgsync.base import Base, create_database, drop_database  # noqa: E402
+from pgsync.constants import DEFAULT_SCHEMA  # noqa: E402
+from pgsync.settings import IS_MYSQL_COMPAT  # noqa: E402
+from pgsync.singleton import Singleton  # noqa: E402
+from pgsync.sync import Sync  # noqa: E402
+from pgsync.urls import get_database_url  # noqa: E402
 
 logging.getLogger("faker").setLevel(logging.ERROR)
 

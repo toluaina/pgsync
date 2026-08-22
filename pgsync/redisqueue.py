@@ -52,7 +52,7 @@ class RedisQueue(object):
         """
         try:
             return bool(self.__db.ping())
-        except ConnectionError as exc:
+        except ConnectionError:
             logger.exception("Redis server is not reachable when pinging.")
             raise
 

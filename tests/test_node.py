@@ -527,6 +527,7 @@ class TestNodeAdditional(object):
             }
         )
         # Note: through_tables is from the input, but internal throughs is populated by tree
+        assert rel_with_through.throughs == []
 
 
 # ============================================================================
