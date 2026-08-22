@@ -53,8 +53,6 @@ CLASSIFIERS = [
     "Operating System :: OS Independent",
 ]
 SCRIPTS = ["bin/bootstrap", "bin/parallel_sync", "bin/pgsync"]
-SETUP_REQUIRES = ["pytest-runner"]
-TESTS_REQUIRE = ["pytest"]
 
 # if building the source dist then add the sources
 PACKAGES = find_packages(include=["pgsync"])
@@ -81,10 +79,7 @@ setup(
     include_package_data=True,
     keywords=KEYWORDS,
     packages=PACKAGES,
-    setup_requires=SETUP_REQUIRES,
     scripts=SCRIPTS,
-    test_suite="tests",
-    tests_require=TESTS_REQUIRE,
     url=URL,
     version=VERSION,
     zip_safe=False,

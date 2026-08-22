@@ -68,7 +68,6 @@ pgsync/
 ├── bin/ # executable startup scripts
 ├── demo/ # demo data and configurations
 ├── docker/ # docker configurations and entrypoints
-├── docs/ # documentation assets
 ├── examples/ # example schema.json files
 ├── pgsync/ # core application source code
 │ ├── settings.py # configuration loading

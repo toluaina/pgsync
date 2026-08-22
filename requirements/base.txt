@@ -8,9 +8,9 @@ async-timeout==5.0.1
     # via redis
 backports-datetime-fromisoformat==2.0.3
     # via marshmallow
-boto3==1.43.77
+boto3==1.43.78
     # via -r requirements/base.in
-botocore==1.43.77
+botocore==1.43.78
     # via
     #   boto3
     #   s3transfer

@@ -68,7 +68,7 @@ Ready to contribute? Here's how to set up `pgsync` for local development.
 
     $ mkvirtualenv pgsync
     $ cd pgsync/
-    $ python setup.py develop
+    $ python -m pip install -e .
 
 4. Create a branch for local development::
 
@@ -80,7 +80,7 @@ Ready to contribute? Here's how to set up `pgsync` for local development.
    tests, including testing other Python versions with tox::
 
     $ flake8 pgsync tests
-    $ python setup.py test or py.test
+    $ pytest
     $ tox
 
    To get flake8 and tox, just pip install them into your virtualenv.
@@ -118,7 +118,7 @@ Deploying
 ---------
 
 A reminder for the maintainers on how to deploy.
-Make sure all your changes are committed (including an entry in HISTORY.rst).
+Make sure all your changes are committed (including an entry in CHANGELOG.rst).
 Then run::
 
 $ bumpversion patch # possible: major / minor / patch
