@@ -8,7 +8,7 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/pgsync?color=blue&logo=pypi&logoColor=white)](https://pypi.org/project/pgsync)
 [![Python versions](https://img.shields.io/pypi/pyversions/pgsync?logo=python&logoColor=white)](https://pypi.org/project/pgsync)
-[![Build status](https://img.shields.io/github/actions/workflow/status/toluaina/pgsync/python-build.yml?branch=main&logo=github)](https://github.com/toluaina/pgsync/actions)
+[![CI status](https://img.shields.io/github/actions/workflow/status/toluaina/pgsync/ci.yml?branch=main&logo=github)](https://github.com/toluaina/pgsync/actions)
 [![codecov](https://img.shields.io/codecov/c/github/toluaina/pgsync?logo=codecov&logoColor=white)](https://codecov.io/gh/toluaina/pgsync)
 [![Downloads](https://img.shields.io/pypi/dm/pgsync?color=brightgreen&logo=pypi&logoColor=white)](https://pypi.org/project/pgsync)
 [![License](https://img.shields.io/github/license/toluaina/pgsync?color=blue)](LICENSE)
