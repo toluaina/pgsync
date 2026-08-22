@@ -62,6 +62,10 @@ class TestConnectionFactories:
             pool_timeout=base_module.SQLALCHEMY_POOL_TIMEOUT,
         )
 
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="work_mem is a PostgreSQL-only connection setting",
+    )
     def test_pg_engine_can_use_nullpool_and_configure_work_mem(self):
         engine = MagicMock()
         dbapi_conn = MagicMock()
