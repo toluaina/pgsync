@@ -89,15 +89,15 @@ class TestConnectionFactories:
                             side_effect=listen_for,
                         ):
                             base_module._pg_engine("books")
+                            callbacks[0](dbapi_conn, MagicMock())
+                            dbapi_conn.cursor.return_value.execute.assert_called_once_with(
+                                "SET work_mem = '16MB'"
+                            )
+                            dbapi_conn.cursor.return_value.close.assert_called_once_with()
 
         assert (
             create_engine.call_args.kwargs["poolclass"].__name__ == "NullPool"
         )
-        callbacks[0](dbapi_conn, MagicMock())
-        dbapi_conn.cursor.return_value.execute.assert_called_once_with(
-            "SET work_mem = '16MB'"
-        )
-        dbapi_conn.cursor.return_value.close.assert_called_once_with()
 
     def test_pg_logical_repl_conn_uses_shared_connection_configuration(self):
         connection = MagicMock()
