@@ -1,7 +1,5 @@
 """Transform tests."""
 
-import pytest
-
 from pgsync.constants import (
     CONCAT_TRANSFORM,
     RENAME_TRANSFORM,
@@ -10,7 +8,6 @@ from pgsync.constants import (
 from pgsync.transform import Transform
 
 
-@pytest.mark.usefixtures("table_creator")
 class TestTransform(object):
     """Transform tests."""
 

@@ -657,3 +657,68 @@ class TestSearchClientBulkOperations:
                     ):
                         # Should not raise when settings are False
                         client.bulk("test", actions)
+
+
+class TestSearchClientErrorPaths:
+    """Unit tests for branches that do not need a running search service."""
+
+    def test_elasticsearch_info_error_keeps_default_version(self):
+        with override_env_var(ELASTICSEARCH="True", OPENSEARCH="False"):
+            importlib.reload(settings)
+            backend = MagicMock()
+            backend.info.return_value = {"version": {}}
+            with mock.patch(
+                "pgsync.search_client.get_search_url",
+                return_value="http://localhost:9200",
+            ):
+                with mock.patch(
+                    "pgsync.search_client.get_search_client",
+                    return_value=backend,
+                ):
+                    assert SearchClient().major_version == 0
+
+    def test_prepare_action_only_adds_type_for_legacy_elasticsearch(self):
+        client = object.__new__(SearchClient)
+        client.major_version = 6
+        client.is_opensearch = False
+        assert client.prepare_action({"id": 1}) == {"id": 1, "_type": "_doc"}
+
+        client.major_version = 8
+        assert client.prepare_action({"id": 1}) == {"id": 1}
+
+    @mock.patch("pgsync.search_client.logger")
+    def test_teardown_logs_and_reraises_client_errors(self, mock_logger):
+        client = object.__new__(SearchClient)
+        client._SearchClient__client = MagicMock()
+        client._SearchClient__client.indices.delete.side_effect = RuntimeError(
+            "unavailable"
+        )
+
+        with pytest.raises(RuntimeError, match="unavailable"):
+            client.teardown("books")
+
+        mock_logger.exception.assert_called_once()
+
+    def test_delete_by_query_skips_empty_ids(self):
+        client = object.__new__(SearchClient)
+        client._SearchClient__client = MagicMock()
+
+        client.delete_by_query("books", [])
+
+        client._SearchClient__client.delete_by_query.assert_not_called()
+
+    @mock.patch("pgsync.search_client.logger")
+    def test_search_ignores_known_numeric_range_error(self, mock_logger):
+        client = object.__new__(SearchClient)
+        client._SearchClient__client = MagicMock()
+        search = MagicMock()
+        search.source.return_value = search
+        search.scan.side_effect = elasticsearch.exceptions.RequestError(
+            400, "bad request", {"error": "is out of range for a long"}
+        )
+        client.Search = MagicMock(return_value=search)
+        client.Bool = MagicMock()
+        client.Q = MagicMock()
+
+        assert list(client._search("books", "book")) == []
+        mock_logger.warning.assert_called_once()

@@ -13,7 +13,6 @@ from pgsync.urls import (
 from pgsync.utils import validate_config
 
 
-@pytest.mark.usefixtures("table_creator")
 class TestUrls(object):
     """URLS tests."""
 
@@ -57,14 +56,16 @@ class TestUrls(object):
             )
         url = get_database_url("mydb", port=9999)
         assert url.endswith("@localhost:9999/mydb")
-        # with patch("pgsync.urls.logger") as mock_logger:
-        #     assert (
-        #         get_database_url("mydb", user="kermit")
-        #         == "postgresql+psycopg2://kermit@localhost:5432/mydb"
-        #     )
-        #     mock_logger.debug.assert_called_once_with(
-        #         "Connecting to Postgres without password."
-        #     )
+        with patch("pgsync.urls.PG_PASSWORD", None):
+            with patch("pgsync.urls.logger") as mock_logger:
+                assert get_database_url("mydb", user="kermit") == (
+                    "mysql+pymysql://kermit@localhost:3306/mydb"
+                    if IS_MYSQL_COMPAT
+                    else "postgresql+psycopg2://kermit@localhost:5432/mydb"
+                )
+                mock_logger.debug.assert_called_once_with(
+                    "Connecting to database without password."
+                )
 
     @patch("pgsync.urls.logger")
     def test_get_redis_url(self, mock_logger):

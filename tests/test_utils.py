@@ -5,7 +5,7 @@ import os
 import pytest
 import sqlalchemy as sa
 from freezegun import freeze_time
-from mock import call, patch
+from mock import call, MagicMock, patch
 
 from pgsync import settings
 from pgsync.base import Base
@@ -773,3 +773,75 @@ class TestExceptionHandling:
 
         result = func_with_kwargs(a=5, b=10)
         assert result == 15
+
+
+class TestConfigLoaderRemoteSources:
+    """Remote configuration loading does not require database fixtures."""
+
+    def test_loads_http_config_and_removes_download(self, monkeypatch):
+        response = MagicMock()
+        response.json.return_value = [{"database": "${PGSYNC_TEST_DB}"}]
+
+        monkeypatch.setenv("PGSYNC_TEST_DB", "books")
+        with patch("pgsync.utils.requests.get", return_value=response) as get:
+            documents = list(
+                config_loader(schema_url="https://example.test/schema.json")
+            )
+
+        assert documents == [{"database": "books"}]
+        get.assert_called_once_with(
+            "https://example.test/schema.json",
+            headers={"Accept": "application/json"},
+            timeout=(10, 60),
+        )
+        response.raise_for_status.assert_called_once_with()
+
+    def test_rejects_non_json_http_response(self):
+        response = MagicMock()
+        response.json.side_effect = ValueError("not json")
+        response.headers = {"Content-Type": "text/html"}
+
+        with patch("pgsync.utils.requests.get", return_value=response):
+            with pytest.raises(ValueError, match="Expected JSON"):
+                list(config_loader(schema_url="https://example.test/schema"))
+
+    def test_loads_s3_config_and_removes_download(self):
+        def download_file(bucket, key, filename):
+            assert (bucket, key) == ("schemas", "book.json")
+            with open(filename, "w", encoding="utf-8") as file_:
+                file_.write('[{"database": "books"}]')
+
+        s3 = MagicMock()
+        s3.download_file.side_effect = download_file
+        with patch("pgsync.utils.boto3.client", return_value=s3):
+            assert list(
+                config_loader(s3_schema_url="s3://schemas/book.json")
+            ) == [{"database": "books"}]
+
+        s3.download_file.assert_called_once()
+
+    @pytest.mark.parametrize("s3_url", ["s3://bucket", "s3://"])
+    def test_rejects_incomplete_s3_url(self, s3_url):
+        with pytest.raises(ValueError, match="Invalid S3 URL"):
+            list(config_loader(s3_schema_url=s3_url))
+
+    @patch(
+        "pgsync.utils.config_loader",
+        return_value=[{"database": "Books!", "index": "book-index"}],
+    )
+    @patch("pgsync.utils.logger")
+    def test_show_settings_reports_sanitized_replication_slot(
+        self, mock_logger, mock_config_loader
+    ):
+        show_settings(
+            config="schema.json",
+            schema_url="https://example.test/schema.json",
+            s3_schema_url="s3://schemas/book.json",
+        )
+
+        mock_config_loader.assert_called_once_with(
+            config="schema.json",
+            schema_url="https://example.test/schema.json",
+            s3_schema_url="s3://schemas/book.json",
+        )
+        mock_logger.info.assert_any_call("Slot: books_bookindex")
