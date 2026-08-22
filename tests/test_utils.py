@@ -805,6 +805,19 @@ class TestConfigLoaderRemoteSources:
             with pytest.raises(ValueError, match="Expected JSON"):
                 list(config_loader(schema_url="https://example.test/schema"))
 
+    def test_rejects_missing_or_invalid_config_source(self):
+        with pytest.raises(ValueError, match="must provide"):
+            list(config_loader())
+        with pytest.raises(ValueError, match="Invalid input"):
+            list(config_loader(schema_url="ftp://example.test/schema.json"))
+
+    def test_rejects_invalid_local_json(self, tmp_path):
+        config = tmp_path / "invalid.json"
+        config.write_text("not json", encoding="utf-8")
+
+        with pytest.raises(ValueError, match="not valid JSON"):
+            list(config_loader(config=str(config)))
+
     def test_loads_s3_config_and_removes_download(self):
         def download_file(bucket, key, filename):
             assert (bucket, key) == ("schemas", "book.json")

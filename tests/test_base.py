@@ -1,9 +1,12 @@
 """Base tests."""
 
+import threading
+
 import pytest
 import sqlalchemy as sa
-from mock import call, patch
+from mock import call, MagicMock, patch
 
+import pgsync.base as base_module
 from pgsync.base import (
     _pg_engine,
     Base,
@@ -23,6 +26,208 @@ from pgsync.exc import (
 )
 from pgsync.settings import IS_MYSQL_COMPAT
 from pgsync.view import CreateView, DropView
+
+
+class TestConnectionFactories:
+    """Connection construction is deterministic and does not need a database."""
+
+    def test_pg_engine_uses_configured_pool_options(self):
+        engine = MagicMock()
+        with patch.object(
+            base_module,
+            "_pg_connect_config",
+            return_value=(
+                "postgresql://example/books",
+                {"sslmode": "require"},
+            ),
+        ):
+            with patch.object(base_module, "SQLALCHEMY_USE_NULLPOOL", False):
+                with patch.object(base_module, "PG_WORK_MEM", None):
+                    with patch.object(
+                        base_module.sa, "create_engine", return_value=engine
+                    ) as create_engine:
+                        assert (
+                            base_module._pg_engine("books", echo=True)
+                            is engine
+                        )
+
+        create_engine.assert_called_once_with(
+            "postgresql://example/books",
+            echo=True,
+            connect_args={"sslmode": "require"},
+            pool_size=base_module.SQLALCHEMY_POOL_SIZE,
+            max_overflow=base_module.SQLALCHEMY_MAX_OVERFLOW,
+            pool_pre_ping=base_module.SQLALCHEMY_POOL_PRE_PING,
+            pool_recycle=base_module.SQLALCHEMY_POOL_RECYCLE,
+            pool_timeout=base_module.SQLALCHEMY_POOL_TIMEOUT,
+        )
+
+    def test_pg_engine_can_use_nullpool_and_configure_work_mem(self):
+        engine = MagicMock()
+        dbapi_conn = MagicMock()
+        callbacks = []
+
+        def listen_for(*_args):
+            def decorator(callback):
+                callbacks.append(callback)
+                return callback
+
+            return decorator
+
+        with patch.object(
+            base_module,
+            "_pg_connect_config",
+            return_value=("postgresql://example/books", {}),
+        ):
+            with patch.object(base_module, "SQLALCHEMY_USE_NULLPOOL", True):
+                with patch.object(base_module, "PG_WORK_MEM", "16MB"):
+                    with patch.object(
+                        base_module.sa, "create_engine", return_value=engine
+                    ) as create_engine:
+                        with patch(
+                            "sqlalchemy.event.listens_for",
+                            side_effect=listen_for,
+                        ):
+                            base_module._pg_engine("books")
+
+        assert (
+            create_engine.call_args.kwargs["poolclass"].__name__ == "NullPool"
+        )
+        callbacks[0](dbapi_conn, MagicMock())
+        dbapi_conn.cursor.return_value.execute.assert_called_once_with(
+            "SET work_mem = '16MB'"
+        )
+        dbapi_conn.cursor.return_value.close.assert_called_once_with()
+
+    def test_pg_logical_repl_conn_uses_shared_connection_configuration(self):
+        connection = MagicMock()
+        with patch.object(
+            base_module,
+            "_pg_connect_config",
+            return_value=(
+                "postgresql://reader:secret@example.test:5444/books",
+                {"sslmode": "verify-full"},
+            ),
+        ):
+            with patch.object(
+                base_module.psycopg2, "connect", return_value=connection
+            ) as connect:
+                assert (
+                    base_module.pg_logical_repl_conn(database="books")
+                    is connection
+                )
+
+        connect.assert_called_once_with(
+            host="example.test",
+            port=5444,
+            user="reader",
+            password="secret",
+            dbname="books",
+            connection_factory=base_module.LogicalReplicationConnection,
+            sslmode="verify-full",
+        )
+
+
+class TestBasePureHelpers:
+    """Base helpers that only compose SQL can be tested without PostgreSQL."""
+
+    def test_trigger_exists_uses_bound_parameters(self):
+        base = object.__new__(Base)
+        base._thread_local = threading.local()
+        base._Base__engine = MagicMock()
+        connection = (
+            base._Base__engine.connect.return_value.__enter__.return_value
+        )
+        connection.execute.return_value.scalar.return_value = True
+
+        assert base.trigger_exists("public_book_notify", "book", "public")
+
+        statement, params = connection.execute.call_args.args
+        assert "FROM   pg_trigger" in str(statement)
+        assert params == {
+            "trigger": "public_book_notify",
+            "table": "book",
+            "schema": "public",
+        }
+
+    def test_trigger_helpers_generate_statements_for_every_table(self):
+        base = object.__new__(Base)
+        base.tables = MagicMock(return_value=["book", "author"])
+        base.execute = MagicMock()
+        base.disable_trigger = MagicMock()
+        base.enable_trigger = MagicMock()
+
+        base.drop_triggers("public", join_queries=True)
+        base.disable_triggers("public")
+        base.enable_triggers("public")
+
+        statement = str(base.execute.call_args.args[0])
+        assert 'DROP TRIGGER IF EXISTS "public_book_notify"' in statement
+        assert 'DROP TRIGGER IF EXISTS "public_author_truncate"' in statement
+        base.disable_trigger.assert_has_calls(
+            [call("public", "book"), call("public", "author")]
+        )
+        base.enable_trigger.assert_has_calls(
+            [call("public", "book"), call("public", "author")]
+        )
+
+    def test_create_triggers_skips_views_and_combines_queries(self):
+        base = object.__new__(Base)
+        base.tables = MagicMock(return_value=["book", "author", "book_view"])
+        base.views = MagicMock(return_value=["book_view"])
+        base.view_exists = MagicMock(return_value=False)
+        base.drop_triggers = MagicMock()
+        base.execute = MagicMock()
+
+        base.create_triggers(
+            "public", tables=["book", "book_view"], join_queries=True
+        )
+
+        statement = str(base.execute.call_args.args[0])
+        assert 'CREATE TRIGGER "public_book_notify"' in statement
+        assert 'CREATE TRIGGER "public_book_truncate"' in statement
+        assert "book_view" not in statement
+        assert base.drop_triggers.call_count == 2
+
+    def test_trigger_and_function_statements_are_executed(self):
+        base = object.__new__(Base)
+        base.execute = MagicMock()
+
+        base.disable_trigger("public", "book")
+        base.enable_trigger("public", "book")
+        base.create_function("public")
+        base.drop_function("public")
+
+        statements = [
+            str(call_.args[0]) for call_ in base.execute.call_args_list
+        ]
+        assert any(
+            "DISABLE TRIGGER public_book_notify" in item for item in statements
+        )
+        assert any(
+            "ENABLE TRIGGER public_book_truncate" in item
+            for item in statements
+        )
+        assert any("CREATE OR REPLACE FUNCTION" in item for item in statements)
+        assert any("DROP FUNCTION IF EXISTS" in item for item in statements)
+
+    def test_query_helpers_return_rows_and_boolean_existence(self):
+        base = object.__new__(Base)
+        base.verbose = False
+        base._thread_local = threading.local()
+        base._Base__engine = MagicMock()
+        connection = (
+            base._Base__engine.connect.return_value.__enter__.return_value
+        )
+        connection.execute.return_value.fetchone.side_effect = [("row",), None]
+        connection.execute.return_value.fetchall.return_value = [("one",)]
+
+        assert base.fetchone(sa.text("SELECT 1")) == ("row",)
+        assert base.fetchall(sa.text("SELECT 1")) == [("one",)]
+        assert not base.exists(sa.text("SELECT 1"))
+        connection.execute.return_value.fetchone.side_effect = None
+        connection.execute.return_value.fetchone.return_value = (1,)
+        assert base.exists(sa.text("SELECT 1"))
 
 
 @pytest.mark.skipif(

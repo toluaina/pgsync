@@ -1,6 +1,7 @@
 """SearchClient tests."""
 
 import importlib
+from types import SimpleNamespace
 
 import elastic_transport
 import mock
@@ -722,3 +723,87 @@ class TestSearchClientErrorPaths:
 
         assert list(client._search("books", "book")) == []
         mock_logger.warning.assert_called_once()
+
+    def test_search_reraises_unrecognized_request_error(self):
+        client = object.__new__(SearchClient)
+        client._SearchClient__client = MagicMock()
+        search = MagicMock()
+        search.source.return_value = search
+        search.scan.side_effect = elasticsearch.exceptions.RequestError(
+            400, "bad request", {"error": "invalid query"}
+        )
+        client.Search = MagicMock(return_value=search)
+        client.Bool = MagicMock()
+        client.Q = MagicMock()
+
+        with pytest.raises(elasticsearch.exceptions.RequestError):
+            list(client._search("books", "book"))
+
+    def test_create_setting_supports_explicit_mappings(self):
+        client = object.__new__(SearchClient)
+        client._SearchClient__client = MagicMock()
+        indices = client._SearchClient__client.indices
+        indices.exists.return_value = False
+
+        client._create_setting(
+            "books",
+            MagicMock(),
+            mappings={"dynamic": "strict"},
+            mapping={"dynamic_templates": [{"strings": {}}]},
+        )
+
+        indices.create.assert_called_once_with(
+            index="books",
+            body={
+                "mappings": {"dynamic_templates": [{"strings": {}}]},
+            },
+        )
+
+    def test_create_setting_reraises_create_error(self):
+        client = object.__new__(SearchClient)
+        client._SearchClient__client = MagicMock()
+        client._SearchClient__client.indices.exists.return_value = False
+        client._SearchClient__client.indices.create.side_effect = RuntimeError(
+            "unavailable"
+        )
+
+        with pytest.raises(RuntimeError, match="unavailable"):
+            client._create_setting("books", MagicMock(), mapping={"title": {}})
+
+    def test_build_mapping_adds_parameters_to_legacy_nested_mapping(self):
+        client = object.__new__(SearchClient)
+        client.major_version = 6
+        client.is_opensearch = False
+        parent = SimpleNamespace(
+            transform={}, _mapping={}, parent=None, label="books"
+        )
+        child = SimpleNamespace(
+            transform={
+                "rename": {"title": "name"},
+                "mapping": {"name": {"type": "text", "analyzer": "standard"}},
+            },
+            _mapping={},
+            parent=parent,
+            label="author",
+        )
+        tree = SimpleNamespace(
+            root=parent,
+            traverse_post_order=lambda: [child, parent],
+        )
+
+        assert client._build_mapping(tree) == {
+            "mappings": {
+                "_doc": {
+                    "properties": {
+                        "author": {
+                            "properties": {
+                                "name": {
+                                    "type": "text",
+                                    "analyzer": "standard",
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
