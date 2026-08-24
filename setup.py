@@ -60,8 +60,16 @@ PACKAGES = find_packages(include=["pgsync"])
 with open("README.rst") as fp:
     README = fp.read()
 
-with open("requirements/base.txt") as fp:
-    INSTALL_REQUIRES = fp.read()
+# install_requires comes from the loose direct dependencies in base.in;
+# the pip-compiled base.txt/dev.txt are lockfiles for environments.
+# Shipping exact pins in package metadata makes every requirements
+# refresh conflict with an already installed pgsync.
+with open("requirements/base.in") as fp:
+    INSTALL_REQUIRES = [
+        line.strip()
+        for line in fp
+        if line.strip() and not line.strip().startswith(("#", "-"))
+    ]
 
 setup(
     name=NAME,

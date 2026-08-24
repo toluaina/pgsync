@@ -14,6 +14,24 @@ from pgsync.sync import settings
 from .testing_utils import override_env_var
 
 
+def request_error(body: dict) -> Exception:
+    """Build a RequestError across client major versions.
+
+    The 7.x client takes (status_code, error, info) while 8.x takes
+    (message, meta, body) with a typed meta object.
+    """
+    if int(elasticsearch.__version__[0]) >= 8:
+        meta = elastic_transport.ApiResponseMeta(
+            status=400,
+            http_version="1.1",
+            headers=elastic_transport.HttpHeaders({}),
+            duration=0.0,
+            node=None,
+        )
+        return elasticsearch.exceptions.RequestError("bad request", meta, body)
+    return elasticsearch.exceptions.RequestError(400, "bad request", body)
+
+
 class TestSearchClient(object):
     """Search Client tests."""
 
@@ -714,8 +732,8 @@ class TestSearchClientErrorPaths:
         client._SearchClient__client = MagicMock()
         search = MagicMock()
         search.source.return_value = search
-        search.scan.side_effect = elasticsearch.exceptions.RequestError(
-            400, "bad request", {"error": "is out of range for a long"}
+        search.scan.side_effect = request_error(
+            {"error": "is out of range for a long"}
         )
         client.Search = MagicMock(return_value=search)
         client.Bool = MagicMock()
@@ -729,9 +747,7 @@ class TestSearchClientErrorPaths:
         client._SearchClient__client = MagicMock()
         search = MagicMock()
         search.source.return_value = search
-        search.scan.side_effect = elasticsearch.exceptions.RequestError(
-            400, "bad request", {"error": "invalid query"}
-        )
+        search.scan.side_effect = request_error({"error": "invalid query"})
         client.Search = MagicMock(return_value=search)
         client.Bool = MagicMock()
         client.Q = MagicMock()
