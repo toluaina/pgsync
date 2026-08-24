@@ -6,7 +6,11 @@ from collections import defaultdict
 
 import sqlalchemy as sa
 
-from .base import compiled_query, TupleIdentifierType
+from .base import (
+    compiled_query,
+    epoch_extended_xid_column,
+    TupleIdentifierType,
+)
 from .constants import OBJECT, ONE_TO_MANY, ONE_TO_ONE, SCALAR
 from .exc import ForeignKeyError
 from .node import Node
@@ -391,6 +395,7 @@ class QueryBuilder(threading.local):
         txmin: t.Optional[int] = None,
         txmax: t.Optional[int] = None,
         ctid: t.Optional[dict] = None,
+        txid_anchor: t.Optional[int] = None,
     ) -> None:
         columns = [
             JSON_ARRAY(
@@ -443,28 +448,17 @@ class QueryBuilder(threading.local):
                     )
                 )
 
-        if txmin:
-            node._filters.append(
-                sa.cast(
-                    sa.cast(
-                        node.model.c.xmin,
-                        sa.Text,
-                    ),
-                    sa.BigInteger,
-                )
-                >= txmin
+        if txmin or txmax:
+            # txmax is the current 64-bit txid at the time of the pull so it
+            # doubles as the epoch anchor when one is not supplied explicitly
+            xmin64: sa.sql.elements.ColumnElement = epoch_extended_xid_column(
+                node.model.c.xmin,
+                txid_anchor if txid_anchor is not None else txmax,
             )
-        if txmax:
-            node._filters.append(
-                sa.cast(
-                    sa.cast(
-                        node.model.c.xmin,
-                        sa.Text,
-                    ),
-                    sa.BigInteger,
-                )
-                < txmax
-            )
+            if txmin:
+                node._filters.append(xmin64 >= txmin)
+            if txmax:
+                node._filters.append(xmin64 < txmax)
 
         # NB: only apply filters to the root node
         if node._filters:
@@ -1003,6 +997,7 @@ class QueryBuilder(threading.local):
         txmin: t.Optional[int] = None,
         txmax: t.Optional[int] = None,
         ctid: t.Optional[dict] = None,
+        txid_anchor: t.Optional[int] = None,
     ) -> None:
         """Build node query."""
         self.from_obj = None
@@ -1014,7 +1009,13 @@ class QueryBuilder(threading.local):
         self._children(node)
 
         if node.is_root:
-            self._root(node, txmin=txmin, txmax=txmax, ctid=ctid)
+            self._root(
+                node,
+                txmin=txmin,
+                txmax=txmax,
+                ctid=ctid,
+                txid_anchor=txid_anchor,
+            )
         else:
             # 2) subquery: these are for children creating their own columns
             if node.relationship.throughs:

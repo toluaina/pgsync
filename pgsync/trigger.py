@@ -42,7 +42,10 @@ BEGIN
             FROM JSON_EACH(old_row)
             WHERE key = ANY(_primary_keys)
         );
-        xmin := OLD.xmin;
+        -- use the deleting transaction's 64-bit txid, not OLD.xmin:
+        -- OLD.xmin is the row's creation txid and would drag the
+        -- checkpoint backwards when an old row is deleted
+        xmin := TXID_CURRENT();
     ELSE
         IF TG_OP <> 'TRUNCATE' THEN
 
@@ -84,7 +87,9 @@ BEGIN
                     WHERE key = ANY(_primary_keys || _foreign_keys)
                 );
             END IF;
-            xmin := NEW.xmin;
+            -- 64-bit epoch-extended txid of the writing transaction:
+            -- immune to xid wraparound, unlike the raw 32-bit NEW.xmin
+            xmin := TXID_CURRENT();
         END IF;
     END IF;
 

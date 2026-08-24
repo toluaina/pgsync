@@ -17,6 +17,7 @@ from pgsync.base import (
     drop_extension,
     Payload,
     pg_execute,
+    TupleIdentifierType,
 )
 from pgsync.constants import DEFAULT_SCHEMA
 from pgsync.exc import (
@@ -1009,6 +1010,67 @@ class TestBaseAdditional:
         reason="Skipped because IS_MYSQL_COMPAT env var is set",
     )
     @pytest.mark.usefixtures("table_creator")
+    def test_txid_snapshot_xmin(self, connection):
+        """Test txid_snapshot_xmin returns the oldest in-progress txid."""
+        pg_base = Base(connection.engine.url.database)
+        snapshot_xmin: int = pg_base.txid_snapshot_xmin
+        assert isinstance(snapshot_xmin, int)
+        # never above the current txid: safe as a checkpoint bound
+        assert 0 < snapshot_xmin <= pg_base.txid_current
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
+    def test_txid_snapshot_xmin_bounds_open_transaction(self, connection):
+        """An uncommitted transaction holds txid_snapshot_xmin down.
+
+        This is the property that makes it a safe checkpoint: txids are
+        assigned at first write, not commit, so txid_current can move
+        past a transaction that has not committed yet. Checkpointing at
+        the snapshot xmin keeps such transactions above the checkpoint
+        so their changes are still scanned once they commit.
+        """
+        pg_base = Base(connection.engine.url.database)
+        open_conn = pg_base.engine.connect()
+        transaction = open_conn.begin()
+        try:
+            open_xid: int = open_conn.execute(
+                sa.text("SELECT txid_current()")
+            ).scalar()
+            # advance the counter past the open transaction
+            assert pg_base.txid_current > open_xid
+            # but the snapshot xmin must not pass it
+            assert pg_base.txid_snapshot_xmin <= open_xid
+        finally:
+            transaction.rollback()
+            open_conn.close()
+        # once resolved, the snapshot xmin moves past it
+        assert pg_base.txid_snapshot_xmin > open_xid
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
+    def test_model_system_column_types(self, connection):
+        """Reflected models carry typed ctid and xmin system columns.
+
+        Regression: ctid was appended as sa.Column("ctid") with the type
+        accidentally passed as append_column's replace_existing flag,
+        leaving the column as NullType.
+        """
+        pg_base = Base(connection.engine.url.database)
+        model = pg_base.models("book", "public")
+        assert isinstance(model.c.ctid.type, TupleIdentifierType)
+        assert isinstance(model.c.xmin.type, sa.BigInteger)
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
     def test_verbose_property(self, connection):
         """Test verbose property setting."""
         pg_base = Base(connection.engine.url.database, verbose=True)
@@ -1781,6 +1843,39 @@ class TestAdvisoryLock:
             ).bindparams(slot=slot)
         ).fetchone()
         assert row[0] == 0
+
+    def test_not_reentrant_across_threads(self, connection):
+        """A different thread must NOT treat a held lock as re-entrant.
+
+        This is the property that makes logical_slot_changes atomic:
+        the slot cleanup thread (a different thread) must block while
+        the pull thread holds the lock for its count/peek/index/consume
+        sequence, instead of silently entering via re-entrancy.
+        """
+        pg_base = Base(connection.engine.url.database)
+        slot = "test_lock_cross_thread"
+        results: dict = {}
+
+        def attempt() -> None:
+            try:
+                with pg_base.advisory_lock(
+                    slot, max_retries=0, retry_interval=0.01
+                ):
+                    results["acquired"] = True
+            except RuntimeError:
+                results["acquired"] = False
+
+        with pg_base.advisory_lock(slot):
+            thread = threading.Thread(target=attempt)
+            thread.start()
+            thread.join()
+        assert results["acquired"] is False
+
+        # once released, another thread can acquire it
+        thread = threading.Thread(target=attempt)
+        thread.start()
+        thread.join()
+        assert results["acquired"] is True
 
     def test_max_retries_exceeded(self, connection):
         """RuntimeError raised when retries are exhausted."""

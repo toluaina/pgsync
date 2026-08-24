@@ -103,9 +103,13 @@ def logical_slot_changes(
     # now sync up to txmax to capture everything we may have missed
     sync: Sync = Sync(doc, verbose=verbose, validate=validate)
     txmin: int = sync.checkpoint
+    # snapshot xmin bounds in-progress transactions: checkpointing at
+    # txmax would skip any of them that commit after this run
+    snapshot_xmin: int = sync.txid_snapshot_xmin
     txmax: int = sync.txid_current
-    sync.logical_slot_changes(txmin=txmin, txmax=txmax)
-    sync.checkpoint = txmax or sync.txid_current
+    sync.logical_slot_changes(
+        txmin=txmin, txmax=txmax, checkpoint=snapshot_xmin
+    )
 
 
 @dataclass

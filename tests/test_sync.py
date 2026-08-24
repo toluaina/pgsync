@@ -10,7 +10,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from mock import ANY, call, patch
+from mock import ANY, call, patch, PropertyMock
 
 from pgsync.base import Base, Payload
 from pgsync.exc import (
@@ -206,17 +206,13 @@ class TestSync(object):
                 assert mock_peek.call_args_list == [
                     call(
                         slot_name="testdb_testdb",
-                        txmin=None,
-                        txmax=None,
-                        upto_lsn=None,
+                        upto_lsn=ANY,
                         limit=5000,
                         offset=0,
                     ),
                     call(
                         slot_name="testdb_testdb",
-                        txmin=None,
-                        txmax=None,
-                        upto_lsn=None,
+                        upto_lsn=ANY,
                         limit=5000,
                         offset=5000,
                     ),
@@ -233,17 +229,13 @@ class TestSync(object):
                 assert mock_peek.call_args_list == [
                     call(
                         slot_name="testdb_testdb",
-                        txmin=None,
-                        txmax=None,
-                        upto_lsn=None,
+                        upto_lsn=ANY,
                         limit=5000,
                         offset=0,
                     ),
                     call(
                         slot_name="testdb_testdb",
-                        txmin=None,
-                        txmax=None,
-                        upto_lsn=None,
+                        upto_lsn=ANY,
                         limit=5000,
                         offset=5000,
                     ),
@@ -272,17 +264,13 @@ class TestSync(object):
                     assert mock_peek.call_args_list == [
                         call(
                             slot_name="testdb_testdb",
-                            txmin=None,
-                            txmax=None,
-                            upto_lsn=None,
+                            upto_lsn=ANY,
                             limit=5000,
                             offset=0,
                         ),
                         call(
                             slot_name="testdb_testdb",
-                            txmin=None,
-                            txmax=None,
-                            upto_lsn=None,
+                            upto_lsn=ANY,
                             limit=5000,
                             offset=5000,
                         ),
@@ -369,6 +357,145 @@ class TestSync(object):
 
     @patch("pgsync.sync.SearchClient.bulk")
     @patch("pgsync.sync.logger")
+    def test_logical_slot_changes_lsn_cursor(
+        self, mock_logger, mock_bulk, sync
+    ):
+        """The slot is an LSN cursor: peek and get share one bound, no xid filter.
+
+        Consuming an entry that was never indexed loses it permanently
+        (deletes have no other recovery path), so the consume phase must
+        use exactly the LSN bound the index phase used, and no entry may
+        be excluded by transaction id.
+        """
+        insert: str = (
+            "table public.book: INSERT: id[integer]:10 isbn[character "
+            "varying]:'888' title[character varying]:'My book title' "
+            "description[character varying]:null copyright[character "
+            "varying]:null tags[jsonb]:null publisher_id[integer]:null"
+        )
+        with patch(
+            "pgsync.sync.Sync.current_wal_lsn",
+            new_callable=PropertyMock,
+            return_value="0/DEADBEEF",
+        ):
+            with patch(
+                "pgsync.sync.Sync.logical_slot_count_changes"
+            ) as mock_count:
+                mock_count.return_value = 1
+                with patch(
+                    "pgsync.sync.Sync.logical_slot_peek_changes"
+                ) as mock_peek:
+                    mock_peek.side_effect = [[ROW(insert, 1234)], []]
+                    with patch(
+                        "pgsync.sync.Sync.logical_slot_get_changes"
+                    ) as mock_get:
+                        with patch("pgsync.sync.Sync.sync"):
+                            # txmin/txmax must not filter the slot
+                            sync.logical_slot_changes(txmin=5, txmax=10)
+
+        for peek_call in mock_peek.call_args_list:
+            assert "txmin" not in peek_call.kwargs
+            assert "txmax" not in peek_call.kwargs
+            assert peek_call.kwargs["upto_lsn"] == "0/DEADBEEF"
+        mock_count.assert_called_once_with(
+            "testdb_testdb", upto_lsn="0/DEADBEEF"
+        )
+        mock_get.assert_called_once_with(
+            slot_name="testdb_testdb", upto_lsn="0/DEADBEEF"
+        )
+        # the row was indexed even though its xid (1234) is outside
+        # [txmin, txmax): nothing is consumed without being indexed
+        mock_bulk.assert_called_once()
+
+    @patch("pgsync.sync.logger")
+    def test_logical_slot_changes_explicit_lsn_not_overridden(
+        self, mock_logger, sync
+    ):
+        """A caller-supplied upto_lsn is used as-is for both phases."""
+        with patch(
+            "pgsync.sync.Sync.current_wal_lsn",
+            new_callable=PropertyMock,
+        ) as mock_lsn:
+            with patch(
+                "pgsync.sync.Sync.logical_slot_count_changes"
+            ) as mock_count:
+                mock_count.return_value = 0
+                with patch(
+                    "pgsync.sync.Sync.logical_slot_peek_changes"
+                ) as mock_peek:
+                    mock_peek.side_effect = [[]]
+                    with patch(
+                        "pgsync.sync.Sync.logical_slot_get_changes"
+                    ) as mock_get:
+                        sync.logical_slot_changes(upto_lsn="0/AAAA1111")
+        mock_lsn.assert_not_called()
+        mock_get.assert_called_once_with(
+            slot_name="testdb_testdb", upto_lsn="0/AAAA1111"
+        )
+
+    @patch("pgsync.sync.logger")
+    def test_logical_slot_changes_atomic_under_advisory_lock(
+        self, mock_logger, sync
+    ):
+        """Count, peek and consume must all run under one advisory lock.
+
+        Per-call locking would let a competing consumer (the slot
+        cleanup thread or another process) drain the slot between two
+        peek pages, permanently discarding the unindexed remainder.
+        """
+        key: int = sync.advisory_key("testdb_testdb")
+
+        def lock_held() -> bool:
+            return key in getattr(sync._advisory_locks_held, "keys", set())
+
+        observed: dict = {"count": [], "peek": [], "get": []}
+
+        def fake_count(*args, **kwargs):
+            observed["count"].append(lock_held())
+            return 0
+
+        def fake_peek(**kwargs):
+            observed["peek"].append(lock_held())
+            return []
+
+        def fake_get(**kwargs):
+            observed["get"].append(lock_held())
+
+        with patch(
+            "pgsync.sync.Sync.logical_slot_count_changes",
+            side_effect=fake_count,
+        ):
+            with patch(
+                "pgsync.sync.Sync.logical_slot_peek_changes",
+                side_effect=fake_peek,
+            ):
+                with patch(
+                    "pgsync.sync.Sync.logical_slot_get_changes",
+                    side_effect=fake_get,
+                ):
+                    sync.logical_slot_changes(upto_lsn="0/AAAA1111")
+
+        assert observed["count"] == [True]
+        assert observed["peek"] == [True]
+        assert observed["get"] == [True]
+        # and the lock is released afterwards
+        assert not lock_held()
+
+    @patch("pgsync.sync.SearchClient.bulk")
+    @patch("pgsync.sync.logger")
+    def test_pull_warns_when_checkpoint_pinned(
+        self, mock_logger, mock_es, sync
+    ):
+        """A long running transaction pinning the checkpoint is surfaced."""
+        with patch("pgsync.sync.Sync.logical_slot_changes"):
+            # a checkpoint at or above the snapshot xmin cannot advance
+            sync.checkpoint = sync.txid_current + 1000
+            sync.pull()
+        assert mock_logger.warning.call_count == 1
+        assert "Checkpoint pinned" in mock_logger.warning.call_args.args[0]
+
+    @patch("pgsync.sync.SearchClient.bulk")
+    @patch("pgsync.sync.logger")
     def test_logical_slot_changes_groups(
         self, mock_logger, mock_search_client, sync
     ):
@@ -427,17 +554,13 @@ class TestSync(object):
                 assert mock_logical_slot_peek_changes.call_args_list == [
                     call(
                         slot_name="testdb_testdb",
-                        txmin=None,
-                        txmax=None,
-                        upto_lsn=None,
+                        upto_lsn=ANY,
                         limit=5000,
                         offset=0,
                     ),
                     call(
                         slot_name="testdb_testdb",
-                        txmin=None,
-                        txmax=None,
-                        upto_lsn=None,
+                        upto_lsn=ANY,
                         limit=5000,
                         offset=5000,
                     ),
@@ -646,13 +769,61 @@ class TestSync(object):
                 txmax=txmax,
                 logical_slot_chunk_size=settings.LOGICAL_SLOT_CHUNK_SIZE,
                 upto_lsn=ANY,
+                checkpoint=ANY,
             )
+            # the checkpoint must be the snapshot xmin captured before
+            # txmax, never above txmax itself
+            checkpoint = mock_logical_slot_changes.call_args.kwargs[
+                "checkpoint"
+            ]
+            assert isinstance(checkpoint, int)
+            assert txmin < checkpoint <= txmax
             mock_logger.debug.assert_called_once_with(
                 f"pull txmin: {txmin} - txmax: {txmax}"
             )
             # assert sync.checkpoint == txmax
             assert sync._truncate is True
             mock_es.assert_called_once_with("testdb", ANY)
+
+    @patch("pgsync.sync.logger")
+    def test_sync_txmin_only_fetches_txid_anchor(self, mock_logger, sync):
+        """sync(txmin=...) without txmax must fetch an epoch anchor."""
+
+        class Boom(Exception):
+            pass
+
+        captured: dict = {}
+
+        def spy(node, **kwargs):
+            captured.update(kwargs)
+            raise Boom
+
+        with patch.object(
+            sync.query_builder, "build_queries", side_effect=spy
+        ):
+            with pytest.raises(Boom):
+                list(sync.sync(txmin=1234))
+        assert captured["txmax"] is None
+        assert isinstance(captured["txid_anchor"], int)
+        assert captured["txid_anchor"] > 0
+
+        # with txmax given, txmax itself is the anchor: nothing fetched
+        captured.clear()
+        with patch.object(
+            sync.query_builder, "build_queries", side_effect=spy
+        ):
+            with pytest.raises(Boom):
+                list(sync.sync(txmin=1234, txmax=5678))
+        assert captured["txid_anchor"] == 5678
+
+        # with neither bound there is nothing to anchor
+        captured.clear()
+        with patch.object(
+            sync.query_builder, "build_queries", side_effect=spy
+        ):
+            with pytest.raises(Boom):
+                list(sync.sync())
+        assert captured["txid_anchor"] is None
 
     @patch("pgsync.sync.SearchClient.bulk")
     @patch("pgsync.sync.logger")
@@ -687,6 +858,104 @@ class TestSync(object):
         mock_logger.debug.assert_any_call("on_publish len 3")
         assert sync.checkpoint is not None
         mock_es.assert_called_once_with("testdb", ANY)
+
+    @staticmethod
+    def _book_payload(xmin, tg_op="INSERT"):
+        return Payload(
+            schema="public",
+            tg_op=tg_op,
+            table="book",
+            old={"isbn": "001"},
+            new={"isbn": "0001"},
+            xmin=xmin,
+        )
+
+    @patch("pgsync.sync.SearchClient.bulk")
+    @patch("pgsync.sync.logger")
+    def test__on_publish_checkpoint_epoch_normalization(
+        self, mock_logger, mock_es, sync
+    ):
+        """Raw 32-bit payload xmins are epoch-extended before the min.
+
+        Pre-fix behavior after the first wraparound: min(150, anchor)
+        picked the raw value and the checkpoint regressed by about
+        4 billion.
+        """
+        anchor = 2**32 + 200  # txid_current after the first wraparound
+        with patch(
+            "pgsync.sync.Sync.txid_current",
+            new_callable=PropertyMock,
+            return_value=anchor,
+        ):
+            sync._on_publish([self._book_payload(xmin=150)])
+        assert sync.checkpoint == 2**32 + 150 - 1
+
+    @patch("pgsync.sync.SearchClient.bulk")
+    @patch("pgsync.sync.logger")
+    def test__on_publish_checkpoint_64bit_payload_passthrough(
+        self, mock_logger, mock_es, sync
+    ):
+        """New trigger payloads carry 64-bit txids: no double extension."""
+        anchor = 2**32 + 400
+        with patch(
+            "pgsync.sync.Sync.txid_current",
+            new_callable=PropertyMock,
+            return_value=anchor,
+        ):
+            sync._on_publish([self._book_payload(xmin=2**32 + 300)])
+        assert sync.checkpoint == 2**32 + 300 - 1
+
+    @patch("pgsync.sync.SearchClient.bulk")
+    @patch("pgsync.sync.logger")
+    def test__on_publish_truncate_only_skips_checkpoint(
+        self, mock_logger, mock_es, sync
+    ):
+        """TRUNCATE payloads (null xmin) must not move the checkpoint."""
+        sync.checkpoint = 4242
+        sync._on_publish([self._book_payload(xmin=None, tg_op="TRUNCATE")])
+        assert sync.checkpoint == 4242
+
+    @patch("pgsync.sync.SearchClient.bulk")
+    @patch("pgsync.sync.logger")
+    def test__on_publish_checkpoint_mixed_truncate_and_dml(
+        self, mock_logger, mock_es, sync
+    ):
+        """A batch mixing TRUNCATE (null xmin) and DML must not crash.
+
+        Pre-fix behavior: min() over a set containing None raised
+        TypeError. The None is ignored and the DML xmin drives the
+        checkpoint.
+        """
+        with patch(
+            "pgsync.sync.Sync.txid_current",
+            new_callable=PropertyMock,
+            return_value=1000,
+        ):
+            sync._on_publish(
+                [
+                    self._book_payload(xmin=None, tg_op="TRUNCATE"),
+                    self._book_payload(xmin=500),
+                ]
+            )
+        assert sync.checkpoint == 500 - 1
+
+    @patch("pgsync.sync.SearchClient.bulk")
+    @patch("pgsync.sync.logger")
+    def test__on_publish_checkpoint_read_only_zero_anchor(
+        self, mock_logger, mock_es, sync
+    ):
+        """A read-only consumer with no published txid must not regress to -1.
+
+        txid_current is 0 until the producer publishes it to Redis; the
+        checkpoint falls back to the payload txids alone.
+        """
+        with patch(
+            "pgsync.sync.Sync.txid_current",
+            new_callable=PropertyMock,
+            return_value=0,
+        ):
+            sync._on_publish([self._book_payload(xmin=700)])
+        assert sync.checkpoint == 700 - 1
 
     @patch("pgsync.sync.SearchClient.bulk")
     @patch("pgsync.sync.logger")

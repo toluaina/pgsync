@@ -173,6 +173,63 @@ class TestRedisQueue(object):
         xmins = [json.loads(i)["xmin"] for i in remaining]
         assert set(xmins) == {3001, 3002, 3003}
 
+    def test_pop_visible_in_snapshot_null_xmin(self):
+        """A null xmin (e.g. TRUNCATE) is popped without a visibility check."""
+        queue: RedisQueue = RedisQueue("something")
+        queue.delete()
+        payloads: list[dict] = [
+            {"xmin": None, "tg_op": "TRUNCATE", "data": "truncate"},
+            {"xmin": 4001, "data": "pending"},
+        ]
+        for item in payloads:
+            queue._RedisQueue__db.rpush(queue.key, json.dumps(item))
+
+        seen_xmins: list = []
+
+        def fake_pg_visible_in_snapshot():
+            def visibility(xmins):
+                seen_xmins.extend(xmins)
+                return {xmin: False for xmin in xmins}
+
+            return visibility
+
+        result = queue.pop_visible_in_snapshot(fake_pg_visible_in_snapshot)
+
+        # the null xmin must not reach the visibility query
+        assert seen_xmins == [4001]
+        # the truncate payload is returned, the invisible one stays queued
+        assert len(result) == 1
+        assert result[0]["tg_op"] == "TRUNCATE"
+        remaining = queue._RedisQueue__db.lrange(queue.key, 0, -1)
+        assert len(remaining) == 1
+        assert json.loads(remaining[0])["xmin"] == 4001
+
+    def test_pop_visible_in_snapshot_malformed_payload(self):
+        """Payloads without an xmin key are removed, not left clogging the queue."""
+        queue: RedisQueue = RedisQueue("something")
+        queue.delete()
+        payloads: list[dict] = [
+            {"data": "malformed"},
+            {"xmin": 5001, "data": "valid"},
+        ]
+        for item in payloads:
+            queue._RedisQueue__db.rpush(queue.key, json.dumps(item))
+
+        def fake_pg_visible_in_snapshot():
+            def visibility(xmins):
+                return {xmin: True for xmin in xmins}
+
+            return visibility
+
+        result = queue.pop_visible_in_snapshot(fake_pg_visible_in_snapshot)
+
+        # only the valid payload is returned
+        assert len(result) == 1
+        assert result[0]["xmin"] == 5001
+        # the malformed payload was removed from the queue
+        remaining = queue._RedisQueue__db.lrange(queue.key, 0, -1)
+        assert remaining == []
+
 
 class TestSetMetaGetMeta:
     """Tests for hash-based set_meta / get_meta."""

@@ -79,6 +79,70 @@ SSL_MODES = (
     "verify-full",
 )
 
+# The raw 32-bit transaction id counter wraps at this modulus while
+# txid_current() keeps growing by embedding the epoch in the high 32 bits.
+XID_MODULUS: int = 2**32
+
+
+def epoch_extended_xid(raw_xid: int, txid_anchor: int) -> int:
+    """
+    Rebuild the 64-bit epoch-extended txid for a raw 32-bit xid.
+
+    Row xmin values and the xid column of the logical slot functions
+    are raw 32-bit counters that wrap at XID_MODULUS, whereas
+    txid_current() is 64-bit and monotonic. Comparing the two directly
+    breaks after the first wraparound.
+
+    Given txid_anchor (a recent txid_current() value), raw xids at or
+    below the anchor's raw counter belong to the anchor's epoch; larger
+    raw xids were assigned before the last wraparound and belong to the
+    previous epoch. This is sound for unfrozen rows because
+    anti-wraparound freezing keeps live xmins within about 2 billion
+    transactions of the current counter. Frozen rows keep their
+    historical xmin and can alias into the current window, which at
+    worst re-syncs them (for a bulk-loaded table, in one spike once per
+    epoch, since a bulk load shares a single xid). Transform plugins
+    must therefore stay idempotent.
+    """
+    if raw_xid >= XID_MODULUS:
+        # already epoch extended
+        return raw_xid
+    epoch: int = txid_anchor // XID_MODULUS
+    raw_anchor: int = txid_anchor % XID_MODULUS
+    if epoch == 0 or raw_xid <= raw_anchor:
+        return raw_xid + (epoch * XID_MODULUS)
+    return raw_xid + ((epoch - 1) * XID_MODULUS)
+
+
+def epoch_extended_xid_column(
+    column: sa.sql.elements.ColumnElement, txid_anchor: t.Optional[int]
+) -> sa.sql.elements.ColumnElement:
+    """
+    SQL expression equivalent of epoch_extended_xid for an xid column.
+
+    Returns a bigint expression that epoch-extends the raw 32-bit xid
+    column (a table's xmin or a logical slot's xid) so it can be
+    compared against 64-bit checkpoints based on txid_current().
+
+    When txid_anchor is None, or the database is still in epoch 0, this
+    reduces to a plain cast from text to bigint, which matches the raw
+    value and preserves the pre-wraparound behaviour.
+    """
+    raw: sa.sql.elements.ColumnElement = sa.cast(
+        sa.cast(column, sa.Text),
+        sa.BigInteger,
+    )
+    if txid_anchor is None:
+        return raw
+    epoch: int = txid_anchor // XID_MODULUS
+    if epoch == 0:
+        return raw
+    raw_anchor: int = txid_anchor % XID_MODULUS
+    return sa.case(
+        (raw <= raw_anchor, raw + (epoch * XID_MODULUS)),
+        else_=raw + ((epoch - 1) * XID_MODULUS),
+    )
+
 
 class Payload(object):
     """
@@ -327,7 +391,7 @@ class Base(object):
                 )
             model = metadata.tables[name]
             model.append_column(sa.Column("xmin", sa.BigInteger))
-            model.append_column(sa.Column("ctid"), TupleIdentifierType)
+            model.append_column(sa.Column("ctid", TupleIdentifierType))
             # support SQLAlchemy/Postgres 14 which somehow now reflects
             # the oid column
             if "oid" not in [column.name for column in model.columns]:
@@ -703,6 +767,7 @@ class Base(object):
         upto_nchanges: t.Optional[int] = None,
         limit: t.Optional[int] = None,
         offset: t.Optional[int] = None,
+        txid_anchor: t.Optional[int] = None,
     ) -> sa.sql.Select:
         """
         Returns a SQLAlchemy Select statement that selects changes from a logical replication slot.
@@ -716,6 +781,9 @@ class Base(object):
             upto_nchanges (Optional[int], optional): The maximum number of changes to read. Defaults to None.
             limit (Optional[int], optional): The maximum number of rows to return. Defaults to None.
             offset (Optional[int], optional): The number of rows to skip before returning. Defaults to None.
+            txid_anchor (Optional[int], optional): A recent txid_current() value used to
+                epoch-extend the slot's raw 32-bit xid before comparing against
+                txmin/txmax. Defaults to txmax when omitted.
 
         Returns:
             sa.sql.Select: A SQLAlchemy Select statement that selects changes from the logical replication slot.
@@ -731,22 +799,22 @@ class Base(object):
                 upto_nchanges,
             )
         )
-        if txmin is not None:
-            filters.append(
-                sa.cast(
-                    sa.cast(sa.column("xid"), sa.Text),
-                    sa.BigInteger,
-                )
-                >= txmin
+        if txid_anchor is None:
+            # txmax is the current 64-bit txid at the time of the pull so it
+            # doubles as the epoch anchor when one is not supplied explicitly
+            txid_anchor = txmax
+        if txid_anchor is None and txmin is not None:
+            # txmin-only calls still need an anchor or the comparison
+            # degrades to raw 32-bit xids after wraparound
+            txid_anchor = self.txid_current
+        if txmin is not None or txmax is not None:
+            xid64: sa.sql.elements.ColumnElement = epoch_extended_xid_column(
+                sa.column("xid"), txid_anchor
             )
-        if txmax is not None:
-            filters.append(
-                sa.cast(
-                    sa.cast(sa.column("xid"), sa.Text),
-                    sa.BigInteger,
-                )
-                < txmax
-            )
+            if txmin is not None:
+                filters.append(xid64 >= txmin)
+            if txmax is not None:
+                filters.append(xid64 < txmax)
         if filters:
             statement = statement.where(sa.and_(*filters))
         if limit is not None:
@@ -1055,6 +1123,25 @@ class Base(object):
         return self.fetchone(
             sa.select("*").select_from(sa.func.TXID_CURRENT()),
             label="txid_current",
+        )[0]
+
+    @property
+    def txid_snapshot_xmin(self) -> int:
+        """
+        Get the oldest transaction id still in progress.
+
+        SELECT txid_snapshot_xmin(txid_current_snapshot())
+
+        Transactions get their xid at first write, not at commit, so a
+        transaction below txid_current can still be uncommitted. Using
+        this value as the checkpoint (instead of txid_current) ensures a
+        late-committing transaction is not skipped by the next pull.
+        """
+        return self.fetchone(
+            sa.select("*").select_from(
+                sa.func.TXID_SNAPSHOT_XMIN(sa.func.TXID_CURRENT_SNAPSHOT())
+            ),
+            label="txid_snapshot_xmin",
         )[0]
 
     def pg_visible_in_snapshot(

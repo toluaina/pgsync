@@ -34,7 +34,7 @@ from pgsync.base import pg_logical_repl_conn
 from pgsync.settings import IS_MYSQL_COMPAT
 
 from . import __version__, settings
-from .base import Base, Payload
+from .base import Base, epoch_extended_xid, Payload
 from .constants import (
     DELETE,
     INSERT,
@@ -565,10 +565,24 @@ class Sync(Base, metaclass=Singleton):
         txmax: t.Optional[int] = None,
         upto_lsn: t.Optional[str] = None,
         logical_slot_chunk_size: t.Optional[int] = None,
+        checkpoint: t.Optional[int] = None,
     ) -> None:
         """
         Stream through the slot in pages of logical_slot_chunk_size,
         grouping consecutive rows with the same (tg_op, table).
+
+        The slot is treated as an LSN-ordered cursor: every change up to
+        upto_lsn is indexed and then consumed in a single pass, with no
+        transaction id filtering. Since consuming the slot discards
+        entries permanently, an entry must never be consumed without
+        having been indexed first; sharing one LSN bound between the
+        peek (index) and get (consume) phases guarantees that. A crash
+        between the two phases replays the same entries on the next run,
+        which is idempotent (at-least-once).
+
+        txmin/txmax no longer filter the slot. They are retained to
+        advance the transaction id checkpoint used by the forward-pass
+        table scan, which has no LSN equivalent (rows only record xmin).
 
         Here, we are grouping all rows of the same table and tg_op
         and processing them as a group in bulk.
@@ -595,62 +609,78 @@ class Sync(Base, metaclass=Singleton):
             logical_slot_chunk_size or settings.LOGICAL_SLOT_CHUNK_SIZE
         )
         current: int = 0
-        total: int = self.logical_slot_count_changes(
-            self.__name,
-            txmin=txmin,
-            txmax=txmax,
-            upto_lsn=upto_lsn,
-        )
-        while True:
-            # peek one page of up to limit rows
-            raw: t.List[sa.engine.row.Row] = self.logical_slot_peek_changes(
-                slot_name=self.__name,
-                txmin=txmin,
-                txmax=txmax,
+        # hold one advisory lock across count, peek, index and consume:
+        # with per-call locking a competing consumer (the slot cleanup
+        # thread or another process) could drain the slot between peek
+        # pages, discarding the unindexed remainder. advisory_lock is
+        # re-entrant per thread, so the nested locks in the wrappers
+        # below are no-ops.
+        with self.advisory_lock(
+            self.__name, max_retries=None, retry_interval=0.1
+        ):
+            # one deterministic bound shared by the index and consume
+            # phases: without it, get_changes would consume entries that
+            # were never peeked (e.g. changes committed while this runs)
+            if upto_lsn is None:
+                upto_lsn = self.current_wal_lsn
+            total: int = self.logical_slot_count_changes(
+                self.__name,
                 upto_lsn=upto_lsn,
-                limit=limit,
-                offset=offset,
             )
-            if not raw:
-                break
-            offset += limit
+            while True:
+                # peek one page of up to limit rows
+                raw: t.List[sa.engine.row.Row] = (
+                    self.logical_slot_peek_changes(
+                        slot_name=self.__name,
+                        upto_lsn=upto_lsn,
+                        limit=limit,
+                        offset=offset,
+                    )
+                )
+                if not raw:
+                    break
+                offset += limit
 
-            # parse and filter out BEGIN/COMMIT and unwanted schemas
-            payloads: t.List[Payload] = []
-            for row in raw:
-                if TX_BOUNDARY_RE.match(row.data) or LOGICAL_MSG_RE.match(
-                    row.data
-                ):
-                    continue
-                try:
-                    payload: Payload = self.parse_logical_slot(row.data)
-                except Exception:
-                    logger.exception(f"Error parsing row: {row.data}")
-                    raise
-                if payload.schema in self.tree.schemas:
-                    payloads.append(payload)
+                # parse and filter out BEGIN/COMMIT and unwanted schemas
+                payloads: t.List[Payload] = []
+                for row in raw:
+                    if TX_BOUNDARY_RE.match(row.data) or LOGICAL_MSG_RE.match(
+                        row.data
+                    ):
+                        continue
+                    try:
+                        payload: Payload = self.parse_logical_slot(row.data)
+                    except Exception:
+                        logger.exception(f"Error parsing row: {row.data}")
+                        raise
+                    if payload.schema in self.tree.schemas:
+                        payloads.append(payload)
 
-            if payloads:
-                # bulk-index each consecutive run of (tg_op, table)
-                for (op, tbl), run in groupby(
-                    payloads,
-                    key=lambda payload: (payload.tg_op, payload.table),
-                ):
-                    batch: list = list(run)
-                    logger.debug(f"op: {op} tbl {tbl} - {len(batch)}")
-                    current += len(batch)
-                    self.log_xlog_progress(current, total, bar_length=30)
-                    self.search_client.bulk(self.index, self._payloads(batch))
-                    self.count["xlog"] += len(batch)
+                if payloads:
+                    # bulk-index each consecutive run of (tg_op, table)
+                    for (op, tbl), run in groupby(
+                        payloads,
+                        key=lambda payload: (payload.tg_op, payload.table),
+                    ):
+                        batch: list = list(run)
+                        logger.debug(f"op: {op} tbl {tbl} - {len(batch)}")
+                        current += len(batch)
+                        self.log_xlog_progress(current, total, bar_length=30)
+                        self.search_client.bulk(
+                            self.index, self._payloads(batch)
+                        )
+                        self.count["xlog"] += len(batch)
 
-        # mark those rows consumed
-        self.logical_slot_get_changes(
-            slot_name=self.__name,
-            txmin=txmin,
-            txmax=txmax,
-            upto_lsn=upto_lsn,
-        )
-        self.checkpoint = txmax or self.txid_current
+            # mark those rows consumed: same LSN bound as the peek phase
+            # so exactly what was indexed gets discarded, nothing more
+            self.logical_slot_get_changes(
+                slot_name=self.__name,
+                upto_lsn=upto_lsn,
+            )
+        # prefer the caller-supplied snapshot xmin: checkpointing at
+        # txmax would skip transactions that were still in progress
+        # during this pull and commit later
+        self.checkpoint = checkpoint or txmax or self.txid_current
 
     def _xlog_progress(self, current: int, total: t.Optional[int]) -> None:
         try:
@@ -1536,6 +1566,13 @@ class Sync(Base, metaclass=Singleton):
         self.query_builder.isouter = True
         self.query_builder.from_obj = None
 
+        # epoch anchor for the xmin filters: txmax is the current txid
+        # when both bounds are given; with only txmin we must fetch it
+        # or the comparison degrades to raw 32-bit xids after wraparound
+        txid_anchor: t.Optional[int] = txmax
+        if txid_anchor is None and txmin is not None:
+            txid_anchor = self.txid_current
+
         for node in self.tree.traverse_post_order():
             node._subquery = None
             node._filters = []
@@ -1543,7 +1580,12 @@ class Sync(Base, metaclass=Singleton):
 
             try:
                 self.query_builder.build_queries(
-                    node, filters=filters, txmin=txmin, txmax=txmax, ctid=ctid
+                    node,
+                    filters=filters,
+                    txmin=txmin,
+                    txmax=txmax,
+                    ctid=ctid,
+                    txid_anchor=txid_anchor,
                 )
             except Exception as e:
                 logger.exception(f"Exception {e}")
@@ -1920,7 +1962,23 @@ class Sync(Base, metaclass=Singleton):
         txids: t.Set = set(map(lambda x: x.xmin, payloads))
         # for truncate, tg_op txids is None so skip setting the checkpoint
         if txids != set([None]):
-            self.checkpoint: int = min(min(txids), self.txid_current) - 1
+            # payloads from triggers deployed before the TXID_CURRENT()
+            # change carry raw 32-bit xmins while txid_current is
+            # 64-bit: normalize to 64-bit before taking the min or the
+            # checkpoint regresses by about 4 billion after the first
+            # wraparound
+            txid_anchor: int = self.txid_current
+            txids64: t.List[int] = [
+                epoch_extended_xid(txid, txid_anchor)
+                for txid in txids
+                if txid is not None
+            ]
+            # a read-only consumer sees txid_current as 0 until the
+            # producer publishes it: fall back to the payload txids
+            # alone instead of computing a checkpoint of -1
+            if txid_anchor:
+                txids64.append(txid_anchor)
+            self.checkpoint: int = min(txids64) - 1
 
     def pull(self, polling: bool = False) -> None:
         """Pull data from db."""
@@ -1940,7 +1998,21 @@ class Sync(Base, metaclass=Singleton):
             )
         else:
             txmin = self.checkpoint
+            # capture the snapshot xmin BEFORE txmax: transactions that
+            # already have an xid but have not committed must stay below
+            # the next checkpoint or their changes would be skipped
+            snapshot_xmin: int = self.txid_snapshot_xmin
             txmax = self.txid_current
+            if txmin is not None and snapshot_xmin <= txmin:
+                # operational tradeoff of snapshot-xmin checkpointing:
+                # correctness is preserved but the re-scanned window
+                # grows until the pinning transaction commits or aborts
+                logger.warning(
+                    f"Checkpoint pinned at {snapshot_xmin} by a "
+                    f"long running transaction (current txid: {txmax}): "
+                    f"rows changed since then are re-scanned every pull "
+                    f"until it completes"
+                )
             logger.debug(f"pull txmin: {txmin} - txmax: {txmax}")
 
         # forward pass sync
@@ -1964,6 +2036,7 @@ class Sync(Base, metaclass=Singleton):
                     txmax=txmax,
                     logical_slot_chunk_size=chunk_size,
                     upto_lsn=upto_lsn,
+                    checkpoint=snapshot_xmin,
                 )
             except Exception:
                 # if we are polling, we can just continue

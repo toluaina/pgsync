@@ -89,16 +89,25 @@ class RedisQueue(object):
             return []
         payloads = [json.loads(i) for i in items]
         visible_map: dict = pg_visible_in_snapshot()(
-            [payload.get("xmin") for payload in payloads if "xmin" in payload]
+            [
+                payload["xmin"]
+                for payload in payloads
+                if payload.get("xmin") is not None
+            ]
         )
         visible: t.List[dict] = []
         for item, payload in zip(items, payloads):
             if "xmin" not in payload:
+                # remove malformed payloads or they clog the queue head
+                # and every subsequent poll re-reads them forever
                 logger.warning(
-                    f"Skipping payload without 'xmin' key: {payload}"
+                    f"Removing payload without 'xmin' key: {payload}"
                 )
+                self.__db.lrem(self.key, 1, item)
                 continue
-            if visible_map.get(payload["xmin"]):
+            # a null xmin (e.g. TRUNCATE) is always safe to process:
+            # pg_notify only delivers after the transaction commits
+            if payload["xmin"] is None or visible_map.get(payload["xmin"]):
                 # Claim atomically
                 removed = self.__db.lrem(self.key, 1, item)
                 if removed:
