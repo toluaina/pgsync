@@ -19,6 +19,29 @@ def make_sync():
     )
 
 
+def test_pull_polling_updates_checkpoint_without_logical_slot():
+    """PostgreSQL polling must not depend on logical replication."""
+    docs = [{"_id": "1"}]
+    sync = SimpleNamespace(
+        is_mysql_compat=False,
+        checkpoint=1,
+        txid_snapshot_xmin=100,
+        txid_current=200,
+        current_wal_lsn="0/16B6C50",
+        index="testdb",
+        search_client=Mock(),
+        sync=Mock(return_value=docs),
+        logical_slot_changes=Mock(),
+        _truncate=False,
+    )
+
+    Sync.pull(sync, polling=True)
+
+    assert sync.checkpoint == 100
+    sync.logical_slot_changes.assert_not_called()
+    sync.search_client.bulk.assert_called_once_with("testdb", docs)
+
+
 def test_poll_db_once_flushes_buffer_when_notification_wait_times_out():
     sync = make_sync()
     conn = Mock()
