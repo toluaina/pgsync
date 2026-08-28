@@ -2020,6 +2020,12 @@ class Sync(Base, metaclass=Singleton):
             self.index, self.sync(txmin=txmin, txmax=txmax)
         )
 
+        # PostgreSQL polling uses only the forward pass and has no logical
+        # replication slot, so advance its safe snapshot checkpoint directly.
+        if polling and not self.is_mysql_compat:
+            self.checkpoint = snapshot_xmin
+            return
+
         if self.is_mysql_compat:
             self.binlog_changes(
                 start_log=start_log,
