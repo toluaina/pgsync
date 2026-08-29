@@ -305,7 +305,7 @@ def _get_logging_config(
             "console": {
                 "class": "logging.StreamHandler",
                 "level": env.str(
-                    "CONSOLE_LOGGING_HANDLER_MIN_LEVEL", default="WARNING"
+                    "CONSOLE_LOGGING_HANDLER_MIN_LEVEL", default="INFO"
                 ),
                 "formatter": "simple",
             },

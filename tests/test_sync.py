@@ -785,6 +785,19 @@ class TestSync(object):
             assert sync._truncate is True
             mock_es.assert_called_once_with("testdb", ANY)
 
+    @patch("pgsync.sync.SearchClient.bulk")
+    def test_pull_polling_does_not_require_a_logical_slot(
+        self, mock_search_client, sync
+    ):
+        """Polling advances its table-scan checkpoint without slot access."""
+        sync.checkpoint = 1
+        with patch("pgsync.sync.Sync.logical_slot_changes") as mock_slot:
+            sync.pull(polling=True)
+
+        mock_slot.assert_not_called()
+        assert sync.checkpoint > 1
+        assert sync._truncate is True
+
     @patch("pgsync.sync.logger")
     def test_sync_txmin_only_fetches_txid_anchor(self, mock_logger, sync):
         """sync(txmin=...) without txmax must fetch an epoch anchor."""

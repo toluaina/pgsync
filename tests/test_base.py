@@ -1023,6 +1023,53 @@ class TestBaseAdditional:
         reason="Skipped because IS_MYSQL_COMPAT env var is set",
     )
     @pytest.mark.usefixtures("table_creator")
+    def test_txid_snapshot_bounds(self, connection):
+        """Snapshot bounds are ordered and can delimit a polling scan."""
+        pg_base = Base(connection.engine.url.database)
+        xmin, xmax = pg_base.txid_snapshot_bounds
+        assert isinstance(xmin, int)
+        assert isinstance(xmax, int)
+        assert 0 < xmin <= xmax
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
+    def test_snapshot_bounds_do_not_assign_xid_in_read_only_transaction(
+        self, connection
+    ):
+        """The SQL used for polling remains valid without an assigned XID."""
+        with connection.engine.connect() as conn:
+            with conn.begin():
+                conn.execute(sa.text("SET TRANSACTION READ ONLY"))
+                assert (
+                    conn.execute(
+                        sa.text("SELECT txid_current_if_assigned()")
+                    ).scalar()
+                    is None
+                )
+                xmin, xmax = conn.execute(
+                    sa.text(
+                        "SELECT txid_snapshot_xmin(snapshot), "
+                        "txid_snapshot_xmax(snapshot) "
+                        "FROM (SELECT txid_current_snapshot() AS snapshot) "
+                        "AS current_snapshot"
+                    )
+                ).one()
+                assert 0 < xmin <= xmax
+                assert (
+                    conn.execute(
+                        sa.text("SELECT txid_current_if_assigned()")
+                    ).scalar()
+                    is None
+                )
+
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
+    @pytest.mark.usefixtures("table_creator")
     def test_txid_snapshot_xmin_bounds_open_transaction(self, connection):
         """An uncommitted transaction holds txid_snapshot_xmin down.
 

@@ -2001,8 +2001,13 @@ class Sync(Base, metaclass=Singleton):
             # capture the snapshot xmin BEFORE txmax: transactions that
             # already have an xid but have not committed must stay below
             # the next checkpoint or their changes would be skipped
-            snapshot_xmin: int = self.txid_snapshot_xmin
-            txmax = self.txid_current
+            if polling:
+                # A hot standby cannot assign transaction IDs. Both bounds
+                # come from one read-only snapshot, avoiding txid_current().
+                snapshot_xmin, txmax = self.txid_snapshot_bounds
+            else:
+                snapshot_xmin = self.txid_snapshot_xmin
+                txmax = self.txid_current
             if txmin is not None and snapshot_xmin <= txmin:
                 # operational tradeoff of snapshot-xmin checkpointing:
                 # correctness is preserved but the re-scanned window
@@ -2016,15 +2021,22 @@ class Sync(Base, metaclass=Singleton):
             logger.debug(f"pull txmin: {txmin} - txmax: {txmax}")
 
         # forward pass sync
-        self.search_client.bulk(
-            self.index, self.sync(txmin=txmin, txmax=txmax)
-        )
-
-        # PostgreSQL polling uses only the forward pass and has no logical
-        # replication slot, so advance its safe snapshot checkpoint directly.
         if polling and not self.is_mysql_compat:
-            self.checkpoint = snapshot_xmin
-            return
+            before: int = self.search_client.doc_count
+            self.search_client.bulk(
+                self.index, self.sync(txmin=txmin, txmax=txmax)
+            )
+            indexed: int = self.search_client.doc_count - before
+            if indexed:
+                logger.info(
+                    "Polling indexed %d document(s) into %s",
+                    indexed,
+                    self.index,
+                )
+        else:
+            self.search_client.bulk(
+                self.index, self.sync(txmin=txmin, txmax=txmax)
+            )
 
         if self.is_mysql_compat:
             self.binlog_changes(
@@ -2032,6 +2044,14 @@ class Sync(Base, metaclass=Singleton):
                 start_pos=start_pos,
                 binlog_chunk_size=chunk_size,
             )
+        elif polling:
+            # Polling is intentionally independent of logical replication:
+            # advance the xmin checkpoint after the table scan so the next
+            # pass only indexes rows committed since this snapshot. Calling
+            # logical_slot_changes here would fail on read only databases and
+            # previously returned before saving a checkpoint, causing every
+            # interval to rescan from the beginning.
+            self.checkpoint = snapshot_xmin
         else:
             # this is the max lsn we should go upto
             upto_lsn: str = self.current_wal_lsn

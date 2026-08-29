@@ -19,14 +19,14 @@ def make_sync():
     )
 
 
-def test_pull_polling_updates_checkpoint_without_logical_slot():
+@patch("pgsync.sync.logger")
+def test_pull_polling_updates_checkpoint_without_logical_slot(mock_logger):
     """PostgreSQL polling must not depend on logical replication."""
     docs = [{"_id": "1"}]
     sync = SimpleNamespace(
         is_mysql_compat=False,
         checkpoint=1,
-        txid_snapshot_xmin=100,
-        txid_current=200,
+        txid_snapshot_bounds=(100, 200),
         current_wal_lsn="0/16B6C50",
         index="testdb",
         search_client=Mock(),
@@ -34,12 +34,24 @@ def test_pull_polling_updates_checkpoint_without_logical_slot():
         logical_slot_changes=Mock(),
         _truncate=False,
     )
+    sync.search_client.doc_count = 0
+    indexed_actions = []
+
+    def bulk(_, actions):
+        indexed_actions.extend(actions)
+        sync.search_client.doc_count += len(indexed_actions)
+
+    sync.search_client.bulk.side_effect = bulk
 
     Sync.pull(sync, polling=True)
 
     assert sync.checkpoint == 100
     sync.logical_slot_changes.assert_not_called()
-    sync.search_client.bulk.assert_called_once_with("testdb", docs)
+    sync.search_client.bulk.assert_called_once()
+    assert indexed_actions == docs
+    mock_logger.info.assert_called_once_with(
+        "Polling indexed %d document(s) into %s", 1, "testdb"
+    )
 
 
 def test_poll_db_once_flushes_buffer_when_notification_wait_times_out():

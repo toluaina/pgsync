@@ -1130,19 +1130,33 @@ class Base(object):
         """
         Get the oldest transaction id still in progress.
 
-        SELECT txid_snapshot_xmin(txid_current_snapshot())
-
         Transactions get their xid at first write, not at commit, so a
         transaction below txid_current can still be uncommitted. Using
         this value as the checkpoint (instead of txid_current) ensures a
         late-committing transaction is not skipped by the next pull.
         """
-        return self.fetchone(
-            sa.select("*").select_from(
-                sa.func.TXID_SNAPSHOT_XMIN(sa.func.TXID_CURRENT_SNAPSHOT())
+        return self.txid_snapshot_bounds[0]
+
+    @property
+    def txid_snapshot_bounds(self) -> t.Tuple[int, int]:
+        """Return the xmin and xmax bounds of one current snapshot.
+
+        Unlike ``txid_current()``, obtaining a snapshot does not assign this
+        connection a transaction ID, so this is safe to use on a hot standby.
+        ``xmin`` is the oldest transaction still in progress and ``xmax`` is
+        the first transaction not yet started when the snapshot was taken.
+        """
+        snapshot: sa.sql.Select = sa.select(
+            sa.func.TXID_CURRENT_SNAPSHOT().label("snapshot")
+        ).subquery()
+        row: sa.engine.Row = self.fetchone(
+            sa.select(
+                sa.func.TXID_SNAPSHOT_XMIN(snapshot.c.snapshot),
+                sa.func.TXID_SNAPSHOT_XMAX(snapshot.c.snapshot),
             ),
-            label="txid_snapshot_xmin",
-        )[0]
+            label="txid_snapshot_bounds",
+        )
+        return int(row[0]), int(row[1])
 
     def pg_visible_in_snapshot(
         self, literal_binds: bool = False
