@@ -2,5 +2,5 @@
 
 set -x
 
-isort --profile black bin/* demo examples pgsync plugins scripts tests setup.py
-black bin/* demo examples pgsync plugins scripts tests setup.py
+isort --profile black bin/* examples pgsync plugins scripts tests setup.py
+black bin/* examples pgsync plugins scripts tests setup.py

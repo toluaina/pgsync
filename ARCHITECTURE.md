@@ -66,7 +66,6 @@ Documents are indexed into Elasticsearch/OpenSearch in near real-time.
 <code>
 pgsync/
 ├── bin/ # executable startup scripts
-├── demo/ # demo data and configurations
 ├── docker/ # docker configurations and entrypoints
 ├── examples/ # example schema.json files
 ├── pgsync/ # core application source code

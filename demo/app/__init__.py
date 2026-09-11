@@ -1,1 +1,0 @@
-"""PGSync Demo app."""

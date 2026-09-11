@@ -10,16 +10,15 @@ backports-datetime-fromisoformat==2.0.3
     # via marshmallow
 black==26.5.1
     # via -r requirements/dev.in
-boto3==1.43.83
+boto3==1.43.92
     # via -r requirements/base.in
-botocore==1.43.83
+botocore==1.43.92
     # via
     #   boto3
     #   s3transfer
 certifi==2026.7.22
     # via
     #   elastic-transport
-    #   elasticsearch
     #   opensearch-py
     #   requests
 cfgv==3.5.0
@@ -36,15 +35,17 @@ coverage[toml]==7.16.0
     #   pytest-cov
 distlib==0.4.3
     # via virtualenv
-elastic-transport==9.4.2
-    # via -r requirements/base.in
-elasticsearch==7.17.13
+elastic-transport==8.19.0
+    # via
+    #   -r requirements/base.in
+    #   elasticsearch
+elasticsearch==8.19.3
     # via
     #   -r requirements/base.in
     #   elasticsearch-dsl
-elasticsearch-dsl==7.4.1
+elasticsearch-dsl==8.15.4
     # via -r requirements/base.in
-environs==15.1.0
+environs==15.2.0
     # via -r requirements/base.in
 events==0.5
     # via opensearch-py
@@ -52,9 +53,9 @@ exceptiongroup==1.3.1
     # via
     #   anyio
     #   pytest
-faker==40.37.0
+faker==40.38.0
     # via -r requirements/dev.in
-filelock==3.32.4
+filelock==3.32.6
     # via
     #   python-discovery
     #   virtualenv
@@ -105,7 +106,7 @@ packaging==26.3
     #   pytest
 pathspec==1.1.1
     # via black
-platformdirs==4.11.5
+platformdirs==4.11.8
     # via
     #   black
     #   virtualenv
@@ -115,9 +116,9 @@ pluggy==1.6.0
     #   pytest-cov
 pre-commit==4.6.2
     # via -r requirements/dev.in
-protobuf==7.36.0
+protobuf==7.36.1
     # via opensearch-protobufs
-psycopg2-binary==2.9.12
+psycopg2-binary==2.9.13
     # via -r requirements/base.in
 pycodestyle==2.14.0
     # via flake8
@@ -168,13 +169,8 @@ s3transfer==0.19.2
     # via boto3
 six==1.17.0
     # via
-    #   elasticsearch-dsl
     #   opensearch-dsl
     #   python-dateutil
-sniffio==1.3.1
-    # via
-    #   elastic-transport
-    #   elasticsearch
 sqlalchemy==2.0.52
     # via -r requirements/base.in
 sqlparse==0.6.0
@@ -189,6 +185,7 @@ typing-extensions==4.16.0
     #   anyio
     #   black
     #   elasticsearch
+    #   elasticsearch-dsl
     #   environs
     #   exceptiongroup
     #   grpcio
@@ -199,8 +196,7 @@ urllib3==2.7.0
     # via
     #   botocore
     #   elastic-transport
-    #   elasticsearch
     #   opensearch-py
     #   requests
-virtualenv==21.7.7
+virtualenv==21.7.9
     # via pre-commit
