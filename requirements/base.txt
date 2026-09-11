@@ -27,22 +27,23 @@ elastic-transport==8.19.0
     # via
     #   -r requirements/base.in
     #   elasticsearch
+    #   elasticsearch-dsl
 elasticsearch==8.19.3
     # via
     #   -r requirements/base.in
     #   elasticsearch-dsl
-elasticsearch-dsl==8.15.4
+elasticsearch-dsl==8.18.0
     # via -r requirements/base.in
 environs==15.2.0
     # via -r requirements/base.in
 events==0.5
     # via opensearch-py
+greenlet==3.5.5
+    # via sqlalchemy
 grpcio==1.83.1
     # via opensearch-protobufs
 idna==3.19
-    # via
-    #   anyio
-    #   requests
+    # via requests
 jmespath==1.1.0
     # via
     #   boto3
@@ -98,11 +99,9 @@ sqlparse==0.6.0
     # via -r requirements/base.in
 typing-extensions==4.16.0
     # via
-    #   anyio
     #   elasticsearch
     #   elasticsearch-dsl
     #   environs
-    #   exceptiongroup
     #   grpcio
     #   marshmallow
     #   sqlalchemy
