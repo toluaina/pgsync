@@ -37,12 +37,12 @@ environs==15.2.0
     # via -r requirements/base.in
 events==0.5
     # via opensearch-py
+greenlet==3.5.6
+    # via sqlalchemy
 grpcio==1.83.1
     # via opensearch-protobufs
 idna==3.19
-    # via
-    #   anyio
-    #   requests
+    # via requests
 jmespath==1.1.0
     # via
     #   boto3
@@ -92,17 +92,15 @@ six==1.17.0
     # via
     #   opensearch-dsl
     #   python-dateutil
-sqlalchemy==2.0.52
+sqlalchemy==2.0.54
     # via -r requirements/base.in
 sqlparse==0.6.0
     # via -r requirements/base.in
 typing-extensions==4.16.0
     # via
-    #   anyio
     #   elasticsearch
     #   elasticsearch-dsl
     #   environs
-    #   exceptiongroup
     #   grpcio
     #   marshmallow
     #   sqlalchemy
