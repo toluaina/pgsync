@@ -8,11 +8,11 @@ async-timeout==5.0.1
     # via redis
 backports-datetime-fromisoformat==2.0.3
     # via marshmallow
-black==26.5.1
+black==26.10.0
     # via -r requirements/dev.in
-boto3==1.43.92
+boto3==1.43.110
     # via -r requirements/base.in
-botocore==1.43.92
+botocore==1.43.110
     # via
     #   boto3
     #   s3transfer
@@ -23,13 +23,13 @@ certifi==2026.7.22
     #   requests
 cfgv==3.5.0
     # via pre-commit
-charset-normalizer==3.5.1
+charset-normalizer==3.5.2
     # via requests
 click==8.5.0
     # via
     #   -r requirements/base.in
     #   black
-coverage[toml]==7.16.0
+coverage[toml]==7.16.2
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -53,27 +53,27 @@ exceptiongroup==1.3.1
     # via
     #   anyio
     #   pytest
-faker==40.38.0
+faker==40.41.0
     # via -r requirements/dev.in
-filelock==3.32.6
+filelock==4.0.12
     # via
     #   python-discovery
     #   virtualenv
-flake8==7.3.0
+flake8==7.4.1
     # via -r requirements/dev.in
 freezegun==1.5.5
     # via -r requirements/dev.in
-grpcio==1.83.1
+grpcio==1.84.0
     # via opensearch-protobufs
-identify==2.6.19
+identify==2.6.20
     # via pre-commit
-idna==3.19
+idna==3.20
     # via
     #   anyio
     #   requests
-iniconfig==2.3.0
+iniconfig==2.3.1
     # via pytest
-isort==9.0.1
+isort==9.0.2
     # via -r requirements/dev.in
 jmespath==1.1.0
     # via
@@ -91,7 +91,7 @@ mypy-extensions==1.1.0
     #   isort
 mysql-replication==1.0.17
     # via -r requirements/base.in
-nodeenv==1.10.0
+nodeenv==1.11.0
     # via pre-commit
 opensearch-dsl==2.1.0
     # via -r requirements/base.in
@@ -104,9 +104,10 @@ packaging==26.3
     #   black
     #   mysql-replication
     #   pytest
+    #   virtualenv
 pathspec==1.1.1
     # via black
-platformdirs==4.11.8
+platformdirs==4.12.4
     # via
     #   black
     #   virtualenv
@@ -116,17 +117,17 @@ pluggy==1.6.0
     #   pytest-cov
 pre-commit==4.6.2
     # via -r requirements/dev.in
-protobuf==7.36.1
+protobuf==7.36.2
     # via opensearch-protobufs
 psycopg2-binary==2.9.13
     # via -r requirements/base.in
-pycodestyle==2.14.0
+pycodestyle==2.15.0
     # via flake8
-pyflakes==3.4.0
+pyflakes==4.0.3
     # via flake8
 pygments==2.21.0
     # via pytest
-pymysql==1.2.0
+pymysql==1.2.3
     # via
     #   -r requirements/base.in
     #   mysql-replication
@@ -137,7 +138,7 @@ pytest==9.1.1
     #   pytest-mock
 pytest-cov==7.1.0
     # via -r requirements/dev.in
-pytest-mock==3.15.1
+pytest-mock==3.16.0
     # via -r requirements/dev.in
 python-dateutil==2.9.0.post0
     # via
@@ -147,9 +148,9 @@ python-dateutil==2.9.0.post0
     #   freezegun
     #   opensearch-dsl
     #   opensearch-py
-python-discovery==1.6.0
+python-discovery==1.6.1
     # via virtualenv
-python-dotenv==1.2.3
+python-dotenv==1.2.4
     # via
     #   -r requirements/base.in
     #   environs
@@ -171,11 +172,11 @@ six==1.17.0
     # via
     #   opensearch-dsl
     #   python-dateutil
-sqlalchemy==2.0.52
+sqlalchemy==2.0.54
     # via -r requirements/base.in
 sqlparse==0.6.0
     # via -r requirements/base.in
-tomli==2.4.1
+tomli==2.5.0
     # via
     #   black
     #   coverage
@@ -192,11 +193,11 @@ typing-extensions==4.16.0
     #   marshmallow
     #   sqlalchemy
     #   virtualenv
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   botocore
     #   elastic-transport
     #   opensearch-py
     #   requests
-virtualenv==21.7.9
+virtualenv==21.14.6
     # via pre-commit
