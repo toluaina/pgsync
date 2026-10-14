@@ -8,11 +8,11 @@ async-timeout==5.0.1
     # via redis
 backports-datetime-fromisoformat==2.0.3
     # via marshmallow
-black==26.10.0
+black==26.10.1
     # via -r requirements/dev.in
-boto3==1.43.111
+boto3==1.43.113
     # via -r requirements/base.in
-botocore==1.43.111
+botocore==1.43.113
     # via
     #   boto3
     #   s3transfer
@@ -148,7 +148,7 @@ python-dateutil==2.9.0.post0
     #   freezegun
     #   opensearch-dsl
     #   opensearch-py
-python-discovery==1.6.1
+python-discovery==1.6.2
     # via virtualenv
 python-dotenv==1.2.4
     # via
@@ -199,5 +199,5 @@ urllib3==2.8.0
     #   elastic-transport
     #   opensearch-py
     #   requests
-virtualenv==21.14.6
+virtualenv==21.14.7
     # via pre-commit
