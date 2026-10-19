@@ -10,9 +10,9 @@ backports-datetime-fromisoformat==2.0.3
     # via marshmallow
 black==26.10.1
     # via -r requirements/dev.in
-boto3==1.43.113
+boto3==1.43.114
     # via -r requirements/base.in
-botocore==1.43.113
+botocore==1.43.114
     # via
     #   boto3
     #   s3transfer
@@ -50,9 +50,7 @@ environs==15.2.0
 events==0.5
     # via opensearch-py
 exceptiongroup==1.3.1
-    # via
-    #   anyio
-    #   pytest
+    # via pytest
 faker==40.43.0
     # via -r requirements/dev.in
 filelock==4.1.0
@@ -63,14 +61,14 @@ flake8==7.4.1
     # via -r requirements/dev.in
 freezegun==1.5.5
     # via -r requirements/dev.in
+greenlet==3.5.6
+    # via sqlalchemy
 grpcio==1.84.0
     # via opensearch-protobufs
 identify==2.6.20
     # via pre-commit
 idna==3.20
-    # via
-    #   anyio
-    #   requests
+    # via requests
 iniconfig==2.3.1
     # via pytest
 isort==9.0.2
@@ -183,7 +181,6 @@ tomli==2.5.0
     #   pytest
 typing-extensions==4.16.0
     # via
-    #   anyio
     #   black
     #   elasticsearch
     #   elasticsearch-dsl
