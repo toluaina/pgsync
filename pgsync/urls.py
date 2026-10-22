@@ -92,7 +92,7 @@ def get_search_url(
 
     auth: str = ""
     if user and password:
-        auth = f"{user}:{quote_plus(password)}@"
+        auth = f"{user}:{quote(password, safe='')}@"
     else:
         logger.debug("Connecting to Search without password.")
 
@@ -142,7 +142,7 @@ def get_database_url(
             )
         )
 
-    auth: str = f"{user}:{quote_plus(password)}" if password else user
+    auth: str = f"{user}:{quote(password, safe='')}" if password else user
     if not password:
         logger.debug("Connecting to database without password.")
 
@@ -193,10 +193,10 @@ def get_redis_url(
 
     auth: str = ""
     if username and password:
-        auth = f"{quote_plus(username)}:{quote_plus(password)}@"
+        auth = f"{quote_plus(username)}:{quote(password, safe='')}@"
         logger.debug("Connecting to Redis with custom username and password.")
     elif password:
-        auth = f":{quote_plus(password)}@"
+        auth = f":{quote(password, safe='')}@"
         logger.debug("Connecting to Redis with default password.")
     else:
         logger.debug("Connecting to Redis without password.")
