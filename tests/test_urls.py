@@ -42,6 +42,31 @@ class TestUrls(object):
 
         assert unquote(urlsplit(url).password) == password
 
+    @pytest.mark.parametrize(
+        "service", ["database", "database-no-password", "search", "redis"]
+    )
+    @pytest.mark.parametrize(
+        "username", ["user with spaces", "plus+ @:/?#%", "üser 用户"]
+    )
+    def test_connection_username_round_trip(
+        self, monkeypatch, service, username
+    ):
+        monkeypatch.setattr("pgsync.urls._get_auth", lambda key: None)
+        monkeypatch.setattr("pgsync.urls.PG_PASSWORD", None)
+        for variable in ("PG_URL", "ELASTICSEARCH_URL", "REDIS_URL"):
+            monkeypatch.setattr(f"pgsync.urls.{variable}", None)
+
+        if service == "database":
+            url = get_database_url("mydb", user=username, password="secret")
+        elif service == "database-no-password":
+            url = get_database_url("mydb", user=username)
+        elif service == "search":
+            url = get_search_url(user=username, password="secret")
+        else:
+            url = get_redis_url(username=username, password="secret")
+
+        assert unquote(urlsplit(url).username) == username
+
     @patch("pgsync.urls.logger")
     def test_get_search_url(self, mock_logger):
         assert (

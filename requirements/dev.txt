@@ -10,13 +10,13 @@ backports-datetime-fromisoformat==2.0.3
     # via marshmallow
 black==26.10.1
     # via -r requirements/dev.in
-boto3==1.43.116
+boto3==1.43.118
     # via -r requirements/base.in
-botocore==1.43.116
+botocore==1.43.118
     # via
     #   boto3
     #   s3transfer
-certifi==2026.10.19
+certifi==2026.10.23
     # via
     #   elastic-transport
     #   opensearch-py
@@ -63,7 +63,7 @@ flake8==7.4.1
     # via -r requirements/dev.in
 freezegun==1.5.5
     # via -r requirements/dev.in
-grpcio==1.84.0
+grpcio==1.84.1
     # via opensearch-protobufs
 identify==2.6.20
     # via pre-commit
@@ -199,5 +199,5 @@ urllib3==2.8.0
     #   elastic-transport
     #   opensearch-py
     #   requests
-virtualenv==21.14.11
+virtualenv==21.14.13
     # via pre-commit

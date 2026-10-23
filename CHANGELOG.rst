@@ -6,7 +6,7 @@ Changelog
 Unreleased
 ----------
 
-* Preserve spaces in database, search, and Redis connection URL passwords.
+* Preserve spaces and reserved characters in database, search, and Redis connection URL usernames and passwords.
 
 1.0.1 (2020-15-01)
 ------------------
