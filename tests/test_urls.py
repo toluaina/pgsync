@@ -1,5 +1,7 @@
 """URLS tests."""
 
+from urllib.parse import unquote, urlsplit
+
 import pytest
 from mock import MagicMock, patch
 
@@ -15,6 +17,30 @@ from pgsync.utils import validate_config
 
 class TestUrls(object):
     """URLS tests."""
+
+    @pytest.mark.parametrize(
+        "service", ["database", "search", "redis", "redis-default-user"]
+    )
+    @pytest.mark.parametrize(
+        "password", ["word with spaces", "plus+ @:/?#%", "päss 密码"]
+    )
+    def test_connection_password_round_trip(
+        self, monkeypatch, service, password
+    ):
+        monkeypatch.setattr("pgsync.urls._get_auth", lambda key: None)
+        for variable in ("PG_URL", "ELASTICSEARCH_URL", "REDIS_URL"):
+            monkeypatch.setattr(f"pgsync.urls.{variable}", None)
+
+        if service == "database":
+            url = get_database_url("mydb", user="studio", password=password)
+        elif service == "search":
+            url = get_search_url(user="studio", password=password)
+        elif service == "redis":
+            url = get_redis_url(username="studio", password=password)
+        else:
+            url = get_redis_url(password=password)
+
+        assert unquote(urlsplit(url).password) == password
 
     @patch("pgsync.urls.logger")
     def test_get_search_url(self, mock_logger):
