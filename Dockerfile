@@ -1,4 +1,4 @@
-FROM python:3.12.12-slim
+FROM python:3.15.0-slim
 
 ARG EXAMPLE_NAME=airbnb
 ENV EXAMPLE_NAME=${EXAMPLE_NAME}
