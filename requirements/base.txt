@@ -8,9 +8,9 @@ async-timeout==5.0.1
     # via redis
 backports-datetime-fromisoformat==2.0.3
     # via marshmallow
-boto3==1.43.118
+boto3==1.43.123
     # via -r requirements/base.in
-botocore==1.43.118
+botocore==1.43.123
     # via
     #   boto3
     #   s3transfer
@@ -37,7 +37,7 @@ environs==15.2.0
     # via -r requirements/base.in
 events==0.5
     # via opensearch-py
-grpcio==1.84.1
+grpcio==1.85.1
     # via opensearch-protobufs
 idna==3.20
     # via
@@ -94,7 +94,7 @@ six==1.17.0
     #   python-dateutil
 sqlalchemy==2.0.55
     # via -r requirements/base.in
-sqlparse==0.6.0
+sqlparse==0.6.1
     # via -r requirements/base.in
 typing-extensions==4.16.0
     # via
