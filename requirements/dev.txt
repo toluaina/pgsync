@@ -85,7 +85,7 @@ mccabe==0.7.0
     # via flake8
 mock==5.2.0
     # via -r requirements/dev.in
-mypy-extensions==1.1.0
+mypy-extensions==1.2.0
     # via
     #   black
     #   isort
@@ -148,7 +148,7 @@ python-dateutil==2.9.0.post0
     #   freezegun
     #   opensearch-dsl
     #   opensearch-py
-python-discovery==1.9.2
+python-discovery==1.9.4
     # via virtualenv
 python-dotenv==1.2.4
     # via
@@ -172,7 +172,7 @@ six==1.17.0
     # via
     #   opensearch-dsl
     #   python-dateutil
-sqlalchemy==2.0.55
+sqlalchemy==2.0.57
     # via -r requirements/base.in
 sqlparse==0.6.1
     # via -r requirements/base.in
@@ -199,5 +199,5 @@ urllib3==2.8.0
     #   elastic-transport
     #   opensearch-py
     #   requests
-virtualenv==21.15.2
+virtualenv==21.15.5
     # via pre-commit

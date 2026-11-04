@@ -92,7 +92,7 @@ six==1.17.0
     # via
     #   opensearch-dsl
     #   python-dateutil
-sqlalchemy==2.0.55
+sqlalchemy==2.0.57
     # via -r requirements/base.in
 sqlparse==0.6.1
     # via -r requirements/base.in
