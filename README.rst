@@ -41,6 +41,7 @@ Key Features
 - Support for one-to-one, one-to-many relationships
 - Plugin system for document transformation
 - Multiple operation modes: daemon, polling, or direct WAL streaming
+- Terminal monitor of events, throughput, slot lag, and errors (``--monitor``)
 
 Requirements
 ------------
@@ -170,6 +171,40 @@ Running
 .. code-block:: bash
 
    pgsync --config schema.json --daemon
+
+Monitor
+-------
+
+Use ``--monitor`` (or ``-m``) to see the sync events in your terminal while PGSync runs. The monitor replaces the usual status line with a full-screen panel.
+
+.. code-block:: bash
+
+   pip install 'pgsync[monitor]'
+
+   # Trigger mode
+   pgsync --config schema.json --daemon --monitor
+
+   # WAL mode
+   pgsync --config schema.json --wal --monitor
+
+The header shows the health: ``healthy``, ``backlog`` (the Redis queue has 1,000 events or more), ``slot lag`` (the replication slot is 100 MB or more behind), ``checkpoint stale``, or ``errors`` (an error in the last 60 seconds).
+
+The monitor shows these sections:
+
+- **Pipeline:** one row for each index, with the number of events read, the Redis queue size, the replication slot lag, the documents sent, the documents in the index, and the last checkpoint. An arrow shows if the queue or the slot lag increases (``↑``) or decreases (``↓``). A column with no values does not show.
+- **Progress:** a progress bar, the rate, and the estimated time to the end for the initial sync. Also a progress bar while PGSync reads the changes that occurred while it was stopped (catch-up).
+- **Throughput:** events and documents each second for the last 30 seconds, the highest value, the time since the last event, and the number of errors.
+- **By table:** the number of ``INSERT``, ``UPDATE``, ``DELETE``, and ``TRUNCATE`` events for the busiest tables.
+- **Messages:** the last 4 different warnings and errors, with a count for a repeated message.
+- **Live events:** the most recent change events, with the primary key, the transaction ID, and the changed columns. The list fills the free rows of the terminal.
+
+Press ``q`` to stop PGSync (the same as ``Ctrl+C``). Press ``p`` to pause the event list, or to start it again. Press ``f`` to show the events of one table. Press ``d`` to see all the columns of the newest event. Press ``?`` to see the help. Press ``Esc`` to go back to the event list.
+
+PGSync stops immediately when you press ``q`` or ``Ctrl+C``, also while a query waits for a lock. This is the same with and without ``--monitor``.
+
+Set ``MONITOR_THEME`` to ``default`` (dark background), ``light``, ``classic`` (the terminal colors), or ``mono``. Set ``MONITOR_COLORS`` to change single colors, for example ``MONITOR_COLORS="border=magenta,insert=#00ff00"``.
+
+``--monitor`` needs ``--daemon`` or ``--wal`` and an interactive terminal. It does not support polling mode, MySQL, or MariaDB. See the `full description <https://github.com/toluaina/pgsync#monitor>`_.
 
 Links
 -----

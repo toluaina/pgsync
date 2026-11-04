@@ -79,10 +79,14 @@ jmespath==1.1.0
     # via
     #   boto3
     #   botocore
+markdown-it-py==4.2.0
+    # via rich
 marshmallow==4.3.1
     # via environs
 mccabe==0.7.0
     # via flake8
+mdurl==0.1.2
+    # via markdown-it-py
 mock==5.2.0
     # via -r requirements/dev.in
 mypy-extensions==1.2.0
@@ -126,7 +130,9 @@ pycodestyle==2.15.0
 pyflakes==4.0.3
     # via flake8
 pygments==2.21.0
-    # via pytest
+    # via
+    #   pytest
+    #   rich
 pymysql==1.2.3
     # via
     #   -r requirements/base.in
@@ -166,6 +172,8 @@ requests==2.34.2
     #   requests-aws4auth
 requests-aws4auth==1.4.0
     # via -r requirements/base.in
+rich==15.0.0
+    # via -r requirements/dev.in
 s3transfer==0.19.3
     # via boto3
 six==1.17.0

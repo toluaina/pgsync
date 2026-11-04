@@ -1,6 +1,7 @@
 """Sync module."""
 
 import asyncio
+import contextlib
 import json
 import logging
 import os
@@ -33,8 +34,10 @@ from redis.exceptions import ConnectionError
 from pgsync.base import pg_logical_repl_conn
 from pgsync.settings import IS_MYSQL_COMPAT
 
-from . import __version__, settings
-from .base import Base, epoch_extended_xid, Payload
+from . import __version__
+from . import monitor as monitor_view
+from . import settings
+from .base import Base, epoch_extended_xid, interruptible_queries, Payload
 from .constants import (
     DELETE,
     INSERT,
@@ -154,6 +157,8 @@ class Sync(Base, metaclass=Singleton):
         self.lock: threading.Lock = threading.Lock()
         # holds Payload objects across multiple consume() calls
         self._buffer: list["Payload"] = []
+        # WAL mode: let Ctrl+C cancel a query, once the stream has started
+        self._interruptible_after_start: bool = False
         # graceful shutdown: background workers loop until this is set, and
         # stop() joins them. Never set unless stop() is called, so the default
         # daemon lifecycle (workers run until the process is killed) is unchanged.
@@ -548,6 +553,8 @@ class Sync(Base, metaclass=Singleton):
         """
         Render a single-line, in-place progress update for WAL streaming.
         """
+        if monitor_view.progress(self, current, total):
+            return
         # prevent division by zero
         percent: float = (current / total * 100) if total else 0.0
         filled: int = int(bar_length * current // total) if total else 0
@@ -1435,10 +1442,12 @@ class Sync(Base, metaclass=Singleton):
         # e.g a through table which we need to react to.
         # in this case, we find the parent of the through
         # table and force a re-sync.
-        if (
+        skipped: bool = (
             payload.table not in self.tree.tables
             or payload.schema not in self.tree.schemas
-        ):
+        )
+        monitor_view.record(self, payloads, skipped=skipped)
+        if skipped:
             return
 
         node: Node = self.tree.get_node(payload.table, payload.schema)
@@ -2034,9 +2043,11 @@ class Sync(Base, metaclass=Singleton):
                     self.index,
                 )
         else:
-            self.search_client.bulk(
-                self.index, self.sync(txmin=txmin, txmax=txmax)
-            )
+            docs: t.Generator = self.sync(txmin=txmin, txmax=txmax)
+            if txmin is None:
+                # a full table scan: the monitor shows its progress
+                docs = monitor_view.track_scan(self, docs)
+            self.search_client.bulk(self.index, docs)
 
         if self.is_mysql_compat:
             self.binlog_changes(
@@ -2112,6 +2123,10 @@ class Sync(Base, metaclass=Singleton):
             logger.info(f"sent feedback flush_lsn=P{flush_lsn}")
 
     def consume(self, message: t.Any) -> None:
+        if self._interruptible_after_start:
+            # the stream has started, so the wait callback is now safe
+            interruptible_queries()
+            self._interruptible_after_start = False
         raw: t.Any = message.payload
         lsn: t.Optional[str] = message.data_start
         chunk_size: int = settings.LOGICAL_SLOT_CHUNK_SIZE
@@ -2226,6 +2241,9 @@ class Sync(Base, metaclass=Singleton):
             await asyncio.sleep(settings.LOG_INTERVAL)
 
     def _status(self, label: str) -> None:
+        # the monitor reads the counters itself
+        if monitor_view.active():
+            return
         # TODO: indicate if we are processing logical logs or not
         if self.producer and not self.consumer:
             label = f"{label} (Producer)"
@@ -2431,6 +2449,13 @@ class Sync(Base, metaclass=Singleton):
     default=False,
     help="Bootstrap the database",
 )
+@click.option(
+    "--monitor",
+    "-m",
+    is_flag=True,
+    default=False,
+    help="Show a terminal monitor of sync events (needs -d or --wal)",
+)
 def main(
     config: str,
     schema_url: str,
@@ -2451,6 +2476,7 @@ def main(
     consumer: bool,
     bootstrap: bool,
     wal: bool,
+    monitor: bool,
 ) -> None:
     """Main application syncer."""
     if version:
@@ -2510,7 +2536,83 @@ def main(
     else:
         consumer = producer = True
 
-    with Timer():
+    if monitor:
+        if polling:
+            raise click.UsageError(
+                "--monitor does not support polling mode "
+                "(MySQL and MariaDB always use polling mode)."
+            )
+        if analyze or not (daemon or wal):
+            raise click.UsageError("--monitor needs --daemon or --wal.")
+        if not monitor_view.available():
+            raise click.UsageError(
+                "--monitor needs the rich package: "
+                "pip install 'pgsync[monitor]'"
+            )
+        if not monitor_view.interactive():
+            raise click.UsageError("--monitor needs an interactive terminal.")
+        try:
+            monitor_view.set_palette(
+                monitor_view.palette(
+                    settings.MONITOR_THEME, settings.MONITOR_COLORS
+                )
+            )
+        except ValueError as e:
+            raise click.UsageError(str(e))
+        monitor_view.start()
+
+    try:
+        _run(
+            config=config,
+            schema_url=schema_url,
+            s3_schema_url=s3_schema_url,
+            daemon=daemon,
+            verbose=verbose,
+            analyze=analyze,
+            num_workers=num_workers,
+            polling=polling,
+            producer=producer,
+            consumer=consumer,
+            bootstrap=bootstrap,
+            wal=wal,
+            kwargs=kwargs,
+        )
+    except BaseException:
+        # restore the terminal before the traceback prints
+        monitor_view.stop()
+        raise
+
+
+def _run(
+    config: str,
+    schema_url: str,
+    s3_schema_url: str,
+    daemon: bool,
+    verbose: bool,
+    analyze: bool,
+    num_workers: int,
+    polling: bool,
+    producer: bool,
+    consumer: bool,
+    bootstrap: bool,
+    wal: bool,
+    kwargs: dict,
+) -> None:
+    mode: str = "trigger"
+    if producer and not consumer:
+        mode = "trigger producer"
+    elif consumer and not producer:
+        mode = "trigger consumer"
+
+    # daemon mode: wait for Ctrl+C after the initial sync (see _wait_for_exit)
+    wait: bool = False
+
+    # WAL mode sets this after its stream starts (see interruptible_queries)
+    if not wal:
+        interruptible_queries()
+
+    # the monitor shows the uptime: do not print the elapsed time into it
+    with contextlib.nullcontext() if monitor_view.active() else Timer():
         if analyze:
             for doc in config_loader(
                 config=config,
@@ -2549,6 +2651,7 @@ def main(
                     bootstrap=bootstrap,
                     **kwargs,
                 )
+                monitor_view.register(sync, "WAL")
                 syncs.append(sync)
 
             # Start additional schema consumers in daemon threads
@@ -2564,6 +2667,10 @@ def main(
                 )
                 thread.start()
                 threads.append(thread)
+
+            # with more streams, a later stream could not start
+            if len(syncs) == 1:
+                syncs[0]._interruptible_after_start = True
 
             # Run the first consumer on the main thread so that
             # KeyboardInterrupt is handled naturally.
@@ -2585,6 +2692,7 @@ def main(
                     bootstrap=bootstrap,
                     **kwargs,
                 )
+                monitor_view.register(sync, mode)
                 sync.pull()
                 if daemon:
                     sync.receive()
@@ -2596,6 +2704,29 @@ def main(
                 )
                 event_loop.run_until_complete(asyncio.gather(*tasks))
                 event_loop.close()
+            elif daemon:
+                wait = True
+
+    # after the Timer block, so the elapsed time of the initial sync prints
+    if wait:
+        _wait_for_exit()
+
+
+def _wait_for_exit() -> None:
+    """Wait for Ctrl+C while the workers run, then exit at once.
+
+    Otherwise Ctrl+C lands in threading._shutdown and prints a traceback.
+    """
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        # os._exit skips atexit: restore the terminal and flush the logs first
+        monitor_view.stop()
+        logging.shutdown()
+        sys.stderr.write("\nAborted!\n")
+        sys.stderr.flush()
+        os._exit(1)
 
 
 if __name__ == "__main__":

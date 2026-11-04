@@ -786,6 +786,25 @@ class TestSync(object):
             mock_es.assert_called_once_with("testdb", ANY)
 
     @patch("pgsync.sync.SearchClient.bulk")
+    def test_pull_tracks_only_a_full_scan(self, mock_es, sync):
+        with (
+            patch("pgsync.sync.Sync.logical_slot_changes"),
+            patch(
+                "pgsync.sync.monitor_view.track_scan",
+                side_effect=lambda _, docs: docs,
+            ) as track_scan,
+        ):
+            sync.checkpoint = 1
+            sync.pull()
+            track_scan.assert_not_called()
+            with patch.object(
+                Sync, "checkpoint", new_callable=PropertyMock
+            ) as checkpoint:
+                checkpoint.return_value = None
+                sync.pull()
+            track_scan.assert_called_once_with(sync, ANY)
+
+    @patch("pgsync.sync.SearchClient.bulk")
     def test_pull_polling_does_not_require_a_logical_slot(
         self, mock_search_client, sync
     ):

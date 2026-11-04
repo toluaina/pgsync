@@ -284,6 +284,15 @@ REDIS_SOCKET_TIMEOUT = env.int("REDIS_SOCKET_TIMEOUT", default=5)
 REDIS_RETRY_ON_TIMEOUT = env.bool("REDIS_RETRY_ON_TIMEOUT", default=False)
 
 # =============================================================================
+# Monitor (pgsync --monitor)
+# =============================================================================
+
+# Color theme: default (dark terminal), light, classic (terminal colors), mono
+MONITOR_THEME = env.str("MONITOR_THEME", default="default")
+# Change single colors, for example "border=magenta,insert=#00ff00"
+MONITOR_COLORS = env.str("MONITOR_COLORS", default="")
+
+# =============================================================================
 # Logging
 # =============================================================================
 

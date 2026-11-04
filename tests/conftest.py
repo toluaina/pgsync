@@ -37,6 +37,7 @@ if not has_es and not has_os:
 # These imports must follow the environment setup above.
 import pytest  # noqa: E402
 import sqlalchemy as sa  # noqa: E402
+from psycopg2.extensions import set_wait_callback  # noqa: E402
 from sqlalchemy.orm import (  # noqa: E402
     DeclarativeBase,
     Mapped,
@@ -54,6 +55,13 @@ from pgsync.sync import Sync  # noqa: E402
 from pgsync.urls import get_database_url  # noqa: E402
 
 logging.getLogger("faker").setLevel(logging.ERROR)
+
+
+@pytest.fixture(autouse=True)
+def no_wait_callback():
+    """Remove the process-wide wait callback that main() sets."""
+    yield
+    set_wait_callback(None)
 
 
 @pytest.fixture(scope="session")

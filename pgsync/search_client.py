@@ -223,6 +223,10 @@ class SearchClient(Sink):
                 else:
                     logger.error(f"Document failed to index: {info}")
 
+    def count(self, index: str) -> int:
+        """Return the number of documents in the index."""
+        return self.__client.count(index=index)["count"]
+
     def refresh(self, indices: t.List[str]) -> None:
         """Refresh the Elasticsearch/OpenSearch index."""
         self.__client.indices.refresh(index=indices)

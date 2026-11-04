@@ -19,7 +19,7 @@ import requests
 import sqlalchemy as sa
 import sqlparse
 
-from . import settings
+from . import monitor, settings
 from .urls import get_database_url, get_redis_url, get_search_url
 
 logger = logging.getLogger(__name__)
@@ -89,6 +89,8 @@ def exception(func: t.Callable):
         except Exception as e:
             name: str = threading.current_thread().name
             err = e.args[0] if len(e.args) > 0 else e.args
+            # os._exit skips atexit: restore the terminal so the error shows
+            monitor.stop()
             sys.stdout.write(
                 f"Exception in {func.__name__}() for thread {name}: {err}\n"
                 f"Exiting...\n"

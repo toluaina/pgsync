@@ -85,6 +85,7 @@ setup(
     long_description=README,
     long_description_content_type="text/x-rst",
     install_requires=INSTALL_REQUIRES,
+    extras_require={"monitor": ["rich"]},
     include_package_data=True,
     keywords=KEYWORDS,
     packages=PACKAGES,

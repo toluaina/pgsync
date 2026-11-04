@@ -3,6 +3,7 @@
 import logging
 import os
 import random
+import select
 import threading
 import time
 import typing as t
@@ -10,6 +11,13 @@ from contextlib import contextmanager
 
 import psycopg2
 import sqlalchemy as sa
+from psycopg2.extensions import (
+    POLL_OK,
+    POLL_READ,
+    POLL_WRITE,
+    QueryCanceledError,
+    set_wait_callback,
+)
 from psycopg2.extras import LogicalReplicationConnection
 from sqlalchemy.dialects import postgresql  # noqa
 from sqlalchemy.engine.url import make_url
@@ -572,6 +580,49 @@ class Base(object):
             ),
             label="replication_slots",
         )
+
+    def replication_slot_lag(self, slot_name: str) -> t.Optional[int]:
+        """Return the bytes of WAL that the slot has not confirmed.
+
+        SELECT PG_WAL_LSN_DIFF(PG_CURRENT_WAL_LSN(), confirmed_flush_lsn)
+        FROM PG_REPLICATION_SLOTS WHERE slot_name = :slot_name
+        """
+        row: t.Optional[sa.engine.Row] = self.fetchone(
+            sa.select(
+                sa.func.PG_WAL_LSN_DIFF(
+                    sa.func.PG_CURRENT_WAL_LSN(),
+                    sa.column("confirmed_flush_lsn"),
+                )
+            )
+            .select_from(sa.text("PG_REPLICATION_SLOTS"))
+            .where(sa.column("slot_name") == slot_name),
+            label="replication_slot_lag",
+        )
+        if row is None or row[0] is None:
+            return None
+        return int(row[0])
+
+    def estimated_count(self, table: str, schema: str) -> t.Optional[int]:
+        """Return the planner estimate of the rows in a table.
+
+        The estimate comes from pg_class.reltuples, so it is fast but not
+        exact. Returns None if Postgres has no estimate (the table was never
+        analyzed) or the table does not exist.
+
+        SELECT reltuples FROM pg_class WHERE oid = TO_REGCLASS(:name)
+        """
+        row: t.Optional[sa.engine.Row] = self.fetchone(
+            sa.select(sa.column("reltuples"))
+            .select_from(sa.text("pg_class"))
+            .where(
+                sa.column("oid")
+                == sa.func.TO_REGCLASS(f'"{schema}"."{table}"')
+            ),
+            label="estimated_count",
+        )
+        if row is None or row[0] is None or row[0] < 0:
+            return None
+        return int(row[0])
 
     def create_replication_slot(self, slot_name: str) -> None:
         """Create a replication slot.
@@ -1543,6 +1594,46 @@ def _pg_engine(
         logger.debug(f"Configured work_mem={PG_WORK_MEM} for new connections")
 
     return engine
+
+
+def wait_interruptible(conn: t.Any) -> None:
+    """psycopg2.extras.wait_select, but Ctrl+C raises KeyboardInterrupt."""
+    cancelled: bool = False
+    while True:
+        try:
+            state: int = conn.poll()
+            if state == POLL_OK:
+                break
+            elif state == POLL_READ:
+                select.select([conn.fileno()], [], [])
+            elif state == POLL_WRITE:
+                select.select([], [conn.fileno()], [])
+            else:
+                raise conn.OperationalError(f"bad state from poll: {state}")
+        except KeyboardInterrupt:
+            conn.cancel()
+            cancelled = True
+            # the server ends the query, and poll() then returns POLL_OK
+            continue
+        except QueryCanceledError:
+            if cancelled:
+                raise KeyboardInterrupt from None
+            # cancelled for another reason, for example statement_timeout
+            raise
+    if cancelled:
+        # psycopg2 raises QueryCanceledError after this callback returns:
+        # raise KeyboardInterrupt first
+        raise KeyboardInterrupt
+
+
+def interruptible_queries(enabled: bool = True) -> None:
+    """Let Ctrl+C cancel a running query.
+
+    psycopg2 otherwise waits in C, so Ctrl+C waits for the query to end.
+    The callback is process-wide, and a replication stream cannot start
+    while it is set.
+    """
+    set_wait_callback(wait_interruptible if enabled else None)
 
 
 def pg_logical_repl_conn(
