@@ -1,20 +1,10 @@
-import typing as t
+"""Books with authors and publishers: object, scalar, and through tables."""
+
 from datetime import datetime
 
-import click
 import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.schema import UniqueConstraint
-
-from pgsync.base import create_database, create_schema, pg_engine
-from pgsync.constants import DEFAULT_SCHEMA
-from pgsync.helper import teardown
-from pgsync.settings import S3_SCHEMA_URL, SCHEMA_URL
-from pgsync.utils import (
-    config_loader,
-    MutuallyExclusiveOption,
-    validate_config,
-)
 
 
 class Base(DeclarativeBase):
@@ -240,68 +230,3 @@ class BookShelf(Base):
     shelf: Mapped[Shelf] = sa.orm.relationship(
         Shelf, backref=sa.orm.backref("shelves")
     )
-
-
-def setup(
-    config: str,
-    schema_url: t.Optional[str] = None,
-    s3_schema_url: t.Optional[str] = None,
-) -> None:
-    for doc in config_loader(
-        config, schema_url=schema_url, s3_schema_url=s3_schema_url
-    ):
-        database: str = doc.get("database", doc["index"])
-        schema: str = doc.get("schema", DEFAULT_SCHEMA)
-        create_database(database)
-        create_schema(database, schema)
-        with pg_engine(database) as engine:
-            Base.metadata.schema = schema
-            Base.metadata.drop_all(engine)
-            Base.metadata.create_all(engine)
-
-
-@click.command()
-@click.option(
-    "--config",
-    "-c",
-    help="Schema config",
-    type=click.Path(exists=True),
-)
-@click.option(
-    "--schema_url",
-    help="URL for schema config",
-    type=click.STRING,
-    default=SCHEMA_URL,
-    show_default=True,
-    cls=MutuallyExclusiveOption,
-    mutually_exclusive=["config", "s3_schema_url"],
-)
-@click.option(
-    "--s3_schema_url",
-    help="S3 URL for schema config",
-    type=click.STRING,
-    default=S3_SCHEMA_URL,
-    show_default=True,
-    cls=MutuallyExclusiveOption,
-    mutually_exclusive=["config", "schema_url"],
-)
-def main(config: str, schema_url: str, s3_schema_url: str) -> None:
-    validate_config(
-        config,
-        schema_url=schema_url,
-        s3_schema_url=s3_schema_url,
-    )
-    teardown(
-        config=config,
-        schema_url=schema_url,
-        s3_schema_url=s3_schema_url,
-    )
-    setup(
-        config,
-        schema_url=schema_url,
-        s3_schema_url=s3_schema_url,
-    )
-
-
-if __name__ == "__main__":
-    main()

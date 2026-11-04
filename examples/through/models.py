@@ -1,12 +1,8 @@
-import click
+"""A many-to-many relationship through a join table."""
+
 import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.schema import UniqueConstraint
-
-from pgsync.base import create_database, create_schema, pg_engine
-from pgsync.constants import DEFAULT_SCHEMA
-from pgsync.helper import teardown
-from pgsync.utils import config_loader, validate_config
 
 
 class Base(DeclarativeBase):
@@ -62,32 +58,3 @@ class CustomerGroup(Base):
         Group,
         backref=sa.orm.backref("groups"),
     )
-
-
-def setup(config: str) -> None:
-    for doc in config_loader(config):
-        database: str = doc.get("database", doc["index"])
-        schema: str = doc.get("schema", DEFAULT_SCHEMA)
-        create_database(database)
-        create_schema(database, schema)
-        with pg_engine(database) as engine:
-            Base.metadata.schema = schema
-            Base.metadata.drop_all(engine)
-            Base.metadata.create_all(engine)
-
-
-@click.command()
-@click.option(
-    "--config",
-    "-c",
-    help="Schema config",
-    type=click.Path(exists=True),
-)
-def main(config: str) -> None:
-    validate_config(config)
-    teardown(config=config)
-    setup(config)
-
-
-if __name__ == "__main__":
-    main()

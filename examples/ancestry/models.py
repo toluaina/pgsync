@@ -1,10 +1,7 @@
-import click
+"""Five levels of nested children, with a surrogate table between two."""
+
 import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-
-from pgsync.base import create_database, pg_engine
-from pgsync.helper import teardown
-from pgsync.utils import config_loader, validate_config
 
 
 class Base(DeclarativeBase):
@@ -64,29 +61,3 @@ class GreatGrandChild(Base):
     parent_id: Mapped[int] = mapped_column(
         sa.Integer, sa.ForeignKey(GrandChild.id)
     )
-
-
-def setup(config: str) -> None:
-    for doc in config_loader(config):
-        database: str = doc.get("database", doc["index"])
-        create_database(database)
-        with pg_engine(database) as engine:
-            Base.metadata.drop_all(engine)
-            Base.metadata.create_all(engine)
-
-
-@click.command()
-@click.option(
-    "--config",
-    "-c",
-    help="Schema config",
-    type=click.Path(exists=True),
-)
-def main(config: str) -> None:
-    validate_config(config)
-    teardown(config=config)
-    setup(config)
-
-
-if __name__ == "__main__":
-    main()

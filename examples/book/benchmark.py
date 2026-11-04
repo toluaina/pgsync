@@ -5,8 +5,8 @@ committing per row so every operation becomes a distinct change event
 for pgsync to sync. Reports the rate of each batch and a final summary.
 
 Usage:
-    python benchmark.py --config schema.json --tg_op INSERT --nsize 1000
-    python benchmark.py --config schema.json --daemon
+    python -m examples.book.benchmark -c examples/book/schema.json -t INSERT
+    python -m examples.book.benchmark --config examples/book/schema.json --daemon
 """
 
 import random
@@ -16,9 +16,9 @@ import typing as t
 import click
 import sqlalchemy as sa
 from faker import Faker
-from schema import Book
 from sqlalchemy.orm import Session, sessionmaker
 
+from examples.book.models import Book
 from pgsync.base import pg_engine
 from pgsync.constants import DELETE, INSERT, TG_OPS, TRUNCATE, UPDATE
 from pgsync.utils import config_loader, show_settings, validate_config

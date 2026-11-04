@@ -4,9 +4,9 @@ from random import choice
 import click
 import sqlalchemy as sa
 from faker import Faker
-from schema import Book
 from sqlalchemy.orm import sessionmaker
 
+from examples.book_view.models import Book
 from pgsync.base import pg_engine
 from pgsync.constants import DELETE, INSERT, TG_OP, UPDATE
 from pgsync.utils import config_loader, show_settings, Timer, validate_config

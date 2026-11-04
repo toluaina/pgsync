@@ -1,3 +1,0 @@
-http://www.postgresqltutorial.com/postgresql-sample-database/
-createdb rental
-pg_restore -U postgres -d rental dvdrental.tar
