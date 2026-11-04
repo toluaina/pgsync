@@ -11,6 +11,7 @@ WORKDIR /app
 COPY requirements/base.txt ./requirements/base.txt
 RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements/base.txt
 
+COPY requirements/base.in ./requirements/base.in
 COPY pgsync/ ./pgsync/
 COPY README.rst LICENSE setup.cfg setup.py ./
 COPY bin/bootstrap bin/parallel_sync bin/pgsync ./bin/

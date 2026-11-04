@@ -10,6 +10,7 @@ COPY requirements/base.txt ./requirements/base.txt
 RUN pip install --no-cache-dir -r requirements/base.txt
 
 # Install the checked-out project rather than an unpinned remote revision.
+COPY requirements/base.in ./requirements/base.in
 COPY pgsync/ ./pgsync/
 COPY README.rst README.md LICENSE setup.cfg setup.py ./
 COPY bin/bootstrap bin/parallel_sync bin/pgsync ./bin/
