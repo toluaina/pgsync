@@ -7,6 +7,7 @@ import pytest
 from click.testing import CliRunner
 
 from examples.run import cli, create_tables, drop, Example, seed_rows
+from pgsync.settings import IS_MYSQL_COMPAT
 from pgsync.sync import Sync
 
 WITH_DATA = [name for name in Example.names() if Example(name).has_data]
@@ -30,6 +31,10 @@ def config(tmp_path, request):
     drop(source)
 
 
+@pytest.mark.skipif(
+    IS_MYSQL_COMPAT,
+    reason="Skipped because IS_MYSQL_COMPAT env var is set",
+)
 class TestExamples:
     @pytest.mark.parametrize("config", WITH_DATA, indirect=True)
     def test_example_syncs(self, config):
@@ -92,6 +97,10 @@ class TestCli:
         assert result.exit_code == 2
         assert "Use only one of" in result.output
 
+    @pytest.mark.skipif(
+        IS_MYSQL_COMPAT,
+        reason="Skipped because IS_MYSQL_COMPAT env var is set",
+    )
     @patch("examples.run.os.execv")
     @patch("examples.run.subprocess.run")
     def test_up_without_data_runs_bootstrap_and_pgsync(self, run, execv):
