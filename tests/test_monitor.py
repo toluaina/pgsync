@@ -409,6 +409,7 @@ class TestCli:
         start.assert_called_once()
         register.assert_called_once_with(MockSync.return_value, "WAL")
 
+    @patch("pgsync.sync.IS_MYSQL_COMPAT", False)
     @patch("pgsync.monitor.start")
     @patch("pgsync.monitor.register")
     def test_daemon_producer_mode(
@@ -1440,6 +1441,7 @@ class TestPalette:
         view.record(sync, book_payloads(3))
         assert "public.book" in text_of(view.render())
 
+    @patch("pgsync.sync.IS_MYSQL_COMPAT", False)
     def test_cli_rejects_a_bad_theme(self):
         runner = CliRunner()
         with tempfile.NamedTemporaryFile("w", suffix=".json") as config:

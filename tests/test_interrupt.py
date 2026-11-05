@@ -14,7 +14,6 @@ from psycopg2.extensions import (
 )
 
 from pgsync.base import interruptible_queries, wait_interruptible
-from pgsync.settings import IS_MYSQL_COMPAT
 from pgsync.sync import main, Sync
 
 
@@ -102,10 +101,7 @@ class TestMain:
             return CliRunner().invoke(main, ["-c", tmp.name, *args])
 
     # MySQL changes --daemon to polling mode, which loops forever
-    @pytest.mark.skipif(
-        IS_MYSQL_COMPAT,
-        reason="Skipped because IS_MYSQL_COMPAT env var is set",
-    )
+    @patch("pgsync.sync.IS_MYSQL_COMPAT", False)
     def test_daemon_sets_the_callback(self, callback, MockSync, loader, *_):
         loader.return_value = [{"database": "db", "index": "idx"}]
         MockSync.return_value.tasks = []
