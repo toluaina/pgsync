@@ -8,9 +8,9 @@ async-timeout==5.0.1
     # via redis
 backports-datetime-fromisoformat==2.0.3
     # via marshmallow
-boto3==1.43.123
+boto3==1.44.2
     # via -r requirements/base.in
-botocore==1.43.123
+botocore==1.44.2
     # via
     #   boto3
     #   s3transfer
@@ -21,7 +21,7 @@ certifi==2026.10.23
     #   requests
 charset-normalizer==3.5.2
     # via requests
-click==8.5.0
+click==8.5.1
     # via -r requirements/base.in
 elastic-transport==8.19.0
     # via
@@ -63,7 +63,7 @@ protobuf==7.36.2
     # via opensearch-protobufs
 psycopg2-binary==2.9.13
     # via -r requirements/base.in
-pymysql==1.2.3
+pymysql==1.2.4
     # via
     #   -r requirements/base.in
     #   mysql-replication
