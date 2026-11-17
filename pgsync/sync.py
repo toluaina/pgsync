@@ -1055,6 +1055,43 @@ class Sync(Base, metaclass=Singleton):
 
         return filters
 
+    def _root_direct_foreign_key_resolver(
+        self,
+        node: Node,
+        payloads: t.Sequence[Payload],
+        foreign_keys: dict,
+        filters: list,
+    ) -> list:
+        """
+        Resolve root filters straight from the payload when the node's parent
+        is the root and the node references the root's single primary key
+        (e.g. "rating.book_isbn" -> root "book.isbn").
+
+        The other resolvers look the root up in Elasticsearch/OpenSearch, which
+        only sees documents as of the last index refresh. A change to a child
+        row of a document indexed less than a refresh interval earlier then
+        finds no root and is dropped. The root key in the payload needs no
+        lookup.
+        """
+        if not node.parent or not node.parent.is_root:
+            return filters
+        root_pks = list(self.tree.root.model.primary_keys)
+        child_columns = foreign_keys.get(node.name, [])
+        parent_columns = foreign_keys.get(node.parent.name, [])
+        if (
+            len(root_pks) != 1
+            or len(child_columns) != 1
+            or parent_columns != root_pks
+        ):
+            return filters
+        column = child_columns[0]
+        for payload in payloads:
+            for row in (payload.new, payload.old):
+                value = (row or {}).get(column)
+                if value is not None:
+                    filters.append({root_pks[0]: value})
+        return filters
+
     def _through_node_resolver(
         self,
         node: Node,
@@ -1307,6 +1344,9 @@ class Sync(Base, metaclass=Singleton):
                     )
 
             _filters = self._root_foreign_key_resolver(
+                node, payloads, foreign_keys, _filters
+            )
+            _filters = self._root_direct_foreign_key_resolver(
                 node, payloads, foreign_keys, _filters
             )
             if _filters:
