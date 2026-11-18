@@ -1243,3 +1243,98 @@ class TestParentSingleChildFkOnChild(object):
         sync.session.close()
         sync.engine.dispose(close=True)
         Singleton._instances = {}
+
+    def test_update_child_before_root_is_searchable(
+        self, data, book_cls, rating_cls
+    ):
+        """
+        Test that a child update is synced when its root document is
+        indexed but not yet searchable.
+
+        The index is created with refresh disabled and only refreshed
+        after the update has been synced, as when a child row changes
+        less than a refresh interval after its root was indexed.
+        """
+        doc = {
+            "index": "testdb",
+            "database": "testdb",
+            "setting": {"refresh_interval": "-1"},
+            "nodes": {
+                "table": "book",
+                "columns": ["isbn", "title"],
+                "children": [
+                    {
+                        "table": "rating",
+                        "columns": ["id", "value"],
+                        "relationship": {
+                            "variant": "object",
+                            "type": "one_to_one",
+                        },
+                    }
+                ],
+            },
+        }
+        sync = Sync(doc)
+        # indexed, but not visible to searches until the next refresh
+        sync.search_client.bulk(sync.index, sync.sync())
+
+        session = sync.session
+
+        def pull():
+            txmin = sync.checkpoint
+            txmax = sync.txid_current
+            sync.logical_slot_changes(txmin=txmin, txmax=txmax)
+
+        def poll_redis():
+            return []
+
+        def poll_db():
+            with subtransactions(session):
+                session.execute(
+                    rating_cls.__table__.update()
+                    .where(rating_cls.__table__.c.id == 3)
+                    .values(value=4.4)
+                )
+                session.commit()
+
+        with mock.patch("pgsync.sync.Sync.poll_redis", side_effect=poll_redis):
+            with mock.patch("pgsync.sync.Sync.poll_db", side_effect=poll_db):
+                with mock.patch("pgsync.sync.Sync.pull", side_effect=pull):
+                    with mock.patch(
+                        "pgsync.sync.Sync.truncate_slots",
+                        side_effect=noop,
+                    ):
+                        with mock.patch(
+                            "pgsync.sync.Sync.status",
+                            side_effect=noop,
+                        ):
+                            sync.receive()
+                            sync.search_client.refresh("testdb")
+
+        docs = search(sync.search_client, "testdb")
+
+        assert docs == [
+            {
+                "_meta": {"book": {"isbn": ["abc"]}, "rating": {"id": [1]}},
+                "isbn": "abc",
+                "rating": {"id": 1, "value": 1.1},
+                "title": "The Tiger Club",
+            },
+            {
+                "_meta": {"book": {"isbn": ["def"]}, "rating": {"id": [2]}},
+                "isbn": "def",
+                "rating": {"id": 2, "value": 2.2},
+                "title": "The Lion Club",
+            },
+            {
+                "_meta": {"book": {"isbn": ["ghi"]}, "rating": {"id": [3]}},
+                "isbn": "ghi",
+                "rating": {"id": 3, "value": 4.4},
+                "title": "The Rabbit Club",
+            },
+        ]
+        assert_resync_empty(sync, doc.get("node", {}))
+        sync.search_client.close()
+        sync.session.close()
+        sync.engine.dispose(close=True)
+        Singleton._instances = {}
