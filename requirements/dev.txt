@@ -10,9 +10,9 @@ backports-datetime-fromisoformat==2.0.3
     # via marshmallow
 black==26.10.1
     # via -r requirements/dev.in
-boto3==1.44.2
+boto3==1.44.5
     # via -r requirements/base.in
-botocore==1.44.2
+botocore==1.44.5
     # via
     #   boto3
     #   s3transfer
@@ -35,7 +35,7 @@ coverage[toml]==7.16.2
     #   pytest-cov
 distlib==0.4.4
     # via virtualenv
-elastic-transport==8.19.0
+elastic-transport==8.19.1
     # via
     #   -r requirements/base.in
     #   elasticsearch
@@ -63,7 +63,7 @@ flake8==7.4.1
     # via -r requirements/dev.in
 freezegun==1.5.5
     # via -r requirements/dev.in
-grpcio==1.85.1
+grpcio==1.85.3
     # via opensearch-protobufs
 identify==2.6.20
     # via pre-commit
@@ -154,7 +154,7 @@ python-dateutil==2.9.0.post0
     #   freezegun
     #   opensearch-dsl
     #   opensearch-py
-python-discovery==1.9.5
+python-discovery==1.9.6
     # via virtualenv
 python-dotenv==1.2.4
     # via
@@ -180,7 +180,7 @@ six==1.17.0
     # via
     #   opensearch-dsl
     #   python-dateutil
-sqlalchemy==2.0.57
+sqlalchemy==2.0.58
     # via -r requirements/base.in
 sqlparse==0.6.1
     # via -r requirements/base.in
@@ -207,5 +207,5 @@ urllib3==2.8.0
     #   elastic-transport
     #   opensearch-py
     #   requests
-virtualenv==21.15.6
+virtualenv==21.15.8
     # via pre-commit
