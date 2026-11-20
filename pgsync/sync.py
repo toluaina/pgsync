@@ -726,17 +726,30 @@ class Sync(Base, metaclass=Singleton):
                 # mysql-replication ignores log_file and log_pos on MariaDB
                 # and reads from the start of the binlog. Resume from the
                 # GTID position of the checkpoint instead.
-                auto_position = conn.execute(
-                    sa.text("SELECT BINLOG_GTID_POS(:log_file, :log_pos)"),
-                    {"log_file": start_log, "log_pos": int(start_pos or 4)},
-                ).scalar()
-                if auto_position is None:
-                    # e.g. a purged binlog file
+                try:
+                    auto_position = conn.execute(
+                        sa.text("SELECT BINLOG_GTID_POS(:log_file, :log_pos)"),
+                        {
+                            "log_file": start_log,
+                            "log_pos": int(start_pos or 4),
+                        },
+                    ).scalar()
+                except sa.exc.DBAPIError as e:
+                    # e.g. no binary log, or no privilege. Keep the old
+                    # behavior and read from the start of the binlog.
                     logger.warning(
-                        f"No GTID position for binlog {start_log}, "
-                        f"position {start_pos}. Reading from the start of "
-                        f"the binlog."
+                        f"Cannot get the GTID position for binlog "
+                        f"{start_log}, position {start_pos}: {e.orig}. "
+                        f"Reading from the start of the binlog."
                     )
+                else:
+                    if auto_position is None:
+                        # e.g. a purged binlog file
+                        logger.warning(
+                            f"No GTID position for binlog {start_log}, "
+                            f"position {start_pos}. Reading from the start "
+                            f"of the binlog."
+                        )
                 # an empty position (no GTID yet) also reads from the start
                 auto_position = auto_position or None
 

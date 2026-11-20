@@ -3083,6 +3083,20 @@ class TestBinlogStartPosition:
         assert kwargs["auto_position"] is None
         assert logger.warning.called is (gtid is None)
 
+    def test_mariadb_query_error_reads_from_the_start(self):
+        """If the GTID query fails (e.g. no binary log, error 1381), pgsync
+        logs a warning and reads from the start of the binlog, as before."""
+        sync = _binlog_sync(is_mariadb=True)
+        sync.conn.execute.side_effect = sa.exc.OperationalError(
+            "SELECT BINLOG_GTID_POS", {}, Exception("binary logging is off")
+        )
+        with patch("pgsync.sync.logger") as logger:
+            kwargs = self._read(sync, "master.000002", "5000")
+        assert kwargs["auto_position"] is None
+        assert kwargs["log_file"] == "master.000002"
+        assert kwargs["log_pos"] == 5000
+        assert "binary logging is off" in logger.warning.call_args.args[0]
+
     def test_mariadb_without_a_checkpoint(self):
         sync = _binlog_sync(is_mariadb=True)
         kwargs = self._read(sync)

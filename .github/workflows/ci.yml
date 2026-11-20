@@ -74,7 +74,7 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
     services:
       postgres:
-        image: debezium/postgres@sha256:03d929e57939508a518e36b14a292f78a675c22fe1db4d63beb8777c968002c4
+        image: postgres@sha256:bb6e70add742cd868fb62cb3b2f67d1dd2bdd2b65a521e778420748753687c60 # 19.0
         env:
           POSTGRES_DB: testdb
           POSTGRES_PASSWORD: postgres
@@ -111,6 +111,16 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install -e . -r requirements/dev.txt
+
+    # The official image starts with wal_level=replica, and a service
+    # cannot pass server options. Set wal_level=logical and restart.
+    - name: Enable logical replication
+      run: |
+        docker exec "$PG_CONTAINER" psql -U postgres -c "ALTER SYSTEM SET wal_level = logical"
+        docker restart "$PG_CONTAINER"
+        until docker exec "$PG_CONTAINER" pg_isready -U postgres; do sleep 1; done
+      env:
+        PG_CONTAINER: ${{ job.services.postgres.id }}
 
     - name: Test with pytest
       run: pytest -x -s -vv --cov=pgsync --cov-report=xml:tests/coverage.xml --cov-report=term-missing

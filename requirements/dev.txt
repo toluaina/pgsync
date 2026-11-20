@@ -53,7 +53,7 @@ exceptiongroup==1.3.2
     # via
     #   anyio
     #   pytest
-faker==40.54.0
+faker==40.63.0
     # via -r requirements/dev.in
 filelock==4.1.0
     # via

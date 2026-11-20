@@ -36,7 +36,8 @@ Unreleased
 * Remove ``Payload.foreign_key_constraint``. pgsync does not use it now.
 * MariaDB: resume the binlog read from the checkpoint. Before, each read started at the start of the binlog.
   pgsync converts the checkpoint to a GTID position with ``BINLOG_GTID_POS``.
-  If the binlog file of the checkpoint is purged, pgsync logs a warning and reads from the start, as before.
+  If the binlog file of the checkpoint is purged, or the query fails (for example with no binary log),
+  pgsync logs a warning and reads from the start, as before.
 * MySQL and MariaDB: do not repeat documents and nested items. A child subquery had a second copy of its parent
   table (or through table), so the sync query gave each root row one time for each row of that table.
   This occurred for a foreign key on the parent (for example ``book.publisher_id``) and for a through table.
@@ -62,6 +63,12 @@ Unreleased
   On a terminal, the table column is dim, unless ``NO_COLOR`` is set.
   To turn off the tree, set ``SHOW_TREE=false``.
   ``Node.display()`` has no ``prefix`` and ``leaf`` arguments now.
+* Docker compose, ``docker/Dockerfile`` and the CI tests now use PostgreSQL 19.
+  ``docker/Dockerfile`` had a broken ``FROM`` line and now builds again.
+  CI uses the official ``postgres`` image in place of ``debezium/postgres``, which has no PostgreSQL 19 image.
+* Docker images: use ``python:3.12.16-slim`` (Debian 13.7) in place of ``python:3.12.12-slim`` (Debian 13.3),
+  and install the Debian security updates at build time. This removes the 6 critical and 72 high findings
+  that have a fix (OpenSSL and Perl, among others). 47 high findings remain, and Debian has no fix for them yet.
 
 1.0.1 (2020-15-01)
 ------------------

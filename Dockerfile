@@ -1,4 +1,9 @@
-FROM python:3.12.12-slim
+FROM python:3.12.16-slim
+
+# Install the Debian security fixes released after the base image was built.
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 
 ARG EXAMPLE_NAME=airbnb
 ENV EXAMPLE_NAME=${EXAMPLE_NAME}
