@@ -23,6 +23,7 @@ import sqlparse
 from psycopg2 import OperationalError
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from pymysqlreplication import BinLogStreamReader
+from pymysqlreplication.bitmap import BitGet
 from pymysqlreplication.event import FormatDescriptionEvent, RotateEvent
 from pymysqlreplication.row_event import (
     DeleteRowsEvent,
@@ -76,6 +77,7 @@ from .utils import (
     show_settings,
     threaded,
     Timer,
+    unique_filters,
     validate_config,
 )
 
@@ -132,6 +134,8 @@ class Sync(Base, metaclass=Singleton):
         self._checkpoint: t.Optional[t.Union[str, int]] = None
         self._plugins: Plugins = None
         self._truncate: bool = False
+        # tables where a root path query failed (warn one time only)
+        self._root_query_errors: t.Set[str] = set()
         self.producer: bool = producer
         self.consumer: bool = consumer
         self.num_workers: int = num_workers
@@ -153,6 +157,10 @@ class Sync(Base, metaclass=Singleton):
 
         self.query_builder: QueryBuilder = QueryBuilder(verbose=verbose)
         self.count: dict = dict(xlog=0, db=0, redis=0)
+        # the last keyvalue status line: (time, fields)
+        self._status_line: t.Tuple[float, dict] = (0.0, {})
+        # the last status tick: (time, events), for the rate
+        self._status_tick: t.Tuple[float, int] = (time.monotonic(), 0)
         self.tasks: t.List[asyncio.Task] = []
         self.lock: threading.Lock = threading.Lock()
         # holds Payload objects across multiple consume() calls
@@ -257,7 +265,8 @@ class Sync(Base, metaclass=Singleton):
                     f" is read/writable"
                 )
 
-        self.tree.display()
+        if settings.SHOW_TREE:
+            self.tree.display(index=self.index)
 
         for node in self.tree.traverse_breadth_first():
             # ensure internal materialized view compatibility
@@ -710,8 +719,26 @@ class Sync(Base, metaclass=Singleton):
         }
 
         # Detect MariaDB from SQLAlchemy engine
+        auto_position: t.Optional[str] = None
         with self.engine.connect() as conn:
             is_mariadb: bool = getattr(conn.dialect, "is_mariadb", False)
+            if is_mariadb and start_log:
+                # mysql-replication ignores log_file and log_pos on MariaDB
+                # and reads from the start of the binlog. Resume from the
+                # GTID position of the checkpoint instead.
+                auto_position = conn.execute(
+                    sa.text("SELECT BINLOG_GTID_POS(:log_file, :log_pos)"),
+                    {"log_file": start_log, "log_pos": int(start_pos or 4)},
+                ).scalar()
+                if auto_position is None:
+                    # e.g. a purged binlog file
+                    logger.warning(
+                        f"No GTID position for binlog {start_log}, "
+                        f"position {start_pos}. Reading from the start of "
+                        f"the binlog."
+                    )
+                # an empty position (no GTID yet) also reads from the start
+                auto_position = auto_position or None
 
         def _conn_settings_from_engine(engine: sa.Engine) -> dict:
             url: sa.engine.URL = engine.url
@@ -722,6 +749,25 @@ class Sync(Base, metaclass=Singleton):
                 "passwd": url.password or "",
                 "charset": "utf8mb4",
                 "autocommit": True,
+            }
+
+        def _in_image(
+            values: t.Optional[dict], bitmap: t.Any
+        ) -> t.Optional[dict]:
+            """
+            Remove the columns that are not in the row image.
+
+            With binlog_row_image MINIMAL or NOBLOB, an image holds only
+            some columns, and mysql-replication gives the others as None.
+            A FULL image holds all the columns. The values are in column
+            order, the same as the bits of the bitmap.
+            """
+            if not values or bitmap is None:
+                return values
+            return {
+                key: value
+                for i, (key, value) in enumerate(values.items())
+                if BitGet(bitmap, i)
             }
 
         base: dict = _conn_settings_from_engine(self.engine)
@@ -736,6 +782,7 @@ class Sync(Base, metaclass=Singleton):
             ctl_connection_settings=ctl_connection_settings,  # separate control socket w/ tuple cursor
             server_id=server_id,
             is_mariadb=is_mariadb,
+            auto_position=auto_position,  # MariaDB only, see above
             log_file=start_log,  # None => server current file
             log_pos=int(start_pos or 4),  # must be the "next event" position
             resume_stream=True,
@@ -785,6 +832,12 @@ class Sync(Base, metaclass=Singleton):
                     continue
 
                 # Build payloads
+                # the columns in the row images: the before image (or the
+                # only image), and the after image of an update
+                bitmap: t.Any = getattr(event, "columns_present_bitmap", None)
+                bitmap2: t.Any = getattr(
+                    event, "columns_present_bitmap2", None
+                )
                 if isinstance(event, WriteRowsEvent):
                     for row in event.rows:
                         payload = Payload(
@@ -792,7 +845,10 @@ class Sync(Base, metaclass=Singleton):
                             table=table,
                             tg_op="INSERT",
                             new=remap_unknown(
-                                self.engine, schema, table, row.get("values")
+                                self.engine,
+                                schema,
+                                table,
+                                _in_image(row.get("values"), bitmap),
                             ),
                         )
                         key: tuple[str, str] = (payload.tg_op, payload.table)
@@ -807,21 +863,25 @@ class Sync(Base, metaclass=Singleton):
 
                 elif isinstance(event, UpdateRowsEvent):
                     for row in event.rows:
+                        before: t.Optional[dict] = _in_image(
+                            row.get("before_values"), bitmap
+                        )
+                        after: t.Optional[dict] = _in_image(
+                            row.get("after_values"), bitmap2
+                        )
+                        if after:
+                            # a column that is not in the after image did
+                            # not change, e.g. the primary key with MINIMAL
+                            after = {**(before or {}), **after}
                         payload = Payload(
                             schema=schema,
                             table=table,
                             tg_op="UPDATE",
                             old=remap_unknown(
-                                self.engine,
-                                schema,
-                                table,
-                                row.get("before_values"),
+                                self.engine, schema, table, before
                             ),
                             new=remap_unknown(
-                                self.engine,
-                                schema,
-                                table,
-                                row.get("after_values"),
+                                self.engine, schema, table, after
                             ),
                         )
                         key = (payload.tg_op, payload.table)
@@ -841,7 +901,10 @@ class Sync(Base, metaclass=Singleton):
                             table=table,
                             tg_op="DELETE",
                             old=remap_unknown(
-                                self.engine, schema, table, row.get("values")
+                                self.engine,
+                                schema,
+                                table,
+                                _in_image(row.get("values"), bitmap),
                             ),
                         )
                         key = (payload.tg_op, payload.table)
@@ -989,27 +1052,45 @@ class Sync(Base, metaclass=Singleton):
     ) -> list:
         """
         Batched FK resolver with chunking to respect ES/OpenSearch terms limits.
+
+        Applies only if the node holds the foreign key and the foreign key
+        references the parent primary key(s), e.g. "rating.book_isbn" ->
+        "book.isbn". Searches "_meta.<parent>.<parent pk>" with the foreign
+        key values of the new and old rows, so a child that moves to a
+        different parent also finds the new root. _root_primary_key_resolver
+        covers the other shapes, e.g. a foreign key on the parent.
+
         Splits large value sets into chunks so that each field's terms list
         is <= max_terms_count (defaults to 65536).
         """
-        if not payloads:
+        # foreign_keys of a node with a through table holds the columns of
+        # both hops. The parent of a through node is the child that it links.
+        if (
+            not payloads
+            or not node.parent
+            or node.is_through
+            or node.relationship.throughs
+        ):
             return filters
 
-        fk_names = foreign_keys.get(node.name, [])
-        if not fk_names:
+        child_columns: t.List[str] = foreign_keys.get(node.name, [])
+        parent_columns: t.List[str] = foreign_keys.get(node.parent.name, [])
+        parent_pks: t.List[str] = [
+            key.name for key in node.parent.primary_keys
+        ]
+        if node.parent.is_root:
+            # _meta only holds the first primary key of the root
+            parent_pks = parent_pks[:1]
+        if (
+            not child_columns
+            or len(child_columns) != len(parent_columns)
+            or sorted(parent_columns) != sorted(parent_pks)
+        ):
             return filters
 
-        # Gather distinct FK values across payloads (preserve order).
-        seen_vals = set()
-        foreign_values = []
-        for p in payloads:
-            new_obj = getattr(p, "new", {}) or {}
-            for key in fk_names:
-                v = new_obj.get(key)
-                if v is not None and v not in seen_vals:
-                    seen_vals.add(v)
-                    foreign_values.append(v)
-
+        foreign_values: t.List[tuple] = self._payload_values(
+            payloads, child_columns
+        )
         if not foreign_values:
             return filters
 
@@ -1026,11 +1107,12 @@ class Sync(Base, metaclass=Singleton):
 
         seen_docs = set()
 
-        # For each chunk, build a fields dict mapping *each* PK name -> chunked values,
-        # mirroring your original semantics.
-        pk_names = [k.name for k in node.primary_keys]
+        # map each parent key to the distinct values of its child column
         for chunk in chunks(foreign_values, max_terms):
-            fields = {pk: list(chunk) for pk in pk_names}
+            fields: t.Dict[str, list] = {
+                column: list(dict.fromkeys(value[i] for value in chunk))
+                for i, column in enumerate(parent_columns)
+            }
 
             for doc_id in self.search_client._search(
                 self.index, node.parent.table, fields
@@ -1055,7 +1137,7 @@ class Sync(Base, metaclass=Singleton):
 
         return filters
 
-    def _root_direct_foreign_key_resolver(
+    def _root_payload_resolver(
         self,
         node: Node,
         payloads: t.Sequence[Payload],
@@ -1063,75 +1145,339 @@ class Sync(Base, metaclass=Singleton):
         filters: list,
     ) -> list:
         """
-        Resolve root filters straight from the payload when the node's parent
-        is the root and the node references the root's single primary key
-        (e.g. "rating.book_isbn" -> root "book.isbn").
+        Resolve root filters from the root key in the payload.
 
-        The other resolvers look the root up in Elasticsearch/OpenSearch, which
-        only sees documents as of the last index refresh. A change to a child
-        row of a document indexed less than a refresh interval earlier then
-        finds no root and is dropped. The root key in the payload needs no
-        lookup.
+        The payload holds the root key if the tree links the node to the
+        root directly:
+        - the parent is the root, e.g. "rating.book_isbn" -> "book.isbn"
+        - the node is a through table, and the child that it links is a
+          child of the root, e.g. "book_author.book_isbn" -> "book.isbn"
+
+        The link must pair the node columns with the root primary key(s),
+        or be a database foreign key of the node. A different foreign key
+        to the root, e.g. an audit column "created_by", is not used. The
+        row that it references is not always the root of the change.
+
+        The search resolvers see a document only after an index refresh.
+        The root key in the payload needs no search. A composite key uses
+        all of its columns. The new and old rows are read, so a row that
+        moves to a different root finds the two roots.
         """
-        if not node.parent or not node.parent.is_root:
+        # foreign_keys of a node with a through table holds the columns of
+        # both hops
+        if not payloads or not node.parent or node.relationship.throughs:
             return filters
-        root_pks = list(self.tree.root.model.primary_keys)
-        child_columns = foreign_keys.get(node.name, [])
-        parent_columns = foreign_keys.get(node.parent.name, [])
-        if (
-            len(root_pks) != 1
-            or len(child_columns) != 1
-            or parent_columns != root_pks
+
+        root: Node = self.tree.root
+        if node.is_through:
+            # the parent of a through node is the child that it links, so
+            # use the foreign keys between the root and the through node
+            if not (node.parent.parent and node.parent.parent.is_root):
+                return filters
+            try:
+                foreign_keys = self.query_builder.get_foreign_keys(root, node)
+            except (ForeignKeyError, sa.exc.NoReferenceError):
+                return filters
+        elif not node.parent.is_root:
+            return filters
+
+        columns: t.List[str] = foreign_keys.get(node.name, [])
+        root_columns: t.List[str] = foreign_keys.get(root.name, [])
+        if not columns or len(columns) != len(root_columns):
+            return filters
+        to_primary_key: bool = sorted(root_columns) == sorted(
+            root.model.primary_keys
+        )
+        if not to_primary_key and (
+            frozenset(zip(columns, root_columns))
+            not in self._root_constraints(node)
         ):
             return filters
-        column = child_columns[0]
-        for payload in payloads:
-            for row in (payload.new, payload.old):
-                value = (row or {}).get(column)
-                if value is not None:
-                    filters.append({root_pks[0]: value})
+
+        for value in self._payload_values(payloads, columns):
+            filters.append(dict(zip(root_columns, value)))
+
         return filters
 
-    def _through_node_resolver(
+    def _root_constraints(
+        self, node: Node
+    ) -> t.Set[t.FrozenSet[t.Tuple[str, str]]]:
+        """
+        Return the database foreign keys from the node to the root, each as
+        a set of (node column, root column) pairs.
+        """
+        root_name: str = self.tree.root.name
+        pairs: t.Set[t.FrozenSet[t.Tuple[str, str]]] = set()
+        for constraint in {fk.constraint for fk in node.model.foreign_keys}:
+            try:
+                if str(constraint.referred_table) != root_name:
+                    continue
+                root_columns: t.List[str] = [
+                    element.column.name for element in constraint.elements
+                ]
+            except sa.exc.NoReferenceError:
+                # the referenced table is not in the reflected metadata,
+                # e.g. a table in a different schema, so it is not the root
+                continue
+            pairs.add(frozenset(zip(constraint.column_keys, root_columns)))
+        return pairs
+
+    def _root_path_query(self, node: Node) -> t.Optional[sa.sql.Select]:
+        """
+        Select the root primary keys with a join from the node up to the root.
+
+        Each hop joins on the foreign key columns between the two tables, so
+        the join works on the two sides of a foreign key. A through table is
+        a hop between the node and its parent.
+
+        Returns None if the path cannot join:
+        - a hop has no single set of paired foreign key columns
+        - a table occurs two times in the path (Base.models keeps one alias
+          for each table)
+        - the joined columns of a hop have no index, e.g. a foreign key on
+          the parent. Such a join scans the table for each change.
+        """
+        from_obj: sa.sql.FromClause = node.model
+        tables: t.Set[str] = {node.name}
+        child: Node = node
+        while not child.is_root:
+            previous: Node = child
+            for hop in [*child.relationship.throughs, child.parent]:
+                if hop.name in tables:
+                    return None
+                try:
+                    foreign_keys: t.Dict[str, t.List[str]] = (
+                        self.query_builder.get_foreign_keys(hop, previous)
+                    )
+                except (ForeignKeyError, sa.exc.NoReferenceError):
+                    return None
+                left: t.List[str] = foreign_keys.get(previous.name, [])
+                right: t.List[str] = foreign_keys.get(hop.name, [])
+                if not left or len(left) != len(right):
+                    return None
+                if not self._is_indexed(hop.model.original, right):
+                    return None
+                from_obj = from_obj.join(
+                    hop.model,
+                    sa.and_(
+                        *[
+                            previous.model.c[a] == hop.model.c[b]
+                            for a, b in zip(left, right)
+                        ]
+                    ),
+                )
+                tables.add(hop.name)
+                previous = hop
+            child = child.parent
+
+        root: Node = self.tree.root
+        return (
+            sa.select(*[root.model.c[key] for key in root.model.primary_keys])
+            .select_from(from_obj)
+            .distinct()
+        )
+
+    @staticmethod
+    def _is_indexed(table: sa.Table, columns: t.List[str]) -> bool:
+        """
+        Return True if the columns are the first columns of the primary key,
+        of a unique constraint, or of an index of the table, in any order.
+
+        Only a btree or hash index counts. A partial index, an index with an
+        expression, and a MySQL FULLTEXT or SPATIAL index do not count. The
+        join cannot always use them.
+        """
+        candidates: t.List[t.List[sa.Column]] = [
+            list(table.primary_key.columns)
+        ]
+        candidates.extend(
+            list(constraint.columns)
+            for constraint in table.constraints
+            if isinstance(constraint, sa.UniqueConstraint)
+        )
+        candidates.extend(
+            list(index.columns)
+            for index in table.indexes
+            if (index.dialect_kwargs.get("postgresql_using") or "btree")
+            in ("btree", "hash")
+            and index.dialect_kwargs.get("postgresql_where") is None
+            and not index.dialect_kwargs.get("mysql_prefix")
+            and not index.dialect_kwargs.get("mariadb_prefix")
+            and len(index.expressions) == len(index.columns)
+        )
+        return any(
+            {column.name for column in candidate[: len(columns)]}
+            == set(columns)
+            for candidate in candidates
+            if len(candidate) >= len(columns)
+        )
+
+    def _root_database_resolver(
         self,
         node: Node,
         payloads: t.Sequence[Payload],
         filters: list,
+    ) -> bool:
+        """
+        Add root filters from a database query of the changed rows.
+
+        The search resolvers see a document only after an index refresh, so
+        a change soon after its root is indexed finds no root. This query
+        reads the database. The changed rows must exist, so a delete uses
+        _root_anchor_resolver.
+
+        Add the root filters to filters in place. Return True if the query
+        ran and no chunk failed. A row without a value for each primary key
+        is not in the query.
+        """
+        if not payloads or node.is_root or node.is_through:
+            return False
+
+        statement: t.Optional[sa.sql.Select] = self._root_path_query(node)
+        if statement is None:
+            return False
+
+        pk_names: t.List[str] = list(node.model.primary_keys)
+        values: t.List[tuple] = self._payload_values(payloads, pk_names)
+        if not values:
+            return False
+        return self._query_root_filters(
+            node,
+            statement,
+            [node.model.c[key] for key in pk_names],
+            values,
+            filters,
+        )
+
+    def _root_anchor_resolver(
+        self,
+        node: Node,
+        payloads: t.Sequence[Payload],
+        filters: list,
+        moved: bool = False,
     ) -> list:
         """
-        Handle where node is a through table with a direct references to root
-        Batched resolver for through tables that directly reference the root.
+        Resolve root filters with a database query from the anchor, the row
+        that the changed row links to.
 
-        For each payload, if it carries a foreign key to the root, append a
-        {remote_field: value} filter. Deduplicates to avoid redundant entries.
+        The anchor is the parent. For a through table, the anchor is the node
+        above the child that it links, because the parent of a through node
+        is that child. The query starts at the anchor and filters on the
+        linked values of the new and old rows. Thus the changed row does not
+        have to exist or have a primary key.
+
+        If moved is True, only the old values that differ from the new values
+        are used. This finds the old root of a row that moves to a different
+        anchor.
         """
-        if not payloads:
+        if not payloads or not node.parent or node.relationship.throughs:
             return filters
 
-        root_name = self.tree.root.name
-        seen = set()  # (remote, value)
+        anchor: t.Optional[Node] = (
+            node.parent.parent if node.is_through else node.parent
+        )
+        if anchor is None:
+            return filters
+        try:
+            foreign_keys: t.Dict[str, t.List[str]] = (
+                self.query_builder.get_foreign_keys(anchor, node)
+            )
+        except (ForeignKeyError, sa.exc.NoReferenceError):
+            return filters
+        node_columns: t.List[str] = foreign_keys.get(node.name, [])
+        anchor_columns: t.List[str] = foreign_keys.get(anchor.name, [])
+        if (
+            not node_columns
+            or len(node_columns) != len(anchor_columns)
+            or not self._is_indexed(anchor.model.original, anchor_columns)
+        ):
+            return filters
 
-        for p in payloads:
-            try:
-                fkc = p.foreign_key_constraint(node.model) or {}
-            except Exception:
-                # if a payload can't produce constraints, skip it
-                continue
+        values: t.List[tuple] = self._payload_values(
+            payloads, node_columns, moved
+        )
+        if not values:
+            return filters
+        statement: t.Optional[sa.sql.Select] = self._root_path_query(anchor)
+        if statement is None:
+            return filters
 
-            ref = fkc.get(root_name)
-            if not ref:
-                continue
-
-            remote = ref.get("remote")
-            value = ref.get("value")
-
-            if remote and value is not None:
-                key = (remote, value)
-                if key not in seen:
-                    seen.add(key)
-                    filters.append({remote: value})
-
+        self._query_root_filters(
+            anchor,
+            statement,
+            [anchor.model.c[key] for key in anchor_columns],
+            values,
+            filters,
+        )
         return filters
+
+    @staticmethod
+    def _payload_values(
+        payloads: t.Sequence[Payload],
+        columns: t.List[str],
+        moved: bool = False,
+    ) -> t.List[tuple]:
+        """
+        Return the distinct value tuples of the columns in the new and old
+        rows, in order. A row without a value for each column is skipped.
+
+        If moved is True, return only the old values that differ from the
+        new values.
+        """
+        # a dict keeps the order and removes duplicates
+        values: t.Dict[tuple, None] = {}
+        for payload in payloads:
+            new, old = (
+                tuple((row or {}).get(column) for column in columns)
+                for row in (payload.new, payload.old)
+            )
+            for value in [old] if moved else [new, old]:
+                if None not in value and not (moved and value == new):
+                    values[value] = None
+        return list(values)
+
+    def _query_root_filters(
+        self,
+        node: Node,
+        statement: sa.sql.Select,
+        columns: t.List[sa.Column],
+        values: t.List[tuple],
+        filters: list,
+    ) -> bool:
+        """
+        Run the root path query from the node for the values of the
+        columns, in chunks, and add a root filter for each result row.
+
+        The database can reject a value, e.g. a WAL value of an enum column
+        keeps its quotes. Then skip that chunk, and log a warning one time
+        for each table. Other database errors, e.g. a lost connection or a
+        timeout, propagate, so the change is not lost.
+
+        Return True if no chunk failed.
+        """
+        key: sa.sql.elements.Tuple = sa.tuple_(*columns)
+        root_pks: t.List[str] = self.tree.root.model.primary_keys
+        succeeded: bool = True
+        for chunk in chunks(values, settings.FILTER_CHUNK_SIZE):
+            try:
+                rows: t.List[sa.engine.Row] = self.fetchall(
+                    statement.where(key.in_(chunk))
+                )
+            except sa.exc.DataError as e:
+                succeeded = False
+                if node.name not in self._root_query_errors:
+                    self._root_query_errors.add(node.name)
+                    # the error message holds the row values, so log only
+                    # the error type
+                    logger.warning(
+                        f"Root query from table: {node.name} failed with "
+                        f"{type(e.orig).__name__}. The search can miss the "
+                        f"root of these changes."
+                    )
+                continue
+            for row in rows:
+                filters.append(dict(zip(root_pks, row)))
+        return succeeded
 
     def _insert_op(
         self, node: Node, filters: dict, payloads: t.List[Payload]
@@ -1188,8 +1534,11 @@ class Sync(Base, metaclass=Singleton):
             if _filters:
                 filters[self.tree.root.table].extend(_filters)
 
-            # also check through table with a direct references to root
-            _filters = self._through_node_resolver(node, payloads, _filters)
+            # the root key in the payload, and the root of the linked node
+            _filters = self._root_payload_resolver(
+                node, payloads, foreign_keys, _filters
+            )
+            _filters = self._root_anchor_resolver(node, payloads, _filters)
             if _filters:
                 filters[self.tree.root.table].extend(_filters)
 
@@ -1214,16 +1563,7 @@ class Sync(Base, metaclass=Singleton):
                     )
                     raise
 
-                try:
-                    foreign_keys = self.query_builder.get_foreign_keys(
-                        node.parent,
-                        node,
-                    )
-                except ForeignKeyError:
-                    foreign_keys = self.query_builder._get_foreign_keys(
-                        node.parent,
-                        node,
-                    )
+                foreign_keys = self._parent_foreign_keys(node)
 
                 for payload in payloads:
                     for node_key in foreign_keys[node.name]:
@@ -1238,10 +1578,11 @@ class Sync(Base, metaclass=Singleton):
                     node, payloads, foreign_keys, _filters
                 )
 
-                # also check through table with a direct references to root
-                _filters = self._through_node_resolver(
-                    node, payloads, _filters
+                # the root key in the payload, and the database
+                _filters = self._root_payload_resolver(
+                    node, payloads, foreign_keys, _filters
                 )
+                self._root_database_resolver(node, payloads, _filters)
 
                 if _filters:
                     filters[self.tree.root.table].extend(_filters)
@@ -1330,29 +1671,52 @@ class Sync(Base, metaclass=Singleton):
             _filters = self._root_primary_key_resolver(
                 node, payloads, _filters
             )
-            foreign_keys = []
-            if node.parent:
-                try:
-                    foreign_keys = self.query_builder.get_foreign_keys(
-                        node.parent,
-                        node,
-                    )
-                except ForeignKeyError:
-                    foreign_keys = self.query_builder._get_foreign_keys(
-                        node.parent,
-                        node,
-                    )
+            foreign_keys = self._parent_foreign_keys(node)
 
             _filters = self._root_foreign_key_resolver(
                 node, payloads, foreign_keys, _filters
             )
-            _filters = self._root_direct_foreign_key_resolver(
+            _filters = self._root_payload_resolver(
                 node, payloads, foreign_keys, _filters
+            )
+            resolved: bool = self._root_database_resolver(
+                node, payloads, _filters
+            )
+            # the database has only the new row, so the old root of a row
+            # that moves comes from the old row's anchor. If the query of the
+            # changed rows did not run, the anchor also finds the new root.
+            _filters = self._root_anchor_resolver(
+                node, payloads, _filters, moved=resolved
             )
             if _filters:
                 filters[self.tree.root.table].extend(_filters)
+            else:
+                self._unresolved(node, payloads)
 
         return filters
+
+    def _unresolved(self, node: Node, payloads: t.Sequence[Payload]) -> None:
+        """Record child changes that found no root document.
+
+        No root can be correct, e.g. a child row with a null foreign key.
+        Thus this is a debug log and a counter, not a warning. The update
+        and delete operations call this only if no payload of the batch
+        found a root. Then the counter adds each payload of the batch.
+        """
+        logger.debug(
+            f"No root document found for {len(payloads)} "
+            f"{payloads[0].tg_op} change(s) on table: {node.name}"
+        )
+        monitor_view.unresolved_changes(len(payloads))
+
+    def _parent_foreign_keys(self, node: Node) -> t.Dict[str, t.List[str]]:
+        """Return the foreign keys between the node and its parent."""
+        if not node.parent:
+            return {}
+        try:
+            return self.query_builder.get_foreign_keys(node.parent, node)
+        except ForeignKeyError:
+            return self.query_builder._get_foreign_keys(node.parent, node)
 
     def _delete_op(
         self, node: Node, filters: dict, payloads: t.List[dict]
@@ -1403,8 +1767,21 @@ class Sync(Base, metaclass=Singleton):
             _filters = self._root_primary_key_resolver(
                 node, payloads, _filters
             )
+            # the foreign keys in the payload also give the root. Trigger rows,
+            # binlog rows and WAL rows with REPLICA IDENTITY FULL have them.
+            foreign_keys = self._parent_foreign_keys(node)
+            _filters = self._root_foreign_key_resolver(
+                node, payloads, foreign_keys, _filters
+            )
+            _filters = self._root_payload_resolver(
+                node, payloads, foreign_keys, _filters
+            )
+            # the deleted row does not exist, so start at the linked row
+            _filters = self._root_anchor_resolver(node, payloads, _filters)
             if _filters:
                 filters[self.tree.root.table].extend(_filters)
+            else:
+                self._unresolved(node, payloads)
 
         return filters
 
@@ -1537,6 +1914,12 @@ class Sync(Base, metaclass=Singleton):
 
         if payload.tg_op == TRUNCATE:
             filters = self._truncate_op(node, filters)
+
+        # The resolvers can find one row more than one time, e.g. from many
+        # payloads of one child row, or from different resolvers. The sync
+        # below runs for each combination of chunks, so remove duplicates.
+        for table, wheres in filters.items():
+            filters[table] = unique_filters(wheres)
 
         # If there are no filters, then don't execute the sync query
         # otherwise we would end up performing a full query
@@ -2285,6 +2668,9 @@ class Sync(Base, metaclass=Singleton):
         if monitor_view.active():
             return
         # TODO: indicate if we are processing logical logs or not
+        if settings.LOG_FORMAT != "legacy":
+            self._status_keyvalue(label)
+            return
         if self.producer and not self.consumer:
             label = f"{label} (Producer)"
         elif self.consumer and not self.producer:
@@ -2296,6 +2682,65 @@ class Sync(Base, metaclass=Singleton):
             f"Redis: [{format_number(self.redis.qsize)}] => "
             f"{self.search_client.name}: [{format_number(self.search_client.doc_count)}]"
             f"...\n"
+        )
+        sys.stdout.flush()
+
+    def _status_keyvalue(self, label: str) -> None:
+        """
+        Write the status line as key=value fields, e.g.
+
+        Sync db=book index=book wal=1204 notify=3410 queue=12 consumed=3398
+        docs=60118 rate=8/s
+
+        - wal: changes read from the replication slot
+        - notify: trigger notifications from the database
+        - queue: items in the Redis queue now
+        - consumed: items read from the Redis queue
+        - docs: documents in the index
+        - rate: items for each second since the last tick. The consumer
+          counts consumed items, a producer only counts wal and notify.
+
+        A producer only has no consumed and docs fields. A consumer only has
+        no wal and notify fields. The line is written only if a field other
+        than docs changes, or after LOG_IDLE_INTERVAL seconds. The docs
+        field needs a search request, so it is read only for a written line.
+        """
+        now: float = time.monotonic()
+        fields: dict = {}
+        if self.producer:
+            fields["wal"] = self.count["xlog"]
+            fields["notify"] = self.count["db"]
+        fields["queue"] = self.redis.qsize
+        if self.consumer:
+            fields["consumed"] = self.count["redis"]
+            events: int = self.count["redis"]
+        else:
+            events = self.count["xlog"] + self.count["db"]
+
+        last_time, last_events = self._status_tick
+        self._status_tick = (now, events)
+        line_time, line_fields = self._status_line
+        if (
+            fields == line_fields
+            and now - line_time < settings.LOG_IDLE_INTERVAL
+        ):
+            return
+        self._status_line = (now, fields)
+
+        rate: float = (events - last_events) / max(now - last_time, 1e-6)
+        if self.consumer:
+            fields = {**fields, "docs": self.search_client.doc_count}
+        role: str = ""
+        if self.producer and not self.consumer:
+            role = " role=producer"
+        elif self.consumer and not self.producer:
+            role = " role=consumer"
+        values: str = " ".join(
+            f"{key}={value}" for key, value in fields.items()
+        )
+        sys.stdout.write(
+            f"{label} db={self.database} index={self.index}{role} "
+            f"{values} rate={rate:.0f}/s\n"
         )
         sys.stdout.flush()
 

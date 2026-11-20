@@ -7,7 +7,7 @@ import sqlalchemy as sa
 
 from pgsync.base import Base
 from pgsync.exc import ForeignKeyError
-from pgsync.node import Node
+from pgsync.node import Node, Tree
 from pgsync.querybuilder import (
     JSON_AGG,
     JSON_ARRAY,
@@ -755,6 +755,95 @@ class TestQueryBuilder(object):
             result = query_builder._eval_expression(expression)
             # Should return expression unchanged
             assert result == expression
+
+    @pytest.mark.parametrize(
+        "child, table",
+        [
+            # the foreign key is on the parent (book.publisher_id)
+            (
+                {
+                    "table": "publisher",
+                    "columns": ["id", "name"],
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_one",
+                    },
+                },
+                "book",
+            ),
+            (
+                {
+                    "table": "author",
+                    "columns": ["id", "name"],
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_many",
+                        "through_tables": ["book_author"],
+                    },
+                },
+                "book_author",
+            ),
+        ],
+    )
+    def test_mysql_subquery_has_one_copy_of_each_table(
+        self, connection, child, table
+    ):
+        """A MySQL subquery has no second copy of the parent or through
+        table.
+
+        A MySQL subquery is not LATERAL. A WHERE on the parent or through
+        table adds a second copy of it, and repeats each row for each of its
+        rows.
+        """
+        pg_base = Base(connection.engine.url.database)
+        nodes = {
+            "table": "book",
+            "schema": self.schema,
+            "columns": ["isbn"],
+            "children": [{**child, "schema": self.schema}],
+        }
+        with patch("pgsync.querybuilder.IS_MYSQL_COMPAT", True):
+            tree = Tree(pg_base.models, nodes=nodes, database="testdb")
+            query_builder = QueryBuilder()
+            for node in tree.traverse_post_order():
+                query_builder.build_queries(node)
+            node = tree.get_node(child["table"], self.schema)
+            sql = str(node._subquery.element)
+        assert sql.count(f"{table} AS {table}_1") == (
+            1 if table == "book_author" else 0
+        )
+
+    @pytest.mark.parametrize("mysql", [True, False])
+    def test_root_keys_are_json(self, connection, mysql):
+        """The root keys column is JSON, so MySQL gives a list for _meta.
+
+        MySQL gives JSON as text. PostgreSQL decodes json without help, so
+        its query does not change.
+        """
+        pg_base = Base(connection.engine.url.database)
+        nodes = {
+            "table": "book",
+            "schema": self.schema,
+            "columns": ["isbn"],
+            "children": [
+                {
+                    "table": "publisher",
+                    "schema": self.schema,
+                    "columns": ["id", "name"],
+                    "relationship": {
+                        "variant": "object",
+                        "type": "one_to_one",
+                    },
+                },
+            ],
+        }
+        with patch("pgsync.querybuilder.IS_MYSQL_COMPAT", mysql):
+            tree = Tree(pg_base.models, nodes=nodes, database="testdb")
+            query_builder = QueryBuilder()
+            for node in tree.traverse_post_order():
+                query_builder.build_queries(node)
+        keys = tree.root._subquery.element.selected_columns[0]
+        assert isinstance(keys.type, sa.JSON) is mysql
 
     def test_verbose_mode(self, connection):
         """Test QueryBuilder verbose mode."""

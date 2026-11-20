@@ -10,9 +10,9 @@ backports-datetime-fromisoformat==2.0.3
     # via marshmallow
 black==26.10.1
     # via -r requirements/dev.in
-boto3==1.44.5
+boto3==1.44.7
     # via -r requirements/base.in
-botocore==1.44.5
+botocore==1.44.7
     # via
     #   boto3
     #   s3transfer
@@ -49,7 +49,7 @@ environs==15.2.0
     # via -r requirements/base.in
 events==0.5
     # via opensearch-py
-exceptiongroup==1.3.1
+exceptiongroup==1.3.2
     # via
     #   anyio
     #   pytest
@@ -207,5 +207,5 @@ urllib3==2.8.0
     #   elastic-transport
     #   opensearch-py
     #   requests
-virtualenv==21.15.8
+virtualenv==21.15.9
     # via pre-commit

@@ -1,5 +1,8 @@
 """Node tests."""
 
+import io
+import sys
+
 import pytest
 
 from pgsync.base import Base
@@ -148,6 +151,70 @@ class TestNode(object):
                 assert node.table == "country"
             if i == 8:
                 assert node.table == "continent"
+        sync.search_client.close()
+
+    def _display(self, monkeypatch, tree, encoding="utf-8", tty=False):
+        """Return the lines of the tree on a stdout with this encoding."""
+
+        class Stdout(io.StringIO):
+            def isatty(self):
+                return tty
+
+        stdout = Stdout()
+        monkeypatch.setattr(Stdout, "encoding", encoding, raising=False)
+        monkeypatch.setattr(sys, "stdout", stdout)
+        tree.display(index="book")
+        return stdout.getvalue().splitlines()
+
+    def test_display(self, sync, nodes, monkeypatch):
+        monkeypatch.delenv("NO_COLOR", raising=False)
+        tree = Tree(sync.models, nodes=nodes, database=self.schema)
+        heading = f"{self.schema}: index book"
+        if not IS_MYSQL_COMPAT:
+            heading += f", schema {self.schema}"
+        assert self._display(monkeypatch, tree) == [
+            heading,
+            "  book",
+            "  ├─ publisher_label           publisher      1:1  object",
+            "  ├─ book_languages            book_language  1:N  object",
+            "  ├─ authors                   author         1:N  object"
+            "  via book_author",
+            "  │  └─ city_label             city           1:1  object",
+            "  │     └─ country_label       country        1:1  object",
+            "  │        └─ continent_label  continent      1:1  object",
+            "  ├─ languages                 language       1:N  scalar"
+            "  via book_language",
+            "  └─ subjects                  subject        1:N  scalar"
+            "  via book_subject",
+        ]
+        # ASCII if the output encoding has no box characters
+        lines = self._display(monkeypatch, tree, encoding="ascii")
+        assert lines[2] == (
+            "  |- publisher_label           publisher      1:1  object"
+        )
+        assert lines[5] == (
+            "  |  `- city_label             city           1:1  object"
+        )
+        sync.search_client.close()
+
+    @pytest.mark.parametrize("no_color", [False, True])
+    def test_display_color(self, sync, nodes, monkeypatch, no_color):
+        """On a terminal the table is dim, unless NO_COLOR is set."""
+        if no_color:
+            monkeypatch.setenv("NO_COLOR", "1")
+        else:
+            monkeypatch.delenv("NO_COLOR", raising=False)
+        tree = Tree(sync.models, nodes=nodes, database=self.schema)
+        lines = self._display(monkeypatch, tree, tty=True)
+        if no_color:
+            assert "\033" not in "".join(lines)
+        else:
+            # the root has no table, and the padding is not dim
+            assert "\033" not in lines[1]
+            assert lines[2] == (
+                "  ├─ publisher_label           \033[2mpublisher\033[0m"
+                "      1:1  object"
+            )
         sync.search_client.close()
 
     def test_traverse_post_order(self, sync, nodes):

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import os
 import re
+import sys
 import threading
 import typing as t
 from collections import deque
@@ -16,6 +18,8 @@ from .constants import (
     DEFAULT_SCHEMA,
     JSONB_OPERATORS,
     NODE_ATTRIBUTES,
+    ONE_TO_MANY,
+    ONE_TO_ONE,
     RELATIONSHIP_ATTRIBUTES,
     RELATIONSHIP_FOREIGN_KEYS,
     RELATIONSHIP_TYPES,
@@ -330,17 +334,65 @@ class Node(object):
         if node not in self.children:
             self.children.append(node)
 
-    def display(self, prefix: str = "", leaf: bool = True) -> None:
-        print(
-            prefix,
-            " - " if leaf else "|- ",
-            f"{self.schema}.{self.label}",
-            sep="",
-        )  # noqa T001
-        prefix += "   " if leaf else "|  "
-        for i, child in enumerate(self.children):
-            leaf = i == (len(self.children) - 1)
-            child.display(prefix, leaf)
+    def display(self) -> None:
+        """
+        Print the tree below this node, one node on each line:
+
+        book
+        ├─ publisher_label  publisher  1:1  object
+        ├─ authors          author     1:N  object  via book_author
+        │  └─ city_label    city       1:1  object
+
+        The columns are the label, the table (if it is not the label), the
+        relationship type, the variant and the through tables. A table in a
+        different schema shows as schema.table. The lines use ASCII if the
+        output encoding has no box characters. On a terminal, the table
+        column is dim, unless NO_COLOR is set.
+        """
+        try:
+            "├─└│".encode(sys.stdout.encoding or "ascii")
+            chars: t.Tuple[str, ...] = ("├─ ", "└─ ", "│  ", "   ")
+        except (LookupError, UnicodeEncodeError):
+            chars = ("|- ", "`- ", "|  ", "   ")
+        color: bool = sys.stdout.isatty() and "NO_COLOR" not in os.environ
+
+        rows: t.List[t.Tuple[str, str, str, str]] = []
+
+        def add(node: Node, prefix: str, last: bool, top: bool) -> None:
+            branch: str = "" if top else prefix + chars[1 if last else 0]
+            table: str = node.table
+            if node.schema != self.schema:
+                table = f"{node.schema}.{node.table}"
+            if table == node.label:
+                table = ""
+            relationship: str = ""
+            if node.relationship.type:
+                relationship = {
+                    ONE_TO_ONE: "1:1",
+                    ONE_TO_MANY: "1:N",
+                }.get(node.relationship.type, node.relationship.type)
+                relationship += f"  {node.relationship.variant or '':<6}"
+                if node.relationship.tables:
+                    relationship += "  via " + ", ".join(
+                        node.relationship.tables
+                    )
+            rows.append((branch, node.label, table, relationship))
+            prefix = "" if top else prefix + chars[3 if last else 2]
+            for i, child in enumerate(node.children):
+                add(child, prefix, i == len(node.children) - 1, False)
+
+        add(self, "", True, True)
+        label_width: int = max(len(row[0] + row[1]) for row in rows)
+        table_width: int = max(len(row[2]) for row in rows)
+        for branch, label, table, relationship in rows:
+            # pad before the color codes, so that the columns stay aligned
+            name: str = f"{branch}{label}".ljust(label_width)
+            padding: str = " " * (table_width - len(table))
+            if color and table:
+                table = f"\033[2m{table}\033[0m"
+            table += padding
+            line: str = f"  {name}  {table}  {relationship}"
+            print(line.rstrip())  # noqa T001
 
     def traverse_breadth_first(self) -> t.Generator:
         queue: deque = deque([self])
@@ -369,7 +421,14 @@ class Tree(threading.local):
         self.root: t.Optional[Node] = None
         self.build(self.nodes)
 
-    def display(self) -> None:
+    def display(self, index: t.Optional[str] = None) -> None:
+        """Print a heading, and then the tree of the nodes."""
+        heading: str = self.database
+        if index:
+            heading += f": index {index}"
+        if not IS_MYSQL_COMPAT:
+            heading += f"{',' if index else ':'} schema {self.root.schema}"
+        print(heading)  # noqa T001
         self.root.display()
 
     def traverse_breadth_first(self) -> t.Generator:

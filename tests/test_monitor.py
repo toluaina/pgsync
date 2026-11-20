@@ -220,6 +220,23 @@ class TestMessages:
         assert view.errors == 2
         assert view.messages[0][1:] == ("CRITICAL", "down", 1)
 
+    def test_unresolved_changes_are_counted(self):
+        view = monitor.MonitorView()
+        first = view.signature()
+        view.unresolved_changes(2)
+        view.unresolved_changes(3)
+        assert view.unresolved == 5
+        assert view.signature() != first
+
+    def test_unresolved_changes_goes_to_the_view(self):
+        # without a view, the call does nothing
+        with patch.object(monitor, "VIEW", None):
+            monitor.unresolved_changes(1)
+        view = monitor.MonitorView()
+        with patch.object(monitor, "VIEW", view):
+            monitor.unresolved_changes(2)
+        assert view.unresolved == 2
+
     def test_stream_capture_splits_lines(self):
         view = monitor.MonitorView()
         stream = monitor._StreamCapture(view, "STDERR")
@@ -739,6 +756,18 @@ class TestFillHeight:
 
 
 class TestLastEvent:
+    def test_throughput_shows_unresolved_only_if_any(self):
+        from rich.console import Console
+
+        view = monitor.MonitorView()
+        console = Console(width=120, record=True, file=io.StringIO())
+        console.print(view._throughput())
+        assert "unresolved" not in console.export_text()
+        view.unresolved_changes(3)
+        console = Console(width=120, record=True, file=io.StringIO())
+        console.print(view._throughput())
+        assert "unresolved  3" in console.export_text()
+
     def test_throughput_shows_last_event(self):
         from rich.console import Console
 
@@ -978,6 +1007,34 @@ class TestSpeed:
                 view.render(console)
             assert len(measured) == 1
             view.message("WARNING", "new row in MESSAGES")
+            view.render(console)
+            assert len(measured) == 2
+
+    def test_top_sections_are_measured_again_for_unresolved(self):
+        from rich.console import Console, Group
+
+        sync = make_sync()
+        view = monitor.MonitorView()
+        view.register(sync, "WAL")
+        view.record(sync, book_payloads(5))
+        console = Console(width=100, height=40, file=io.StringIO())
+        measured = []
+        render_lines = console.render_lines
+
+        def count(renderable, *args, **kwargs):
+            if isinstance(renderable, Group):
+                measured.append(renderable)
+            return render_lines(renderable, *args, **kwargs)
+
+        with patch.object(console, "render_lines", side_effect=count):
+            view.render(console)
+            assert len(measured) == 1
+            # the first unresolved change adds a row to the top
+            view.unresolved_changes(1)
+            view.render(console)
+            assert len(measured) == 2
+            # more unresolved changes do not change the size of the top
+            view.unresolved_changes(1)
             view.render(console)
             assert len(measured) == 2
 

@@ -306,6 +306,43 @@ class TestChunks:
         assert result == [[1]]
 
 
+class TestUniqueFilters:
+    """Tests for the unique_filters utility function."""
+
+    def test_unique_filters_keeps_first_occurrence(self):
+        """Test unique_filters removes duplicates and keeps the order."""
+        from pgsync.utils import unique_filters
+
+        data = [{"id": 2}, {"id": 1}, {"id": 2}, {"id": 3}, {"id": 1}]
+        assert unique_filters(data) == [{"id": 2}, {"id": 1}, {"id": 3}]
+
+    def test_unique_filters_compares_values_as_strings(self):
+        """Test unique_filters treats 1 and '1' as the same value."""
+        from pgsync.utils import unique_filters
+
+        assert unique_filters([{"id": 1}, {"id": "1"}]) == [{"id": 1}]
+
+    def test_unique_filters_ignores_key_order(self):
+        """Test unique_filters with composite keys in any order."""
+        from pgsync.utils import unique_filters
+
+        data = [{"a": 1, "b": 2}, {"b": 2, "a": 1}, {"a": 1, "b": 3}]
+        assert unique_filters(data) == [{"a": 1, "b": 2}, {"a": 1, "b": 3}]
+
+    def test_unique_filters_keeps_none_apart(self):
+        """Test unique_filters does not merge None with the string 'None'."""
+        from pgsync.utils import unique_filters
+
+        data = [{"id": None}, {"id": "None"}, {"id": None}]
+        assert unique_filters(data) == [{"id": None}, {"id": "None"}]
+
+    def test_unique_filters_empty(self):
+        """Test unique_filters with an empty list."""
+        from pgsync.utils import unique_filters
+
+        assert unique_filters([]) == []
+
+
 @pytest.mark.usefixtures("table_creator")
 class TestQname:
     """Tests for the qname utility function."""

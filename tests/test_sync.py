@@ -6,10 +6,12 @@ import subprocess
 import sys
 import typing as t
 from collections import namedtuple
+from contextlib import ExitStack
 from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+import sqlalchemy as sa
 from mock import ANY, call, patch, PropertyMock
 
 from pgsync.base import Base, Payload
@@ -729,6 +731,18 @@ class TestSync(object):
         )
         # raise
 
+    @pytest.mark.parametrize("show_tree", [True, False])
+    def test_validate_shows_the_tree(self, sync, show_tree):
+        """SHOW_TREE=false turns off the tree at the start."""
+        with patch("pgsync.sync.settings.SHOW_TREE", show_tree):
+            with patch.object(sync.tree, "display") as mock_display:
+                sync.validate()
+        if show_tree:
+            mock_display.assert_called_once_with(index=sync.index)
+        else:
+            mock_display.assert_not_called()
+
+    @patch("pgsync.sync.settings.LOG_FORMAT", "legacy")
     def test_status(self, sync):
         with patch("pgsync.sync.sys") as mock_sys:
             sync._status("mydb")
@@ -1572,10 +1586,11 @@ class TestSync(object):
             Payload(
                 tg_op="INSERT",
                 table="book",
-                new={"isbn": "002"},
+                new={"isbn": f"{i:03d}"},
                 schema="public",
             )
-        ] * 20
+            for i in range(20)
+        ]
         with patch("pgsync.sync.Sync.sync") as mock_sync:
             with override_env_var(FILTER_CHUNK_SIZE="4"):
                 importlib.reload(settings)
@@ -1585,12 +1600,23 @@ class TestSync(object):
         assert mock_sync.call_args_list[-1] == call(
             filters={
                 "book": [
-                    {"isbn": "002"},
-                    {"isbn": "002"},
-                    {"isbn": "002"},
-                    {"isbn": "002"},
+                    {"isbn": "016"},
+                    {"isbn": "017"},
+                    {"isbn": "018"},
+                    {"isbn": "019"},
                 ]
             },
+        )
+
+        # duplicate payloads for one row give one filter
+        with patch("pgsync.sync.Sync.sync") as mock_sync:
+            with override_env_var(FILTER_CHUNK_SIZE="4"):
+                importlib.reload(settings)
+                for _ in sync._payloads(payloads[:1] * 20):
+                    pass
+        assert mock_sync.call_count == 1
+        assert mock_sync.call_args_list[-1] == call(
+            filters={"book": [{"isbn": "000"}]},
         )
 
         # updating a child table
@@ -1646,7 +1672,7 @@ class TestSync(object):
         """
         Non-root, non-through node:
         - uses foreign_keys to populate parent filters
-        - uses _root_foreign_key_resolver + _through_node_resolver to populate root filters
+        - uses _root_foreign_key_resolver + _root_payload_resolver to populate root filters
         """
 
         # Stub parent and child nodes (duck-typed; don't need the real Node class)
@@ -1686,12 +1712,17 @@ class TestSync(object):
         # Make the root resolvers predictable
         sync._root_foreign_key_resolver = Mock(return_value=[{"root_id": 1}])
 
-        def through_node_resolver(node_arg, payloads_arg, filters_arg):
+        def root_payload_resolver(
+            node_arg, payloads_arg, foreign_keys_arg, filters_arg
+        ):
             # emulate "extend" behaviour
             filters_arg.append({"root_id": 2})
             return filters_arg
 
-        sync._through_node_resolver = through_node_resolver
+        sync._root_payload_resolver = root_payload_resolver
+        sync._root_database_resolver = (
+            lambda node_arg, payloads_arg, filters_arg: False
+        )
 
         filters: dict[str, t.List[dict]] = {
             "parent": [],
@@ -1759,7 +1790,8 @@ class TestSync(object):
         }
 
         sync._root_foreign_key_resolver = Mock(return_value=[])
-        sync._through_node_resolver = Mock(return_value=[])
+        sync._root_payload_resolver = Mock(return_value=[])
+        sync._root_database_resolver = Mock(return_value=False)
 
         filters: dict[str, t.List[dict]] = {
             "parent": [],
@@ -1787,7 +1819,7 @@ class TestSync(object):
         Through node:
         - Uses FKs to populate parent filters
         - Uses _root_primary_key_resolver for parent and grandparent
-        - Uses _through_node_resolver for additional root filters
+        - Uses _root_payload_resolver for additional root filters
         """
         grandparent = SimpleNamespace(
             name="grand",
@@ -1840,7 +1872,9 @@ class TestSync(object):
                 filters_arg.append({"id": 20})
             return filters_arg
 
-        def through_node_resolver(node_arg, payloads_arg, filters_arg):
+        def root_payload_resolver(
+            node_arg, payloads_arg, foreign_keys_arg, filters_arg
+        ):
             """
             Also mutates filters_arg and returns it.
             """
@@ -1848,7 +1882,13 @@ class TestSync(object):
             return filters_arg
 
         sync._root_primary_key_resolver = root_primary_key_resolver
-        sync._through_node_resolver = through_node_resolver
+        sync._root_payload_resolver = root_payload_resolver
+        sync._root_database_resolver = (
+            lambda node_arg, payloads_arg, filters_arg: False
+        )
+        sync._root_anchor_resolver = (
+            lambda node_arg, payloads_arg, filters_arg: filters_arg
+        )
 
         filters: dict[str, t.List[dict]] = {
             "parent": [],
@@ -1988,7 +2028,8 @@ class TestSync(object):
 
         # No root/through filters for this test
         sync._root_foreign_key_resolver = Mock(return_value=[])
-        sync._through_node_resolver = Mock(return_value=[])
+        sync._root_payload_resolver = Mock(return_value=[])
+        sync._root_database_resolver = Mock(return_value=False)
 
         filters: dict[str, t.List[dict]] = {
             "parent": [],
@@ -2219,6 +2260,7 @@ class TestSync(object):
         with pytest.raises(PrimaryKeyNotFoundError):
             sync.get_doc_id([], "book")
 
+    @patch("pgsync.sync.settings.LOG_FORMAT", "legacy")
     @patch("pgsync.sync.sys")
     def test_status_producer_only(self, mock_sys, sync):
         """Test _status with producer mode only."""
@@ -2228,6 +2270,7 @@ class TestSync(object):
         call_args = mock_sys.stdout.write.call_args[0][0]
         assert "(Producer)" in call_args
 
+    @patch("pgsync.sync.settings.LOG_FORMAT", "legacy")
     @patch("pgsync.sync.sys")
     def test_status_consumer_only(self, mock_sys, sync):
         """Test _status with consumer mode only."""
@@ -2236,6 +2279,117 @@ class TestSync(object):
         sync._status("Test")
         call_args = mock_sys.stdout.write.call_args[0][0]
         assert "(Consumer)" in call_args
+
+    @pytest.mark.parametrize(
+        "producer, consumer, expected",
+        [
+            (
+                True,
+                True,
+                "Sync db=testdb index=testdb wal=3 notify=4 queue=2 "
+                "consumed=5 docs=7 rate=10/s\n",
+            ),
+            (
+                True,
+                False,
+                "Sync db=testdb index=testdb role=producer wal=3 notify=4 "
+                "queue=2 rate=14/s\n",
+            ),
+            (
+                False,
+                True,
+                "Sync db=testdb index=testdb role=consumer queue=2 "
+                "consumed=5 docs=7 rate=10/s\n",
+            ),
+        ],
+    )
+    def test_status_keyvalue(self, sync, producer, consumer, expected):
+        """The keyvalue line has the fields of the role, and the rate."""
+        with ExitStack() as stack:
+            mock_sys = stack.enter_context(patch("pgsync.sync.sys"))
+            stack.enter_context(
+                patch("pgsync.sync.settings.LOG_FORMAT", "keyvalue")
+            )
+            stack.enter_context(
+                patch("pgsync.sync.time.monotonic", return_value=100.5)
+            )
+            stack.enter_context(
+                patch.object(
+                    type(sync.search_client),
+                    "doc_count",
+                    new_callable=PropertyMock,
+                    return_value=7,
+                )
+            )
+            redis = Mock(qsize=2)
+            stack.enter_context(
+                patch.object(type(sync), "redis", new_callable=PropertyMock)
+            ).return_value = redis
+            stack.enter_context(
+                patch.multiple(
+                    sync,
+                    producer=producer,
+                    consumer=consumer,
+                    count=dict(xlog=3, db=4, redis=5),
+                    _status_line=(0.0, {}),
+                    _status_tick=(100.0, 0),
+                )
+            )
+            sync._status("Sync")
+        mock_sys.stdout.write.assert_called_once_with(expected)
+
+    def test_status_keyvalue_is_quiet_when_idle(self, sync):
+        """No line if no field changes, until LOG_IDLE_INTERVAL seconds."""
+        clock = [100.0]
+        with ExitStack() as stack:
+            mock_sys = stack.enter_context(patch("pgsync.sync.sys"))
+            stack.enter_context(
+                patch("pgsync.sync.settings.LOG_FORMAT", "keyvalue")
+            )
+            stack.enter_context(
+                patch("pgsync.sync.settings.LOG_IDLE_INTERVAL", 60.0)
+            )
+            stack.enter_context(
+                patch(
+                    "pgsync.sync.time.monotonic", side_effect=lambda: clock[0]
+                )
+            )
+            doc_count = stack.enter_context(
+                patch.object(
+                    type(sync.search_client),
+                    "doc_count",
+                    new_callable=PropertyMock,
+                    return_value=7,
+                )
+            )
+            stack.enter_context(
+                patch.object(type(sync), "redis", new_callable=PropertyMock)
+            ).return_value = Mock(qsize=0)
+            stack.enter_context(
+                patch.multiple(
+                    sync,
+                    producer=True,
+                    consumer=True,
+                    count=dict(xlog=0, db=0, redis=0),
+                    _status_line=(0.0, {}),
+                    _status_tick=(99.0, 0),
+                )
+            )
+            sync._status("Sync")  # the first line
+            clock[0] = 130.0
+            sync._status("Sync")  # no change
+            assert mock_sys.stdout.write.call_count == 1
+            # no search request for a line that is not written
+            assert doc_count.call_count == 1
+            sync.count["db"] = 1
+            sync._status("Sync")  # a change
+            assert mock_sys.stdout.write.call_count == 2
+            clock[0] = 189.0
+            sync._status("Sync")  # no change, 59 seconds
+            assert mock_sys.stdout.write.call_count == 2
+            clock[0] = 190.0
+            sync._status("Sync")  # no change, 60 seconds
+            assert mock_sys.stdout.write.call_count == 3
 
     def test_refresh_views_postgresql(self, sync):
         """Test refresh_views calls _refresh_views for PostgreSQL."""
@@ -2879,6 +3033,163 @@ class TestPollDB:
 # ============================================================================
 
 
+def _binlog_sync(is_mariadb: bool, gtid: t.Optional[str] = None) -> Mock:
+    """A mock Sync for binlog_changes, with a mock MySQL or MariaDB engine."""
+    conn = Mock()
+    conn.dialect.is_mariadb = is_mariadb
+    conn.execute.return_value.scalar.return_value = gtid
+    engine = Mock()
+    engine.url = sa.engine.make_url("mysql+pymysql://user@host:3306/db")
+    engine.connect.return_value.__enter__ = Mock(return_value=conn)
+    engine.connect.return_value.__exit__ = Mock(return_value=False)
+    sync = Mock(engine=engine, tree=SimpleNamespace(schemas=["db"]))
+    sync.conn = conn
+    return sync
+
+
+class TestBinlogStartPosition:
+    """The binlog read starts at the checkpoint, also on MariaDB.
+
+    mysql-replication ignores log_file and log_pos on MariaDB, so pgsync
+    gives it the GTID position of the checkpoint. These tests use a mock
+    database, so they also run without MySQL or MariaDB.
+    """
+
+    def _read(self, sync: Mock, *args: t.Any) -> dict:
+        """Read the binlog, and return the arguments of the stream."""
+        stream = Mock(log_file=None, log_pos=None)
+        stream.__iter__ = Mock(return_value=iter([]))
+        reader = Mock(return_value=stream)
+        with patch("pgsync.sync.BinLogStreamReader", reader):
+            Sync.binlog_changes(sync, *args)
+        return reader.call_args.kwargs
+
+    def test_mariadb_resumes_from_the_gtid_of_the_checkpoint(self):
+        sync = _binlog_sync(is_mariadb=True, gtid="0-1-42")
+        kwargs = self._read(sync, "master.000007", "1234")
+        assert kwargs["auto_position"] == "0-1-42"
+        assert kwargs["log_file"] == "master.000007"
+        statement, params = sync.conn.execute.call_args.args
+        assert "BINLOG_GTID_POS" in str(statement)
+        assert params == {"log_file": "master.000007", "log_pos": 1234}
+
+    @pytest.mark.parametrize("gtid", [None, ""])
+    def test_mariadb_without_a_gtid_reads_from_the_start(self, gtid):
+        """A purged binlog file has no GTID position (None), and a server
+        with no GTID yet has an empty position."""
+        sync = _binlog_sync(is_mariadb=True, gtid=gtid)
+        with patch("pgsync.sync.logger") as logger:
+            kwargs = self._read(sync, "master.000001", "4")
+        assert kwargs["auto_position"] is None
+        assert logger.warning.called is (gtid is None)
+
+    def test_mariadb_without_a_checkpoint(self):
+        sync = _binlog_sync(is_mariadb=True)
+        kwargs = self._read(sync)
+        assert kwargs["auto_position"] is None
+        sync.conn.execute.assert_not_called()
+
+    def test_mysql_uses_the_binlog_position(self):
+        sync = _binlog_sync(is_mariadb=False)
+        kwargs = self._read(sync, "mysql-bin.000003", "99")
+        assert kwargs["auto_position"] is None
+        assert kwargs["log_file"] == "mysql-bin.000003"
+        assert kwargs["log_pos"] == 99
+        sync.conn.execute.assert_not_called()
+
+
+class TestBinlogRowImages:
+    """The payloads hold only the columns in the binlog row images.
+
+    With binlog_row_image MINIMAL, mysql-replication gives the columns that
+    are not in an image as None. These tests use a mock database.
+    """
+
+    def _payloads(self, event: Mock) -> t.List[Payload]:
+        """Read one event, and return the payloads that it gives."""
+        sync = _binlog_sync(is_mariadb=False)
+        payloads: t.List[Payload] = []
+        sync._flush_batch.side_effect = lambda key, batch: payloads.extend(
+            batch
+        )
+        stream = Mock(log_file=None, log_pos=None)
+        stream.__iter__ = Mock(return_value=iter([event]))
+        with patch(
+            "pgsync.sync.BinLogStreamReader", Mock(return_value=stream)
+        ):
+            Sync.binlog_changes(sync)
+        return payloads
+
+    def _event(self, cls: type, row: dict, *bitmaps: bytes) -> Mock:
+        event = Mock(spec=cls, schema="db", table="book", rows=[row])
+        event.columns_present_bitmap = bitmaps[0]
+        if len(bitmaps) > 1:
+            event.columns_present_bitmap2 = bitmaps[1]
+        return event
+
+    def test_minimal_update(self):
+        """The new row gets the primary key from the before image."""
+        from pymysqlreplication.row_event import UpdateRowsEvent
+
+        row = {
+            "before_values": {"id": 1, "title": None, "publisher_id": None},
+            "after_values": {"id": None, "title": "New", "publisher_id": None},
+        }
+        # before image: id. after image: title.
+        event = self._event(UpdateRowsEvent, row, b"\x01", b"\x02")
+        (payload,) = self._payloads(event)
+        assert payload.old == {"id": 1}
+        assert payload.new == {"id": 1, "title": "New"}
+
+    def test_minimal_update_of_the_primary_key(self):
+        from pymysqlreplication.row_event import UpdateRowsEvent
+
+        row = {
+            "before_values": {"id": 1, "title": None},
+            "after_values": {"id": 2, "title": None},
+        }
+        event = self._event(UpdateRowsEvent, row, b"\x01", b"\x01")
+        (payload,) = self._payloads(event)
+        assert payload.old == {"id": 1}
+        assert payload.new == {"id": 2}
+
+    def test_full_update_does_not_change(self):
+        """A FULL image keeps all the columns, also the null values."""
+        from pymysqlreplication.row_event import UpdateRowsEvent
+
+        row = {
+            "before_values": {"id": 1, "title": "Old", "publisher_id": None},
+            "after_values": {"id": 1, "title": "New", "publisher_id": None},
+        }
+        event = self._event(UpdateRowsEvent, row, b"\x07", b"\x07")
+        (payload,) = self._payloads(event)
+        assert payload.old == row["before_values"]
+        assert payload.new == row["after_values"]
+
+    @pytest.mark.parametrize("tg_op", ["INSERT", "DELETE"])
+    def test_minimal_insert_and_delete(self, tg_op):
+        from pymysqlreplication.row_event import (
+            DeleteRowsEvent,
+            WriteRowsEvent,
+        )
+
+        cls = WriteRowsEvent if tg_op == "INSERT" else DeleteRowsEvent
+        row = {"values": {"id": 1, "title": None, "publisher_id": 5}}
+        # the image holds id and publisher_id
+        (payload,) = self._payloads(self._event(cls, row, b"\x05"))
+        assert payload.tg_op == tg_op
+        assert payload.data == {"id": 1, "publisher_id": 5}
+
+    def test_event_without_a_bitmap(self):
+        """An event without a bitmap keeps all the columns."""
+        from pymysqlreplication.row_event import WriteRowsEvent
+
+        event = Mock(spec=WriteRowsEvent, schema="db", table="book")
+        event.rows = [{"values": {"id": 1, "title": None}}]
+        (payload,) = self._payloads(event)
+        assert payload.new == {"id": 1, "title": None}
+
+
 @pytest.mark.skipif(
     not IS_MYSQL_COMPAT,
     reason="MySQL-specific checkpoint tests",
@@ -3278,51 +3589,101 @@ class TestRootResolvers:
 
     def test_root_foreign_key_resolver_no_foreign_keys(self, sync, connection):
         """Test _root_foreign_key_resolver with no FKs."""
-        pg_base = Base(connection.engine.url.database)
-        node = Node(models=pg_base.models, table="publisher", schema="public")
-        foreign_keys = {}
-
-        payloads = [Payload(tg_op="INSERT", table="publisher", new={"id": 1})]
-        filters = []
-
-        result = sync._root_foreign_key_resolver(
-            node, payloads, foreign_keys, filters
-        )
+        node, _ = self._rating_node(connection)
+        payloads = [
+            Payload(
+                tg_op="INSERT",
+                table="rating",
+                new={"id": 1, "book_isbn": "abc"},
+            )
+        ]
+        with patch.object(sync.search_client, "_search") as search:
+            result = sync._root_foreign_key_resolver(node, payloads, {}, [])
         assert result == []
+        search.assert_not_called()
+
+    def _rating_node(self, connection):
+        """A rating node whose foreign key references the root book."""
+        pg_base = Base(connection.engine.url.database)
+        parent = Node(models=pg_base.models, table="book", schema="public")
+        node = Node(
+            models=pg_base.models,
+            table="rating",
+            schema="public",
+            relationship={
+                "type": "one_to_one",
+                "variant": "object",
+            },
+        )
+        node.parent = parent
+        foreign_keys = {
+            "public.rating": ["book_isbn"],
+            "public.book": ["isbn"],
+        }
+        return node, foreign_keys
 
     def test_root_foreign_key_resolver_chunks_values(self, sync, connection):
         """Test _root_foreign_key_resolver chunks large value sets."""
-        pg_base = Base(connection.engine.url.database)
-        node = Node(models=pg_base.models, table="publisher", schema="public")
-        foreign_keys = {"publisher": ["id"]}
+        node, foreign_keys = self._rating_node(connection)
 
         # Create many payloads
         payloads = [
-            Payload(tg_op="INSERT", table="publisher", new={"id": i})
+            Payload(
+                tg_op="INSERT",
+                table="rating",
+                new={"id": i, "book_isbn": f"{i:03d}"},
+            )
             for i in range(100)
         ]
 
         filters = []
 
         with patch.object(
-            sync.search_client, "_search", return_value=["doc1", "doc2"]
-        ):
+            sync.search_client, "_search", return_value=[]
+        ) as mock_search:
             sync.max_terms_count = 10
-            result = sync._root_foreign_key_resolver(
+            sync._root_foreign_key_resolver(
                 node, payloads, foreign_keys, filters
             )
 
             # Should have made multiple search calls due to chunking
-            assert len(result) >= 0
+            assert mock_search.call_count == 10
+            _, table, fields = mock_search.call_args_list[0].args
+            assert table == "book"
+            assert fields == {"isbn": [f"{i:03d}" for i in range(10)]}
 
-    def test_root_foreign_key_resolver_skips_malformed_doc_ids(
+    def test_root_foreign_key_resolver_new_and_old_values(
         self, sync, connection
     ):
-        """Test _root_foreign_key_resolver skips malformed doc IDs."""
+        """Test _root_foreign_key_resolver searches new and old values."""
+        node, foreign_keys = self._rating_node(connection)
+        payloads = [
+            Payload(
+                tg_op="UPDATE",
+                table="rating",
+                old={"id": 1, "book_isbn": "abc"},
+                new={"id": 1, "book_isbn": "def"},
+            )
+        ]
+
+        with patch.object(
+            sync.search_client, "_search", return_value=["abc", "def"]
+        ) as mock_search:
+            result = sync._root_foreign_key_resolver(
+                node, payloads, foreign_keys, []
+            )
+
+        mock_search.assert_called_once_with(
+            sync.index, "book", {"isbn": ["def", "abc"]}
+        )
+        assert result == [{"isbn": "abc"}, {"isbn": "def"}]
+
+    def test_root_foreign_key_resolver_skips_fk_on_parent(
+        self, sync, connection
+    ):
+        """Test _root_foreign_key_resolver skips a foreign key on the parent."""
         pg_base = Base(connection.engine.url.database)
-        # Create parent (root) node
         parent = Node(models=pg_base.models, table="book", schema="public")
-        # Create child node with parent
         node = Node(
             models=pg_base.models,
             table="publisher",
@@ -3333,10 +3694,33 @@ class TestRootResolvers:
             },
         )
         node.parent = parent
-        # Use fully qualified name (schema.table) as key
-        foreign_keys = {"public.publisher": ["id"]}
+        foreign_keys = {
+            "public.publisher": ["id"],
+            "public.book": ["publisher_id"],
+        }
+        payloads = [Payload(tg_op="UPDATE", table="publisher", new={"id": 1})]
 
-        payloads = [Payload(tg_op="INSERT", table="publisher", new={"id": 1})]
+        with patch.object(sync.search_client, "_search") as mock_search:
+            result = sync._root_foreign_key_resolver(
+                node, payloads, foreign_keys, []
+            )
+
+        mock_search.assert_not_called()
+        assert result == []
+
+    def test_root_foreign_key_resolver_skips_malformed_doc_ids(
+        self, sync, connection
+    ):
+        """Test _root_foreign_key_resolver skips malformed doc IDs."""
+        node, foreign_keys = self._rating_node(connection)
+
+        payloads = [
+            Payload(
+                tg_op="INSERT",
+                table="rating",
+                new={"id": 1, "book_isbn": "abc"},
+            )
+        ]
         filters = []
 
         # Return malformed doc_id (wrong number of parts)
@@ -3491,20 +3875,163 @@ class TestSyncEdgeCases:
 
         assert payload.data == {"id": 1}
 
-    def test_through_node_resolver_no_parent(self, sync):
-        """Test _through_node_resolver with node without parent."""
-        node = SimpleNamespace(
-            table="through_table", parent=None, is_through=True
+    def _payload_resolver_tree(self, sync, child_fk=None):
+        """A root "parent" (composite primary key a, b, unique c) and a
+        "child" table below a node that is not the root.
+
+        If child_fk is given, it maps the child columns to the parent
+        columns of a database foreign key.
+        """
+        metadata = sa.MetaData(schema="public")
+        parent_table = sa.Table(
+            "parent",
+            metadata,
+            sa.Column("a", sa.Integer, primary_key=True),
+            sa.Column("b", sa.Integer, primary_key=True),
+            sa.Column("c", sa.Integer, unique=True),
         )
+        child_table = sa.Table(
+            "child",
+            metadata,
+            sa.Column("id", sa.Integer, primary_key=True),
+            sa.Column("pa", sa.Integer),
+            sa.Column("pb", sa.Integer),
+            sa.Column("pc", sa.Integer),
+            *(
+                [
+                    sa.ForeignKeyConstraint(
+                        list(child_fk),
+                        [f"parent.{column}" for column in child_fk.values()],
+                    )
+                ]
+                if child_fk
+                else []
+            ),
+        )
+        parent_model = parent_table.alias()
+        parent_model.primary_keys = ["a", "b"]
+        root = SimpleNamespace(
+            name="public.parent", model=parent_model, is_root=True
+        )
+        sync.tree = SimpleNamespace(root=root)
+        node = SimpleNamespace(
+            name="public.child",
+            model=child_table.alias(),
+            parent=SimpleNamespace(is_root=False),
+            is_through=False,
+            relationship=SimpleNamespace(throughs=[]),
+        )
+        return node
 
+    def test_root_payload_resolver_no_reference(self, sync):
+        """Test _root_payload_resolver with no reference to the root."""
+        node = self._payload_resolver_tree(sync)
         payloads = [
-            Payload(tg_op="INSERT", table="through_table", new={"id": 1})
+            Payload(
+                tg_op="INSERT", table="child", new={"id": 1, "pa": 1, "pb": 2}
+            )
         ]
-        filters = []
+        assert sync._root_payload_resolver(node, payloads, {}, []) == []
 
-        # Should return filters unchanged when no parent
-        result = sync._through_node_resolver(node, payloads, filters)
-        assert result == []
+    def test_root_payload_resolver_skips_a_foreign_key_off_the_tree(
+        self, sync
+    ):
+        """Test _root_payload_resolver skips a database foreign key to the
+        root if the tree does not link the node to the root, e.g. an audit
+        column."""
+        node = self._payload_resolver_tree(
+            sync, child_fk={"pa": "a", "pb": "b"}
+        )
+        payloads = [
+            Payload(
+                tg_op="INSERT", table="child", new={"id": 1, "pa": 1, "pb": 2}
+            )
+        ]
+        assert sync._root_payload_resolver(node, payloads, {}, []) == []
+
+    def test_root_payload_resolver_composite_key(self, sync):
+        """Test _root_payload_resolver uses all composite key columns."""
+        node = self._payload_resolver_tree(sync)
+        node.parent = sync.tree.root
+        foreign_keys = {
+            "public.child": ["pb", "pa"],
+            "public.parent": ["b", "a"],
+        }
+        payloads = [
+            Payload(
+                tg_op="UPDATE",
+                table="child",
+                old={"id": 1, "pa": 1, "pb": 2},
+                new={"id": 1, "pa": 1, "pb": 3},
+            ),
+            Payload(
+                tg_op="UPDATE",
+                table="child",
+                old={"id": 2, "pa": 1, "pb": 3},
+                new={"id": 2, "pa": None, "pb": 3},
+            ),
+            Payload(
+                tg_op="DELETE", table="child", old={"id": 3, "pa": 5, "pb": 6}
+            ),
+        ]
+        assert sync._root_payload_resolver(
+            node, payloads, foreign_keys, []
+        ) == [{"b": 3, "a": 1}, {"b": 2, "a": 1}, {"b": 6, "a": 5}]
+
+    @pytest.mark.parametrize("constraint", [True, False])
+    def test_root_payload_resolver_foreign_key_to_a_unique_column(
+        self, sync, constraint
+    ):
+        """Test _root_payload_resolver uses a link to a root column that is
+        not the primary key only if it is a database foreign key of the
+        node, e.g. "rating.book_isbn" -> "book.isbn"."""
+        node = self._payload_resolver_tree(
+            sync, child_fk={"pc": "c"} if constraint else None
+        )
+        node.parent = sync.tree.root
+        foreign_keys = {"public.child": ["pc"], "public.parent": ["c"]}
+        payloads = [Payload(tg_op="INSERT", table="child", new={"pc": 7})]
+        assert sync._root_payload_resolver(
+            node, payloads, foreign_keys, []
+        ) == ([{"c": 7}] if constraint else [])
+
+    def test_root_foreign_key_resolver_composite_root_key(self, sync):
+        """Test _root_foreign_key_resolver searches only the first primary
+        key of a root with a composite primary key.
+
+        _meta holds only the first primary key of the root.
+        """
+        node = self._payload_resolver_tree(sync)
+        root = sync.tree.root
+        root.table = "parent"
+        root.primary_keys = [
+            SimpleNamespace(name="a"),
+            SimpleNamespace(name="b"),
+        ]
+        node.parent = root
+        foreign_keys = {"public.child": ["pa"], "public.parent": ["a"]}
+        payloads = [Payload(tg_op="INSERT", table="child", new={"pa": 1})]
+        with patch.object(
+            sync.search_client, "_search", return_value=["1|2"]
+        ) as search:
+            result = sync._root_foreign_key_resolver(
+                node, payloads, foreign_keys, []
+            )
+        assert search.call_args.args[1:] == ("parent", {"a": [1]})
+        assert result == [{"a": "1", "b": "2"}]
+
+    def test_root_payload_resolver_skips_non_primary_key(self, sync):
+        """Test _root_payload_resolver skips a foreign key on the parent."""
+        node = self._payload_resolver_tree(sync)
+        node.parent = sync.tree.root
+        foreign_keys = {
+            "public.child": ["id"],
+            "public.parent": ["a"],
+        }
+        payloads = [Payload(tg_op="INSERT", table="child", new={"id": 1})]
+        assert (
+            sync._root_payload_resolver(node, payloads, foreign_keys, []) == []
+        )
 
     def test_xlog_progress_formatting(self, sync):
         """Test _xlog_progress formats output correctly."""

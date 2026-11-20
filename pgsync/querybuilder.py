@@ -397,17 +397,23 @@ class QueryBuilder(threading.local):
         ctid: t.Optional[dict] = None,
         txid_anchor: t.Optional[int] = None,
     ) -> None:
+        keys = JSON_ARRAY(
+            *[
+                child._subquery.c._keys
+                for child in node.children
+                if hasattr(
+                    child._subquery.c,
+                    "_keys",
+                )
+            ]
+        )
+        if IS_MYSQL_COMPAT:
+            # MySQL gives JSON as text. Mark the keys as JSON, so that
+            # SQLAlchemy decodes them, as it does for the document.
+            # PostgreSQL decodes json without help.
+            keys = JSON_CAST(keys)
         columns = [
-            JSON_ARRAY(
-                *[
-                    child._subquery.c._keys
-                    for child in node.children
-                    if hasattr(
-                        child._subquery.c,
-                        "_keys",
-                    )
-                ]
-            ),
+            keys,
             self._json_build_object(node.columns),
             *node.primary_keys,
         ]
@@ -739,7 +745,11 @@ class QueryBuilder(threading.local):
                 node.model.c[foreign_key_columns[i]]
                 == through.model.c[parent_foreign_key_columns[i]]
             )
-        outer_subquery = outer_subquery.where(sa.and_(*where))
+        # A MySQL subquery is not LATERAL, so this WHERE would add a second
+        # copy of the through table to the FROM, and repeat each row for
+        # each through row. The join below pairs the rows.
+        if not IS_MYSQL_COMPAT:
+            outer_subquery = outer_subquery.where(sa.and_(*where))
 
         if node._filters:
             outer_subquery = outer_subquery.where(sa.and_(*node._filters))
@@ -974,7 +984,11 @@ class QueryBuilder(threading.local):
                 node.model.c[foreign_key_columns[i]]
                 == node.parent.model.c[parent_foreign_key_columns[i]]
             )
-        node._subquery = node._subquery.where(sa.and_(*where))
+        # A MySQL subquery is not LATERAL, so this WHERE would add a second
+        # copy of the parent table to the FROM, and repeat each row for
+        # each parent row. The join in the parent query pairs the rows.
+        if not IS_MYSQL_COMPAT:
+            node._subquery = node._subquery.where(sa.and_(*where))
 
         # NB do not apply filters to the child node as they are applied to the parent
         # if node._filters:

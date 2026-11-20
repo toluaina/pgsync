@@ -37,15 +37,20 @@ BEGIN
 
     IF TG_OP = 'DELETE' THEN
 
-        SELECT primary_keys, indices INTO _primary_keys, _indices
+        SELECT primary_keys, foreign_keys, indices
+        INTO _primary_keys, _foreign_keys, _indices
         FROM _view
         WHERE table_name = TG_TABLE_NAME;
 
+        -- send the foreign keys too, so that pgsync can find the root
+        -- of a deleted child row without a search. A table without
+        -- primary keys in the view sends no keys, as before.
         old_row = ROW_TO_JSON(OLD);
         old_row := (
             SELECT JSONB_OBJECT_AGG(key, value)
             FROM JSON_EACH(old_row)
-            WHERE key = ANY(_primary_keys)
+            WHERE _primary_keys IS NOT NULL
+            AND key = ANY(_primary_keys || _foreign_keys)
         );
         -- use the deleting transaction's 64-bit txid, not OLD.xmin:
         -- OLD.xmin is the row's creation txid and would drag the

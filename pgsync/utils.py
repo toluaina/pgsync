@@ -40,6 +40,25 @@ def chunks(sequence: t.Sequence, size: int) -> t.Iterable[t.Sequence]:
         yield sequence[i : i + size]
 
 
+def unique_filters(filters: t.List[dict]) -> t.List[dict]:
+    """Remove duplicate filters, and keep the first occurrence.
+
+    Compare the values as strings: a filter from a doc _id holds strings,
+    and a filter from a payload holds typed values. Keep None apart from
+    the string "None".
+    """
+    seen: t.Set[tuple] = set()
+    unique: t.List[dict] = []
+    for where in filters:
+        key: tuple = tuple(
+            sorted((k, v is None, str(v)) for k, v in where.items())
+        )
+        if key not in seen:
+            seen.add(key)
+            unique.append(where)
+    return unique
+
+
 def timeit(func: t.Callable):
     def timed(*args, **kwargs):
         since: float = time()

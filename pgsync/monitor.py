@@ -369,6 +369,8 @@ class MonitorView(object):
         )
         self.by_table: t.DefaultDict[str, Counter] = defaultdict(Counter)
         self.errors: int = 0
+        # child changes that found no root document
+        self.unresolved: int = 0
         self.paused: bool = False
         # show only the events of this table (the f key)
         self.filter: t.Optional[str] = None
@@ -463,6 +465,11 @@ class MonitorView(object):
             if last is not None:
                 self._rows[None] = last
                 self._rows[last[0].table] = last
+
+    def unresolved_changes(self, count: int) -> None:
+        """Count the child changes that found no root document."""
+        with self._lock:
+            self.unresolved += count
 
     def progress(self, sync: "Sync", current: int, total: int) -> None:
         with self._lock:
@@ -979,6 +986,15 @@ class MonitorView(object):
                 style=_s("alert", bold=True) if self.errors else "",
             ),
         )
+        if self.unresolved:
+            grid.add_row(
+                "",
+                "",
+                "",
+                "",
+                "unresolved",
+                Text(str(self.unresolved), style=_s("warn", bold=True)),
+            )
         return grid
 
     def _tables(self, limit: int):
@@ -1274,6 +1290,7 @@ class MonitorView(object):
                 len(progress),
                 table_rows,
                 len(self.messages),
+                bool(self.unresolved),
             )
 
         parts: list = list(top)
@@ -1364,6 +1381,7 @@ class MonitorView(object):
             return (
                 self._events_total,
                 self.errors,
+                self.unresolved,
                 self.messages[0][::3] if self.messages else None,
                 self.paused,
                 self.filter,
@@ -1542,6 +1560,11 @@ def record(
 ) -> None:
     if VIEW is not None:
         VIEW.record(sync, payloads, skipped=skipped)
+
+
+def unresolved_changes(count: int) -> None:
+    if VIEW is not None:
+        VIEW.unresolved_changes(count)
 
 
 def progress(sync: "Sync", current: int, total: int) -> bool:
