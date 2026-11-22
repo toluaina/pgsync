@@ -1,0 +1,69 @@
+name: Publish to Docker Hub
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Release tag to publish, e.g. 8.0.0
+        required: true
+
+concurrency:
+  group: publish-docker-${{ github.event.release.tag_name || inputs.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Build and push image
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    env:
+      REF: ${{ github.event.release.tag_name || inputs.ref }}
+    steps:
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.0.2
+      with:
+        ref: ${{ env.REF }}
+        persist-credentials: false
+
+    - name: Read the version
+      id: version
+      run: |
+        VERSION=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' pgsync/__init__.py)
+        if [ "$VERSION" != "$REF" ]; then
+          echo "::error::pgsync/__init__.py has $VERSION, but the release tag is $REF"
+          exit 1
+        fi
+        {
+          echo "version=$VERSION"
+          echo "minor=${VERSION%.*}"
+          echo "major=${VERSION%%.*}"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    # a prerelease does not move the minor, major and latest tags
+    - name: Build and push
+      uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+      with:
+        context: .
+        file: Dockerfile.dockerhub
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: |
+          ${{ secrets.DOCKERHUB_USERNAME }}/pgsync:${{ steps.version.outputs.version }}
+          ${{ !github.event.release.prerelease && format('{0}/pgsync:{1}', secrets.DOCKERHUB_USERNAME, steps.version.outputs.minor) || '' }}
+          ${{ !github.event.release.prerelease && format('{0}/pgsync:{1}', secrets.DOCKERHUB_USERNAME, steps.version.outputs.major) || '' }}
+          ${{ !github.event.release.prerelease && format('{0}/pgsync:latest', secrets.DOCKERHUB_USERNAME) || '' }}
