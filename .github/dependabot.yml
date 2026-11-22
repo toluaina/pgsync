@@ -9,6 +9,13 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # pgsync supports a fixed range of Elasticsearch versions, so a major
+    # client upgrade needs a manual change and tests.
+    ignore:
+      - dependency-name: "elasticsearch"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "elasticsearch-dsl"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: docker
     directory: /
@@ -19,3 +26,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # keep the local Elasticsearch and Kibana images on the supported major
+    ignore:
+      - dependency-name: "elasticsearch/elasticsearch"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "kibana/kibana"
+        update-types: ["version-update:semver-major"]
