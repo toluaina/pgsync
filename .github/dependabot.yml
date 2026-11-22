@@ -4,6 +4,15 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # these actions must use the same version, so update them together
+    groups:
+      codeql:
+        patterns:
+          - "github/codeql-action*"
+      artifact:
+        patterns:
+          - "actions/upload-artifact"
+          - "actions/download-artifact"
 
   - package-ecosystem: pip
     directory: /
