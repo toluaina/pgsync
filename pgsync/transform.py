@@ -95,8 +95,9 @@ class Transform(object):
                 values: list = [data.get(key, key) for key in nodes["columns"]]
                 delimiter: str = nodes.get("delimiter", "")
                 destination: str = nodes["destination"]
+                # Zero and False are valid values, not blanks.
                 data[destination] = f"{delimiter}".join(
-                    map(str, filter(None, values))
+                    str(value) for value in values if value or value == 0
                 )
             for key, value in data.items():
                 if key in nodes:

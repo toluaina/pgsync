@@ -788,6 +788,20 @@ class TestTransform(object):
             "combined": "A-C",
         }
 
+    def test_concat_preserves_zero_and_false(self):
+        nodes = {
+            "transform": {
+                "concat": {
+                    "columns": ["count", "missing", "enabled", "blank"],
+                    "destination": "combined",
+                    "delimiter": "-",
+                }
+            }
+        }
+        row = {"count": 0, "missing": None, "enabled": False, "blank": ""}
+
+        assert Transform.concat(row, nodes)["combined"] == "0-False"
+
     def test_concat_no_delimiter(self):
         """Test concat transform without delimiter (default empty)."""
         nodes = {
