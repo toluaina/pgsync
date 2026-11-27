@@ -1,5 +1,7 @@
 """Transform tests."""
 
+from decimal import Decimal
+
 from pgsync.constants import (
     CONCAT_TRANSFORM,
     RENAME_TRANSFORM,
@@ -801,6 +803,21 @@ class TestTransform(object):
         row = {"count": 0, "missing": None, "enabled": False, "blank": ""}
 
         assert Transform.concat(row, nodes)["combined"] == "0-False"
+
+    def test_concat_preserves_decimal_and_float_zero(self):
+        """Test concat keeps Decimal zero (PostgreSQL NUMERIC) and 0.0."""
+        nodes = {
+            "transform": {
+                "concat": {
+                    "columns": ["price", "missing", "ratio"],
+                    "destination": "combined",
+                    "delimiter": "-",
+                }
+            }
+        }
+        row = {"price": Decimal("0"), "missing": None, "ratio": 0.0}
+
+        assert Transform.concat(row, nodes)["combined"] == "0-0.0"
 
     def test_concat_no_delimiter(self):
         """Test concat transform without delimiter (default empty)."""

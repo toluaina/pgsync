@@ -301,7 +301,7 @@ Rename fields in the output document:
 
 ### Concat
 
-Combine multiple fields into a new field:
+Combine multiple fields into a new field. Concat skips `null` values and empty strings. It keeps `0` and `false`:
 
 ```json
 {

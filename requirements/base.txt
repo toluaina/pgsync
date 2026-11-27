@@ -8,18 +8,18 @@ async-timeout==5.0.1
     # via redis
 backports-datetime-fromisoformat==2.0.3
     # via marshmallow
-boto3==1.44.7
+boto3==1.44.13
     # via -r requirements/base.in
-botocore==1.44.7
+botocore==1.44.13
     # via
     #   boto3
     #   s3transfer
-certifi==2026.10.23
+certifi==2026.11.20
     # via
     #   elastic-transport
     #   opensearch-py
     #   requests
-charset-normalizer==3.5.2
+charset-normalizer==3.5.3
     # via requests
 click==8.5.1
     # via -r requirements/base.in
@@ -37,7 +37,7 @@ environs==15.2.0
     # via -r requirements/base.in
 events==0.5
     # via opensearch-py
-grpcio==1.85.3
+grpcio==1.85.4
     # via opensearch-protobufs
 idna==3.20
     # via
@@ -57,7 +57,7 @@ opensearch-protobufs==1.2.0
     # via opensearch-py
 opensearch-py==3.2.0
     # via opensearch-dsl
-packaging==26.3
+packaging==26.4
     # via mysql-replication
 protobuf==7.36.2
     # via opensearch-protobufs
